@@ -1,7 +1,7 @@
 [project]
 name = "claude-automata"
 version = "0"
-description = "AI Automata — 목적을 가지고 AI를 영속적으로 실행시키는 재귀적 자기개선 시스템"
+description = "AI Automata System — 목적을 가지고 AI를 영속적으로 실행시키는 재귀적 자기개선 시스템"
 requires-python = ">=3.10"
 dependencies = ["copier>=9.0"]
 license = "MIT"

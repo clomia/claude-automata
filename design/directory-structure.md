@@ -824,7 +824,7 @@ design/
 참고 문서 모음. 요구사항, 조사 결과, 기술 참고 자료를 저장한다.
 
 **현재 문서**:
-- `ai-automata-definition.md` — AI Automata 정의
+- `ai-automata-definition.md` — AI Automata System 정의
 - `claude-automata-requirements.md` — 요구사항 명세
 - `llm-persistent-agent-research.md` — LLM 영속 에이전트 관련 조사
 - `uv-and-claude-max-research.md` — uv, Claude Max 기술 조사
