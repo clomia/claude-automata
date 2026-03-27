@@ -1,8 +1,8 @@
 # claude-automata 요구사항
 
-claude-automata는 [자율 AI 시스템](autonomous-ai-system-definition.md)의 구현체이다.
+claude-automata는 [AI Automata](ai-automata-definition.md)의 구현체이다.
 
-> **자율 AI 시스템** — _목적을 가지고 AI를 영속적으로 실행시키는 재귀적 자기개선 시스템_
+> **AI Automata** — _목적을 가지고 AI를 영속적으로 실행시키는 재귀적 자기개선 시스템_
 
 이 문서의 요구사항은 정의의 세 축(**목적**, **영속적 실행**, **재귀적 자기개선**)을 따르며, 이를 지탱하는 **Owner 인터페이스**와 **배포 및 실행 환경** 요구사항을 별도로 기술한다.
 

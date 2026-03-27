@@ -1,4 +1,4 @@
-# Autonomous AI System
+# AI Automata
 
 **목적을 가지고 AI를 영속적으로 실행시키는 재귀적 자기개선 시스템**
 
@@ -8,7 +8,7 @@
 
 # Claude Automata
 
-claude-automata는 위 자율 AI 시스템의 구현체이다. Claude Code를 AI 엔진으로 사용하며, macOS에서 영속적으로 동작한다. 소유자는 Slack을 통해 시스템과 비동기로 소통한다.
+claude-automata는 AI Automata의 구현체이다. Claude Code를 AI 엔진으로 사용하며, macOS에서 영속적으로 동작한다. 소유자는 Slack을 통해 시스템과 비동기로 소통한다.
 
 ## 요구 환경
 

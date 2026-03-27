@@ -970,7 +970,7 @@ async def _connection_monitor(self) -> None:
 
 display_information:
   name: Claude Automata
-  description: 자율 AI 시스템의 Owner 통신 채널
+  description: AI Automata의 Owner 통신 채널
   background_color: "#1a1a2e"
   long_description: |
     claude-automata 시스템의 Slack 클라이언트.
