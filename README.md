@@ -19,9 +19,9 @@
 시스템은 AI가 목적을 위해 시스템을 계속 개선하도록 유도한다.
 개선 동작 자체를 포함한 모든 구성 요소가 개선 대상이다.
 
----
+## claude-automata
 
-claude-automata는 이 자율 AI 시스템의 구현체이다. Claude Code를 AI 엔진으로 사용한다.
+claude-automata는 위 자율 AI 시스템의 구현체이다. Claude Code를 AI 엔진으로 사용하며, macOS에서 영속적으로 동작한다. 소유자는 Slack을 통해 시스템과 비동기로 소통한다.
 
 ## 사용
 
