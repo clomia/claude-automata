@@ -23,7 +23,7 @@ def main():
     from copier import run_copy
 
     run_copy(
-        src_path="https://github.com/jeonghoo/autonomous-claude-code.git",
+        src_path="https://github.com/clomia/autonomous-claude-code.git",
         dst_path=str(dest),
         data={"project_name": project_name},
         unsafe=True,
