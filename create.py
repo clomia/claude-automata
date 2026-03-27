@@ -3,17 +3,17 @@
 # requires-python = ">=3.10"
 # ///
 """
-autonomous-claude-code 프로젝트 생성.
+claude-automata 프로젝트 생성.
 
 사용법:
   uv run create.py [디렉토리]
-  uv run https://raw.githubusercontent.com/clomia/autonomous-claude-code/main/create.py [디렉토리]
+  uv run https://raw.githubusercontent.com/clomia/claude-automata/main/create.py [디렉토리]
 """
 import sys
 from pathlib import Path
 
 def main():
-    dest = Path.cwd() / (sys.argv[1] if len(sys.argv) > 1 else "autonomous-claude-code")
+    dest = Path.cwd() / (sys.argv[1] if len(sys.argv) > 1 else "claude-automata")
 
     if dest.exists():
         print(f"오류: '{dest}' 디렉토리가 이미 존재합니다.")
@@ -22,7 +22,7 @@ def main():
     from copier import run_copy
 
     run_copy(
-        src_path="https://github.com/clomia/autonomous-claude-code.git",
+        src_path="https://github.com/clomia/claude-automata.git",
         dst_path=str(dest),
         defaults=True,
         unsafe=True,

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /Users/jeonghoo/dev/autonomous-claude-code/poc/state_persistence/session_hook.sh"
+            "command": "bash /Users/jeonghoo/dev/claude-automata/poc/state_persistence/session_hook.sh"
           }
         ]
       }

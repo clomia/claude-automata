@@ -12,4 +12,4 @@ _exclude:
 _tasks:
   - "git init"
   - "git add -A"
-  - "git commit -m 'autonomous-claude-code 초기 스캐폴드'"
+  - "git commit -m 'claude-automata 초기 스캐폴드'"

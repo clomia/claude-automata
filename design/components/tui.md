@@ -89,9 +89,9 @@ from textual.widgets import (
 
 
 class DashboardApp(App):
-    """autonomous-claude-code 실시간 모니터링 대시보드"""
+    """claude-automata 실시간 모니터링 대시보드"""
 
-    TITLE = "autonomous-claude-code"
+    TITLE = "claude-automata"
     CSS_PATH = "dashboard.tcss"
 
     BINDINGS = [

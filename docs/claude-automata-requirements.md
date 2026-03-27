@@ -1,6 +1,6 @@
-# autonomous-claude-code 요구사항
+# claude-automata 요구사항
 
-autonomous-claude-code는 [자율 AI 시스템](autonomous-ai-system-definition.md)의 구현체이다.
+claude-automata는 [자율 AI 시스템](autonomous-ai-system-definition.md)의 구현체이다.
 
 > **자율 AI 시스템** — _목적을 가지고 AI를 영속적으로 실행시키는 재귀적 자기개선 시스템_
 

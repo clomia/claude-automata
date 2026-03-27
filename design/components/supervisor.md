@@ -7,7 +7,7 @@
 
 ## 1. 개요
 
-Supervisor는 autonomous-claude-code의 Deterministic Core 핵심이다. Python asyncio 기반 단일 프로세스 데몬으로, macOS launchd LaunchAgent가 관리한다. 시스템의 모든 생명주기(시작, 운영, 복구, 종료)를 통제하며, 자체적으로는 어떤 지능적 판단도 하지 않는다 — 모든 판단은 Claude Code 세션(Agentic Shell)에 위임한다.
+Supervisor는 claude-automata의 Deterministic Core 핵심이다. Python asyncio 기반 단일 프로세스 데몬으로, macOS launchd LaunchAgent가 관리한다. 시스템의 모든 생명주기(시작, 운영, 복구, 종료)를 통제하며, 자체적으로는 어떤 지능적 판단도 하지 않는다 — 모든 판단은 Claude Code 세션(Agentic Shell)에 위임한다.
 
 ### 핵심 원칙
 
@@ -869,7 +869,7 @@ Supervisor 프로세스를 macOS launchd LaunchAgent로 관리한다. 사용자 
         <string>/Users/USERNAME/.local/bin/uv</string>
         <string>run</string>
         <string>--project</string>
-        <string>/Users/USERNAME/dev/autonomous-claude-code</string>
+        <string>/Users/USERNAME/dev/claude-automata</string>
         <string>python</string>
         <string>-m</string>
         <string>system.supervisor</string>
@@ -877,7 +877,7 @@ Supervisor 프로세스를 macOS launchd LaunchAgent로 관리한다. 사용자 
 
     <!-- 작업 디렉토리 -->
     <key>WorkingDirectory</key>
-    <string>/Users/USERNAME/dev/autonomous-claude-code</string>
+    <string>/Users/USERNAME/dev/claude-automata</string>
 
     <!-- 항상 실행 유지: 크래시/종료 시 자동 재시작 -->
     <key>KeepAlive</key>
@@ -929,10 +929,10 @@ Supervisor 프로세스를 macOS launchd LaunchAgent로 관리한다. 사용자 
 
     <!-- 표준 출력/에러를 파일로 리디렉션 -->
     <key>StandardOutPath</key>
-    <string>/Users/USERNAME/dev/autonomous-claude-code/logs/supervisor-launchd-stdout.log</string>
+    <string>/Users/USERNAME/dev/claude-automata/logs/supervisor-launchd-stdout.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/USERNAME/dev/autonomous-claude-code/logs/supervisor-launchd-stderr.log</string>
+    <string>/Users/USERNAME/dev/claude-automata/logs/supervisor-launchd-stderr.log</string>
 
     <!--
         Nice: 프로세스 우선순위를 약간 낮춤 (기본 0, 범위 -20~20).
@@ -1011,14 +1011,14 @@ Watchdog은 Supervisor와 독립적으로 실행되는 별도 LaunchAgent이다.
         <string>/Users/USERNAME/.local/bin/uv</string>
         <string>run</string>
         <string>--project</string>
-        <string>/Users/USERNAME/dev/autonomous-claude-code</string>
+        <string>/Users/USERNAME/dev/claude-automata</string>
         <string>python</string>
         <string>-m</string>
         <string>system.watchdog</string>
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/USERNAME/dev/autonomous-claude-code</string>
+    <string>/Users/USERNAME/dev/claude-automata</string>
 
     <!--
         StartInterval: 60초마다 실행.
@@ -1041,10 +1041,10 @@ Watchdog은 Supervisor와 독립적으로 실행되는 별도 LaunchAgent이다.
     <string>Background</string>
 
     <key>StandardOutPath</key>
-    <string>/Users/USERNAME/dev/autonomous-claude-code/logs/watchdog-stdout.log</string>
+    <string>/Users/USERNAME/dev/claude-automata/logs/watchdog-stdout.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/USERNAME/dev/autonomous-claude-code/logs/watchdog-stderr.log</string>
+    <string>/Users/USERNAME/dev/claude-automata/logs/watchdog-stderr.log</string>
 
     <key>Nice</key>
     <integer>10</integer>
@@ -1199,7 +1199,7 @@ done
 launchctl bootstrap "gui/${UID_CURRENT}" "${LAUNCH_AGENTS_DIR}/com.acc.supervisor.plist"
 launchctl bootstrap "gui/${UID_CURRENT}" "${LAUNCH_AGENTS_DIR}/com.acc.watchdog.plist"
 
-echo "autonomous-claude-code 시스템이 시작되었습니다."
+echo "claude-automata 시스템이 시작되었습니다."
 echo "  Supervisor: launchctl print gui/${UID_CURRENT}/com.acc.supervisor"
 echo "  Watchdog:   launchctl print gui/${UID_CURRENT}/com.acc.watchdog"
 ```
@@ -1227,7 +1227,7 @@ rm -f "${PROJECT_ROOT}/run/supervisor.pid"
 rm -f "${PROJECT_ROOT}/run/supervisor.heartbeat"
 rm -f "${PROJECT_ROOT}/run/current_session.json"
 
-echo "autonomous-claude-code 시스템이 중지되었습니다."
+echo "claude-automata 시스템이 중지되었습니다."
 ```
 
 ### 6.3 상태 확인

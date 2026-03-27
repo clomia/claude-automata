@@ -1,11 +1,11 @@
-# autonomous-claude-code 구현 가이드
+# claude-automata 구현 가이드
 
 ---
 
 ## 프로젝트 구조
 
 ```
-autonomous-claude-code/
+claude-automata/
 ├── .claude/
 │   └── settings.local.json     # 개발용: 제품 hooks 비활성화
 ├── copier.yml                  # 배포 설정 (src/ → 사용자 프로젝트)
@@ -35,7 +35,7 @@ autonomous-claude-code/
 
 사용자 경험:
 ```bash
-uv run https://raw.githubusercontent.com/<owner>/autonomous-claude-code/main/create.py my-agent
+uv run https://raw.githubusercontent.com/<owner>/claude-automata/main/create.py my-agent
 cd my-agent
 uv sync
 uv run acc configure

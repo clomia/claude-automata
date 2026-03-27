@@ -973,7 +973,7 @@ display_information:
   description: 자율 AI 시스템의 Owner 통신 채널
   background_color: "#1a1a2e"
   long_description: |
-    autonomous-claude-code 시스템의 Slack 클라이언트.
+    claude-automata 시스템의 Slack 클라이언트.
     Owner와의 비동기 통신, 상태 알림, 질문/응답을 담당합니다.
 
 features:

@@ -1,6 +1,6 @@
-# autonomous-claude-code 핵심 흐름 설계서
+# claude-automata 핵심 흐름 설계서
 
-> 이 문서는 autonomous-claude-code 시스템의 **모든 핵심 운영 흐름**을 시퀀스 다이어그램과 단계별 설명으로 기술한다.
+> 이 문서는 claude-automata 시스템의 **모든 핵심 운영 흐름**을 시퀀스 다이어그램과 단계별 설명으로 기술한다.
 
 ---
 
@@ -1403,7 +1403,7 @@ Owner               TUI (Textual)        State Files           State Manager    
   |  │ [3] 대시보드 렌더링                                                          │
   |  │                                                                               │
   |  │  ┌─────────────────────────────────────────────────────────────────────────┐  │
-  |  │  │  autonomous-claude-code Dashboard                          [Q]uit      │  │
+  |  │  │  claude-automata Dashboard                          [Q]uit      │  │
   |  │  │                                                                         │  │
   |  │  │  ┌─ Status ──────────────┐  ┌─ Current Mission ──────────────────────┐ │  │
   |  │  │  │ State: RUNNING        │  │ M-023: API 인증 모듈 구현             │ │  │

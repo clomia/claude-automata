@@ -67,7 +67,7 @@ class StateManager:
 ### 초기화 흐름
 
 ```
-StateManager(project_dir="/path/to/autonomous-claude-code")
+StateManager(project_dir="/path/to/claude-automata")
     │
     ├── state_dir = project_dir / "state"
     ├── run_dir = project_dir / "run"

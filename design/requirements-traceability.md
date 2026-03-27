@@ -1,6 +1,6 @@
 # 요구사항 추적성 매트릭스
 
-이 문서는 [autonomous-claude-code 요구사항](../docs/autonomous-claude-code-requirements.md)의 모든 항목이 설계에서 어떻게 만족되는지 추적한다.
+이 문서는 [claude-automata 요구사항](../docs/claude-automata-requirements.md)의 모든 항목이 설계에서 어떻게 만족되는지 추적한다.
 
 ---
 

@@ -511,8 +511,8 @@ Typical active Claude Code API users spend $60-90/month without optimization. He
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Create project
-uv init --package autonomous-claude-code
-cd autonomous-claude-code
+uv init --package claude-automata
+cd claude-automata
 
 # Pin Python version
 uv python pin 3.14
@@ -522,7 +522,7 @@ uv add click rich
 uv add --dev pytest ruff mypy
 
 # Run the project
-uv run autonomous-claude-code
+uv run claude-automata
 ```
 
 ### Claude Code Configuration

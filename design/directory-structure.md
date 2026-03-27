@@ -1,13 +1,13 @@
 # 프로젝트 디렉토리 구조 상세
 
-> autonomous-claude-code의 모든 파일과 디렉토리에 대한 상세 설명.
+> claude-automata의 모든 파일과 디렉토리에 대한 상세 설명.
 
 ---
 
 ## 전체 구조 개요
 
 ```
-autonomous-claude-code/
+claude-automata/
 ├── pyproject.toml
 ├── CLAUDE.md
 ├── .env
@@ -102,7 +102,7 @@ uv 네이티브 프로젝트 설정 파일. Python 3.14를 사용하며, 모든 
 
 ```toml
 [project]
-name = "autonomous-claude-code"
+name = "claude-automata"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
@@ -822,7 +822,7 @@ design/
 
 **현재 문서**:
 - `autonomous-ai-system-definition.md` — 자율 AI 시스템 정의
-- `autonomous-claude-code-requirements.md` — 요구사항 명세
+- `claude-automata-requirements.md` — 요구사항 명세
 - `llm-persistent-agent-research.md` — LLM 영속 에이전트 관련 조사
 - `uv-and-claude-max-research.md` — uv, Claude Max 기술 조사
 - `claude-code-automation-patterns.md` — Claude Code 자동화 패턴 조사
