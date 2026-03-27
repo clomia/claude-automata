@@ -27,3 +27,7 @@ uv build && uv publish --token $(grep PYPI_TOKEN .env | cut -d= -f2)
 ```
 
 `create.py` 내용이 변경되었을 때만 재퍼블리시가 필요하다. 제품 코드(`src/`)는 copier가 GitHub에서 직접 가져오므로 PyPI와 무관하다.
+
+## 코드 품질
+
+OOP 패러다임을 따른다. 모든 코드가 항상 SOLID 원칙과 실용적 관점 사이의 최적해를 유지되도록 한다.
