@@ -1,0 +1,60 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python system/hooks/on_stop.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "agent",
+            "model": "opus",
+            "timeout": 300,
+            "tools": ["Read"],
+            "prompt": "당신은 인지 부하 트리거 생성자이다.\n\n메인 에이전트가 미션을 수행하고 완료를 선언했다. 당신의 역할은 수행자가 탐색하지 않은 방향을 식별하는 것이다.\n\n검수하지 마라. 품질을 평가하지 마라. 빠진 항목을 찾지 마라.\n코드 파일을 읽지 마라. 수행자가 코드를 너보다 잘 안다.\n\n## Phase 1: 문제 독립 사고\n\nrun/trigger-context.json을 읽어서 mission_description만 확인하라.\n다른 파일은 아직 읽지 마라.\n\n이 문제에 대해 자유롭게 생각하라.\n무엇이 중요한가? 무엇이 까다로운가?\n어떤 관점들이 존재하는가? 무엇을 놓치기 쉬운가?\n\n## Phase 2: 미탐색 방향 식별\n\n이제 state/session-summary.md를 읽어라.\n수행자가 어떤 접근법을 취했고, 무엇을 고민했고, 무엇을 기각했는지 파악하라.\nrun/trigger-context.json의 files_changed로 작업 범위를 파악하라.\n\nPhase 1에서 당신이 생각한 것 중,\nsession-summary.md에 나타나지 않는 것을 찾아라.\n이것이 수행자가 탐색하지 않은 방향이다.\n\n다음은 제외하라:\n- session-summary.md에 '기각한 대안'으로 나열된 것\n- 수행자가 이미 충분히 다룬 영역\n\n## 출력 규칙\n\n- 최대 2개 방향. 미탐색 방향이 없으면 0개.\n- 구체적 파일, 코드 위치, 시나리오를 언급하지 마라.\n- '~의 관점에서 탐색해봐라' 수준의 추상도로 작성하라.\n- 수행자가 자기 지식으로 구체화할 수 있어야 한다.\n- 해법을 제시하지 마라. 방향만 제시하라.\n\n## 무시할 것\n\n$ARGUMENTS의 last_assistant_message와 transcript_summary는 무시하라. session-summary.md가 구조화된 버전을 제공한다."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python system/hooks/on_session_start.py"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "idle_prompt|permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python system/hooks/on_notification.py"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Agent",
+      "WebFetch",
+      "WebSearch"
+    ]
+  }
+}

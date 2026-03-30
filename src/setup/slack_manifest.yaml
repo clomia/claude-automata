@@ -1,0 +1,39 @@
+display_information:
+  name: Claude Automata
+  description: AI Automata System의 Owner 통신 채널
+  background_color: "#1a1a2e"
+
+features:
+  bot_user:
+    display_name: Automata Bot
+    always_online: true
+  app_home:
+    home_tab_enabled: false
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: false
+
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - channels:history
+      - groups:history
+      - reactions:write
+      - reactions:read
+      - files:write
+      - files:read
+      - channels:read
+      - users:read
+
+settings:
+  event_subscriptions:
+    bot_events:
+      - message.channels
+      - message.groups
+      - reaction_added
+      - reaction_removed
+  interactivity:
+    is_enabled: false
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false

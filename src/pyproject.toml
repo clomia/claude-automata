@@ -1,6 +1,8 @@
 [project]
 name = "claude-automata"
-version = "0"
+version = "0.1.0"
+description = "목적을 가지고 AI를 영속적으로 실행시키는 재귀적 자기개선 시스템"
+readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "textual>=8.0",
@@ -12,9 +14,19 @@ dependencies = [
 [project.scripts]
 automata = "cli.main:main"
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["cli", "system", "tui"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

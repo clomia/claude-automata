@@ -1,10 +1,10 @@
 CLAUDE.md
 .claude/settings.local.json
-.claude/rules/
 state/session-summary.md
-state/trigger-effectiveness.jsonl
+state/trigger-log.jsonl
 run/
 logs/
 __pycache__/
+*.pyc
 .venv/
 .env
