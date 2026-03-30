@@ -18,7 +18,12 @@
 8. [Current Session](#8-current-session) — `run/current_session.json`
 9. [Heartbeat](#9-heartbeat) — `run/supervisor.heartbeat`
 10. [Supervisor State](#10-supervisor-state) — `run/supervisor.state`
-11. [Archive Files](#11-archive-files) — `state/archive/*.jsonl`
+11. [Session Analysis](#11-session-analysis) — `run/session-analysis.json`
+12. [Trigger Context](#12-trigger-context) — `run/trigger-context.json`
+13. [Hook State](#13-hook-state) — `run/hook_state.json`
+14. [Session Summary](#14-session-summary) — `state/session-summary.md`
+15. [Trigger Log](#15-trigger-log) — `state/trigger-log.jsonl`
+16. [Archive Files](#16-archive-files) — `state/archive/*.jsonl`
 
 ---
 
@@ -1677,11 +1682,190 @@ all_thresholds_modifiable = true
 }
 ```
 
-> `run/current_session.json`과 `run/supervisor.heartbeat`는 런타임에만 존재하므로 초기 상태 파일은 없다.
+> `run/` 디렉토리의 파일(current_session.json, supervisor.heartbeat, session-analysis.json, trigger-context.json, hook_state.json)은 런타임에만 존재하므로 초기 상태 파일은 없다.
+> `state/session-summary.md`와 `state/trigger-log.jsonl`도 런타임에 생성된다. Initialization Session 완료 후 첫 Working Session이 session-summary.md를 생성하고, 첫 Stop Hook Agent 실행이 trigger-log.jsonl에 첫 레코드를 추가한다.
 
 ---
 
-## 11. Archive Files
+## 11. Session Analysis
+
+**파일**: `run/session-analysis.json`
+**설명**: StreamAnalyzer가 stream-json 이벤트에서 실시간 추출하는 작업 패턴 기록. Supervisor의 세션 모니터링, ErrorClassifier 입력, friction 감지, trigger-context.json 생성의 원천 데이터이다. `run/` 디렉토리에 위치하므로 Git에서 제외된다.
+
+### 스키마
+
+```json
+{
+  "tool_call_count": 87,
+  "tool_distribution": {"Read": 30, "Edit": 25, "Bash": 20, "Write": 12},
+  "files_read": ["system/auth.py", "tests/test_auth.py"],
+  "files_written": ["system/auth.py", "system/middleware.py"],
+  "files_read_not_written": ["tests/test_auth.py"],
+  "errors": [
+    {
+      "tool": "Bash",
+      "error": "pytest: 1 failed, 5 passed",
+      "timestamp": 1234.5
+    }
+  ],
+  "error_count": 1,
+  "tests_executed": true,
+  "bash_commands": ["uv run pytest", "git status"],
+  "duration_minutes": 44.5,
+  "topic_areas": {"system/": 15, "tests/": 8}
+}
+```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `tool_call_count` | integer | 총 도구 호출 수 |
+| `tool_distribution` | object | 도구별 호출 횟수 |
+| `files_read` | string[] | 읽은 파일 경로 목록 |
+| `files_written` | string[] | 쓴 파일 경로 목록 |
+| `files_read_not_written` | string[] | 읽었지만 수정하지 않은 파일 |
+| `errors` | object[] | 에러 목록 (도구, 메시지, 타임스탬프) |
+| `error_count` | integer | 총 에러 수 |
+| `tests_executed` | boolean | 테스트 실행 여부 |
+| `bash_commands` | string[] | 실행된 bash 명령 (100자 잘림) |
+| `duration_minutes` | number | 세션 경과 시간 (분) |
+| `topic_areas` | object | 파일 경로 기반 작업 영역 분포 |
+
+### 파일 생명주기
+
+세션 시작 시 생성, stream-json 이벤트 수신 시마다 갱신, 세션 종료 후 다음 세션 시작 시 덮어씀.
+
+---
+
+## 12. Trigger Context
+
+**파일**: `run/trigger-context.json`
+**설명**: Stop Hook Agent(인지 부하 트리거)를 위한 최소 입력. Supervisor가 Stop hook 발동 직전에 session-analysis.json에서 파일 경로만 추출하여 미션 설명과 함께 기록한다. Stop Hook Agent가 코드 파일이나 운영 메타데이터에 접근하지 않도록 입력을 제한하는 것이 목적이다.
+
+### 스키마
+
+```json
+{
+  "mission_id": "M-042",
+  "mission_description": "API 인증 모듈을 구현한다...",
+  "files_changed": [
+    "system/auth_handler.py",
+    "system/middleware.py",
+    "tests/test_auth.py"
+  ]
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|:----:|------|
+| `mission_id` | string | Y | 현재 미션 ID |
+| `mission_description` | string | Y | 미션 description 전문 |
+| `files_changed` | string[] | Y | 세션 중 읽거나 쓴 파일 경로 목록 (내용 아님) |
+
+### 파일 생명주기
+
+Stop hook 발동 직전에 Supervisor가 생성. Stop Hook Agent가 읽은 후 다음 세션에서 덮어씀.
+
+---
+
+## 13. Hook State
+
+**파일**: `run/hook_state.json`
+**설명**: Hook 실행 상태. Stop Hook의 호출 카운터, compaction 카운터 등 안전 장치 상태를 추적한다. `run/` 디렉토리에 위치하므로 Git에서 제외된다.
+
+### 스키마
+
+```json
+{
+  "current_session_id": "session-abc-123",
+  "session_stop_count": 15,
+  "completed_mission_count": 42,
+  "compaction_count": 1,
+  "last_invoked_at": "2026-03-25T10:30:00Z"
+}
+```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `current_session_id` | string \| null | 현재 세션 ID. 세션 변경 시 `session_stop_count` 리셋 |
+| `session_stop_count` | integer | 현재 세션의 Stop Hook 호출 횟수. 50회 초과 시 강제 allow (안전 장치) |
+| `completed_mission_count` | integer | 전체 완료 미션 수. 사전 개선 주기 판단에 사용 |
+| `compaction_count` | integer | autocompaction 횟수. 컨텍스트 리프레시 판단에 사용 |
+| `last_invoked_at` | string | 마지막 Hook 호출 시각 (ISO 8601 UTC) |
+
+### 파일 생명주기
+
+첫 Stop Hook 호출 시 생성. 세션이 바뀌면 `session_stop_count`만 리셋. Supervisor 재시작 시에도 보존 (run/ 디렉토리이지만 Supervisor가 재시작 시 정리하지 않음).
+
+---
+
+## 14. Session Summary
+
+**파일**: `state/session-summary.md`
+**설명**: 수행자(Claude Code)가 4단계 실행 프로토콜의 마지막 단계에서 작성하는 구조화된 자기 평가. 두 가지 역할을 한다: (1) 다음 세션의 컨텍스트 보존(C-1), (2) Stop Hook Agent(인지 부하 트리거)의 핵심 입력.
+
+### 구조
+
+Markdown 형식이며, 다음 4개 섹션을 포함해야 한다:
+
+```markdown
+## 접근법
+이 미션에서 취한 접근법과 그 이유를 서술한다.
+
+## 불확실한 결정
+가장 불확실했던 결정 3가지와 각 결정의 근거를 나열한다.
+
+## 기각한 대안
+검토했지만 채택하지 않은 대안과 기각 이유를 나열한다.
+
+## 타협
+타협한 부분과 이유를 나열한다.
+```
+
+### 검증 규칙
+
+| 규칙 | 설명 |
+|------|------|
+| 필수 섹션 | 4개 섹션(접근법, 불확실한 결정, 기각한 대안, 타협)이 모두 존재해야 한다 |
+| 작성 시점 | 4단계 프로토콜의 마지막 단계에서 작성. Stop hook 발동 전에 완료되어야 한다 |
+| 덮어쓰기 | 매 미션 완료 시 새로 작성한다. 이전 내용은 보존되지 않는다 |
+| Git 추적 | `state/` 디렉토리이므로 Git으로 추적된다 |
+| Stop Hook Agent 입력 | "기각한 대안" 섹션은 Stop Hook Agent가 이미 탐색된 영역을 필터링하는 데 사용한다 |
+
+---
+
+## 15. Trigger Log
+
+**파일**: `state/trigger-log.jsonl`
+**설명**: 인지 부하 트리거(Stop Hook Agent)의 이력을 사실만 기록한다. 자동 효과 점수화나 자동 가중은 수행하지 않는다. Proactive Review 미션(S-3)에서 트리거 시스템의 전반적 효과를 종합 판단하는 입력으로 사용된다.
+
+### JSONL 레코드 스키마
+
+```jsonl
+{"mission_id":"M-042","directions":["시간 조건 관점 탐색","에러 소비자 관점 탐색"],"direction_count":2,"phase1_thoughts_summary":"보안, 분산환경, 시간의존성, 에러분류","already_explored_in_summary":["에러분류 — session-summary에서 기각됨"],"timestamp":"2026-03-27T10:00:00Z"}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|:----:|------|
+| `mission_id` | string | Y | 대상 미션 ID |
+| `directions` | string[] | Y | 제시된 방향 (0~2개) |
+| `direction_count` | integer | Y | 제시된 방향 수 |
+| `phase1_thoughts_summary` | string | Y | Phase 1에서 에이전트가 생각한 키워드 요약 |
+| `already_explored_in_summary` | string[] | Y | session-summary.md와 겹쳐서 제외된 방향 |
+| `timestamp` | string | Y | 기록 시각 (ISO 8601 UTC) |
+
+### 검증 규칙
+
+| 규칙 | 설명 |
+|------|------|
+| Append-only | 기존 레코드를 수정하지 않는다. 항상 추가만 한다 |
+| Git 추적 | `state/` 디렉토리이므로 Git으로 추적된다 |
+| Stop Hook Agent 미제공 | 이 파일은 Stop Hook Agent에 직접 제공되지 않는다 (자동 가중 루프 방지) |
+| `direction_count` 정합성 | `directions` 배열의 길이와 일치해야 한다 |
+| Proactive Review 입력 | Proactive Review 미션이 이 이력을 읽고 트리거 시스템의 전반적 효과를 판단한다 |
+
+---
+
+## 16. Archive Files
 
 **디렉토리**: `state/archive/`
 **설명**: 운영 상태 파일(missions.json, friction.json, sessions.json)이 일정 크기를 초과하면 완료/해소된 레코드를 아카이브 파일로 이동한다. JSONL(JSON Lines) 형식을 사용하여 한 줄에 하나의 완전한 JSON 객체를 저장한다. Git으로 추적한다.

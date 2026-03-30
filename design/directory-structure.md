@@ -26,7 +26,7 @@ claude-automata/
 │   ├── state_manager.py
 │   ├── slack_client.py
 │   ├── error_classifier.py
-│   ├── cognitive_load.py        # 인지 부하 트리거 + StreamAnalyzer
+│   ├── cognitive_load.py        # 미션 특화 지시 생성 + StreamAnalyzer
 │   ├── watchdog.py
 │   └── hooks/
 │       ├── on_stop.py
@@ -46,8 +46,8 @@ claude-automata/
 │   ├── requests.json
 │   ├── sessions.json
 │   ├── config.toml
-│   ├── trigger-effectiveness.jsonl  # 인지 부하 트리거 효과 이력
-│   ├── session-summary.md           # 세션 가중 요약 (4단계 프로토콜 출력)
+│   ├── trigger-log.jsonl             # 인지 부하 트리거 이력 (사실 기록)
+│   ├── session-summary.md           # 수행자의 구조화된 자기 평가 (4단계 프로토콜 산출물)
 │   └── archive/
 │       ├── missions.jsonl
 │       ├── friction.jsonl
@@ -57,7 +57,8 @@ claude-automata/
 │   ├── supervisor.heartbeat
 │   ├── supervisor.state           # Supervisor 크래시 복구용 상태
 │   ├── current_session.json
-│   ├── session-analysis.json      # StreamAnalyzer 작업 패턴 기록
+│   ├── session-analysis.json      # StreamAnalyzer 작업 패턴 기록 (Supervisor 모니터링용)
+│   ├── trigger-context.json       # Stop Hook Agent 전용 최소 입력
 │   └── hook_state.json            # Hook 실행 상태 (호출 카운터 등)
 ├── logs/
 │   ├── supervisor.log

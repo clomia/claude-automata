@@ -122,9 +122,9 @@
 
 | 항목 | 내용 |
 |------|------|
-| **설계 결정** | 자기 주도 계층(미션 프롬프트 4단계 프로토콜) + 외부 주입 계층(Stop hook agent가 패턴 분석 후 방향 주입). 두 계층으로 5회 이상 인지 전환 |
+| **설계 결정** | 자기 주도 계층(미션 프롬프트 4단계 프로토콜) + 외부 주입 계층(Stop hook agent가 독립 사고 후 미탐색 방향 제시). 인지 부하 트리거의 본질은 "AI가 고려하지 못한 방향을 찾아 추상적으로 언급하는 것"이며, 검수나 구체적 지적이 아님 |
 | **구현 위치** | Cognitive Load Trigger ([cognitive-load-trigger.md](components/cognitive-load-trigger.md)) |
-| **검증 방법** | trigger-effectiveness.jsonl의 효과 추적 데이터로 트리거 후 행동 변화 측정 |
+| **검증 방법** | trigger-log.jsonl의 이력을 Proactive Review 미션에서 종합 판단 |
 
 #### Q-4: 인지 부하 트리거 5원칙
 
@@ -132,9 +132,9 @@
 
 | 항목 | 내용 |
 |------|------|
-| **설계 결정** | Q-4a: session-analysis.json 기반. Q-4b: 부재/다양성/에러무시/비대칭/수렴 분석으로 미탐색 겨냥. Q-4c: prompt에 "방향만 제시" 명시. Q-4d: Stop hook reason이 동일 세션에 주입. Q-4e: agent hook 별도 컨텍스트, 사실만 입력 |
+| **설계 결정** | Q-4a: session-summary.md(수행자 자기 평가) + 파일 경로 목록 기반. Q-4b: Phase 1(독립 사고) - Phase 2(이미 탐색한 영역) = 미탐색 방향. 구조적으로 미탐색을 겨냥. Q-4c: 추상적 출력 규칙 + "해법을 제시하지 마라" 명시. Q-4d: Stop hook reason이 동일 세션에 주입. Q-4e: 별도 컨텍스트. session-summary.md(구조화된 자기 평가)만 입력. 코드 파일 및 전체 추론 미제공 |
 | **구현 위치** | Cognitive Load Trigger ([cognitive-load-trigger.md](components/cognitive-load-trigger.md) §3) |
-| **검증 방법** | 각 원칙별 구조적 보장: Q-4a(StreamAnalyzer), Q-4b(분석 렌즈), Q-4c(prompt 제약), Q-4d(Stop hook 메커니즘), Q-4e(별도 컨텍스트 + 사실만 입력) |
+| **검증 방법** | 각 원칙별 구조적 보장: Q-4a(session-summary.md + 파일 경로), Q-4b(2단계 프로세스 — 독립 사고 → 델타 식별), Q-4c(추상적 출력 규칙), Q-4d(Stop hook 메커니즘), Q-4e(별도 컨텍스트 + 구조화된 자기 평가만 입력 + 코드 파일 미제공) |
 
 ### 2.3 컨텍스트 보존
 

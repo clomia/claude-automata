@@ -68,9 +68,9 @@ run/
           {
             "type": "agent",
             "model": "opus",
-            "timeout": 120,
-            "tools": ["Read", "Glob", "Grep", "Bash"],
-            "prompt": "인지 부하 트리거 생성자. 상세: cognitive-load-trigger.md §3.3"
+            "timeout": 300,
+            "tools": ["Read"],
+            "prompt": "인지 부하 트리거 생성자. 상세: cognitive-load-trigger.md §3.4"
           }
         ]
       }

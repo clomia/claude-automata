@@ -277,6 +277,7 @@ session_timeout_minutes = 150  # 120→150 (2026-03-26): 복잡한 미션이 120
 | `max_consecutive_failures` | `3` | int | 연속 실패 시 에스컬레이션 임계값 |
 | `slack_notification_level` | `"warning"` | string | Slack 알림 수준 (`"info"`, `"warning"`, `"error"`, `"critical"`) |
 | `mission_idle_generation_count` | `3` | int | 미션 큐 비었을 때 한 번에 생성할 미션 수 |
+| `owner_feedback_interval` | `20` | int | N미션 동안 Owner 상호작용 없으면 방향 확인 요청 |
 
 ### 5.2 임계값 수정 시나리오
 
