@@ -22,7 +22,7 @@ Claude Code 안에서:
 
 ```
 /plugin marketplace add clomia/clomata
-/plugin install clomata@clomata
+/plugin install boost@clomata
 ```
 
 ## 설정
@@ -41,7 +41,7 @@ CLOMATA_MAX_ROUNDS=5 claude
 ## 제거
 
 ```
-/plugin uninstall clomata@clomata
+/plugin uninstall boost@clomata
 /plugin marketplace remove clomata
 ```
 
