@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PLUGIN_ROOT}\" -m parallax",
+            "command": "uv run --project \"${CLAUDE_PLUGIN_ROOT}\" parallax",
             "timeout": 180
           }
         ]
