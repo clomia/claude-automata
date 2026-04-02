@@ -1,19 +1,19 @@
 {
-  "name": "clomata",
+  "name": "claude-automata",
   "owner": {
     "name": "clomia",
-    "email": "clomia.dev@gmail.com"
+    "email": "clomia.sig@gmail.com"
   },
   "metadata": {
-    "description": "Stop hook 기반 감독관 플러그인"
+    "description": "LLM의 좁아진 인지 범위를 확장하는 플러그인 마켓플레이스"
   },
   "plugins": [
     {
-      "name": "boost",
-      "source": "./plugins/boost",
-      "description": "수행자가 완료를 선언할 때마다 독립적으로 평가하여 미탐색 방향을 반복 주입하는 감독관",
+      "name": "booster",
+      "source": "./plugins/booster",
+      "description": "Stop hook에서 LLM 출력을 훑어보고 미탐색 방향을 주입하여 인지 범위를 확장한다",
       "version": "0.1.0",
-      "keywords": ["supervisor", "stop-hook", "cognitive-load", "quality-gate"]
+      "keywords": ["stop-hook", "cognitive-expansion", "exploration", "boost"]
     }
   ]
 }

@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/supervisor.sh",
+            "command": "uv run \"${CLAUDE_PLUGIN_ROOT}/scripts/booster.py\"",
             "timeout": 180
           }
         ]
