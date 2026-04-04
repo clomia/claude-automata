@@ -6,7 +6,7 @@
 
 ## Installation
 
-**[uv](https://docs.astral.sh/uv/getting-started/installation/) 가 설치되어 있어야 합니다.**
+**[uv가 설치되어 있어야 합니다.](https://docs.astral.sh/uv/getting-started/installation/)**
 
 ```
 /plugin marketplace add clomia/claude-automata
