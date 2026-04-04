@@ -1,4 +1,8 @@
-"""State construction and persistence for a parallax run."""
+"""State — all external inputs for a parallax run, assembled into one object.
+
+Parses the session transcript, loads persisted turn state, and provides
+save_initial_turn / finish_round for the caller to persist explicitly.
+"""
 
 import json
 import os

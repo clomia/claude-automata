@@ -17,15 +17,23 @@ from src.state import ROUND_LIMIT, build_state, finish_round, save_initial_turn
 # ── claude -p invocation ──
 
 
+DISALLOWED_TOOLS = "Bash,Write,Edit,NotebookEdit"
+
+
 def invoke_claude(
     prompt: str,
     model: str | None = None,
     *,
+    allow_tools: bool = False,
     effort: str | None = None,
     timeout: int = 120,
 ) -> str | None:
     """Run claude -p and return stdout. Returns None on failure or timeout."""
     cmd = ["claude", "-p", prompt, "--no-session-persistence"]
+    if allow_tools:
+        cmd.extend(["--disallowedTools", DISALLOWED_TOOLS])
+    else:
+        cmd.extend(["--tools", ""])
     if model:
         cmd.extend(["--model", model])
     if effort:
@@ -73,7 +81,9 @@ def main():
     prompt = build_analysis_prompt(
         state.turn.user_input, action_history, state.direction_history
     )
-    new_direction = invoke_claude(prompt, state.turn.agent_model, effort="max")
+    new_direction = invoke_claude(
+        prompt, state.turn.agent_model, allow_tools=True, effort="max"
+    )
 
     if not new_direction or new_direction == "null":
         sys.exit(0)

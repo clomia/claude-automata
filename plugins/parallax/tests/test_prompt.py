@@ -3,10 +3,11 @@
 import json
 
 from src.prompt import (
+    INSTRUCTION_PROMPT,
+    ROLE_PROMPT,
     build_analysis_prompt,
     format_conversion_prompt,
     format_direction_history,
-    load_prompt_file,
     wrap_section,
 )
 
@@ -42,19 +43,17 @@ class TestFormatDirectionHistory:
         assert "라운드 2: Handle edge cases" in result
 
 
-# ── load_prompt_file ──
+# ── Prompt constants ──
 
 
-class TestLoadPromptFile:
-    def test_loads_role_md(self):
-        content = load_prompt_file("role.md")
-        assert "parallax" in content
-        assert "# 역할" in content
+class TestPromptConstants:
+    def test_role_prompt_loaded(self):
+        assert "parallax" in ROLE_PROMPT
+        assert "# 역할" in ROLE_PROMPT
 
-    def test_loads_instruction_md(self):
-        content = load_prompt_file("instruction.md")
-        assert "# 지시사항" in content
-        assert "`null`" in content
+    def test_instruction_prompt_loaded(self):
+        assert "# 지시사항" in INSTRUCTION_PROMPT
+        assert "`null`" in INSTRUCTION_PROMPT
 
 
 # ── format_conversion_prompt ──
@@ -69,6 +68,11 @@ class TestFormatConversionPrompt:
     def test_includes_instruction_text(self):
         prompt = format_conversion_prompt([])
         assert "마크다운 문서를 작성하세요" in prompt
+
+    def test_wraps_json_in_action_record_tag(self):
+        prompt = format_conversion_prompt([])
+        assert "<action-record>" in prompt
+        assert "</action-record>" in prompt
 
 
 # ── build_analysis_prompt ──
