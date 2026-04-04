@@ -94,11 +94,11 @@ def main():
     if state.current_round >= ROUND_LIMIT:
         sys.exit(0)
 
-    action_markdown = convert_actions_to_markdown(
+    action_history = convert_actions_to_markdown(
         state.turn.agent_actions, state.turn.agent_model
     )
     prompt = build_analysis_prompt(
-        state.turn.user_input, action_markdown, state.direction_history
+        state.turn.user_input, action_history, state.direction_history
     )
     raw = invoke_claude(prompt, state.turn.agent_model, effort="max")
     decision = parse_decision(raw)

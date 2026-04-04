@@ -45,14 +45,14 @@ def format_conversion_prompt(actions: list[dict]) -> str:
 
 def build_analysis_prompt(
     user_input: str,
-    action_history_markdown: str,
+    action_history: str,
     direction_history: list[str],
 ) -> str:
     """Assemble the 5-section analysis prompt. Pure string assembly."""
     sections = [
         wrap_section("role", load_prompt_file("role.md")),
         wrap_section("original-mission", user_input),
-        wrap_section("action-history", action_history_markdown),
+        wrap_section("action-history", action_history),
         wrap_section(
             "parallax-direction-history",
             format_direction_history(direction_history),

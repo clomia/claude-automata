@@ -78,7 +78,7 @@ class TestBuildAnalysisPrompt:
     def test_assembles_all_five_sections(self):
         prompt = build_analysis_prompt(
             user_input="implement auth",
-            action_history_markdown="The agent implemented auth.",
+            action_history="The agent implemented auth.",
             direction_history=["Add validation"],
         )
 
