@@ -1,4 +1,4 @@
-"""Tests for State construction."""
+"""Tests for the state module."""
 
 import json
 from pathlib import Path
@@ -6,10 +6,14 @@ from pathlib import Path
 from src.state import (
     HookInput,
     PluginEnvironment,
+    State,
+    Turn,
     build_state,
     extract_user_input,
+    finish_round,
     load_turn_state,
     parse_turn,
+    save_initial_turn,
     save_turn_state,
 )
 
@@ -69,12 +73,10 @@ class TestHookInput:
 class TestPluginEnvironment:
     def test_construction(self):
         env = PluginEnvironment(
-            src_dir=Path("/plugin/root"),
             data_dir=Path("/plugin/data"),
             is_inside_recursion=False,
             is_disabled=False,
         )
-        assert env.src_dir == Path("/plugin/root")
         assert env.data_dir == Path("/plugin/data")
         assert env.is_inside_recursion is False
         assert env.is_disabled is False
@@ -112,6 +114,70 @@ class TestTurnState:
         save_turn_state(f, {"round": 2, "user_input": "test prompt"})
         data = load_turn_state(f)
         assert data == {"round": 2, "user_input": "test prompt"}
+
+
+# ── finish_round ──
+
+
+class TestFinishRound:
+    def test_increments_round_and_appends_direction(self, tmp_path):
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        save_turn_state(
+            data_dir / "sess1.json",
+            {"round": 0, "user_input": "fix bug", "directions": []},
+        )
+        state = State(
+            hook=HookInput(
+                stop_hook_active=False,
+                last_assistant_message="",
+                session_id="sess1",
+                transcript_path="",
+            ),
+            env=PluginEnvironment(
+                data_dir=data_dir,
+                is_inside_recursion=False,
+                is_disabled=False,
+            ),
+            current_round=0,
+            direction_history=[],
+            turn=Turn(user_input="fix bug", agent_actions=[], agent_model=None),
+        )
+
+        finish_round(state, "Add error handling")
+
+        saved = load_turn_state(data_dir / "sess1.json")
+        assert saved["round"] == 1
+        assert saved["directions"] == ["Add error handling"]
+        assert saved["user_input"] == "fix bug"
+
+    def test_accumulates_directions_across_rounds(self, tmp_path):
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        state = State(
+            hook=HookInput(
+                stop_hook_active=True,
+                last_assistant_message="",
+                session_id="sess1",
+                transcript_path="",
+            ),
+            env=PluginEnvironment(
+                data_dir=data_dir,
+                is_inside_recursion=False,
+                is_disabled=False,
+            ),
+            current_round=2,
+            direction_history=["Add tests", "Handle edge cases"],
+            turn=Turn(
+                user_input="implement feature", agent_actions=[], agent_model=None
+            ),
+        )
+
+        finish_round(state, "Add logging")
+
+        saved = load_turn_state(data_dir / "sess1.json")
+        assert saved["round"] == 3
+        assert saved["directions"] == ["Add tests", "Handle edge cases", "Add logging"]
 
 
 # ── extract_user_input ──
@@ -417,7 +483,7 @@ class TestBuildStateRound1:
         )
         data_dir = tmp_path / "data"
         data_dir.mkdir()
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
 
@@ -431,8 +497,9 @@ class TestBuildStateRound1:
 
         assert state.turn.user_input == "fix the login bug"
         assert state.current_round == 0
+        assert state.direction_history == []
 
-    def test_saves_user_input_to_state_file(self, tmp_path, monkeypatch):
+    def test_save_initial_turn_persists_state(self, tmp_path, monkeypatch):
         t = tmp_path / "transcript.jsonl"
         write_jsonl(
             t,
@@ -443,21 +510,23 @@ class TestBuildStateRound1:
         )
         data_dir = tmp_path / "data"
         data_dir.mkdir()
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
 
-        build_state(
+        state = build_state(
             make_stdin(
                 stop_hook_active=False,
                 session_id="s1",
                 transcript_path=str(t),
             )
         )
+        save_initial_turn(state)
 
         saved = json.loads((data_dir / "s1.json").read_text())
         assert saved["user_input"] == "original prompt"
         assert saved["round"] == 0
+        assert saved["directions"] == []
 
     def test_system_injections_before_prompt_do_not_interfere(
         self, tmp_path, monkeypatch
@@ -487,7 +556,7 @@ class TestBuildStateRound1:
         )
         data_dir = tmp_path / "data"
         data_dir.mkdir()
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
 
@@ -502,9 +571,51 @@ class TestBuildStateRound1:
         assert state.turn.user_input == "now fix the tests"
         assert len(state.turn.agent_actions) == 1
 
+    def test_compaction_before_first_stop_hook(self, tmp_path, monkeypatch):
+        """If compaction happens within a turn before any Stop hook fires,
+        the compaction summary becomes user_input (degraded but no crash).
+        The original prompt text is lost from the transcript but included
+        in the summary."""
+        t = tmp_path / "transcript.jsonl"
+        write_jsonl(
+            t,
+            [
+                {
+                    "role": "user",
+                    "content": "This session is being continued from a previous conversation... the last task was: implement auth",
+                },
+                {
+                    "role": "assistant",
+                    "content": "Continuing.",
+                    "model": "claude-opus-4-6",
+                },
+            ],
+        )
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
+        monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
+
+        state = build_state(
+            make_stdin(
+                stop_hook_active=False,
+                session_id="s1",
+                transcript_path=str(t),
+            )
+        )
+
+        # Compaction summary is the only user(str) → becomes user_input
+        assert "This session is being continued" in state.turn.user_input
+        assert len(state.turn.agent_actions) == 1
+        # save_initial_turn persists for round 2+ recovery
+        save_initial_turn(state)
+        saved = json.loads((data_dir / "s1.json").read_text())
+        assert "This session is being continued" in saved["user_input"]
+
     def test_new_turn_overwrites_previous_state_file(self, tmp_path, monkeypatch):
-        """When a new turn starts (stop_hook_active=False), the state file from
-        the previous turn is overwritten with fresh data."""
+        """When a new turn starts (stop_hook_active=False), save_initial_turn
+        overwrites the stale state file from the previous turn."""
         t = tmp_path / "transcript.jsonl"
         write_jsonl(
             t,
@@ -520,7 +631,7 @@ class TestBuildStateRound1:
             data_dir / "s1.json",
             {"round": 5, "user_input": "old task"},
         )
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
 
@@ -534,6 +645,7 @@ class TestBuildStateRound1:
 
         assert state.current_round == 0
         assert state.turn.user_input == "new task"
+        save_initial_turn(state)
         saved = json.loads((data_dir / "s1.json").read_text())
         assert saved["user_input"] == "new task"
         assert saved["round"] == 0
@@ -563,9 +675,13 @@ class TestBuildStateRound2:
         data_dir.mkdir()
         save_turn_state(
             data_dir / "s1.json",
-            {"round": 1, "user_input": "fix the bug"},
+            {
+                "round": 1,
+                "user_input": "fix the bug",
+                "directions": ["Add error handling"],
+            },
         )
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
 
@@ -579,6 +695,7 @@ class TestBuildStateRound2:
 
         assert state.turn.user_input == "fix the bug"
         assert state.current_round == 1
+        assert state.direction_history == ["Add error handling"]
 
     def test_agent_actions_contains_work_since_last_feedback(
         self, tmp_path, monkeypatch
@@ -614,9 +731,13 @@ class TestBuildStateRound2:
         data_dir.mkdir()
         save_turn_state(
             data_dir / "s1.json",
-            {"round": 1, "user_input": "fix the bug"},
+            {
+                "round": 1,
+                "user_input": "fix the bug",
+                "directions": ["Also add logging"],
+            },
         )
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
 
@@ -659,9 +780,13 @@ class TestBuildStateRound2:
         data_dir.mkdir()
         save_turn_state(
             data_dir / "s1.json",
-            {"round": 2, "user_input": "implement feature"},
+            {
+                "round": 2,
+                "user_input": "implement feature",
+                "directions": ["Add tests", "Handle edge cases"],
+            },
         )
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
 
@@ -675,6 +800,7 @@ class TestBuildStateRound2:
 
         assert state.turn.user_input == "implement feature"
         assert state.current_round == 2
+        assert state.direction_history == ["Add tests", "Handle edge cases"]
         assert len(state.turn.agent_actions) == 1
         assert state.turn.agent_actions[0]["content"] == "Edge cases handled."
 
@@ -697,9 +823,13 @@ class TestBuildStateRound2:
         data_dir.mkdir()
         save_turn_state(
             data_dir / "s1.json",
-            {"round": 1, "user_input": "fix the bug"},
+            {
+                "round": 1,
+                "user_input": "fix the bug",
+                "directions": ["Add validation"],
+            },
         )
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
 
@@ -734,7 +864,6 @@ class TestBuildStateRound2:
         # Old format: no user_input key
         save_turn_state(data_dir / "s1.json", {"round": 1})
 
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
 
@@ -767,7 +896,6 @@ class TestBuildStateRound2:
         data_dir.mkdir()
         (data_dir / "s1.json").write_text("{corrupt")
 
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
 
@@ -791,7 +919,7 @@ class TestBuildStateEnvironment:
     def test_recursion_guard(self, tmp_path, monkeypatch):
         t = tmp_path / "transcript.jsonl"
         write_jsonl(t, [{"role": "user", "content": "hi"}])
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         monkeypatch.setenv("PARALLAX_INSIDE_RECURSION", "1")
 
@@ -804,7 +932,7 @@ class TestBuildStateEnvironment:
         data_dir = tmp_path / "data"
         data_dir.mkdir()
         (data_dir / "disabled").touch()
-        monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(tmp_path))
+
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
 
