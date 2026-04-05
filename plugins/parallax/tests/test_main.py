@@ -193,6 +193,7 @@ class TestRun:
             is_inside_recursion=False,
             is_disabled=False,
             stop_hook_active=False,
+            continuing=False,
             current_round=0,
             direction_history=[],
         )
@@ -209,6 +210,7 @@ class TestRun:
                 is_inside_recursion=defaults["is_inside_recursion"],
                 is_disabled=defaults["is_disabled"],
             ),
+            continuing=defaults["continuing"],
             current_round=defaults["current_round"],
             direction_history=defaults["direction_history"],
             turn=Turn(
@@ -240,7 +242,10 @@ class TestRun:
 
     def test_exits_on_round_limit(self, tmp_path):
         state = self._make_state(
-            tmp_path, stop_hook_active=True, current_round=ROUND_LIMIT
+            tmp_path,
+            stop_hook_active=True,
+            continuing=True,
+            current_round=ROUND_LIMIT,
         )
         with (
             patch("src.main.build_state", return_value=state),
@@ -264,7 +269,9 @@ class TestRun:
         mock_save.assert_called_once_with(state)
 
     def test_skips_save_on_existing_turn(self, tmp_path):
-        state = self._make_state(tmp_path, stop_hook_active=True, current_round=1)
+        state = self._make_state(
+            tmp_path, stop_hook_active=True, continuing=True, current_round=1
+        )
         with (
             patch("src.main.build_state", return_value=state),
             patch("sys.stdin", io.StringIO("")),

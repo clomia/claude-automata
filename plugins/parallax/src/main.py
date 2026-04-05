@@ -81,7 +81,7 @@ def run():
     if state.env.is_inside_recursion or state.env.is_disabled:
         sys.exit(0)
 
-    new_turn = not state.hook.stop_hook_active
+    new_turn = not state.continuing
     if new_turn:
         save_initial_turn(state)
 

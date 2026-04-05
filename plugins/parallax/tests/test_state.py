@@ -1,6 +1,7 @@
 """Tests for the state module."""
 
 import json
+import os
 from pathlib import Path
 
 from src.state import (
@@ -699,7 +700,9 @@ class TestBuildStateRound1:
 
     def test_new_turn_overwrites_previous_state_file(self, tmp_path, monkeypatch):
         """When a new turn starts (stop_hook_active=False), save_initial_turn
-        overwrites the stale state file from the previous turn."""
+        overwrites the stale state file from the previous turn.
+        A real new turn means UserPromptSubmit fired, so the prompt file
+        is newer than the stale state file."""
         t = tmp_path / "transcript.jsonl"
         write_jsonl(
             t,
@@ -710,11 +713,15 @@ class TestBuildStateRound1:
         )
         data_dir = tmp_path / "data"
         data_dir.mkdir()
-        # Stale state file from previous turn
-        save_turn_state(
-            data_dir / "s1.json",
-            {"round": 5, "user_input": "old task"},
-        )
+        # Stale state file from previous turn (mtime = 1000)
+        state_path = data_dir / "s1.json"
+        save_turn_state(state_path, {"round": 5, "user_input": "old task"})
+        os.utime(state_path, (1000, 1000))
+
+        # Prompt file from new turn (mtime = 2000, strictly newer)
+        prompt_path = data_dir / "s1_last_user_prompt.txt"
+        prompt_path.write_text("new task")
+        os.utime(prompt_path, (2000, 2000))
 
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
         monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
@@ -733,6 +740,55 @@ class TestBuildStateRound1:
         saved = json.loads((data_dir / "s1.json").read_text())
         assert saved["user_input"] == "new task"
         assert saved["round"] == 0
+
+    def test_auto_compaction_preserves_round(self, tmp_path, monkeypatch):
+        """After auto-compaction stop_hook_active reverts to False, but the
+        state file (updated by finish_round) is newer than the prompt file
+        (written once at turn start).  build_state must detect this and
+        keep the existing round instead of resetting to 0."""
+        t = tmp_path / "transcript.jsonl"
+        write_jsonl(
+            t,
+            [
+                {"role": "user", "content": "build feature"},
+                {"role": "assistant", "content": "done"},
+            ],
+        )
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+
+        # Prompt file written at turn start (mtime = 1000)
+        prompt_path = data_dir / "s1_last_user_prompt.txt"
+        prompt_path.write_text("build feature")
+        os.utime(prompt_path, (1000, 1000))
+
+        # State file written by finish_round (mtime = 2000, strictly newer)
+        state_path = data_dir / "s1.json"
+        save_turn_state(
+            state_path,
+            {
+                "round": 3,
+                "user_input": "build feature",
+                "directions": ["d1", "d2", "d3"],
+            },
+        )
+        os.utime(state_path, (2000, 2000))
+
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
+        monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
+
+        state = build_state(
+            make_stdin(
+                stop_hook_active=False,
+                session_id="s1",
+                transcript_path=str(t),
+            )
+        )
+
+        assert state.continuing is True
+        assert state.current_round == 3
+        assert len(state.direction_history) == 3
+        assert state.turn.user_input == "build feature"
 
 
 # ── build_state: round 2+ (stop_hook_active=True) ──

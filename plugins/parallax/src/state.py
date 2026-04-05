@@ -51,6 +51,7 @@ class State(BaseModel):
 
     hook: HookInput
     env: PluginEnvironment
+    continuing: bool = False
     current_round: int = 0
     direction_history: list[str] = []
     turn: Turn
@@ -169,11 +170,13 @@ def build_state(stdin_raw: str) -> State:
     """Collect all external inputs and assemble a State. No side effects.
 
     user_input source by round:
-    - Round 1 (stop_hook_active=False): Raw user prompt captured by the
-      UserPromptSubmit hook (capture_user_prompt).  Guaranteed to contain exactly
-      what the user typed, free of skill expansions or system injections.
-    - Round 2+ (stop_hook_active=True): Loaded from persisted state file
-      (saved in round 1).
+    - New turn (continuing=False): Raw user prompt captured by the
+      UserPromptSubmit hook (capture_user_prompt).  Guaranteed to contain
+      exactly what the user typed, free of skill expansions or system
+      injections.
+    - Continuing turn (continuing=True): Loaded from persisted state file.
+      Note: stop_hook_active can revert to False after auto-compaction,
+      so continuing is determined by mtime comparison, not the flag alone.
 
     agent_actions always comes from parse_turn, which naturally scopes to
     work done since the last feedback injection.
@@ -188,10 +191,27 @@ def build_state(stdin_raw: str) -> State:
     )
 
     state_file = env.data_dir / f"{hook.session_id}.json"
+    prompt_file = env.data_dir / f"{hook.session_id}_last_user_prompt.txt"
     turn_state = load_turn_state(state_file)
     turn = parse_turn(hook.transcript_path)
 
-    if hook.stop_hook_active:
+    # stop_hook_active reverts to False after auto-compaction because
+    # Claude Code fires SessionStart(compact), resetting the flag.
+    # Detect this by comparing the prompt file mtime (set once by
+    # UserPromptSubmit at turn start) with the state file mtime
+    # (set by finish_round during the turn).  If the state file is
+    # newer, no new turn actually started — compaction happened.
+    continuing = hook.stop_hook_active
+    if not continuing and turn_state.get("round", 0) > 0:
+        try:
+            prompt_mtime = prompt_file.stat().st_mtime if prompt_file.exists() else 0
+            state_mtime = state_file.stat().st_mtime if state_file.exists() else 0
+        except OSError:
+            prompt_mtime = state_mtime = 0
+        if state_mtime > prompt_mtime:
+            continuing = True
+
+    if continuing:
         current_round = turn_state.get("round", 0)
         direction_history = turn_state.get("directions", [])
         saved_user_input = turn_state.get("user_input")
@@ -204,7 +224,6 @@ def build_state(stdin_raw: str) -> State:
     else:
         current_round = 0
         direction_history = []
-        prompt_file = env.data_dir / f"{hook.session_id}_last_user_prompt.txt"
         captured = load_last_user_prompt(prompt_file)
         if captured is not None:
             turn = Turn(
@@ -216,6 +235,7 @@ def build_state(stdin_raw: str) -> State:
     return State(
         hook=hook,
         env=env,
+        continuing=continuing,
         current_round=current_round,
         direction_history=direction_history,
         turn=turn,
