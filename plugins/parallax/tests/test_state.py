@@ -11,6 +11,7 @@ from src.state import (
     build_state,
     extract_user_input,
     finish_round,
+    load_last_user_prompt,
     load_turn_state,
     parse_turn,
     save_initial_turn,
@@ -114,6 +115,19 @@ class TestTurnState:
         save_turn_state(f, {"round": 2, "user_input": "test prompt"})
         data = load_turn_state(f)
         assert data == {"round": 2, "user_input": "test prompt"}
+
+
+# ── load_last_user_prompt ──
+
+
+class TestLoadLastUserPrompt:
+    def test_returns_content_when_file_exists(self, tmp_path):
+        f = tmp_path / "sess1_last_user_prompt.txt"
+        f.write_text("/commit push")
+        assert load_last_user_prompt(f) == "/commit push"
+
+    def test_returns_none_when_file_missing(self, tmp_path):
+        assert load_last_user_prompt(tmp_path / "nonexistent.txt") is None
 
 
 # ── finish_round ──
@@ -472,7 +486,46 @@ class TestParseTurn:
 
 
 class TestBuildStateRound1:
-    def test_parses_user_input_from_transcript(self, tmp_path, monkeypatch):
+    def test_uses_captured_prompt_over_transcript(self, tmp_path, monkeypatch):
+        """Primary path: UserPromptSubmit hook saved the raw prompt to a file.
+        build_state should use it instead of the transcript-parsed user_input."""
+        t = tmp_path / "transcript.jsonl"
+        write_jsonl(
+            t,
+            [
+                # Transcript has the skill-expanded version
+                {"role": "user", "content": "Full commit guide... 2500 chars..."},
+                {
+                    "role": "assistant",
+                    "content": "Committed.",
+                    "model": "claude-opus-4-6",
+                },
+            ],
+        )
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        # Captured prompt file written by capture_user_prompt hook
+        (data_dir / "s1_last_user_prompt.txt").write_text("/commit push")
+
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
+        monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
+
+        state = build_state(
+            make_stdin(
+                stop_hook_active=False,
+                session_id="s1",
+                transcript_path=str(t),
+            )
+        )
+
+        assert state.turn.user_input == "/commit push"
+        assert state.turn.agent_actions == [
+            {"role": "assistant", "content": "Committed.", "model": "claude-opus-4-6"}
+        ]
+
+    def test_falls_back_to_transcript_without_captured_prompt(
+        self, tmp_path, monkeypatch
+    ):
         t = tmp_path / "transcript.jsonl"
         write_jsonl(
             t,
@@ -528,11 +581,42 @@ class TestBuildStateRound1:
         assert saved["round"] == 0
         assert saved["directions"] == []
 
-    def test_system_injections_before_prompt_do_not_interfere(
+    def test_captured_prompt_persists_through_save_initial_turn(
         self, tmp_path, monkeypatch
     ):
-        """Slash commands, doc injection, compaction summary all come before the
-        real prompt. The last user(str) is always the real prompt in round 1."""
+        """Captured prompt (not transcript) should be what gets saved to the state file."""
+        t = tmp_path / "transcript.jsonl"
+        write_jsonl(
+            t,
+            [
+                {"role": "user", "content": "Expanded skill prompt... very long"},
+                {"role": "assistant", "content": "Done."},
+            ],
+        )
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        (data_dir / "s1_last_user_prompt.txt").write_text("@file.md do the thing")
+
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
+        monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
+
+        state = build_state(
+            make_stdin(
+                stop_hook_active=False,
+                session_id="s1",
+                transcript_path=str(t),
+            )
+        )
+        save_initial_turn(state)
+
+        saved = json.loads((data_dir / "s1.json").read_text())
+        assert saved["user_input"] == "@file.md do the thing"
+
+    def test_fallback_uses_last_user_message_from_transcript(
+        self, tmp_path, monkeypatch
+    ):
+        """Fallback path (no captured prompt file): parse_turn picks the last
+        user(str) message in the transcript as user_input."""
         t = tmp_path / "transcript.jsonl"
         write_jsonl(
             t,

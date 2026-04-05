@@ -85,12 +85,9 @@ def parse_turn(transcript_path: str) -> Turn:
     """Parse transcript JSONL and extract the most recent turn.
 
     Finds the last user message with string content (excluding tool results)
-    and splits the transcript at that point: user_input is the prompt text,
-    agent_actions is everything after it.
-
-    When stop_hook_active is True, the "last user(str)" may be hook feedback
-    rather than the real prompt. The caller (build_state) corrects user_input
-    from the persisted state file in that case.
+    and splits the transcript at that point: agent_actions is everything
+    after it.  user_input from this function is only used as a last resort;
+    build_state prefers the captured prompt (round 1) or state file (round 2+).
     """
     messages: list[dict] = []
     for line in Path(transcript_path).read_text().splitlines():
@@ -122,6 +119,13 @@ def parse_turn(transcript_path: str) -> Turn:
 # ── Turn state persistence ──
 
 
+def load_last_user_prompt(prompt_file: Path) -> str | None:
+    """Load raw user prompt saved by the UserPromptSubmit hook."""
+    if prompt_file.exists():
+        return prompt_file.read_text()
+    return None
+
+
 def load_turn_state(state_file: Path) -> dict:
     """Load persisted turn state from JSON file. Returns empty dict on any failure."""
     if not state_file.exists():
@@ -138,7 +142,7 @@ def save_turn_state(state_file: Path, data: dict) -> None:
 
 
 def save_initial_turn(state: "State") -> None:
-    """Persist user_input and empty directions for round 1. Called by main."""
+    """Persist user_input and empty directions for round 1. Called by run."""
     path = state.env.data_dir / f"{state.hook.session_id}.json"
     save_turn_state(
         path, {"round": 0, "user_input": state.turn.user_input, "directions": []}
@@ -146,7 +150,7 @@ def save_initial_turn(state: "State") -> None:
 
 
 def finish_round(state: "State", new_direction: str) -> None:
-    """Persist round result: increment counter and append direction. Called by main."""
+    """Persist round result: increment counter and append direction. Called by run."""
     path = state.env.data_dir / f"{state.hook.session_id}.json"
     save_turn_state(
         path,
@@ -164,18 +168,15 @@ def finish_round(state: "State", new_direction: str) -> None:
 def build_state(stdin_raw: str) -> State:
     """Collect all external inputs and assemble a State. No side effects.
 
-    Uses stop_hook_active (documented in Hooks Reference) to decide whether
-    to parse user_input from the transcript or load it from the state file:
+    user_input source by round:
+    - Round 1 (stop_hook_active=False): Raw user prompt captured by the
+      UserPromptSubmit hook (capture_user_prompt).  Guaranteed to contain exactly
+      what the user typed, free of skill expansions or system injections.
+    - Round 2+ (stop_hook_active=True): Loaded from persisted state file
+      (saved in round 1).
 
-    - stop_hook_active=False (round 1): No hook feedback exists in the
-      transcript yet, so the last user(str) message is reliably the real
-      prompt. Caller should persist via save_initial_turn().
-
-    - stop_hook_active=True (round 2+): Hook feedback has been injected as
-      a user(str) message, which would be misidentified as the prompt.
-      Instead, user_input is loaded from the state file (saved in round 1).
-      agent_actions naturally contains only the work done since the last
-      feedback, which is the correct scope for each analysis round.
+    agent_actions always comes from parse_turn, which naturally scopes to
+    work done since the last feedback injection.
     """
     hook = HookInput.model_validate_json(stdin_raw)
 
@@ -203,6 +204,14 @@ def build_state(stdin_raw: str) -> State:
     else:
         current_round = 0
         direction_history = []
+        prompt_file = env.data_dir / f"{hook.session_id}_last_user_prompt.txt"
+        captured = load_last_user_prompt(prompt_file)
+        if captured is not None:
+            turn = Turn(
+                user_input=captured,
+                agent_actions=turn.agent_actions,
+                agent_model=turn.agent_model,
+            )
 
     return State(
         hook=hook,

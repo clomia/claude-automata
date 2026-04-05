@@ -1,3 +1,3 @@
-from src.main import main
+from src.main import capture_user_prompt, run
 
-__all__ = ["main"]
+__all__ = ["capture_user_prompt", "run"]

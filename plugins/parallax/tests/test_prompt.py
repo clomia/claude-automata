@@ -30,17 +30,19 @@ class TestWrapSection:
 
 class TestFormatDirectionHistory:
     def test_empty_history(self):
-        result = format_direction_history([])
-        assert "이전에 제시한 방향 없음" in result
+        assert format_direction_history([]) == "No prior directions."
 
     def test_single_direction(self):
         result = format_direction_history(["Add error handling"])
-        assert "라운드 1: Add error handling" in result
+        assert result == "<direction-1>\n\nAdd error handling\n\n</direction-1>"
 
     def test_multiple_directions(self):
         result = format_direction_history(["Add tests", "Handle edge cases"])
-        assert "라운드 1: Add tests" in result
-        assert "라운드 2: Handle edge cases" in result
+        assert result == (
+            "<direction-1>\n\nAdd tests\n\n</direction-1>"
+            "\n\n"
+            "<direction-2>\n\nHandle edge cases\n\n</direction-2>"
+        )
 
 
 # ── Prompt constants ──
@@ -67,7 +69,7 @@ class TestFormatConversionPrompt:
 
     def test_includes_instruction_text(self):
         prompt = format_conversion_prompt([])
-        assert "마크다운 문서를 작성하세요" in prompt
+        assert "Produce a markdown document" in prompt
 
     def test_wraps_json_in_action_record_tag(self):
         prompt = format_conversion_prompt([])
@@ -93,7 +95,8 @@ class TestBuildAnalysisPrompt:
         assert "<action-history>" in prompt
         assert "The agent implemented auth." in prompt
         assert "<parallax-direction-history>" in prompt
-        assert "라운드 1: Add validation" in prompt
+        assert "<direction-1>" in prompt
+        assert "Add validation" in prompt
         assert "<instructions>" in prompt
         assert "지시사항" in prompt
 
@@ -110,4 +113,4 @@ class TestBuildAnalysisPrompt:
 
     def test_empty_direction_history(self):
         prompt = build_analysis_prompt("input", "actions", [])
-        assert "이전에 제시한 방향 없음" in prompt
+        assert "No prior directions." in prompt

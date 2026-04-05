@@ -1,4 +1,4 @@
-"""parallax — Stop hook that injects unexplored directions into the session.
+"""parallax — Stop hook that injects unexplored directions into the turn.
 
 On each LLM stop:
 1) Manage round counter (prevent runaway loops)
@@ -10,6 +10,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 from src.prompt import build_analysis_prompt, format_conversion_prompt
 from src.state import ROUND_LIMIT, build_state, finish_round, save_initial_turn
@@ -60,10 +61,11 @@ def convert_actions_to_markdown(actions: list[dict], model: str | None) -> str:
     return result or json.dumps(actions, ensure_ascii=False, indent=2)
 
 
-# ── Execution flow ──
+# ── Entry points ──
 
 
-def main():
+def run():
+    """Stop hook entry point. Analyzes agent work and injects unexplored directions."""
     state = build_state(sys.stdin.read())
 
     if state.env.is_inside_recursion or state.env.is_disabled:
@@ -93,5 +95,20 @@ def main():
     sys.exit(2)
 
 
+def capture_user_prompt():
+    """UserPromptSubmit hook entry point.
+
+    Persists the raw user input to a file that the Stop hook reads later.
+    This guarantees original-mission contains exactly what the user typed,
+    regardless of skill expansions or system message injections.
+    """
+    data = json.loads(sys.stdin.read())
+    prompt_file = (
+        Path(os.environ["CLAUDE_PLUGIN_DATA"])
+        / f"{data['session_id']}_last_user_prompt.txt"
+    )
+    prompt_file.write_text(data.get("prompt", ""))
+
+
 if __name__ == "__main__":
-    main()
+    run()
