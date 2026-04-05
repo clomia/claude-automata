@@ -50,11 +50,10 @@ class TestFormatDirectionHistory:
 
 class TestPromptConstants:
     def test_role_prompt_loaded(self):
-        assert "parallax" in ROLE_PROMPT
-        assert "# 역할" in ROLE_PROMPT
+        assert "advisory agent" in ROLE_PROMPT
+        assert "# Background" in ROLE_PROMPT
 
     def test_instruction_prompt_loaded(self):
-        assert "# 지시사항" in INSTRUCTION_PROMPT
         assert "`null`" in INSTRUCTION_PROMPT
 
 

@@ -21,5 +21,5 @@ LLM은 토큰을 생성할수록 이전 출력이 이후 탐색을 제약하여 
 이 프롬프트는 다음 섹션으로 구성됩니다:
 
 - **original-mission**: 사용자가 메인 에이전트에게 부여하여 이 턴을 시작시킨 원본 미션.
-- **action-history**: 직전 라운드에서 메인 에이전트가 수행한 작업 내역.
+- **action-history**: 마지막 parallax-direction(첫 라운드에서는 original-mission)에 대한 메인 에이전트의 액션.
 - **parallax-direction-history**: 이 턴에서 자문 에이전트가 제시했던 모든 방향들.
