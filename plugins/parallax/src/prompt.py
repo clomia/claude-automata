@@ -32,9 +32,9 @@ def wrap_section(tag: str, content: str) -> str:
 def format_direction_history(direction_history: list[str]) -> str:
     """Format previous parallax directions for the <parallax-direction-history> section."""
     if not direction_history:
-        return "이번 턴에서 이전에 제시한 방향 없음."
-    return "\n".join(
-        f"- 라운드 {i + 1}: {direction}"
+        return "No prior directions."
+    return "\n\n".join(
+        f"<direction-{i + 1}>\n\n{direction}\n\n</direction-{i + 1}>"
         for i, direction in enumerate(direction_history)
     )
 
