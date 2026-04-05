@@ -1,5 +1,16 @@
 {
 	"hooks": {
+		"UserPromptSubmit": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "python3 -c \"import json,sys,os; d=json.load(sys.stdin); p=os.path.join(os.environ.get('CLAUDE_PROJECT_DIR','/tmp'),'poc_prompt.json'); open(p,'w').write(json.dumps(d,ensure_ascii=False,indent=2))\"",
+						"timeout": 5
+					}
+				]
+			}
+		],
 		"PostToolUse": [
 			{
 				"matcher": "Edit|Write",
