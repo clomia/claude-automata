@@ -10,7 +10,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-ROUND_LIMIT = 15
+ROUND_LIMIT = 30
 
 
 # ── Input models ──

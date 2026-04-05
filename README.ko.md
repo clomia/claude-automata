@@ -14,7 +14,7 @@
 
 ## Plugin - parallax
 
-> 세부 지시사항을 
+> 복잡한 작업을 위한 지능 부스터
 
 LLM은 입력이 활성화한 representation space를 기점으로 토큰을 생성하며, 토큰을 생성할수록 이전 출력이 이후 탐색을 제약하여 탐색 범위가 축소되는 경향이 있습니다. 따라서 모델이 자발적으로 도달하기 어려운 영역을 탐색하려면, 새로운 영역을 활성화하는 입력이 필요합니다.
 
@@ -28,6 +28,7 @@ parallax는 모델이 자발적으로 도달하기 어려운 영역에 도달할
 /plugin install parallax@claude-automata
 ```
 
-- `/parallax off` — 비활성화
+- `/parallax` — 활성화 여부 확인
 - `/parallax on` — 활성화
-- `/parallax` — 현재 상태 확인
+- `/parallax off` — 비활성화
+- `/parallax log` — 디버깅용 로그

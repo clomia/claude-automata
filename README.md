@@ -14,6 +14,8 @@ A system that amplifies Claude Code's autonomy.
 
 ## Plugin - parallax
 
+> Intelligence booster for complex tasks
+
 LLMs generate tokens starting from the representation space activated by their input, and as generation proceeds, prior outputs tend to constrain subsequent exploration, narrowing the exploration scope. Exploring regions the model cannot spontaneously reach therefore requires input that activates new regions.
 
 This is one of the factors that cause people using Claude Code to be dissatisfied with single-turn output and iterate across multiple turns.
@@ -26,6 +28,7 @@ parallax generates and injects input that activates new regions, enabling the mo
 /plugin install parallax@claude-automata
 ```
 
-- `/parallax off` — disable
+- `/parallax` — check activation status
 - `/parallax on` — enable
-- `/parallax` — check current status
+- `/parallax off` — disable
+- `/parallax log` — debugging log
