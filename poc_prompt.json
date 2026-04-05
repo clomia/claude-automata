@@ -1,8 +1,0 @@
-{
-  "session_id": "5ea14287-9b9a-4a0d-8824-9b798d3b0590",
-  "transcript_path": "/Users/clomia/.claude/projects/-Users-clomia-projects-claude-automata/5ea14287-9b9a-4a0d-8824-9b798d3b0590.jsonl",
-  "cwd": "/Users/clomia/projects/claude-automata",
-  "permission_mode": "default",
-  "hook_event_name": "UserPromptSubmit",
-  "prompt": "/commit push"
-}
