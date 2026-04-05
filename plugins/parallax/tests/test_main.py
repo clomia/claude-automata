@@ -12,6 +12,7 @@ from src.main import (
     convert_actions_to_markdown,
     invoke_claude,
     run,
+    skill,
     write_log,
 )
 from src.state import ROUND_LIMIT, HookInput, PluginEnvironment, State, Turn
@@ -188,7 +189,7 @@ class TestWriteLog:
 
 
 class TestRun:
-    def _make_state(self, tmp_path, **overrides):
+    def _make_state(self, tmp_path, *, user_input="fix bug", **overrides):
         defaults = dict(
             is_inside_recursion=False,
             is_disabled=False,
@@ -214,7 +215,7 @@ class TestRun:
             current_round=defaults["current_round"],
             direction_history=defaults["direction_history"],
             turn=Turn(
-                user_input="fix bug",
+                user_input=user_input,
                 agent_actions=[],
                 agent_model="claude-opus-4-6",
             ),
@@ -325,3 +326,90 @@ class TestRun:
         assert exc.value.code == 2
         mock_stderr.write.assert_called_once_with("Add error handling")
         mock_finish.assert_called_once_with(state, "Add error handling")
+
+    @pytest.mark.parametrize(
+        "user_input",
+        ["/parallax", "/parallax on", "/parallax off", "/parallax log"],
+    )
+    def test_exits_on_self_command(self, tmp_path, user_input):
+        state = self._make_state(tmp_path, user_input=user_input)
+        with (
+            patch("src.main.build_state", return_value=state),
+            patch("sys.stdin", io.StringIO("")),
+            pytest.raises(SystemExit) as exc,
+        ):
+            run()
+        assert exc.value.code == 0
+
+
+# ── skill ──
+
+
+class TestSkill:
+    def test_on_removes_disabled_file(self, tmp_path, monkeypatch, capsys):
+        disabled = tmp_path / "disabled"
+        disabled.touch()
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr("sys.argv", ["parallax-skill", "on"])
+
+        skill()
+
+        assert not disabled.exists()
+        assert capsys.readouterr().out.strip() == "parallax: on"
+
+    def test_on_noop_when_already_enabled(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr("sys.argv", ["parallax-skill", "on"])
+
+        skill()
+
+        assert not (tmp_path / "disabled").exists()
+        assert capsys.readouterr().out.strip() == "parallax: on"
+
+    def test_off_creates_disabled_file(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr("sys.argv", ["parallax-skill", "off"])
+
+        skill()
+
+        assert (tmp_path / "disabled").exists()
+        assert capsys.readouterr().out.strip() == "parallax: off"
+
+    def test_log_shows_path_when_exists(self, tmp_path, monkeypatch, capsys):
+        log_file = tmp_path / "sess1_parallax.log"
+        log_file.write_text("log content")
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setenv("CLAUDE_SESSION_ID", "sess1")
+        monkeypatch.setattr("sys.argv", ["parallax-skill", "log"])
+
+        skill()
+
+        out = capsys.readouterr().out
+        assert str(log_file) in out
+        assert "analysis prompts and directions" in out
+
+    def test_log_shows_not_run_when_missing(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setenv("CLAUDE_SESSION_ID", "sess1")
+        monkeypatch.setattr("sys.argv", ["parallax-skill", "log"])
+
+        skill()
+
+        assert "has not run in this session yet" in capsys.readouterr().out
+
+    def test_no_args_reports_on(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr("sys.argv", ["parallax-skill"])
+
+        skill()
+
+        assert capsys.readouterr().out.strip() == "parallax: on"
+
+    def test_no_args_reports_off(self, tmp_path, monkeypatch, capsys):
+        (tmp_path / "disabled").touch()
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr("sys.argv", ["parallax-skill"])
+
+        skill()
+
+        assert capsys.readouterr().out.strip() == "parallax: off"
