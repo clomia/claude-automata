@@ -32,7 +32,6 @@ class PluginEnvironment(BaseModel):
 
     data_dir: Path
     is_inside_recursion: bool
-    is_disabled: bool
 
 
 class Turn(BaseModel):
@@ -187,7 +186,6 @@ def build_state(stdin_raw: str) -> State:
     env = PluginEnvironment(
         data_dir=data_dir,
         is_inside_recursion=os.environ.get("PARALLAX_INSIDE_RECURSION") == "1",
-        is_disabled=(data_dir / "disabled").exists(),
     )
 
     state_file = env.data_dir / f"{hook.session_id}.json"

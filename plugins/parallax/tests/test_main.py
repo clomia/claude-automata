@@ -201,7 +201,6 @@ class TestRun:
     def _make_state(self, tmp_path, *, user_input="fix bug", **overrides):
         defaults = dict(
             is_inside_recursion=False,
-            is_disabled=False,
             stop_hook_active=False,
             continuing=False,
             current_round=0,
@@ -218,7 +217,6 @@ class TestRun:
             env=PluginEnvironment(
                 data_dir=tmp_path,
                 is_inside_recursion=defaults["is_inside_recursion"],
-                is_disabled=defaults["is_disabled"],
             ),
             continuing=defaults["continuing"],
             current_round=defaults["current_round"],
@@ -232,16 +230,6 @@ class TestRun:
 
     def test_exits_on_recursion(self, tmp_path):
         state = self._make_state(tmp_path, is_inside_recursion=True)
-        with (
-            patch("src.main.build_state", return_value=state),
-            patch("sys.stdin", io.StringIO("")),
-            pytest.raises(SystemExit) as exc,
-        ):
-            run()
-        assert exc.value.code == 0
-
-    def test_exits_on_disabled(self, tmp_path):
-        state = self._make_state(tmp_path, is_disabled=True)
         with (
             patch("src.main.build_state", return_value=state),
             patch("sys.stdin", io.StringIO("")),
@@ -338,7 +326,7 @@ class TestRun:
 
     @pytest.mark.parametrize(
         "user_input",
-        ["/parallax", "/parallax on", "/parallax off", "/parallax log"],
+        ["/parallax-log"],
     )
     def test_exits_on_self_command(self, tmp_path, user_input):
         state = self._make_state(tmp_path, user_input=user_input)

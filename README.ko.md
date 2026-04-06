@@ -14,7 +14,8 @@ claude plugin marketplace add clomia/claude-automata
 
 ## Plugin - parallax
 
-> 복잡한 작업을 위한 지능 부스터
+> **복잡한 작업을 위한 지능 부스터**  
+> 이 플러그인은 클로드 코드가 멈추지 않고 완벽히 끝내도록 만듭니다.
 
 LLM은 입력이 활성화한 representation space를 기점으로 토큰을 생성하며, 토큰을 생성할수록 이전 출력이 이후 탐색을 제약하여 탐색 범위가 축소되는 경향이 있습니다. 따라서 모델이 자발적으로 도달하기 어려운 영역을 탐색하려면, 새로운 영역을 활성화하는 입력이 필요합니다.
 
@@ -26,8 +27,10 @@ parallax는 모델이 자발적으로 도달하기 어려운 영역에 도달할
 
 ```
 claude plugin install parallax@claude-automata
-claude plugin uninstall parallax@claude-automata # 제거
 ```
+
+> Update: `claude plugin update parallax@claude-automata`  
+> Uninstall: `claude plugin uninstall parallax@claude-automata`
 
 - `/parallax` — 활성화 여부 확인
 - `/parallax on` — 활성화

@@ -82,11 +82,11 @@ def run():
     """Stop hook entry point. Analyzes agent work and injects unexplored directions."""
     state = build_state(sys.stdin.read())
 
-    if state.env.is_inside_recursion or state.env.is_disabled:
+    if state.env.is_inside_recursion:
         sys.exit(0)
 
-    # Skip analysis when the user prompt is a /parallax skill command
-    if state.turn.user_input.lstrip().startswith("/parallax"):
+    # Skip analysis when the user prompt is a /parallax-log skill command
+    if state.turn.user_input.lstrip().startswith("/parallax-log"):
         sys.exit(0)
 
     new_turn = not state.continuing

@@ -77,11 +77,9 @@ class TestPluginEnvironment:
         env = PluginEnvironment(
             data_dir=Path("/plugin/data"),
             is_inside_recursion=False,
-            is_disabled=False,
         )
         assert env.data_dir == Path("/plugin/data")
         assert env.is_inside_recursion is False
-        assert env.is_disabled is False
 
 
 # ── Turn state persistence ──
@@ -152,7 +150,6 @@ class TestFinishRound:
             env=PluginEnvironment(
                 data_dir=data_dir,
                 is_inside_recursion=False,
-                is_disabled=False,
             ),
             current_round=0,
             direction_history=[],
@@ -179,7 +176,6 @@ class TestFinishRound:
             env=PluginEnvironment(
                 data_dir=data_dir,
                 is_inside_recursion=False,
-                is_disabled=False,
             ),
             current_round=2,
             direction_history=["Add tests", "Handle edge cases"],
@@ -1066,15 +1062,3 @@ class TestBuildStateEnvironment:
         state = build_state(make_stdin(transcript_path=str(t)))
         assert state.env.is_inside_recursion is True
 
-    def test_disabled_flag(self, tmp_path, monkeypatch):
-        t = tmp_path / "transcript.jsonl"
-        write_jsonl(t, [{"role": "user", "content": "hi"}])
-        data_dir = tmp_path / "data"
-        data_dir.mkdir()
-        (data_dir / "disabled").touch()
-
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
-        monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
-
-        state = build_state(make_stdin(transcript_path=str(t)))
-        assert state.env.is_disabled is True

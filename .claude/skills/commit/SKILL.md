@@ -2,6 +2,7 @@
 name: commit
 description: 전체 변경사항을 git commit 합니다. (push 인수로 push까지 수행)
 disable-model-invocation: true
+model: haiku
 argument-hint: "[push]"
 ---
 
