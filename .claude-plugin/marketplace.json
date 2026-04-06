@@ -12,7 +12,11 @@
       "name": "parallax",
       "source": "./plugins/parallax",
       "description": "Finds and injects directions beyond the model's narrowing focus",
-      "version": "0.1.0"
+      "version": "0.1.0",
+      "author": {
+        "name": "clomia",
+        "email": "clomia.sig@gmail.com"
+      }
     }
   ]
 }
