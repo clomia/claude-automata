@@ -7,7 +7,6 @@ dependencies = ["pydantic>=2.12.5"]
 [project.scripts]
 parallax = "src.main:run"
 parallax-capture-user-prompt = "src.main:capture_user_prompt"
-parallax-skill = "src.main:skill"
 
 [build-system]
 requires = ["uv_build>=0.11.0,<0.12.0"]

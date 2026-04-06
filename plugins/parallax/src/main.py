@@ -120,35 +120,6 @@ def run():
     sys.exit(2)
 
 
-def skill():
-    """Slash-command entry point for /parallax [on|off|log]. Deterministic."""
-    data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
-    session_id = os.environ.get("CLAUDE_SESSION_ID", "")
-    disabled_file = data_dir / "disabled"
-
-    arg = sys.argv[1].lower() if len(sys.argv) > 1 else ""
-
-    if arg == "on":
-        disabled_file.unlink(missing_ok=True)
-        print("parallax: on")
-    elif arg == "off":
-        disabled_file.touch()
-        print("parallax: off")
-    elif arg == "log":
-        log_file = data_dir / f"{session_id}_parallax.log"
-        if log_file.exists():
-            print(f"parallax log: {log_file}")
-            print(
-                "This file contains the analysis prompts and directions"
-                " from the latest turn, including all rounds."
-            )
-        else:
-            print("parallax has not run in this session yet.")
-    else:
-        status = "off" if disabled_file.exists() else "on"
-        print(f"parallax: {status}")
-
-
 def capture_user_prompt():
     """UserPromptSubmit hook entry point.
 

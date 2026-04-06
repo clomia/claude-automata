@@ -12,7 +12,6 @@ from src.main import (
     convert_actions_to_markdown,
     invoke_claude,
     run,
-    skill,
     write_log,
 )
 from src.state import ROUND_LIMIT, HookInput, PluginEnvironment, State, Turn
@@ -340,76 +339,3 @@ class TestRun:
         ):
             run()
         assert exc.value.code == 0
-
-
-# ── skill ──
-
-
-class TestSkill:
-    def test_on_removes_disabled_file(self, tmp_path, monkeypatch, capsys):
-        disabled = tmp_path / "disabled"
-        disabled.touch()
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        monkeypatch.setattr("sys.argv", ["parallax-skill", "on"])
-
-        skill()
-
-        assert not disabled.exists()
-        assert capsys.readouterr().out.strip() == "parallax: on"
-
-    def test_on_noop_when_already_enabled(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        monkeypatch.setattr("sys.argv", ["parallax-skill", "on"])
-
-        skill()
-
-        assert not (tmp_path / "disabled").exists()
-        assert capsys.readouterr().out.strip() == "parallax: on"
-
-    def test_off_creates_disabled_file(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        monkeypatch.setattr("sys.argv", ["parallax-skill", "off"])
-
-        skill()
-
-        assert (tmp_path / "disabled").exists()
-        assert capsys.readouterr().out.strip() == "parallax: off"
-
-    def test_log_shows_path_when_exists(self, tmp_path, monkeypatch, capsys):
-        log_file = tmp_path / "sess1_parallax.log"
-        log_file.write_text("log content")
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        monkeypatch.setenv("CLAUDE_SESSION_ID", "sess1")
-        monkeypatch.setattr("sys.argv", ["parallax-skill", "log"])
-
-        skill()
-
-        out = capsys.readouterr().out
-        assert str(log_file) in out
-        assert "analysis prompts and directions" in out
-
-    def test_log_shows_not_run_when_missing(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        monkeypatch.setenv("CLAUDE_SESSION_ID", "sess1")
-        monkeypatch.setattr("sys.argv", ["parallax-skill", "log"])
-
-        skill()
-
-        assert "has not run in this session yet" in capsys.readouterr().out
-
-    def test_no_args_reports_on(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        monkeypatch.setattr("sys.argv", ["parallax-skill"])
-
-        skill()
-
-        assert capsys.readouterr().out.strip() == "parallax: on"
-
-    def test_no_args_reports_off(self, tmp_path, monkeypatch, capsys):
-        (tmp_path / "disabled").touch()
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        monkeypatch.setattr("sys.argv", ["parallax-skill"])
-
-        skill()
-
-        assert capsys.readouterr().out.strip() == "parallax: off"
