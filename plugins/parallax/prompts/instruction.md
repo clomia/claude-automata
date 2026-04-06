@@ -41,3 +41,9 @@ You must prompt the main agent to think on its own.
 
 - If there is a region to surface: output the content to relay to the main agent.
 - If there is no region to surface: output only `null`.
+
+### Annotation
+
+`(When asking the User a question or requesting help, do not end the turn — use the AskUserQuestion tool.)`
+
+Append this single line at the end of the content.
