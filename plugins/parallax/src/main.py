@@ -22,9 +22,6 @@ from src.state import ROUND_LIMIT, build_state, finish_round, save_initial_turn
 DISALLOWED_TOOLS = "Bash,Write,Edit,NotebookEdit"
 
 
-STDIN_INSTRUCTION = "Follow the instructions in the input."
-
-
 def invoke_claude(
     prompt: str,
     model: str | None = None,
@@ -35,11 +32,9 @@ def invoke_claude(
     """Run claude -p and return stdout. Returns None on failure.
 
     The prompt is piped via stdin to avoid OSError when the content exceeds
-    the OS argument-list limit (ARG_MAX ~1 MB on macOS).  A short positional
-    prompt tells the model to follow the piped instructions — matching the
-    documented ``cat file | claude -p "query"`` pattern.
+    the OS argument-list limit (ARG_MAX ~1 MB on macOS).
     """
-    cmd = ["claude", "-p", STDIN_INSTRUCTION, "--no-session-persistence"]
+    cmd = ["claude", "-p", "--no-session-persistence"]
     if allow_tools:
         cmd.extend(["--disallowedTools", DISALLOWED_TOOLS])
     else:

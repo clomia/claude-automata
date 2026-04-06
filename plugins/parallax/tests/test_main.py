@@ -42,7 +42,6 @@ class TestInvokeClaude:
             assert mock_run.call_args[1]["input"] == "my prompt text"
             cmd = mock_run.call_args[0][0]
             assert "my prompt text" not in cmd
-            assert "Follow the instructions in the input." in cmd
 
     def test_returns_none_on_failure(self):
         mock_result = subprocess.CompletedProcess(
