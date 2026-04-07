@@ -4,23 +4,11 @@ English | [한국어](README.ko.md)
 
 Plugins that amplify Claude Code's autonomy.
 
-## Installation
+## Getting Started
 
-**[`uv` is required.](https://docs.astral.sh/uv/getting-started/installation/)**
+**[`uv` is required. Install it if you don't have it.](https://docs.astral.sh/uv/getting-started/installation/)**
 
-```
-claude plugin marketplace add clomia/claude-automata
-```
-
-## Commands
-
-> To use in local scope, add the `--scope local` option to the command.
-
-- Install plugin: `claude plugin install {plugin}@claude-automata`
-- Update plugin: `claude plugin update {plugin}@claude-automata`
-- Enable plugin: `claude plugin enable {plugin}@claude-automata`
-- Disable plugin: `claude plugin disable {plugin}@claude-automata`
-- Uninstall plugin: `claude plugin uninstall {plugin}@claude-automata`
+Add this repository to the marketplace: `claude plugin marketplace add clomia/claude-automata`
 
 # Parallax
 
@@ -46,3 +34,13 @@ claude plugin install parallax@claude-automata
 > Example: Make a tic-tac-toe game in HTML. parallaxthink
 
 Use the `/parallax-log` command to view the most recent parallax log.
+
+# Appendix: Plugin Management Commands
+
+> To use in local scope, add the `--scope local` option to the command.
+
+- Install plugin: `claude plugin install {plugin}@claude-automata`
+- Update plugin: `claude plugin update {plugin}@claude-automata`
+- Enable plugin: `claude plugin enable {plugin}@claude-automata`
+- Disable plugin: `claude plugin disable {plugin}@claude-automata`
+- Uninstall plugin: `claude plugin uninstall {plugin}@claude-automata`

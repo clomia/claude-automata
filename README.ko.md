@@ -4,23 +4,11 @@
 
 클로드 코드의 자율성을 증폭시키는 플러그인들
 
-## Installation
+## Getting Started
 
-**[`uv` 가 설치되어 있어야 합니다.](https://docs.astral.sh/uv/getting-started/installation/)**
+**[`uv`가 필요합니다. 없다면 설치하세요.](https://docs.astral.sh/uv/getting-started/installation/)**
 
-```
-claude plugin marketplace add clomia/claude-automata
-```
-
-## Commands
-
-> 커멘드에 `--scope local` 옵션을 추가하면 로컬 스코프로 동작합니다.
-
-- 플러그인 설치: `claude plugin install {plugin}@claude-automata`
-- 플러그인 업데이트: `claude plugin update {plugin}@claude-automata`
-- 플러그인 활성화: `claude plugin enable {plugin}@claude-automata`
-- 플러그인 비활성화: `claude plugin disable {plugin}@claude-automata`
-- 플러그인 삭제: `claude plugin uninstall {plugin}@claude-automata`
+이 레포지토리를 마켓플레이스에 추가하세요: `claude plugin marketplace add clomia/claude-automata`
 
 # Parallax
 
@@ -46,3 +34,13 @@ claude plugin install parallax@claude-automata
 > 예시: HTML로 틱택토 게임 만들어줘. parallaxthink
 
 `/parallax-log` 커멘드로 직전에 실행된 로그를 확인할 수 있습니다.
+
+# Appendix: Plugin Management Commands
+
+> 커멘드에 `--scope local` 옵션을 추가하면 로컬 스코프로 동작합니다.
+
+- 플러그인 설치: `claude plugin install {plugin}@claude-automata`
+- 플러그인 업데이트: `claude plugin update {plugin}@claude-automata`
+- 플러그인 활성화: `claude plugin enable {plugin}@claude-automata`
+- 플러그인 비활성화: `claude plugin disable {plugin}@claude-automata`
+- 플러그인 삭제: `claude plugin uninstall {plugin}@claude-automata`
