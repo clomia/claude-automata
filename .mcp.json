@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mermaid-mcp": {
+      "url": "https://mcp.mermaid.ai/mcp",
+      "type": "http"
+    }
+  }
+}

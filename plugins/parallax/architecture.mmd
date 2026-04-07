@@ -1,0 +1,58 @@
+sequenceDiagram
+    autonumber
+
+    actor U as User
+    participant HC as Hooks
+    participant MA as Main Context
+    box rgba(200, 150, 255, 0.08) Parallax
+    participant PX as Orchestrator
+    participant SS as State Store
+    participant CV as Narrator Context
+    participant AA as Advisor Context
+    end
+
+    U->>HC: Prompt containing parallaxthink
+
+    rect rgba(255, 220, 100, 0.12)
+    Note over HC,SS: UserPromptSubmit Hook
+    HC->>SS: Save raw user prompt and activation marker
+    end
+
+    HC->>+MA: Forward user prompt
+    MA-->>-HC: Turn complete
+
+    loop Stop Hook (max 30 rounds)
+        HC->>PX: Main agent stopped
+        PX->>SS: Load session state
+        SS-->>PX: User input and region history and round counter
+
+        rect rgba(200, 150, 255, 0.12)
+        Note over PX,CV: Narrate agent work as readable document
+        PX->>SS: Save current round actions as temp file
+        PX->>+CV: Narrate action records as markdown
+        CV->>SS: Read temp file
+        SS-->>CV: Agent action records (JSON)
+        CV-->>-PX: Markdown narrative
+        PX->>SS: Delete temp file
+        end
+
+        rect rgba(255, 200, 100, 0.12)
+        Note over PX,AA: Find unexplored regions
+        PX->>+AA: Analysis prompt
+        AA-->>-PX: New region or null
+        end
+
+        PX->>SS: Log analysis results
+
+        alt No unexplored region remains
+            PX-->>HC: Allow agent to stop
+        else Unexplored region found
+            PX->>SS: Persist region to history
+            PX-->>HC: Inject region as feedback
+            HC->>+MA: Deliver surfaced region
+            Note right of MA: Context persists and grows
+            MA-->>-HC: Turn complete
+        end
+    end
+
+    HC-->>U: Final result delivered
