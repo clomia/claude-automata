@@ -7,7 +7,7 @@ from src.prompt import (
     ROLE_PROMPT,
     build_analysis_prompt,
     format_conversion_prompt,
-    format_direction_history,
+    format_region_history,
     wrap_section,
 )
 
@@ -25,23 +25,23 @@ class TestWrapSection:
         assert result == "<tag>\n\n\n\n</tag>"
 
 
-# ── format_direction_history ──
+# ── format_region_history ──
 
 
-class TestFormatDirectionHistory:
+class TestFormatRegionHistory:
     def test_empty_history(self):
-        assert format_direction_history([]) == "No prior directions."
+        assert format_region_history([]) == "No prior regions."
 
-    def test_single_direction(self):
-        result = format_direction_history(["Add error handling"])
-        assert result == "<direction-1>\n\nAdd error handling\n\n</direction-1>"
+    def test_single_region(self):
+        result = format_region_history(["Add error handling"])
+        assert result == "<region-1>\n\nAdd error handling\n\n</region-1>"
 
-    def test_multiple_directions(self):
-        result = format_direction_history(["Add tests", "Handle edge cases"])
+    def test_multiple_regions(self):
+        result = format_region_history(["Add tests", "Handle edge cases"])
         assert result == (
-            "<direction-1>\n\nAdd tests\n\n</direction-1>"
+            "<region-1>\n\nAdd tests\n\n</region-1>"
             "\n\n"
-            "<direction-2>\n\nHandle edge cases\n\n</direction-2>"
+            "<region-2>\n\nHandle edge cases\n\n</region-2>"
         )
 
 
@@ -84,7 +84,7 @@ class TestBuildAnalysisPrompt:
         prompt = build_analysis_prompt(
             user_input="implement auth",
             action_history="The agent implemented auth.",
-            direction_history=["Add validation"],
+            region_history=["Add validation"],
         )
 
         assert "<role>" in prompt
@@ -93,8 +93,8 @@ class TestBuildAnalysisPrompt:
         assert "implement auth" in prompt
         assert "<action-history>" in prompt
         assert "The agent implemented auth." in prompt
-        assert "<parallax-direction-history>" in prompt
-        assert "<direction-1>" in prompt
+        assert "<parallax-region-history>" in prompt
+        assert "<region-1>" in prompt
         assert "Add validation" in prompt
         assert "<instructions>" in prompt
         assert "Find and surface regions" in prompt
@@ -105,11 +105,11 @@ class TestBuildAnalysisPrompt:
         role_pos = prompt.index("<role>")
         mission_pos = prompt.index("<original-mission>")
         action_pos = prompt.index("<action-history>")
-        history_pos = prompt.index("<parallax-direction-history>")
+        history_pos = prompt.index("<parallax-region-history>")
         instr_pos = prompt.index("<instructions>")
 
         assert role_pos < mission_pos < action_pos < history_pos < instr_pos
 
-    def test_empty_direction_history(self):
+    def test_empty_region_history(self):
         prompt = build_analysis_prompt("input", "actions", [])
-        assert "No prior directions." in prompt
+        assert "No prior regions." in prompt

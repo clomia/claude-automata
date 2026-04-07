@@ -22,5 +22,5 @@ You are invoked at the end of each round to analyze progress.
 This prompt consists of the following sections:
 
 - **original-mission**: The original mission the user assigned to the main agent, which initiated this turn.
-- **action-history**: The main agent's actions in response to the last parallax-direction (or the original-mission in the first round).
-- **parallax-direction-history**: All directions the advisory agent has surfaced during this turn.
+- **action-history**: The main agent's actions in response to the last parallax-region (or the original-mission in the first round).
+- **parallax-region-history**: All regions the advisory agent has surfaced during this turn.

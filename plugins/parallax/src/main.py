@@ -1,9 +1,9 @@
-"""parallax — Stop hook that injects unexplored directions into the turn.
+"""parallax — Stop hook that injects unexplored regions into the turn.
 
 On each LLM stop:
 1) Manage round counter (prevent runaway loops)
 2) Review output via separate claude -p call (isolated context)
-3) Block + inject direction if unexplored paths remain, or allow stop
+3) Block + inject region if unexplored paths remain, or allow stop
 """
 
 import json
@@ -66,10 +66,11 @@ def convert_actions_to_markdown(actions: list[dict], model: str | None) -> str:
 def write_log(log_file: Path, round_number: int, *, new_turn: bool, **sections: str):
     """Append a round's log to the session log file. Overwrites on new turn."""
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    header = f"# Round {round_number} — {timestamp}\n\n"
+    header = f"[[ Round {round_number} - {timestamp} ]]\n\n"
     body = ""
     for title, content in sections.items():
-        body += f"## {title}\n\n{content}\n\n"
+        label = title.replace("_", " ").title()
+        body += f"[[ Round {round_number} / {label} ]]\n\n{content}\n\n"
     mode = "w" if new_turn else "a"
     with open(log_file, mode) as f:
         f.write(header + body)
@@ -79,7 +80,7 @@ def write_log(log_file: Path, round_number: int, *, new_turn: bool, **sections: 
 
 
 def run():
-    """Stop hook entry point. Analyzes agent work and injects unexplored directions."""
+    """Stop hook entry point. Analyzes agent work and injects unexplored regions."""
     state = build_state(sys.stdin.read())
 
     if state.env.is_inside_recursion:
@@ -102,9 +103,9 @@ def run():
         state.turn.agent_actions, state.turn.agent_model
     )
     prompt = build_analysis_prompt(
-        state.turn.user_input, action_history, state.direction_history
+        state.turn.user_input, action_history, state.region_history
     )
-    new_direction = invoke_claude(
+    new_region = invoke_claude(
         prompt, state.turn.agent_model, allow_tools=True, effort="max"
     )
 
@@ -113,14 +114,14 @@ def run():
         state.current_round + 1,
         new_turn=new_turn,
         analysis_prompt=prompt,
-        new_direction=new_direction or "null",
+        new_advice=new_region or "null",
     )
 
-    if not new_direction or new_direction == "null":
+    if not new_region or new_region.strip().strip("`") == "null":
         sys.exit(0)
 
-    finish_round(state, new_direction)
-    sys.stderr.write(new_direction)
+    finish_round(state, new_region)
+    sys.stderr.write(new_region)
     sys.exit(2)
 
 

@@ -171,11 +171,11 @@ class TestCaptureUserPrompt:
 class TestWriteLog:
     def test_creates_header_and_sections(self, tmp_path):
         log = tmp_path / "test.log"
-        write_log(log, 1, new_turn=True, prompt="the prompt", direction="go left")
+        write_log(log, 1, new_turn=True, prompt="the prompt", region="go left")
         content = log.read_text()
-        assert "# Round 1 — " in content
-        assert "## prompt\n\nthe prompt\n\n" in content
-        assert "## direction\n\ngo left\n\n" in content
+        assert "[[ Round 1 - " in content
+        assert "[[ Round 1 / Prompt ]]\n\nthe prompt\n\n" in content
+        assert "[[ Round 1 / Region ]]\n\ngo left\n\n" in content
 
     def test_new_turn_overwrites(self, tmp_path):
         log = tmp_path / "test.log"
@@ -183,15 +183,15 @@ class TestWriteLog:
         write_log(log, 1, new_turn=True, note="fresh")
         content = log.read_text()
         assert "old content" not in content
-        assert "# Round 1" in content
+        assert "[[ Round 1" in content
 
     def test_appends_without_new_turn(self, tmp_path):
         log = tmp_path / "test.log"
         write_log(log, 1, new_turn=True, note="round 1")
         write_log(log, 2, new_turn=False, note="round 2")
         content = log.read_text()
-        assert "# Round 1" in content
-        assert "# Round 2" in content
+        assert "[[ Round 1" in content
+        assert "[[ Round 2" in content
 
 
 # ── run ──
@@ -204,7 +204,7 @@ class TestRun:
             stop_hook_active=False,
             continuing=False,
             current_round=0,
-            direction_history=[],
+            region_history=[],
         )
         defaults.update(overrides)
         return State(
@@ -220,7 +220,7 @@ class TestRun:
             ),
             continuing=defaults["continuing"],
             current_round=defaults["current_round"],
-            direction_history=defaults["direction_history"],
+            region_history=defaults["region_history"],
             turn=Turn(
                 user_input=user_input,
                 agent_actions=[],
@@ -281,7 +281,7 @@ class TestRun:
             run()
         mock_save.assert_not_called()
 
-    def test_exits_when_no_direction(self, tmp_path):
+    def test_exits_when_no_region(self, tmp_path):
         state = self._make_state(tmp_path)
         with (
             patch("src.main.build_state", return_value=state),
@@ -294,20 +294,21 @@ class TestRun:
             run()
         assert exc.value.code == 0
 
-    def test_exits_when_direction_is_null_string(self, tmp_path):
+    @pytest.mark.parametrize("null_variant", ["null", "`null`", " null ", " `null` "])
+    def test_exits_when_region_is_null_string(self, tmp_path, null_variant):
         state = self._make_state(tmp_path)
         with (
             patch("src.main.build_state", return_value=state),
             patch("sys.stdin", io.StringIO("")),
             patch("src.main.save_initial_turn"),
             patch("src.main.convert_actions_to_markdown", return_value="md"),
-            patch("src.main.invoke_claude", return_value="null"),
+            patch("src.main.invoke_claude", return_value=null_variant),
             pytest.raises(SystemExit) as exc,
         ):
             run()
         assert exc.value.code == 0
 
-    def test_injects_direction_and_exits_2(self, tmp_path):
+    def test_injects_region_and_exits_2(self, tmp_path):
         state = self._make_state(tmp_path)
         with (
             patch("src.main.build_state", return_value=state),

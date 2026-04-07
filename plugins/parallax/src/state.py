@@ -52,7 +52,7 @@ class State(BaseModel):
     env: PluginEnvironment
     continuing: bool = False
     current_round: int = 0
-    direction_history: list[str] = []
+    region_history: list[str] = []
     turn: Turn
 
 
@@ -142,22 +142,22 @@ def save_turn_state(state_file: Path, data: dict) -> None:
 
 
 def save_initial_turn(state: "State") -> None:
-    """Persist user_input and empty directions for round 1. Called by run."""
+    """Persist user_input and empty regions for round 1. Called by run."""
     path = state.env.data_dir / f"{state.hook.session_id}.json"
     save_turn_state(
-        path, {"round": 0, "user_input": state.turn.user_input, "directions": []}
+        path, {"round": 0, "user_input": state.turn.user_input, "regions": []}
     )
 
 
-def finish_round(state: "State", new_direction: str) -> None:
-    """Persist round result: increment counter and append direction. Called by run."""
+def finish_round(state: "State", new_region: str) -> None:
+    """Persist round result: increment counter and append region. Called by run."""
     path = state.env.data_dir / f"{state.hook.session_id}.json"
     save_turn_state(
         path,
         {
             "round": state.current_round + 1,
             "user_input": state.turn.user_input,
-            "directions": [*state.direction_history, new_direction],
+            "regions": [*state.region_history, new_region],
         },
     )
 
@@ -211,7 +211,7 @@ def build_state(stdin_raw: str) -> State:
 
     if continuing:
         current_round = turn_state.get("round", 0)
-        direction_history = turn_state.get("directions", [])
+        region_history = turn_state.get("regions", [])
         saved_user_input = turn_state.get("user_input")
         if saved_user_input is not None:
             turn = Turn(
@@ -221,7 +221,7 @@ def build_state(stdin_raw: str) -> State:
             )
     else:
         current_round = 0
-        direction_history = []
+        region_history = []
         captured = load_last_user_prompt(prompt_file)
         if captured is not None:
             turn = Turn(
@@ -235,6 +235,6 @@ def build_state(stdin_raw: str) -> State:
         env=env,
         continuing=continuing,
         current_round=current_round,
-        direction_history=direction_history,
+        region_history=region_history,
         turn=turn,
     )

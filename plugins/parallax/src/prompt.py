@@ -29,13 +29,13 @@ def wrap_section(tag: str, content: str) -> str:
     return f"<{tag}>\n\n{content}\n\n</{tag}>"
 
 
-def format_direction_history(direction_history: list[str]) -> str:
-    """Format previous parallax directions for the <parallax-direction-history> section."""
-    if not direction_history:
-        return "No prior directions."
+def format_region_history(region_history: list[str]) -> str:
+    """Format previous parallax regions for the <parallax-region-history> section."""
+    if not region_history:
+        return "No prior regions."
     return "\n\n".join(
-        f"<direction-{i + 1}>\n\n{direction}\n\n</direction-{i + 1}>"
-        for i, direction in enumerate(direction_history)
+        f"<region-{i + 1}>\n\n{region}\n\n</region-{i + 1}>"
+        for i, region in enumerate(region_history)
     )
 
 
@@ -48,7 +48,7 @@ def format_conversion_prompt(actions: list[dict]) -> str:
 def build_analysis_prompt(
     user_input: str,
     action_history: str,
-    direction_history: list[str],
+    region_history: list[str],
 ) -> str:
     """Assemble the 5-section analysis prompt. Pure string assembly."""
     sections = [
@@ -56,8 +56,8 @@ def build_analysis_prompt(
         wrap_section("original-mission", user_input),
         wrap_section("action-history", action_history),
         wrap_section(
-            "parallax-direction-history",
-            format_direction_history(direction_history),
+            "parallax-region-history",
+            format_region_history(region_history),
         ),
         wrap_section("instructions", INSTRUCTION_PROMPT),
     ]

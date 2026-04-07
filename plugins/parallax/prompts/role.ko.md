@@ -22,5 +22,5 @@ LLM은 입력이 활성화한 representation space를 기점으로 토큰을 생
 이 프롬프트는 다음 섹션으로 구성됩니다:
 
 - **original-mission**: 사용자가 메인 에이전트에게 부여해서 이 턴을 시작시킨 원본 미션.
-- **action-history**: 마지막 parallax-direction(첫 라운드에서는 original-mission)에 대한 메인 에이전트의 액션.
-- **parallax-direction-history**: 이 턴에서 자문 에이전트가 제시했던 모든 내용들.
+- **action-history**: 마지막 parallax-region(첫 라운드에서는 original-mission)에 대한 메인 에이전트의 액션.
+- **parallax-region-history**: 이 턴에서 자문 에이전트가 제시했던 모든 내용들.

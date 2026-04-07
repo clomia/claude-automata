@@ -133,12 +133,12 @@ class TestLoadLastUserPrompt:
 
 
 class TestFinishRound:
-    def test_increments_round_and_appends_direction(self, tmp_path):
+    def test_increments_round_and_appends_region(self, tmp_path):
         data_dir = tmp_path / "data"
         data_dir.mkdir()
         save_turn_state(
             data_dir / "sess1.json",
-            {"round": 0, "user_input": "fix bug", "directions": []},
+            {"round": 0, "user_input": "fix bug", "regions": []},
         )
         state = State(
             hook=HookInput(
@@ -152,7 +152,7 @@ class TestFinishRound:
                 is_inside_recursion=False,
             ),
             current_round=0,
-            direction_history=[],
+            region_history=[],
             turn=Turn(user_input="fix bug", agent_actions=[], agent_model=None),
         )
 
@@ -160,10 +160,10 @@ class TestFinishRound:
 
         saved = load_turn_state(data_dir / "sess1.json")
         assert saved["round"] == 1
-        assert saved["directions"] == ["Add error handling"]
+        assert saved["regions"] == ["Add error handling"]
         assert saved["user_input"] == "fix bug"
 
-    def test_accumulates_directions_across_rounds(self, tmp_path):
+    def test_accumulates_regions_across_rounds(self, tmp_path):
         data_dir = tmp_path / "data"
         data_dir.mkdir()
         state = State(
@@ -178,7 +178,7 @@ class TestFinishRound:
                 is_inside_recursion=False,
             ),
             current_round=2,
-            direction_history=["Add tests", "Handle edge cases"],
+            region_history=["Add tests", "Handle edge cases"],
             turn=Turn(
                 user_input="implement feature", agent_actions=[], agent_model=None
             ),
@@ -188,7 +188,7 @@ class TestFinishRound:
 
         saved = load_turn_state(data_dir / "sess1.json")
         assert saved["round"] == 3
-        assert saved["directions"] == ["Add tests", "Handle edge cases", "Add logging"]
+        assert saved["regions"] == ["Add tests", "Handle edge cases", "Add logging"]
 
 
 # ── extract_user_input ──
@@ -547,7 +547,7 @@ class TestBuildStateRound1:
 
         assert state.turn.user_input == "fix the login bug"
         assert state.current_round == 0
-        assert state.direction_history == []
+        assert state.region_history == []
 
     def test_save_initial_turn_persists_state(self, tmp_path, monkeypatch):
         t = tmp_path / "transcript.jsonl"
@@ -576,7 +576,7 @@ class TestBuildStateRound1:
         saved = json.loads((data_dir / "s1.json").read_text())
         assert saved["user_input"] == "original prompt"
         assert saved["round"] == 0
-        assert saved["directions"] == []
+        assert saved["regions"] == []
 
     def test_captured_prompt_persists_through_save_initial_turn(
         self, tmp_path, monkeypatch
@@ -765,7 +765,7 @@ class TestBuildStateRound1:
             {
                 "round": 3,
                 "user_input": "build feature",
-                "directions": ["d1", "d2", "d3"],
+                "regions": ["d1", "d2", "d3"],
             },
         )
         os.utime(state_path, (2000, 2000))
@@ -783,7 +783,7 @@ class TestBuildStateRound1:
 
         assert state.continuing is True
         assert state.current_round == 3
-        assert len(state.direction_history) == 3
+        assert len(state.region_history) == 3
         assert state.turn.user_input == "build feature"
 
 
@@ -814,7 +814,7 @@ class TestBuildStateRound2:
             {
                 "round": 1,
                 "user_input": "fix the bug",
-                "directions": ["Add error handling"],
+                "regions": ["Add error handling"],
             },
         )
 
@@ -831,7 +831,7 @@ class TestBuildStateRound2:
 
         assert state.turn.user_input == "fix the bug"
         assert state.current_round == 1
-        assert state.direction_history == ["Add error handling"]
+        assert state.region_history == ["Add error handling"]
 
     def test_agent_actions_contains_work_since_last_feedback(
         self, tmp_path, monkeypatch
@@ -870,7 +870,7 @@ class TestBuildStateRound2:
             {
                 "round": 1,
                 "user_input": "fix the bug",
-                "directions": ["Also add logging"],
+                "regions": ["Also add logging"],
             },
         )
 
@@ -919,7 +919,7 @@ class TestBuildStateRound2:
             {
                 "round": 2,
                 "user_input": "implement feature",
-                "directions": ["Add tests", "Handle edge cases"],
+                "regions": ["Add tests", "Handle edge cases"],
             },
         )
 
@@ -936,7 +936,7 @@ class TestBuildStateRound2:
 
         assert state.turn.user_input == "implement feature"
         assert state.current_round == 2
-        assert state.direction_history == ["Add tests", "Handle edge cases"]
+        assert state.region_history == ["Add tests", "Handle edge cases"]
         assert len(state.turn.agent_actions) == 1
         assert state.turn.agent_actions[0]["content"] == "Edge cases handled."
 
@@ -962,7 +962,7 @@ class TestBuildStateRound2:
             {
                 "round": 1,
                 "user_input": "fix the bug",
-                "directions": ["Add validation"],
+                "regions": ["Add validation"],
             },
         )
 
@@ -1061,4 +1061,3 @@ class TestBuildStateEnvironment:
 
         state = build_state(make_stdin(transcript_path=str(t)))
         assert state.env.is_inside_recursion is True
-
