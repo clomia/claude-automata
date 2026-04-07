@@ -14,6 +14,8 @@ claude plugin marketplace add clomia/claude-automata
 
 ## Commands
 
+> 로컬 스코프에서 사용하려면 커멘드에 `--scope local` 옵션을 추가하세요.
+
 - 플러그인 설치: `claude plugin install {plugin}@claude-automata`
 - 플러그인 업데이트: `claude plugin update {plugin}@claude-automata`
 - 플러그인 활성화: `claude plugin enable {plugin}@claude-automata`

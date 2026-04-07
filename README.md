@@ -14,6 +14,8 @@ claude plugin marketplace add clomia/claude-automata
 
 ## Commands
 
+> To use in local scope, add the `--scope local` option to the command.
+
 - Install plugin: `claude plugin install {plugin}@claude-automata`
 - Update plugin: `claude plugin update {plugin}@claude-automata`
 - Enable plugin: `claude plugin enable {plugin}@claude-automata`
