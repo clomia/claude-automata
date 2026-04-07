@@ -16,3 +16,8 @@ argument-hint: "[push]"
 - **인수가 `push`이면 커밋 완료 후 `git push`까지 수행합니다. (변경사항이 없는 경우 `git push`만 수행)**
 
 인수: $ARGUMENTS
+
+# push 전 버전 수정하기 (중요)
+
+플러그인 소스가 변경된 경우 .claude-plugin/marketplace.json 에서 해당 플러그인의 버전을 한단계 올려야 합니다.
+버전을 변경하지 않으면 다른 사용자의 update가 작동하지 않으므로 수정사항 push 전, 반드시 버전을 변경하세요.
