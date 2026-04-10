@@ -212,11 +212,23 @@ class TestCaptureUserPrompt:
         written = (tmp_path / "sess1_last_user_prompt.txt").read_text()
         assert written == ""
 
-    def test_creates_activation_file_when_keyword_present(self, tmp_path, monkeypatch):
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            f"implement auth system {TRIGGER_KEYWORD}",
+            f"implement auth system\n{TRIGGER_KEYWORD}",
+            f"  {TRIGGER_KEYWORD}  ",
+            f"implement auth system {TRIGGER_KEYWORD}\n\n",
+            TRIGGER_KEYWORD,
+        ],
+    )
+    def test_activates_when_prompt_ends_with_keyword(
+        self, tmp_path, monkeypatch, prompt
+    ):
         stdin_data = json.dumps(
             {
                 "session_id": "sess1",
-                "prompt": f"{TRIGGER_KEYWORD} implement auth system",
+                "prompt": prompt,
                 "hook_event_name": "UserPromptSubmit",
             }
         )
@@ -227,11 +239,24 @@ class TestCaptureUserPrompt:
 
         assert (tmp_path / "sess1_active").exists()
 
-    def test_no_activation_file_when_keyword_absent(self, tmp_path, monkeypatch):
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            "fix the login bug",
+            f"{TRIGGER_KEYWORD} implement auth system",
+            f"refactor {TRIGGER_KEYWORD} module",
+            f"<task-notification>{TRIGGER_KEYWORD} test</task-notification>",
+            f"{TRIGGER_KEYWORD}.",
+            f"see {TRIGGER_KEYWORD}-docs",
+        ],
+    )
+    def test_does_not_activate_when_keyword_not_at_end(
+        self, tmp_path, monkeypatch, prompt
+    ):
         stdin_data = json.dumps(
             {
                 "session_id": "sess1",
-                "prompt": "fix the login bug",
+                "prompt": prompt,
                 "hook_event_name": "UserPromptSubmit",
             }
         )
@@ -257,6 +282,68 @@ class TestCaptureUserPrompt:
 
         capture_user_prompt()
 
+        assert not (tmp_path / "sess1_active").exists()
+
+
+class TestCaptureUserPromptTurnBoundaryCleanup:
+    """capture_user_prompt cleans turn-scoped state at the turn boundary,
+    preventing cross-turn contamination of round/regions/mission state."""
+
+    def stdin(self, prompt: str) -> str:
+        return json.dumps(
+            {
+                "session_id": "sess1",
+                "prompt": prompt,
+                "hook_event_name": "UserPromptSubmit",
+            }
+        )
+
+    def test_cleans_stale_state_file(self, tmp_path, monkeypatch):
+        (tmp_path / "sess1.json").write_text(
+            json.dumps({"round": 5, "user_input": "old", "regions": ["a", "b"]})
+        )
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr(
+            "sys.stdin", io.StringIO(self.stdin("new task parallaxthink"))
+        )
+
+        capture_user_prompt()
+
+        assert not (tmp_path / "sess1.json").exists()
+
+    def test_cleans_stale_compaction_marker(self, tmp_path, monkeypatch):
+        (tmp_path / "sess1_compacted").touch()
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr(
+            "sys.stdin", io.StringIO(self.stdin("new task parallaxthink"))
+        )
+
+        capture_user_prompt()
+
+        assert not (tmp_path / "sess1_compacted").exists()
+
+    def test_no_op_when_files_absent(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr("sys.stdin", io.StringIO(self.stdin("task parallaxthink")))
+
+        capture_user_prompt()
+
+        assert not (tmp_path / "sess1.json").exists()
+        assert not (tmp_path / "sess1_compacted").exists()
+
+    def test_cleanup_runs_for_non_parallax_prompt_too(self, tmp_path, monkeypatch):
+        """Cleanup is unconditional — applies even when the new prompt does
+        not activate parallax.  This handles the leak path where a stale
+        marker survives an inactive turn."""
+        (tmp_path / "sess1.json").write_text(json.dumps({"round": 3}))
+        (tmp_path / "sess1_compacted").touch()
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr("sys.stdin", io.StringIO(self.stdin("fix typo")))
+
+        capture_user_prompt()
+
+        assert not (tmp_path / "sess1.json").exists()
+        assert not (tmp_path / "sess1_compacted").exists()
         assert not (tmp_path / "sess1_active").exists()
 
 
@@ -452,12 +539,15 @@ class TestRun:
     @pytest.mark.parametrize(
         "user_input, expected_mission",
         [
-            (f"{TRIGGER_KEYWORD} implement auth", "implement auth"),
-            (f"refactor {TRIGGER_KEYWORD} module", "refactor module"),
+            (f"implement auth {TRIGGER_KEYWORD}", "implement auth"),
             (f"build feature {TRIGGER_KEYWORD}", "build feature"),
-            ("fix bug", "fix bug"),
             (f"# Task\nline2\n{TRIGGER_KEYWORD}", "# Task\nline2"),
-            (f"line1\n{TRIGGER_KEYWORD}\nline3", "line1\n\nline3"),
+            (f"  spaced  {TRIGGER_KEYWORD}  ", "spaced"),
+            # Mid-prompt occurrences are preserved (only the trailing keyword is stripped)
+            (
+                f"see code: x = {TRIGGER_KEYWORD}; do {TRIGGER_KEYWORD}",
+                f"see code: x = {TRIGGER_KEYWORD}; do",
+            ),
         ],
     )
     def test_strips_trigger_keyword_from_mission(

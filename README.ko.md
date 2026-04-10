@@ -31,7 +31,7 @@ claude plugin install parallax@claude-automata
 
 ### Usage
 
-**프롬프트에 `parallaxthink` 키워드가 있으면 자동으로 활성화됩니다.**
+**프롬프트가 `parallaxthink` 키워드로 끝나면 자동으로 활성화됩니다**
 
 > 예시: HTML로 틱택토 게임 만들어줘. parallaxthink
 

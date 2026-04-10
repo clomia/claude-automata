@@ -882,6 +882,99 @@ class TestBuildStateRound1:
         save_initial_turn(state)
         assert not marker.exists()
 
+    def test_turn2_immediate_compaction_does_not_inherit_turn1_state(
+        self, tmp_path, monkeypatch
+    ):
+        """After capture_user_prompt cleans state.json at the turn boundary,
+        a new turn whose first response triggers compaction must NOT load
+        the previous turn's round/regions/mission via the continuing branch."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+
+        # Simulate the post-capture_user_prompt state for Turn 2:
+        # - Previous turn's state.json was deleted by capture_user_prompt
+        # - prompt_file holds Turn 2's original mission
+        # - PostCompact has just fired for Turn 2's first response
+        (data_dir / "s1_last_user_prompt.txt").write_text("task B parallaxthink")
+        (data_dir / "s1_compacted").touch()
+        assert not (data_dir / "s1.json").exists()
+
+        # Compacted transcript replaces the original prompt with a summary
+        t = tmp_path / "transcript.jsonl"
+        write_jsonl(
+            t,
+            [
+                {
+                    "role": "user",
+                    "content": "This session is being continued from a previous conversation...",
+                },
+                {"role": "assistant", "content": "Continuing."},
+            ],
+        )
+
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
+        monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
+
+        state = build_state(
+            make_stdin(
+                stop_hook_active=False,
+                session_id="s1",
+                transcript_path=str(t),
+            )
+        )
+
+        assert state.compacted is True
+        assert state.continuing is True
+        # Round and regions reset because state.json was cleaned at turn boundary
+        assert state.current_round == 0
+        assert state.region_history == []
+        # Mission recovered from prompt file (Turn 2's), not from any leftover state
+        assert state.turn.user_input == "task B parallaxthink"
+
+    def test_stale_marker_does_not_poison_next_parallax_turn(
+        self, tmp_path, monkeypatch
+    ):
+        """A leftover compaction marker from a non-parallax turn or a
+        StopFailure must not poison the next parallax turn.
+        capture_user_prompt cleans it at the turn boundary."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+
+        # Simulate the post-capture_user_prompt state for the new parallax turn:
+        # - Previous turn's stale marker was deleted by capture_user_prompt
+        # - prompt_file holds the new turn's mission
+        # - state.json was also cleaned
+        (data_dir / "s1_last_user_prompt.txt").write_text("new task parallaxthink")
+        assert not (data_dir / "s1_compacted").exists()
+        assert not (data_dir / "s1.json").exists()
+
+        # Normal transcript for the new turn (no compaction this time)
+        t = tmp_path / "transcript.jsonl"
+        write_jsonl(
+            t,
+            [
+                {"role": "user", "content": "new task parallaxthink"},
+                {"role": "assistant", "content": "Done."},
+            ],
+        )
+
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data_dir))
+        monkeypatch.delenv("PARALLAX_INSIDE_RECURSION", raising=False)
+
+        state = build_state(
+            make_stdin(
+                stop_hook_active=False,
+                session_id="s1",
+                transcript_path=str(t),
+            )
+        )
+
+        assert state.compacted is False
+        assert state.continuing is False
+        assert state.current_round == 0
+        assert state.region_history == []
+        assert state.turn.user_input == "new task parallaxthink"
+
 
 # ── build_state: round 2+ (stop_hook_active=True) ──
 

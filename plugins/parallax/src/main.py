@@ -8,7 +8,6 @@ On each LLM stop:
 
 import json
 import os
-import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -112,10 +111,14 @@ def run():
     if state.turn.user_input.lstrip().startswith("/parallax-log"):
         sys.exit(0)
 
-    # Consume compaction marker — must happen after early-exit guards
-    # so recursive calls and non-parallax commands don't consume it
+    # Consume compaction marker generated mid-loop (between rounds within
+    # the same parallax turn).  New-turn markers are cleaned by
+    # capture_user_prompt at the turn boundary.  Must happen after early-exit
+    # guards so recursive calls and non-parallax commands don't consume it.
     if state.compacted:
-        (state.env.data_dir / f"{state.hook.session_id}_compacted").unlink(missing_ok=True)
+        (state.env.data_dir / f"{state.hook.session_id}_compacted").unlink(
+            missing_ok=True
+        )
 
     new_turn = not state.continuing
     if new_turn:
@@ -129,7 +132,7 @@ def run():
     action_history = convert_actions_to_markdown(
         state.turn.agent_actions, state.turn.agent_model, state.env.data_dir
     )
-    mission = re.sub(r" {2,}", " ", state.turn.user_input.replace(TRIGGER_KEYWORD, "")).strip()
+    mission = state.turn.user_input.strip().removesuffix(TRIGGER_KEYWORD).strip()
     prompt = build_analysis_prompt(mission, action_history, state.region_history)
     new_region = invoke_claude(prompt, state.turn.agent_model, tools="*", effort="max")
 
@@ -166,18 +169,33 @@ def capture_user_prompt():
     regardless of skill expansions or system message injections.
 
     Also manages the activation marker: parallax only runs when the user
-    prompt contains the trigger keyword.
+    prompt ends with the trigger keyword (after stripping surrounding
+    whitespace).  This prevents accidental activation by system-injected
+    pseudo-prompts (e.g. <task-notification>) that may quote the keyword
+    in their body but never end with it.
+
+    Bounds turn-scoped state lifetime to a single parallax turn.
+    UserPromptSubmit is the canonical "new user-initiated turn" boundary,
+    so any state from a previous turn must be discarded here.  Without
+    this, an immediate compaction in the new turn (or a stale marker
+    leaked from a non-parallax turn or a StopFailure) would cause
+    build_state to load stale round/regions/mission via the
+    continuing=True branch.
     """
     data = json.loads(sys.stdin.read())
     data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
     session_id = data["session_id"]
     prompt = data.get("prompt", "")
 
+    # Turn boundary cleanup — bound state lifetime to the parallax turn.
+    (data_dir / f"{session_id}.json").unlink(missing_ok=True)
+    (data_dir / f"{session_id}_compacted").unlink(missing_ok=True)
+
     prompt_file = data_dir / f"{session_id}_last_user_prompt.txt"
     prompt_file.write_text(prompt)
 
     activation_file = data_dir / f"{session_id}_active"
-    if TRIGGER_KEYWORD in prompt:
+    if prompt.strip().endswith(TRIGGER_KEYWORD):
         activation_file.touch()
     elif activation_file.exists():
         activation_file.unlink()

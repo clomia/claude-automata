@@ -147,7 +147,9 @@ def save_initial_turn(state: "State") -> None:
     save_turn_state(
         path, {"round": 0, "user_input": state.turn.user_input, "regions": []}
     )
-    # Clean up stale compaction marker from previous turn
+    # Defense in depth: primary cleanup is in capture_user_prompt at the
+    # turn boundary.  This serves as a safety net if UserPromptSubmit
+    # did not fire (e.g., capture_user_prompt itself crashed).
     (state.env.data_dir / f"{state.hook.session_id}_compacted").unlink(missing_ok=True)
 
 

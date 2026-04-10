@@ -31,9 +31,11 @@ claude plugin install parallax@claude-automata
 
 ### Usage
 
-**Automatically activates when the prompt contains the `parallaxthink` keyword.**
+**Automatically activates when the prompt ends with the `parallaxthink` keyword**
 
 > Example: Make a tic-tac-toe game in HTML. parallaxthink
+
+The keyword must appear at the very end of your prompt. This prevents accidental activation when the keyword is quoted in the middle of a prompt or embedded in system-injected content.
 
 Use the `/parallax-log` command to view the most recent parallax log.
 
