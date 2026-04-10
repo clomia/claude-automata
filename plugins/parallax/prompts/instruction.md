@@ -25,8 +25,8 @@ Decide whether to surface a new region to the main agent or end the turn.
 Only surface regions effective for carrying out the original-mission.
 If no unconsidered regions are found, end the turn.
 
-If unconsidered regions exist, select the single most effective one.
-The farther it lies from regions already considered, the more effective it is.
+If unconsidered regions exist, select **the single most effective one**.
+**The farther it lies from regions already considered, the more effective it is.**
 
 Review how effective surfacing the selected region would be for the main agent.
 Verify whether the original-mission requires it and whether a similar region has already been considered in the history.
@@ -39,8 +39,11 @@ If it is expected to drive meaningful progress, surface the region; otherwise en
 Carrying out the mission is the main agent's role.
 Never prescribe methods or pass judgment.
 Guide the main agent to think on its own.
-**Surface at the level of abstraction of 'suggesting something to think about.'**
+**Output at the level of abstraction of 'suggesting something to think about.'**
+
+- Headings start from `##`; do not use `#`.
+- Only describe the region you chose to surface.
 
 ## Ending the turn
 
-Output `<PARALLAXDONE!>` at the end.
+Output `I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLAX_TURN`.
