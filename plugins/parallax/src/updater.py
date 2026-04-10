@@ -2,8 +2,8 @@
 
 Runs on SessionStart with source in {startup, clear}.  Reads the installed
 version from pyproject.toml, fetches the remote marketplace manifest under
-a 6-hour cooldown, and prints a one-line notification to stdout when the
-remote version is strictly newer.
+a 6-hour cooldown, and emits a user-visible systemMessage JSON envelope
+to stdout when the remote version is strictly newer.
 
 Fails silently on every error path — missing env, network, parse, recursion
 guard — to guarantee session startup is never delayed or disrupted.
@@ -136,11 +136,12 @@ def check_for_update() -> None:
         )
 
     if cached_remote and is_newer(cached_remote, local_version):
-        sys.stdout.write(
+        message = (
             f"parallax update available: {local_version} -> {cached_remote}\n"
             f"Run: claude plugin marketplace update claude-automata "
-            f"&& claude plugin update parallax@claude-automata\n"
+            f"&& claude plugin update parallax@claude-automata"
         )
+        sys.stdout.write(json.dumps({"systemMessage": message}))
 
 
 if __name__ == "__main__":
