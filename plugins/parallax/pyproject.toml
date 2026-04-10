@@ -1,6 +1,6 @@
 [project]
 name = "parallax"
-version = "0.2.9"
+version = "0.2.10"
 requires-python = ">=3.14"
 dependencies = ["pydantic>=2.12.5"]
 
@@ -8,6 +8,7 @@ dependencies = ["pydantic>=2.12.5"]
 parallax = "src.main:run"
 parallax-capture-user-prompt = "src.main:capture_user_prompt"
 parallax-mark-compaction = "src.main:mark_compaction"
+parallax-update-check = "src.updater:check_for_update"
 
 [build-system]
 requires = ["uv_build>=0.11.0,<0.12.0"]

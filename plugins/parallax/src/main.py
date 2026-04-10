@@ -20,6 +20,11 @@ from src.state import ROUND_LIMIT, build_state, finish_round, save_initial_turn
 
 
 TRIGGER_KEYWORD = "parallaxthink"
+# Sentinel the advisory agent emits to end the turn.  Checked with `in` so
+# the signal survives reasoning text that thinking-disabled models cannot
+# suppress (e.g. "No more unexplored regions.\n\n<PARALLAXDONE!>").  The
+# token is unique to parallax and will not appear in normal region output.
+TERMINATION_TOKEN = "<PARALLAXDONE!>"
 DISALLOWED_TOOLS = "Bash,Write,Edit,NotebookEdit"
 
 
@@ -141,10 +146,10 @@ def run():
         state.current_round + 1,
         new_turn=new_turn,
         analysis_prompt=prompt,
-        new_advice=new_region or "null",
+        new_advice=new_region if new_region else "(no output)",
     )
 
-    if not new_region or new_region.strip().strip("`") == "null":
+    if not new_region or TERMINATION_TOKEN in new_region:
         sys.exit(0)
 
     finish_round(state, new_region)

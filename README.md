@@ -17,7 +17,7 @@ Add this repository to the marketplace: `claude plugin marketplace add clomia/cl
 > **Intelligence booster for complex tasks**  
 > This plugin keeps Claude Code from stopping short and drives it to finish the job.
 
-LLMs generate tokens starting from the representation space activated by their input, and the further generation proceeds, the more prior outputs tend to constrain subsequent exploration, narrowing the scope. To explore regions the model struggles to reach on its own, input that activates new regions is needed.
+LLMs generate tokens starting from the representation space activated by their input, and the further generation proceeds, the more prior outputs tend to constrain subsequent exploration, narrowing its scope. Therefore, to explore regions the model struggles to reach on its own, input that activates new regions is needed.
 
 This tendency is one of the factors that leave people unsatisfied with single-turn results in Claude Code and lead them to iterate across multiple turns.
 
@@ -34,8 +34,6 @@ claude plugin install parallax@claude-automata
 **Automatically activates when the prompt ends with the `parallaxthink` keyword**
 
 > Example: Make a tic-tac-toe game in HTML. parallaxthink
-
-The keyword must appear at the very end of your prompt. This prevents accidental activation when the keyword is quoted in the middle of a prompt or embedded in system-injected content.
 
 Use the `/parallax-log` command to view the most recent parallax log.
 

@@ -54,7 +54,7 @@ class TestPromptConstants:
         assert "# Background" in ROLE_PROMPT
 
     def test_instruction_prompt_loaded(self):
-        assert "`null`" in INSTRUCTION_PROMPT
+        assert "<PARALLAXDONE!>" in INSTRUCTION_PROMPT
 
 
 # ── format_conversion_prompt ──

@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from src.main import (
+    TERMINATION_TOKEN,
     TRIGGER_KEYWORD,
     capture_user_prompt,
     convert_actions_to_markdown,
@@ -484,19 +485,72 @@ class TestRun:
             run()
         assert exc.value.code == 0
 
-    @pytest.mark.parametrize("null_variant", ["null", "`null`", " null ", " `null` "])
-    def test_exits_when_region_is_null_string(self, tmp_path, null_variant):
+    @pytest.mark.parametrize(
+        "termination_output",
+        [
+            TERMINATION_TOKEN,
+            f" {TERMINATION_TOKEN} ",
+            f"No more unexplored regions. {TERMINATION_TOKEN}",
+            f"{TERMINATION_TOKEN}\n\nAll relevant paths have been covered.",
+            (
+                "After analyzing the action-history and parallax-region-history,\n"
+                "every candidate region has already been surfaced or covered by\n"
+                "the main agent's work. Ending the turn.\n\n"
+                f"{TERMINATION_TOKEN}"
+            ),
+        ],
+    )
+    def test_exits_when_output_contains_termination_token(
+        self, tmp_path, termination_output
+    ):
+        """The advisory agent signals turn termination by including the
+        sentinel token anywhere in its output.  Thinking-disabled models
+        emit reasoning alongside the token, so the check must use `in`
+        rather than equality."""
         state = self._make_state(tmp_path)
         with (
             patch("src.main.build_state", return_value=state),
             patch("sys.stdin", io.StringIO("")),
             patch("src.main.save_initial_turn"),
             patch("src.main.convert_actions_to_markdown", return_value="md"),
-            patch("src.main.invoke_claude", return_value=null_variant),
+            patch("src.main.invoke_claude", return_value=termination_output),
             pytest.raises(SystemExit) as exc,
         ):
             run()
         assert exc.value.code == 0
+
+    @pytest.mark.parametrize(
+        "region_output",
+        [
+            "Consider handling null inputs explicitly",
+            "Review the edge case where the result is null",
+            "null",
+            "`null`",
+            "Examine what happens when the function returns None or null",
+        ],
+    )
+    def test_injects_region_when_output_lacks_termination_token(
+        self, tmp_path, region_output
+    ):
+        """Output containing the word 'null' but NOT the termination token
+        must be treated as a region to surface.  This verifies the new
+        check is strictly stricter than the old equality-based check and
+        does not false-positive on region descriptions that mention null."""
+        state = self._make_state(tmp_path)
+        with (
+            patch("src.main.build_state", return_value=state),
+            patch("sys.stdin", io.StringIO("")),
+            patch("src.main.save_initial_turn"),
+            patch("src.main.convert_actions_to_markdown", return_value="md"),
+            patch("src.main.invoke_claude", return_value=region_output),
+            patch("src.main.finish_round") as mock_finish,
+            patch("sys.stderr") as mock_stderr,
+            pytest.raises(SystemExit) as exc,
+        ):
+            run()
+        assert exc.value.code == 2
+        mock_finish.assert_called_once_with(state, region_output)
+        mock_stderr.write.assert_called_once_with(format_injection(region_output))
 
     def test_injects_region_and_exits_2(self, tmp_path):
         state = self._make_state(tmp_path)

@@ -43,4 +43,4 @@ Guide the main agent to think on its own.
 
 ## Ending the turn
 
-Output only `null`.
+Output `<PARALLAXDONE!>` at the end.
