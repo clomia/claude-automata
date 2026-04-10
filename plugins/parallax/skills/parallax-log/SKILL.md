@@ -1,7 +1,7 @@
 ---
 name: parallax-log
 description: Read and summarize the parallax analysis log for this session
-model: haiku
+disable-model-invocation: true
 ---
 
 `/parallax-log`
