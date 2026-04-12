@@ -68,14 +68,14 @@ def convert_actions_to_markdown(actions: list[dict], data_dir: Path) -> str:
     conversion agent to read from it, avoiding input token limits
     for large transcripts.  Falls back to raw JSON on failure.
 
-    Always uses Haiku — this task is pure format conversion with no
-    reasoning required.
+    Always uses Sonnet with low effort — this task requires reliable
+    instruction following but no deep reasoning.
     """
     temp_file = data_dir / f"_conversion_{os.getpid()}.json"
     try:
         temp_file.write_text(json.dumps(actions, ensure_ascii=False, indent=2))
         prompt = format_conversion_prompt(str(temp_file))
-        result = invoke_claude(prompt, "haiku", tools="Read")
+        result = invoke_claude(prompt, "sonnet", tools="Read", effort="low")
         return result or json.dumps(actions, ensure_ascii=False, indent=2)
     finally:
         temp_file.unlink(missing_ok=True)

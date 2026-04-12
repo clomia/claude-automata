@@ -12,9 +12,8 @@ ROLE_PROMPT = (PROMPTS_DIR / "role.md").read_text().strip()
 INSTRUCTION_PROMPT = (PROMPTS_DIR / "instruction.md").read_text().strip()
 
 CONVERSION_PROMPT_TEMPLATE = """\
-Read the JSON file below. This is the main agent's task execution record.
-Produce a markdown document describing this record.
-Enumerate the agent's thoughts, attempts, and results systematically, leaving nothing out.
+Read the JSON file at the path below. This is the main agent's task execution record.
+Produce a markdown document that systematically enumerates every thought, attempt, and result from the agent's execution.
 
 Ignore metadata outside the agent's own awareness, such as token usage, API turn counts, or signatures.
 
