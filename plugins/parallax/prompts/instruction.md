@@ -22,7 +22,7 @@ Synthesize all unconsidered regions and histories to reflect on **what more the 
 
 Decide whether to surface a new region to the main agent or end the turn.
 
-Only surface regions that are relevant to carrying out the original-mission.
+Only surface regions that are valid for carrying out the original-mission.
 If you find no unconsidered regions, end the turn.
 
 If there are unconsidered regions, select **the single most valuable one**.
@@ -43,6 +43,7 @@ Output only the unconsidered region to surface, in a single paragraph.
 - Address the main agent as 'you'.
 - Only raise the issue. The main agent finds the answer.
 - Do not output the analysis process. Output only what is to be relayed to the main agent.
+- Output in the same language as the original-mission.
 
 ## Ending the turn
 
