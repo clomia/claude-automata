@@ -6,5 +6,6 @@ From the recorded information, produce a markdown document that enumerates every
 - Output ONLY the markdown document, without any preamble.
 - Content that the main agent output to the user must be preserved verbatim, every single character.
 - Ignore metadata the main agent cannot be aware of. (Token usage, API turn counts, signatures, etc.)
+- If the main agent created a new file, state only its path; if it modified an existing file, describe the changes made.
 
 Record file: {file_path}
