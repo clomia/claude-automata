@@ -26,25 +26,26 @@ from src.updater import (
 
 
 class TestReadLocalVersion:
-    def test_reads_version_from_pyproject(self, tmp_path):
-        (tmp_path / "pyproject.toml").write_text(
-            '[project]\nname = "parallax"\nversion = "0.2.9"\n'
+    def write_manifest(self, plugin_root: Path, body: str) -> None:
+        manifest_dir = plugin_root / ".claude-plugin"
+        manifest_dir.mkdir(parents=True, exist_ok=True)
+        (manifest_dir / "plugin.json").write_text(body)
+
+    def test_reads_version_from_manifest(self, tmp_path):
+        self.write_manifest(
+            tmp_path, json.dumps({"name": "parallax", "version": "0.2.9"})
         )
         assert read_local_version(tmp_path) == "0.2.9"
 
     def test_returns_none_when_file_missing(self, tmp_path):
         assert read_local_version(tmp_path) is None
 
-    def test_returns_none_on_malformed_toml(self, tmp_path):
-        (tmp_path / "pyproject.toml").write_text("not valid toml ::: {]}")
+    def test_returns_none_on_malformed_json(self, tmp_path):
+        self.write_manifest(tmp_path, "{not valid json")
         assert read_local_version(tmp_path) is None
 
     def test_returns_none_when_version_key_missing(self, tmp_path):
-        (tmp_path / "pyproject.toml").write_text('[project]\nname = "parallax"\n')
-        assert read_local_version(tmp_path) is None
-
-    def test_returns_none_when_project_table_missing(self, tmp_path):
-        (tmp_path / "pyproject.toml").write_text('[tool.poetry]\nname = "parallax"\n')
+        self.write_manifest(tmp_path, json.dumps({"name": "parallax"}))
         assert read_local_version(tmp_path) is None
 
 
@@ -157,23 +158,16 @@ def mock_urlopen_response(body: str) -> MagicMock:
 
 
 class TestFetchRemoteVersion:
-    def test_extracts_parallax_version(self):
-        manifest = json.dumps(
-            {
-                "plugins": [
-                    {"name": "other", "version": "9.9.9"},
-                    {"name": "parallax", "version": "0.3.0"},
-                ]
-            }
-        )
+    def test_extracts_version(self):
+        manifest = json.dumps({"name": "parallax", "version": "0.3.0"})
         with patch(
             "src.updater.urllib.request.urlopen",
             return_value=mock_urlopen_response(manifest),
         ):
             assert fetch_remote_version() == "0.3.0"
 
-    def test_returns_none_when_plugin_missing(self):
-        manifest = json.dumps({"plugins": [{"name": "other", "version": "1.0.0"}]})
+    def test_returns_none_when_version_missing(self):
+        manifest = json.dumps({"name": "parallax"})
         with patch(
             "src.updater.urllib.request.urlopen",
             return_value=mock_urlopen_response(manifest),
@@ -210,9 +204,9 @@ class TestCheckForUpdate:
         self, tmp_path: Path, local_version: str = "0.2.6"
     ) -> tuple[Path, Path]:
         plugin_root = tmp_path / "plugin"
-        plugin_root.mkdir()
-        (plugin_root / "pyproject.toml").write_text(
-            f'[project]\nname = "parallax"\nversion = "{local_version}"\n'
+        (plugin_root / ".claude-plugin").mkdir(parents=True)
+        (plugin_root / ".claude-plugin" / "plugin.json").write_text(
+            json.dumps({"name": "parallax", "version": local_version})
         )
         data_dir = tmp_path / "data"
         data_dir.mkdir()
@@ -252,9 +246,9 @@ class TestCheckForUpdate:
 
     def test_exits_when_data_dir_env_missing(self, tmp_path, monkeypatch, capsys):
         plugin_root = tmp_path / "plugin"
-        plugin_root.mkdir()
-        (plugin_root / "pyproject.toml").write_text(
-            '[project]\nname = "parallax"\nversion = "0.2.6"\n'
+        (plugin_root / ".claude-plugin").mkdir(parents=True)
+        (plugin_root / ".claude-plugin" / "plugin.json").write_text(
+            json.dumps({"name": "parallax", "version": "0.2.6"})
         )
         monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(plugin_root))
         monkeypatch.delenv("CLAUDE_PLUGIN_DATA", raising=False)
@@ -270,7 +264,7 @@ class TestCheckForUpdate:
     def test_exits_when_local_version_unreadable(self, tmp_path, monkeypatch, capsys):
         plugin_root = tmp_path / "plugin"
         plugin_root.mkdir()
-        # No pyproject.toml — read_local_version returns None
+        # No .claude-plugin/plugin.json — read_local_version returns None
         data_dir = tmp_path / "data"
         data_dir.mkdir()
         self.configure_env(monkeypatch, plugin_root, data_dir)

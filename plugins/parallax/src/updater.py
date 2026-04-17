@@ -1,9 +1,10 @@
 """Update notifier — SessionStart hook that surfaces newer parallax releases.
 
 Runs on SessionStart with source in {startup, clear}.  Reads the installed
-version from pyproject.toml, fetches the remote marketplace manifest under
-a 6-hour cooldown, and emits a user-visible systemMessage JSON envelope
-to stdout when the remote version is strictly newer.
+version from .claude-plugin/plugin.json, fetches the same manifest from the
+remote repository under a 6-hour cooldown, and emits a user-visible
+systemMessage JSON envelope to stdout when the remote version is strictly
+newer.
 
 Fails silently on every error path — missing env, network, parse, recursion
 guard — to guarantee session startup is never delayed or disrupted.
@@ -16,29 +17,29 @@ import json
 import os
 import sys
 import time
-import tomllib
 import urllib.error
 import urllib.request
 from pathlib import Path
 
-REMOTE_URL = "https://raw.githubusercontent.com/clomia/claude-automata/main/.claude-plugin/marketplace.json"
+REMOTE_URL = "https://raw.githubusercontent.com/clomia/claude-automata/main/plugins/parallax/.claude-plugin/plugin.json"
 PLUGIN_NAME = "parallax"
 COOLDOWN_SECONDS = 6 * 60 * 60
 HTTP_TIMEOUT = 3.0
 CACHE_FILENAME = "update_cache.json"
+MANIFEST_RELATIVE_PATH = Path(".claude-plugin") / "plugin.json"
 
 
 def read_local_version(plugin_root: Path) -> str | None:
-    """Read the installed plugin version from pyproject.toml."""
+    """Read the installed plugin version from .claude-plugin/plugin.json."""
     try:
-        with (plugin_root / "pyproject.toml").open("rb") as f:
-            return tomllib.load(f)["project"]["version"]
-    except (OSError, KeyError, tomllib.TOMLDecodeError):
+        with (plugin_root / MANIFEST_RELATIVE_PATH).open() as f:
+            return json.load(f)["version"]
+    except (OSError, KeyError, json.JSONDecodeError):
         return None
 
 
 def fetch_remote_version() -> str | None:
-    """HTTP GET the marketplace manifest and extract the parallax version."""
+    """HTTP GET the plugin manifest and extract its version field."""
     try:
         request = urllib.request.Request(
             REMOTE_URL,
@@ -48,11 +49,7 @@ def fetch_remote_version() -> str | None:
             manifest = json.loads(response.read())
     except (OSError, urllib.error.URLError, json.JSONDecodeError):
         return None
-
-    for entry in manifest.get("plugins", []):
-        if entry.get("name") == PLUGIN_NAME:
-            return entry.get("version")
-    return None
+    return manifest.get("version")
 
 
 def parse_version(v: str) -> tuple[int, ...]:
