@@ -1,0 +1,21 @@
+{
+  "name": "parallax",
+  "version": "0.2.21",
+  "description": "Catches what the agent overlooks and drives complex tasks to completion",
+  "author": {
+    "name": "clomia",
+    "email": "clomia.sig@gmail.com",
+    "url": "https://github.com/clomia"
+  },
+  "homepage": "https://github.com/clomia/claude-automata",
+  "repository": "https://github.com/clomia/claude-automata",
+  "license": "MIT",
+  "keywords": [
+    "reasoning",
+    "thinking",
+    "feedback-loop",
+    "context-injection",
+    "autonomy",
+    "agent-enhancement"
+  ]
+}

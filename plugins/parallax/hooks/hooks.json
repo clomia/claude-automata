@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PLUGIN_ROOT}\" parallax-capture-user-prompt"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-hook parallax-capture-user-prompt"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PLUGIN_ROOT}\" parallax-mark-compaction"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-hook parallax-mark-compaction"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PLUGIN_ROOT}\" parallax",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-hook parallax",
             "timeout": 3600,
             "statusMessage": "parallax: running"
           }
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PLUGIN_ROOT}\" parallax-update-check"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-hook parallax-update-check"
           }
         ]
       }

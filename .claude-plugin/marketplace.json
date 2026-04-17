@@ -2,7 +2,8 @@
   "name": "claude-automata",
   "owner": {
     "name": "clomia",
-    "email": "clomia.sig@gmail.com"
+    "email": "clomia.sig@gmail.com",
+    "url": "https://github.com/clomia"
   },
   "metadata": {
     "description": "Autonomization toolkit for Claude"
@@ -10,13 +11,7 @@
   "plugins": [
     {
       "name": "parallax",
-      "source": "./plugins/parallax",
-      "description": "Catches what the agent overlooks and drives complex tasks to completion",
-      "version": "0.2.21",
-      "author": {
-        "name": "clomia",
-        "email": "clomia.sig@gmail.com"
-      }
+      "source": "./plugins/parallax"
     }
   ]
 }

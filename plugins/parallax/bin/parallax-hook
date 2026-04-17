@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+# parallax-hook — wraps plugin entry points with a uv availability check.
+#
+# Usage: parallax-hook <entry-point>
+#
+# Every parallax hook is routed through this script.  If uv is not
+# installed we cannot execute any Python code, so the wrapper exits 0
+# without error.  SessionStart additionally emits a systemMessage so the
+# user learns that installing uv is required to activate the plugin.
+# Other hooks stay silent to avoid flooding the session with duplicate
+# notices on every turn.
+
+set -e
+
+entry="$1"
+
+if [ -z "$entry" ]; then
+    exit 0
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+    if [ "$entry" = "parallax-update-check" ]; then
+        printf '%s' '{"systemMessage":"parallax requires uv (Python package manager). Install it from https://docs.astral.sh/uv/getting-started/installation/ — without uv, parallax hooks will not run."}'
+    fi
+    exit 0
+fi
+
+exec uv run --project "${CLAUDE_PLUGIN_ROOT}" "$entry"
