@@ -16,7 +16,7 @@ claude plugin marketplace add clomia/claude-automata
 
 ## Plugins
 
-- **[Parallax](plugins/parallax/README.md)** — Autopilot for long, complex tasks _(Anthropic API only — not for Pro/Max subscriptions)_
+- **[Parallax](plugins/parallax/README.md)** — Autopilot for long, complex tasks _(Anthropic API only)_
 
 # Appendix: Plugin Management Commands
 

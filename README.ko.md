@@ -16,7 +16,7 @@ claude plugin marketplace add clomia/claude-automata
 
 ## 플러그인들
 
-- **[Parallax](plugins/parallax/README.ko.md)** — 길고 복잡한 작업을 위한 자율 주행 시스템 _(Anthropic API 전용 — Pro/Max 구독 불가)_
+- **[Parallax](plugins/parallax/README.ko.md)** — 길고 복잡한 작업을 위한 자율 주행 시스템 _(Anthropic API 전용)_
 
 # Appendix: Plugin Management Commands
 
