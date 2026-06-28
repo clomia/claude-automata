@@ -17,6 +17,19 @@ if [ -z "$entry" ]; then
     exit 0
 fi
 
+# Diagnostic: record every invocation and its environment, with the directory
+# derived from $0 so it survives even when CLAUDE_PLUGIN_* env vars are unset.
+# Reveals whether the hook fires at all and whether CLAUDE_PLUGIN_DATA — which
+# the Python hook reads via os.environ — actually reaches the process.
+plugin_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." 2>/dev/null && pwd)"
+trace_dir="${CLAUDE_PLUGIN_DATA:-$plugin_root}"
+{
+    printf '=== entry=%s pwd=%s ===\n' "$entry" "$(pwd)"
+    printf 'CLAUDE_PLUGIN_ROOT=%s\n' "${CLAUDE_PLUGIN_ROOT-<unset>}"
+    printf 'CLAUDE_PLUGIN_DATA=%s\n' "${CLAUDE_PLUGIN_DATA-<unset>}"
+    printf 'CLAUDE_SESSION_ID=%s\n' "${CLAUDE_SESSION_ID-<unset>}"
+} >>"${trace_dir}/hook_env_trace.txt" 2>/dev/null || true
+
 if ! command -v uv >/dev/null 2>&1; then
     if [ "$entry" = "anchor-update-check" ]; then
         printf '%s' '{"systemMessage":"anchor requires uv (Python package manager). Install it from https://docs.astral.sh/uv/getting-started/installation/ — without uv, the anchor durability hook will not run."}'

@@ -21,7 +21,7 @@ from pathlib import Path
 
 from src.messages import format_advisor_trigger
 from src.prompt import build_analysis_input
-from src.state import ROUND_LIMIT, build_state, save_ledger
+from src.state import ROUND_LIMIT, AnchorState, build_state, save_ledger
 from src.transcript import extract_advisor_output, parse_round_actions
 
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
@@ -44,9 +44,29 @@ def write_log(
         f.write(header + body)
 
 
+def write_trace(state: AnchorState) -> None:
+    """Unconditional hook-firing trace for diagnosis.
+
+    The hook exits silently when mission_active is False, so without this there
+    is no way to distinguish a hook that never fired from one that fired and
+    bailed.  The file name carries the session_id the hook actually received,
+    revealing whether it matches the session init wrote the mission under.
+    """
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    line = (
+        f"{timestamp} session={state.session_id} "
+        f"transcript_exists={Path(state.transcript_path).exists()} "
+        f"mission_active={state.mission_active} "
+        f"round={state.current_round} done={state.done}\n"
+    )
+    with open(state.data_dir / f"{state.session_id}_hook_trace.log", "a") as f:
+        f.write(line)
+
+
 def subagent_stop() -> None:
     """SubagentStop hook entry point (matcher: anchor)."""
     state = build_state(sys.stdin.read())
+    write_trace(state)
 
     # Not an anchor mission: no mission file was handed off — allow the stop.
     if not state.mission_active:
