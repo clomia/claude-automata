@@ -44,13 +44,15 @@ def write_log(
         f.write(header + body)
 
 
-def write_trace(state: AnchorState) -> None:
+def write_trace(state: AnchorState, raw_stdin: str) -> None:
     """Unconditional hook-firing trace for diagnosis.
 
     The hook exits silently when mission_active is False, so without this there
     is no way to distinguish a hook that never fired from one that fired and
     bailed.  The file name carries the session_id the hook actually received,
-    revealing whether it matches the session init wrote the mission under.
+    revealing whether it matches the session init wrote the mission under.  The
+    raw stdin is recorded too, exposing the event's real fields (e.g.
+    agent_type) so anchor stops can be identified in code if matcher is unfit.
     """
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     line = (
@@ -58,6 +60,7 @@ def write_trace(state: AnchorState) -> None:
         f"transcript_exists={Path(state.transcript_path).exists()} "
         f"mission_active={state.mission_active} "
         f"round={state.current_round} done={state.done}\n"
+        f"  stdin={raw_stdin.strip()}\n"
     )
     with open(state.data_dir / f"{state.session_id}_hook_trace.log", "a") as f:
         f.write(line)
@@ -65,8 +68,9 @@ def write_trace(state: AnchorState) -> None:
 
 def subagent_stop() -> None:
     """SubagentStop hook entry point (matcher: anchor)."""
-    state = build_state(sys.stdin.read())
-    write_trace(state)
+    raw = sys.stdin.read()
+    state = build_state(raw)
+    write_trace(state, raw)
 
     # Not an anchor mission: no mission file was handed off — allow the stop.
     if not state.mission_active:
