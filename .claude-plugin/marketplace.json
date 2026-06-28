@@ -12,6 +12,10 @@
     {
       "name": "parallax",
       "source": "./plugins/parallax"
+    },
+    {
+      "name": "anchor",
+      "source": "./plugins/anchor"
     }
   ]
 }

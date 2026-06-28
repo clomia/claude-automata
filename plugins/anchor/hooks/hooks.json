@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SubagentStop": [
+      {
+        "matcher": "anchor",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/anchor-hook anchor-subagent-stop",
+            "timeout": 120,
+            "statusMessage": "anchor: advising"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/anchor-hook anchor-update-check"
+          }
+        ]
+      }
+    ]
+  }
+}

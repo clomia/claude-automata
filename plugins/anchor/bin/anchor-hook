@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+# anchor-hook — wraps plugin entry points with a uv availability check.
+#
+# Usage: anchor-hook <entry-point>
+#
+# Every anchor hook is routed through this script.  If uv is not installed
+# we cannot execute any Python code, so the wrapper exits 0 without error.
+# SessionStart additionally emits a systemMessage so the user learns that
+# installing uv is required to activate the plugin's durability hook.  Other
+# hooks stay silent to avoid flooding the session with duplicate notices.
+
+set -e
+
+entry="$1"
+
+if [ -z "$entry" ]; then
+    exit 0
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+    if [ "$entry" = "anchor-update-check" ]; then
+        printf '%s' '{"systemMessage":"anchor requires uv (Python package manager). Install it from https://docs.astral.sh/uv/getting-started/installation/ — without uv, the anchor durability hook will not run."}'
+    fi
+    exit 0
+fi
+
+exec uv run --project "${CLAUDE_PLUGIN_ROOT}" "$entry"
