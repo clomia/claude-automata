@@ -80,7 +80,7 @@ narrator   depth 3  Read (leaf)   서사 작성               action 기록을 m
 ```
 anchor round N work ── stops
    |
-   |  <-- SubagentStop hook (matcher: anchor)
+   |  <-- SubagentStop hook (matcher: anchor:anchor)
    |        record last advisor verdict: termination -> done, else append region
    |        done set, or round >= ROUND_LIMIT  ->  exit 0 (allow stop)
    |        else:  parse round actions (advisor calls stripped) -> {session}_action.json
@@ -154,18 +154,22 @@ self-anchoring은 compaction 감지 자체가 불필요해 더 강건하다.
 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
-| **SubagentStop** | `anchor` | anchor가 종료 시도 | 종료 판정 → `exit 0`(허용) 또는 `exit 2`+stderr(advisor 호출 지시) |
+| **SubagentStop** | `anchor:anchor` | anchor가 종료 시도 | 종료 판정 → `exit 0`(허용) 또는 `exit 2`+stderr(advisor 호출 지시) |
 | **SessionStart** | `startup\|clear` | 세션 시작 | 신규 릴리스 알림 (parallax updater 이식) |
 
-`matcher: anchor`가 advisor·narrator의 종료에는 훅을 걸지 않으므로, 그들은
-정상 종료해 결과를 호출자에게 반환한다 — parallax의 `PARALLAX_INSIDE_RECURSION`
-재귀 가드가 구조적으로 불필요해진다. 훅은 `bin/anchor-hook` 셸 래퍼를 거쳐 `uv`를
+플러그인 에이전트는 `anchor:<agent>`로 scoped 등록되므로, Agent 호출의
+subagent_type도 이 matcher도 그 scoped 이름을 쓴다(`anchor`만으로는 매칭되지
+않는다). matcher의 `:`는 정규식으로 평가되어 `anchor:anchor`만 잡고
+`anchor:advisor`·`anchor:narrator`는 제외하므로, advisor·narrator는 정상 종료해
+결과를 호출자에게 반환한다 — parallax의 `PARALLAX_INSIDE_RECURSION` 재귀 가드가
+구조적으로 불필요해진다. 훅은 `bin/anchor-hook` 셸 래퍼를 거쳐 `uv`를
 호출한다 — 래퍼가 uv 가용성을 먼저 확인하므로(parallax에서 상속), uv 미설치 시
 graceful degrade와 SessionStart 안내를 한 지점에서 일원화한다.
 
-**Graceful degradation.** `uv`가 없으면 훅 spawn은 무해하게 실패하고, anchor는
-프롬프트 기반 규율로 degrade한다(시스템 프롬프트가 advisor 호출 루프를 자체
-유지). 강제 루프만 비활성화되고 트리는 계속 돈다.
+**Graceful degradation.** `uv`가 없으면 훅 spawn은 무해하게 실패한다. anchor는
+parallax를 모르므로(루프는 전적으로 훅이 구동) advisor 없이 미션만 수행하고
+종료한다 — 트리는 돌지 않지만 세션은 깨지지 않으며, SessionStart가 uv 설치를
+안내한다.
 
 ---
 
@@ -175,7 +179,10 @@ graceful degrade와 SessionStart 안내를 한 지점에서 일원화한다.
    훅은 stdout/stderr/exit code로만 통신하며 tool call을 발화하지 못한다. 그래서
    `claude -p`를 Agent 툴로 *직접 치환*하는 것은 불가능하다. 대신 SubagentStop이
    `exit 2`+stderr로 anchor에게 advisor 호출을 **지시**하고, anchor(LLM)가 Agent
-   툴로 실행한다. 이 한 단계가 parallax→anchor 전환의 본질이다.
+   툴로 실행한다. 이 한 단계가 parallax→anchor 전환의 본질이다. anchor의 시스템
+   프롬프트는 parallax·advisor를 **언급하지 않는다** — 자발적으로 부르면 경로 대신
+   자기 의견을 advisor에 전달하거나 narrator를 건너뛰어 정해진 사용법을 무시하기
+   때문이다. advisor의 존재는 stderr 지시가 처음 알린다.
 2. **상태는 hook이 단독 소유.** advisor는 region/종료토큰을 반환만 하고, hook이
    트랜스크립트에서 추출해 round·regions·done을 모두 기록한다. 단일 작성자라 동시성
    문제가 없고, advisor 프롬프트가 순수 분석으로 남는다(parallax도 hook이 region 기록).
@@ -243,13 +250,13 @@ ASCII 다이어그램은 정렬을 위해 영어. 에이전트·스킬 프롬프
 anchor/
 ├── .claude-plugin/plugin.json        # manifest
 ├── agents/                           # 3개 tier 정의 (frontmatter 봉인 + 프롬프트 본문)
-│   ├── anchor.md                     # 미션 수행자 + self-anchoring + 루프 프로토콜
+│   ├── anchor.md                     # 미션 수행자 + self-anchoring (parallax 비노출)
 │   ├── advisor.md                    # parallax role+instruction 이식 (순수 분석, Write 없음)
 │   └── narrator.md                   # parallax conversion 이식
 ├── skills/
 │   ├── init/SKILL.md                 # /anchor:init — main->anchor 핸드오프 게이트
 │   └── log/SKILL.md                  # /anchor:log — 분석 로그 조회
-├── hooks/hooks.json                  # SubagentStop(anchor) + SessionStart(update)
+├── hooks/hooks.json                  # SubagentStop(anchor:anchor) + SessionStart(update)
 ├── bin/anchor-hook                   # uv 가용성 체크 래퍼 (parallax 상속)
 ├── prompts/messages/advisor_trigger.md   # 훅 주입 템플릿 (advisor 호출 지시)
 ├── src/                              # 훅 구현 (런타임 의존성: pydantic)
