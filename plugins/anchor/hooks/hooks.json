@@ -1,5 +1,18 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/anchor-hook anchor-pre-tool-use",
+            "timeout": 30,
+            "statusMessage": "anchor: gating"
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "matcher": "anchor:anchor",

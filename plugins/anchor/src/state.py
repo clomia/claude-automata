@@ -61,6 +61,10 @@ class AnchorState(BaseModel):
     def log_path(self) -> Path:
         return self.data_dir / f"{self.session_id}_anchor.log"
 
+    @property
+    def advisor_token_path(self) -> Path:
+        return advisor_token_file(self.data_dir, self.session_id)
+
 
 def load_ledger(state_file: Path) -> dict:
     """Load the {round, regions, done} ledger. Empty dict on any failure."""
@@ -79,6 +83,15 @@ def save_ledger(
     state_file.write_text(
         json.dumps({"round": round_number, "regions": regions, "done": done})
     )
+
+
+def advisor_token_file(data_dir: Path, session_id: str) -> Path:
+    """The single-use token a SubagentStop writes to authorize one advisor call.
+
+    PreToolUse consumes (deletes) it; an advisor call with no fresh token is
+    self-initiated and gets denied.
+    """
+    return data_dir / f"{session_id}_advisor_token"
 
 
 def build_state(stdin_raw: str) -> AnchorState:

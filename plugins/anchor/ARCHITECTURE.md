@@ -127,6 +127,7 @@ region 한 문단**뿐이다. narrator 호출, region-history 누적 읽기, 5-s
 | `{session}_action.json` | hook | 이번 라운드 action 기록 (narrator가 읽음) |
 | `{session}_analysis.md` | hook | advisor 입력: original-mission + region-history XML 봉투 |
 | `{session}_anchor.log` | hook | 라운드별 분석 로그 (`/anchor-log`로 조회) |
+| `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (SubagentStop set · PreToolUse 소비) |
 
 **상태는 hook이 단독 소유한다.** advisor는 분석만 하고 region 한 문단(또는 종료
 토큰)을 **반환**할 뿐 state를 쓰지 않는다. hook이 다음 라운드 시작에 직전 advisor
@@ -154,6 +155,7 @@ self-anchoring은 compaction 감지 자체가 불필요해 더 강건하다.
 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
+| **PreToolUse** | `Agent` | anchor가 Agent 호출 | `anchor:advisor` 호출이면 1회용 토큰 검사 → 허용(소비) 또는 `exit 2` deny(자발 호출 차단) |
 | **SubagentStop** | `anchor:anchor` | anchor가 종료 시도 | 종료 판정 → `exit 0`(허용) 또는 `exit 2`+stderr(advisor 호출 지시) |
 | **SessionStart** | `startup\|clear` | 세션 시작 | 신규 릴리스 알림 (parallax updater 이식) |
 
@@ -212,6 +214,14 @@ parallax를 모르므로(루프는 전적으로 훅이 구동) advisor 없이 �
    상속받아 약한 오염 여지가 있으나(narrator의 "원문 보존" vs 프로젝트 "간결" 등), 차단이
    all-or-nothing이라 anchor의 필요를 우선한다. 선택적 차단 옵션이 생기면 advisor·narrator에
    적용한다.
+9. **자발 advisor 호출 차단(PreToolUse 게이팅).** anchor가 hook 지시 없이 스스로 advisor를
+   부르면 결정론적 사이클이 깨진다 — 라운드 0 자발 호출의 출력은 누락되고, 한 정지에 여러
+   호출이 섞이면 `extract_advisor_output`이 일부만 잡으며, hook이 조립한 `analysis.md` 대신
+   anchor 자기 말이 입력으로 간다. SubagentStop이 호출을 지시할 때만 1회용 토큰을 세우고,
+   PreToolUse(matcher `Agent`)가 `anchor:advisor` 호출을 토큰이 있을 때만 통과시킨다(없으면
+   deny → anchor는 작업을 계속하다 멈추고 정식 지시를 받는다). deny된 호출은 트랜스크립트에
+   error tool_result로 남으므로 `extract_advisor_output`은 `is_error`를 걸러 성공한 호출만
+   기록한다. narrator는 read-only leaf이자 hook 사이클 밖이라 게이팅하지 않는다.
 
 ---
 
@@ -232,6 +242,10 @@ parallax를 모르므로(루프는 전적으로 훅이 구동) advisor 없이 �
    범위가 넓어지거나 region 기록이 누락될 수 있다(graceful, 치명적이지 않음).
 4. **anchor의 지시 순응도** — stderr "advisor 호출"에 anchor가 실제로 응하는가.
    시스템 프롬프트로 강제하고, round 안전망이 미응답 시에도 종료를 보장한다.
+5. **PreToolUse 발동·session 일치** — 자발 호출 게이팅은 PreToolUse가 depth-1 anchor의
+   Agent 호출에 발동하고 그 session_id가 SubagentStop(토큰 set)과 같아야 성립한다.
+   SubagentStop 발동이 강한 전례지만 라이브 확인 항목이다(미발동 시 게이팅만 무효화되고
+   루프는 현행대로 — graceful). `_pretooluse_trace.log`가 발동과 stdin 구조를 실측한다.
 
 ---
 
@@ -256,7 +270,7 @@ anchor/
 ├── skills/
 │   ├── init/SKILL.md                 # /anchor:init — main->anchor 핸드오프 게이트
 │   └── log/SKILL.md                  # /anchor:log — 분석 로그 조회
-├── hooks/hooks.json                  # SubagentStop(anchor:anchor) + SessionStart(update)
+├── hooks/hooks.json                  # PreToolUse(Agent) + SubagentStop(anchor:anchor) + SessionStart(update)
 ├── bin/anchor-hook                   # uv 가용성 체크 래퍼 (parallax 상속)
 ├── prompts/messages/advisor_trigger.md   # 훅 주입 템플릿 (advisor 호출 지시)
 ├── src/                              # 훅 구현 (런타임 의존성: pydantic)
@@ -264,7 +278,7 @@ anchor/
 │   ├── transcript.py                 # action 추출(advisor 호출 strip) + advisor 출력 추출
 │   ├── prompt.py                     # deterministic advisor 입력 조립 (mission + region XML)
 │   ├── messages.py                   # stderr 주입 메시지 조립
-│   ├── hooks.py                      # subagent_stop 엔트리포인트
+│   ├── hooks.py                      # subagent_stop · pre_tool_use 엔트리포인트
 │   └── updater.py                    # SessionStart 업데이트 알림 (parallax 이식)
 └── tests/                            # 구현 독립 (stdin/stdout/disk 구동)
 ```

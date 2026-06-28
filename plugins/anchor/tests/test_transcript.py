@@ -195,3 +195,37 @@ class TestExtractAdvisorOutput:
         t = tmp_path / "t.jsonl"
         write_jsonl(t, agent_exchange("narration", subagent="narrator"))
         assert extract_advisor_output(str(t)) is None
+
+    def test_skips_denied_error_result(self, tmp_path):
+        """A PreToolUse-denied advisor call leaves an is_error result; the most
+        recent successful call is returned instead, keeping region-history clean."""
+        t = tmp_path / "t.jsonl"
+        write_jsonl(
+            t,
+            [
+                *agent_exchange("real region", call_id="a1"),
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "a2",
+                            "name": "Agent",
+                            "input": {"subagent_type": "anchor:advisor"},
+                        }
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "a2",
+                            "content": "denied",
+                            "is_error": True,
+                        }
+                    ],
+                },
+            ],
+        )
+        assert extract_advisor_output(str(t)) == "real region"

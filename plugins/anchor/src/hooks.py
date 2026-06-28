@@ -15,13 +15,20 @@ call it via the Agent tool, which keeps anchor on the subscription-native path.
 """
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 from src.messages import format_advisor_trigger
 from src.prompt import build_analysis_input
-from src.state import ROUND_LIMIT, AnchorState, build_state, save_ledger
+from src.state import (
+    ROUND_LIMIT,
+    AnchorState,
+    advisor_token_file,
+    build_state,
+    save_ledger,
+)
 from src.transcript import extract_advisor_output, parse_round_actions
 
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
@@ -64,6 +71,14 @@ def write_trace(state: AnchorState, raw_stdin: str) -> None:
     )
     with open(state.data_dir / f"{state.session_id}_hook_trace.log", "a") as f:
         f.write(line)
+
+
+def write_pretooluse_trace(data_dir: Path, session_id: str, raw: str) -> None:
+    """Unconditional PreToolUse trace: confirms the hook fires on anchor's tool
+    calls and exposes the stdin shape (session_id, tool_input.subagent_type)."""
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with open(data_dir / f"{session_id}_pretooluse_trace.log", "a") as f:
+        f.write(f"{timestamp} stdin={raw.strip()}\n")
 
 
 def subagent_stop() -> None:
@@ -133,7 +148,51 @@ def subagent_stop() -> None:
         new_turn=new_turn,
         advisor_trigger=trigger,
     )
+    state.advisor_token_path.write_text("")
     sys.stderr.write(trigger)
+    sys.exit(2)
+
+
+def pre_tool_use() -> None:
+    """PreToolUse hook (matcher: Agent): gate anchor's advisor invocation.
+
+    Allow an Agent(anchor:advisor) call only when a SubagentStop set the
+    single-use token; a self-initiated call (no token) is denied so anchor
+    keeps working until it stops and the hook drives the call properly.
+    """
+    raw = sys.stdin.read()
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        sys.exit(0)
+    data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
+    session_id = data.get("session_id", "")
+    write_pretooluse_trace(data_dir, session_id, raw)
+
+    tool_input = data.get("tool_input") or {}
+    subagent_type = (
+        tool_input.get("subagent_type", "") if isinstance(tool_input, dict) else ""
+    )
+
+    # Not an advisor invocation (anchor:anchor / anchor:narrator / other) — allow.
+    if "advisor" not in subagent_type:
+        sys.exit(0)
+
+    # Outside an anchor mission — do not interfere.
+    if not (data_dir / f"{session_id}_mission.md").exists():
+        sys.exit(0)
+
+    # Authorized by a SubagentStop directive: consume the token and allow.
+    token = advisor_token_file(data_dir, session_id)
+    if token.exists():
+        token.unlink()
+        sys.exit(0)
+
+    # Self-initiated advisor call: deny and send anchor back to the mission.
+    sys.stderr.write(
+        "지금은 advisor를 호출할 때가 아닙니다. 미션 작업을 계속하고, "
+        "더 할 일이 없으면 멈추세요."
+    )
     sys.exit(2)
 
 

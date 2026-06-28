@@ -128,32 +128,33 @@ def result_text(content) -> str | None:
 
 
 def extract_advisor_output(transcript_path: str) -> str | None:
-    """Return the text the advisor subagent last returned, or None.
+    """Return the text the most recent successful advisor call returned, or None.
 
-    Finds the most recent Agent-tool call whose subagent is the advisor and
-    returns its tool_result text.  None when no advisor call is present (e.g.
-    round 0, before any advisor invocation).
+    None when no advisor call is present (e.g. round 0).  A call denied by
+    PreToolUse gating leaves an error tool_result; those are skipped so a
+    blocked self-initiated call never reaches region-history.
     """
     messages = load_messages(transcript_path)
 
-    advisor_id = None
-    for msg in messages:
-        if msg.get("role") != "assistant":
-            continue
-        for block in content_blocks(msg):
-            if is_advisor_call(block):
-                advisor_id = block.get("id")
-
-    if advisor_id is None:
+    advisor_ids = {
+        block.get("id")
+        for msg in messages
+        if msg.get("role") == "assistant"
+        for block in content_blocks(msg)
+        if is_advisor_call(block)
+    }
+    if not advisor_ids:
         return None
 
+    output = None
     for msg in messages:
         if msg.get("role") != "user":
             continue
         for block in content_blocks(msg):
             if (
                 block.get("type") == "tool_result"
-                and block.get("tool_use_id") == advisor_id
+                and block.get("tool_use_id") in advisor_ids
+                and not block.get("is_error")
             ):
-                return result_text(block.get("content"))
-    return None
+                output = result_text(block.get("content"))
+    return output

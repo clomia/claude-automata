@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from src.hooks import TERMINATION_TOKEN, subagent_stop, write_log
+from src.hooks import TERMINATION_TOKEN, pre_tool_use, subagent_stop, write_log
 from src.state import ROUND_LIMIT, load_ledger, save_ledger
 
 
@@ -22,6 +22,16 @@ def make_stdin(*, session_id="s1", transcript_path="/t.jsonl"):
             "session_id": session_id,
             "transcript_path": transcript_path,
             "stop_hook_active": False,
+        }
+    )
+
+
+def make_pretooluse_stdin(*, session_id="s1", subagent_type="anchor:advisor"):
+    return json.dumps(
+        {
+            "session_id": session_id,
+            "tool_name": "Agent",
+            "tool_input": {"subagent_type": subagent_type},
         }
     )
 
@@ -107,6 +117,7 @@ class TestSubagentStop:
         assert "<parallax-region-history>" in analysis
         assert "No prior regions." in analysis
         assert "advisor" in capsys.readouterr().err
+        assert (tmp_path / "s1_advisor_token").exists()
 
     def test_records_region_and_wraps_into_next_analysis(self, tmp_path, monkeypatch):
         """Round 1: advisor returned a region — record it, and XML-wrap it into
@@ -157,6 +168,42 @@ class TestSubagentStop:
         arrange(tmp_path, monkeypatch, make_stdin(transcript_path=str(t)))
         with pytest.raises(SystemExit) as exc:
             subagent_stop()
+        assert exc.value.code == 0
+
+
+# ── pre_tool_use gating ──
+
+
+class TestPreToolUse:
+    def test_token_present_allows_and_consumes(self, tmp_path, monkeypatch):
+        """A SubagentStop-set token authorizes exactly one advisor call."""
+        (tmp_path / "s1_mission.md").write_text("m")
+        token = tmp_path / "s1_advisor_token"
+        token.write_text("")
+        arrange(tmp_path, monkeypatch, make_pretooluse_stdin())
+        with pytest.raises(SystemExit) as exc:
+            pre_tool_use()
+        assert exc.value.code == 0
+        assert not token.exists()
+
+    def test_no_token_denies_self_initiated_call(self, tmp_path, monkeypatch):
+        """No token = anchor called advisor on its own — deny so it keeps working."""
+        (tmp_path / "s1_mission.md").write_text("m")
+        arrange(tmp_path, monkeypatch, make_pretooluse_stdin())
+        with pytest.raises(SystemExit) as exc:
+            pre_tool_use()
+        assert exc.value.code == 2
+
+    def test_non_advisor_call_passes_through(self, tmp_path, monkeypatch):
+        """narrator/anchor invocations are never gated."""
+        (tmp_path / "s1_mission.md").write_text("m")
+        arrange(
+            tmp_path,
+            monkeypatch,
+            make_pretooluse_stdin(subagent_type="anchor:narrator"),
+        )
+        with pytest.raises(SystemExit) as exc:
+            pre_tool_use()
         assert exc.value.code == 0
 
 
