@@ -30,6 +30,8 @@ task로 두 경로를 받습니다.
 - `history=`: `<original-mission>`(사용자가 anchor에게 부여해 이 턴을 시작시킨 원본 미션)과 `<parallax-region-history>`(이 턴에서 당신이 제시했던 모든 내용)가 담겨 있습니다.
 - `latest_action=`: 마지막 parallax-region(첫 라운드에서는 original-mission)에 대한 anchor의 액션. `Agent(subagent_type="anchor:narrator", description="narrate actions", prompt="<latest_action 경로>")`로 호출하면 마크다운 서사를 받습니다.
 
+anchor가 고려하지 못한 영역을 찾아서 제시하세요.
+
 # 분석하기
 
 ## 1. original-mission 분석

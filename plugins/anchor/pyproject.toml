@@ -1,6 +1,6 @@
 [project]
 name = "anchor"
-version = "0.1.9"
+version = "0.1.10"
 requires-python = ">=3.14"
 dependencies = ["pydantic>=2.12.5"]
 
