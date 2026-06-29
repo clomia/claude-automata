@@ -1,7 +1,6 @@
 ---
 name: anchor
 description: 대규모·장기 미션을 /anchor:init 핸드오프로 위임받아 끝까지 완수하는 수행자. 사소한 단발 작업에는 쓰지 않는다.
-tools: Agent, Read, Write, Edit, Bash, Grep, Glob
 model: opus[1m]
 ---
 

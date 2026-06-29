@@ -43,7 +43,7 @@ anchor가 여기서 미션을 찾으므로 반드시 이 경로여야 합니다.
 
 ## 4. anchor에게 핸드오프
 
-`Agent` 도구로 `anchor:anchor` 에이전트를 spawn합니다. task에는 **원본 미션 파일의 절대경로만** 담으세요 (`<2에서 확인한 절대경로>`). 미션 내용도, 당신의 지시·주장·의견·해석도, 그 무엇도 더하지 마세요 — anchor는 오직 미션 파일만으로 미션을 읽고 수행합니다. 당신의 해석이 섞이면 anchor와 advisor의 판단이 원본 미션이 아닌 당신의 프레이밍에 정박되어 버립니다.
+`Agent(subagent_type="anchor:anchor", description="run mission", prompt="<2에서 확인한 절대경로>", run_in_background=true)`로 spawn하세요. **반드시 background로** — 그래야 메인이 자유로워 사용자가 `/anchor:log`로 진행을 볼 수 있습니다. prompt에는 미션 경로만 넣고, 당신의 해석·의견 등 다른 텍스트는 넣지 마세요.
 
 ## 5. 핸드오프 이후
 

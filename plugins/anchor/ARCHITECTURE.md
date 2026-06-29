@@ -48,7 +48,7 @@ cap). Anchor는 같은 메커니즘을 이 정식 경로 위에서 재구현해 
 
 ```
 main       depth 0  session       full tools              유저와 대화; 미션을 정의
-   |  /anchor:init  ->  writes {session}_mission.md, then Agent(anchor)
+   |  /anchor:init  ->  writes {session}_mission.md, then Agent(anchor, background)
    v
 anchor     depth 1  Agent +full   수행자(parallax main)   미션을 직접 실행
    |  Agent(advisor)   <- "invoke advisor" injected by SubagentStop hook
@@ -61,7 +61,7 @@ narrator   depth 3  Read (leaf)   서사 작성               action 기록을 m
 
 | Tier | 도구 (allowlist) | 모델 | effort | parallax 대응 |
 |---|---|---|---|---|
-| **anchor** | `Agent, Read, Write, Edit, Bash, Grep, Glob` | `opus[1m]` | inherit | 메인 에이전트 |
+| **anchor** | 전체 (미설정 — 모든 도구 상속) | `opus[1m]` | inherit | 메인 에이전트 |
 | **advisor** | `Agent, Read, Grep, Glob, WebSearch, WebFetch` | `opus[1m]` | max | Advisor (`claude -p`, max) |
 | **narrator** | `Read` | `sonnet` | low | Narrator (`claude -p`, low) |
 
@@ -261,7 +261,7 @@ parallax를 모르므로(루프는 전적으로 훅이 구동) advisor 없이 �
 모든 프롬프트는 **단일 "한국어 기반, 영어 활용"**으로 통일한다(이중 언어 쌍 없음).
 식별자·경로·도구 이름과 `orchestrator` 같은 기술 용어는 영어, 산문은 한국어,
 ASCII 다이어그램은 정렬을 위해 영어. 에이전트·스킬 프롬프트는 단일 `.md`이고,
-훅 주입 메시지(advisor 호출 지시)는 Python이 조립하므로 `prompts/`로 외부화한다.
+훅 주입 메시지(advisor 호출 한 줄)는 짧아 `messages.py`가 인라인 조립한다.
 
 ---
 
@@ -279,7 +279,6 @@ anchor/
 │   └── log/SKILL.md                  # /anchor:log — 분석 로그 조회
 ├── hooks/hooks.json                  # PreToolUse(Agent) + SubagentStop(anchor:anchor) + SessionStart(update)
 ├── bin/anchor-hook                   # uv 가용성 체크 래퍼 (parallax 상속)
-├── prompts/messages/advisor_trigger.md   # 훅 주입 템플릿 (advisor 호출 지시)
 ├── src/                              # 훅 구현 (런타임 의존성: pydantic)
 │   ├── state.py                      # 상태 조립 + 영속화 (round/regions/done)
 │   ├── transcript.py                 # action 추출(advisor 호출 strip) + advisor 출력 추출

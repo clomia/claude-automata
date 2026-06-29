@@ -25,10 +25,10 @@ LLM은 입력이 활성화한 representation space를 기점으로 토큰을 생
 
 # 입력
 
-anchor가 task로 두 경로를 전달합니다.
+task로 두 경로를 받습니다.
 
-- **분석 입력 파일**: 읽으면 `<original-mission>`(사용자가 anchor에게 부여해 이 턴을 시작시킨 원본 미션)과 `<parallax-region-history>`(이 턴에서 당신이 제시했던 모든 내용)가 있습니다.
-- **action 기록**: 마지막 parallax-region(첫 라운드에서는 original-mission)에 대한 anchor의 액션. `anchor:narrator`에게 이 경로를 전달해 호출하면 마크다운 서사로 받습니다.
+- `history=`: `<original-mission>`(사용자가 anchor에게 부여해 이 턴을 시작시킨 원본 미션)과 `<parallax-region-history>`(이 턴에서 당신이 제시했던 모든 내용)가 담겨 있습니다.
+- `latest_action=`: 마지막 parallax-region(첫 라운드에서는 original-mission)에 대한 anchor의 액션. `Agent(subagent_type="anchor:narrator", description="narrate actions", prompt="<latest_action 경로>")`로 호출하면 마크다운 서사를 받습니다.
 
 # 분석하기
 
