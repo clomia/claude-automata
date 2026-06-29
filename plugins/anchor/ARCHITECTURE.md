@@ -62,12 +62,12 @@ narrator   depth 3  Read (leaf)   서사 작성               action 기록을 m
 | Tier | 도구 (allowlist) | 모델 | effort | parallax 대응 |
 |---|---|---|---|---|
 | **anchor** | 전체 (미설정 — 모든 도구 상속) | `opus[1m]` | inherit | 메인 에이전트 |
-| **advisor** | 전체 − `Write` (`disallowedTools`) | `opus[1m]` | max | Advisor (`claude -p`, max) |
+| **advisor** | 전체 − `Write·Edit·NotebookEdit` | `opus[1m]` | max | Advisor (`claude -p`, max) |
 | **narrator** | `Read` | `sonnet` | low | Narrator (`claude -p`, low) |
 
-- **advisor는 `Write`만 막혀 있다(`disallowedTools: Write`)** — 새 파일을 만들지 않는다.
-  조사 도구로 영역을 사실에 근거 짓고(parallax의 CRITIC 근거: advisor가 외부 도구로
-  확인한 뒤 surface), 결과는 region 한 문단으로 **반환**한다 — 그것을 state에 기록하는
+- **advisor는 파일 변경 도구가 막혀 있다(`disallowedTools: Write, Edit, NotebookEdit`)** — 아무것도
+  쓰지 않는다. 조사 도구로 영역을 사실에 근거 짓고(parallax의 CRITIC 근거: advisor가 외부
+  도구로 확인한 뒤 surface), 결과는 region 한 문단으로 **반환**한다 — 그것을 state에 기록하는
   것은 hook의 몫이다(아래 상태 권위).
 - **narrator는 `Read`뿐인 leaf** — `Agent`가 없어 트리가 그 아래로 자라지 않는다.
   단순 변환이라 `sonnet`/`low`로 충분(parallax 그대로).

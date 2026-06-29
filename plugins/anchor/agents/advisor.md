@@ -1,7 +1,7 @@
 ---
 name: advisor
 description: anchor가 고려하지 못한 영역을 surface한다. anchor가 매 라운드 호출한다.
-disallowedTools: Write
+disallowedTools: Write, Edit, NotebookEdit
 model: opus[1m]
 effort: max
 ---
