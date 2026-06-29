@@ -68,13 +68,13 @@ original-mission에 필요한지, history에서 이미 유사한 영역이 고�
 
 ## 영역 제시
 
-제시할 미고려 영역만 한 문단으로 반환하세요.
+제시할 미고려 영역만 한 문단으로 출력하세요.
 
 - anchor를 지칭할때는 '너'라고 하세요.
 - 오직 문제 제기만 하세요. 답은 anchor가 찾습니다.
-- 분석 과정 출력 금지. anchor에게 전할 내용만 반환하세요.
-- original-mission의 언어와 동일한 언어로 반환하세요.
+- 분석 과정 출력 금지. anchor에게 전할 내용만 출력하세요.
+- original-mission의 언어와 동일한 언어로 출력하세요.
 
 ## 턴 종료
 
-`I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLAX_TURN`를 반환하세요.
+`I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLAX_TURN`를 출력하세요.
