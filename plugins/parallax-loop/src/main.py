@@ -167,11 +167,8 @@ def pre_tool_use() -> None:
         token.unlink()
         sys.exit(0)
 
-    # Self-initiated advisor call: deny and send the operator back to the mission.
-    sys.stderr.write(
-        "지금은 advisor를 호출할 때가 아닙니다. 미션 작업을 계속하고, "
-        "더 할 일이 없으면 멈추세요."
-    )
+    # Self-initiated advisor call: deny so the operator keeps working.
+    sys.stderr.write("The advisor cannot be called right now.")
     sys.exit(2)
 
 
