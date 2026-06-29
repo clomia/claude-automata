@@ -222,6 +222,13 @@ parallax를 모르므로(루프는 전적으로 훅이 구동) advisor 없이 �
    deny → anchor는 작업을 계속하다 멈추고 정식 지시를 받는다). deny된 호출은 트랜스크립트에
    error tool_result로 남으므로 `extract_advisor_output`은 `is_error`를 걸러 성공한 호출만
    기록한다. narrator는 read-only leaf이자 hook 사이클 밖이라 게이팅하지 않는다.
+10. **메인 transcript에서 anchor transcript 해소.** SubagentStop은 hook에 정지한 subagent가
+   아니라 **메인 세션 transcript**를 넘긴다(실측 확정). anchor의 작업은
+   `{session}/subagents/agent-{agentId}.jsonl`에 따로 있으므로, hook은 메인 transcript에서
+   **마지막** `anchor:anchor` spawn의 tool_use id를 찾아 subagent `meta.json`의 `toolUseId`와
+   매칭해 그 anchor transcript를 해소한 뒤 action·advisor 출력을 읽는다(메인이 anchor를 여러
+   번 spawn해도 마지막=현재를 집는다). 해소 실패 시 정지를 허용한다(graceful). 이 경로·메타
+   형식은 비공개 구조라 `_hook_trace.log`의 `anchor_transcript=` 줄로 실측·검증한다.
 
 ---
 

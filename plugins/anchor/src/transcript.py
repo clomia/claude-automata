@@ -158,3 +158,48 @@ def extract_advisor_output(transcript_path: str) -> str | None:
             ):
                 output = result_text(block.get("content"))
     return output
+
+
+def is_anchor_spawn(block: dict) -> bool:
+    """True for an Agent tool_use that spawns the anchor (subagent_type *:anchor)."""
+    return (
+        block.get("type") == "tool_use"
+        and block.get("name") in AGENT_TOOL_NAMES
+        and str(block.get("input", {}).get("subagent_type", "")).endswith(":anchor")
+    )
+
+
+def find_anchor_transcript(main_transcript_path: str) -> str | None:
+    """Resolve the anchor subagent's own transcript from the main transcript.
+
+    SubagentStop hands the hook the MAIN session transcript, not the stopped
+    subagent's — the anchor's work lives in a separate file under
+    {session}/subagents/agent-{agentId}.jsonl.  Find the latest anchor:anchor
+    spawn in the main transcript, match its tool_use id to a subagent's
+    meta.json (toolUseId), and return that agent's transcript path.
+    """
+    messages = load_messages(main_transcript_path)
+    spawn_id = None
+    for msg in messages:
+        if msg.get("role") != "assistant":
+            continue
+        for block in content_blocks(msg):
+            if is_anchor_spawn(block):
+                spawn_id = block.get("id")
+    if spawn_id is None:
+        return None
+
+    subagents_dir = Path(main_transcript_path).with_suffix("") / "subagents"
+    if not subagents_dir.is_dir():
+        return None
+    for meta_path in subagents_dir.glob("agent-*.meta.json"):
+        try:
+            meta = json.loads(meta_path.read_text())
+        except json.JSONDecodeError, OSError:
+            continue
+        if meta.get("toolUseId") == spawn_id:
+            transcript = meta_path.with_name(
+                meta_path.name[: -len(".meta.json")] + ".jsonl"
+            )
+            return str(transcript) if transcript.exists() else None
+    return None

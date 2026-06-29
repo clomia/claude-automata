@@ -70,6 +70,48 @@ def arrange(tmp_path, monkeypatch, stdin):
     monkeypatch.setattr("sys.stdin", io.StringIO(stdin))
 
 
+def arrange_mission(
+    tmp_path, monkeypatch, anchor_messages, *, session_id="s1", ledger=None
+):
+    """Set up a mission, a main transcript that spawns anchor, and the anchor's
+    own subagent transcript holding `anchor_messages`.
+
+    SubagentStop receives the MAIN transcript; the hook resolves the anchor's
+    own transcript via the anchor:anchor spawn -> meta.json(toolUseId) chain.
+    """
+    (tmp_path / f"{session_id}_mission.md").write_text("build the thing")
+    if ledger:
+        save_ledger(tmp_path / f"{session_id}_anchor.json", **ledger)
+    main = tmp_path / "main.jsonl"
+    write_jsonl(
+        main,
+        [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "tu_a",
+                        "name": "Agent",
+                        "input": {"subagent_type": "anchor:anchor"},
+                    }
+                ],
+            }
+        ],
+    )
+    subdir = tmp_path / "main" / "subagents"
+    subdir.mkdir(parents=True)
+    (subdir / "agent-A.meta.json").write_text(
+        json.dumps({"agentType": "anchor:anchor", "toolUseId": "tu_a"})
+    )
+    write_jsonl(subdir / "agent-A.jsonl", anchor_messages)
+    arrange(
+        tmp_path,
+        monkeypatch,
+        make_stdin(session_id=session_id, transcript_path=str(main)),
+    )
+
+
 # ── subagent_stop branches ──
 
 
@@ -95,16 +137,14 @@ class TestSubagentStop:
     ):
         """Round 0 has no advisor verdict — assemble analysis input (mission +
         empty region-history), advance, inject."""
-        (tmp_path / "s1_mission.md").write_text("build the thing")
-        t = tmp_path / "t.jsonl"
-        write_jsonl(
-            t,
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
             [
                 {"role": "user", "content": "mission"},
                 {"role": "assistant", "content": "initial work"},
             ],
         )
-        arrange(tmp_path, monkeypatch, make_stdin(transcript_path=str(t)))
         with pytest.raises(SystemExit) as exc:
             subagent_stop()
         assert exc.value.code == 2
@@ -122,11 +162,12 @@ class TestSubagentStop:
     def test_records_region_and_wraps_into_next_analysis(self, tmp_path, monkeypatch):
         """Round 1: advisor returned a region — record it, and XML-wrap it into
         the next round's analysis input."""
-        (tmp_path / "s1_mission.md").write_text("m")
-        save_ledger(tmp_path / "s1_anchor.json", round_number=1, regions=[], done=False)
-        t = tmp_path / "t.jsonl"
-        write_jsonl(t, advisor_returns("consider error handling"))
-        arrange(tmp_path, monkeypatch, make_stdin(transcript_path=str(t)))
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            advisor_returns("consider error handling"),
+            ledger={"round_number": 1, "regions": [], "done": False},
+        )
         with pytest.raises(SystemExit) as exc:
             subagent_stop()
         assert exc.value.code == 2
@@ -141,13 +182,12 @@ class TestSubagentStop:
     def test_termination_token_sets_done_and_stops(self, tmp_path, monkeypatch):
         """The advisor's termination token ends the turn — set done, allow stop,
         and do not append a region."""
-        (tmp_path / "s1_mission.md").write_text("m")
-        save_ledger(
-            tmp_path / "s1_anchor.json", round_number=2, regions=["r"], done=False
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            advisor_returns(f"All paths covered. {TERMINATION_TOKEN}"),
+            ledger={"round_number": 2, "regions": ["r"], "done": False},
         )
-        t = tmp_path / "t.jsonl"
-        write_jsonl(t, advisor_returns(f"All paths covered. {TERMINATION_TOKEN}"))
-        arrange(tmp_path, monkeypatch, make_stdin(transcript_path=str(t)))
         with pytest.raises(SystemExit) as exc:
             subagent_stop()
         assert exc.value.code == 0
@@ -156,16 +196,12 @@ class TestSubagentStop:
         assert ledger["regions"] == ["r"]
 
     def test_round_limit_allows_stop(self, tmp_path, monkeypatch):
-        (tmp_path / "s1_mission.md").write_text("m")
-        save_ledger(
-            tmp_path / "s1_anchor.json",
-            round_number=ROUND_LIMIT,
-            regions=[],
-            done=False,
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            advisor_returns("a late region"),
+            ledger={"round_number": ROUND_LIMIT, "regions": [], "done": False},
         )
-        t = tmp_path / "t.jsonl"
-        write_jsonl(t, advisor_returns("a late region"))
-        arrange(tmp_path, monkeypatch, make_stdin(transcript_path=str(t)))
         with pytest.raises(SystemExit) as exc:
             subagent_stop()
         assert exc.value.code == 0

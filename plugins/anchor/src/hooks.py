@@ -29,7 +29,11 @@ from src.state import (
     build_state,
     save_ledger,
 )
-from src.transcript import extract_advisor_output, parse_round_actions
+from src.transcript import (
+    extract_advisor_output,
+    find_anchor_transcript,
+    parse_round_actions,
+)
 
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
 # survives any surrounding prose the model emits alongside it.
@@ -95,11 +99,20 @@ def subagent_stop() -> None:
     if state.done:
         sys.exit(0)
 
+    # SubagentStop hands us the MAIN transcript; the anchor's own work lives in
+    # a separate subagent transcript.  Resolve the latest anchor spawn's, or
+    # allow the stop if we can't (the loop can't run without anchor's actions).
+    anchor_transcript = find_anchor_transcript(state.transcript_path)
+    with open(state.data_dir / f"{state.session_id}_hook_trace.log", "a") as f:
+        f.write(f"  anchor_transcript={anchor_transcript}\n")
+    if anchor_transcript is None:
+        sys.exit(0)
+
     regions = state.region_history
 
     # Record last round's advisor verdict (none in round 0, before any call).
     if state.current_round >= 1:
-        verdict = extract_advisor_output(state.transcript_path)
+        verdict = extract_advisor_output(anchor_transcript)
         if verdict and TERMINATION_TOKEN in verdict:
             save_ledger(
                 state.state_path,
@@ -121,7 +134,7 @@ def subagent_stop() -> None:
         sys.exit(0)
 
     # Record this round's actions for the narrator (read later via advisor).
-    actions = parse_round_actions(state.transcript_path)
+    actions = parse_round_actions(anchor_transcript)
     state.action_path.write_text(json.dumps(actions, ensure_ascii=False, indent=2))
 
     # Assemble the deterministic part of the advisor's input in code —

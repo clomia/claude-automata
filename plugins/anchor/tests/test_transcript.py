@@ -4,6 +4,7 @@ import json
 
 from src.transcript import (
     extract_advisor_output,
+    find_anchor_transcript,
     is_round_boundary,
     parse_round_actions,
 )
@@ -229,3 +230,45 @@ class TestExtractAdvisorOutput:
             ],
         )
         assert extract_advisor_output(str(t)) == "real region"
+
+
+# ── find_anchor_transcript ──
+
+
+class TestFindAnchorTranscript:
+    @staticmethod
+    def anchor_spawn(call_id):
+        return {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": call_id,
+                    "name": "Agent",
+                    "input": {"subagent_type": "anchor:anchor"},
+                }
+            ],
+        }
+
+    @staticmethod
+    def write_meta(subdir, agent_id, tool_use_id):
+        (subdir / f"agent-{agent_id}.meta.json").write_text(
+            json.dumps({"agentType": "anchor:anchor", "toolUseId": tool_use_id})
+        )
+        (subdir / f"agent-{agent_id}.jsonl").write_text("")
+
+    def test_resolves_latest_anchor_spawn(self, tmp_path):
+        """Main may spawn anchor more than once — resolve the LAST one via its
+        tool_use id, matched to the subagent meta.json (toolUseId)."""
+        main = tmp_path / "sess.jsonl"
+        write_jsonl(main, [self.anchor_spawn("tu_old"), self.anchor_spawn("tu_new")])
+        subdir = tmp_path / "sess" / "subagents"
+        subdir.mkdir(parents=True)
+        self.write_meta(subdir, "OLD", "tu_old")
+        self.write_meta(subdir, "NEW", "tu_new")
+        assert find_anchor_transcript(str(main)) == str(subdir / "agent-NEW.jsonl")
+
+    def test_none_without_anchor_spawn(self, tmp_path):
+        main = tmp_path / "sess.jsonl"
+        write_jsonl(main, [{"role": "assistant", "content": "no spawn here"}])
+        assert find_anchor_transcript(str(main)) is None
