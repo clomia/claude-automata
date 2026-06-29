@@ -159,9 +159,11 @@ class TestSubagentStop:
         assert "advisor" in capsys.readouterr().err
         assert (tmp_path / "s1_advisor_token").exists()
 
-    def test_records_region_and_wraps_into_next_analysis(self, tmp_path, monkeypatch):
-        """Round 1: advisor returned a region — record it, and XML-wrap it into
-        the next round's analysis input."""
+    def test_records_region_and_wraps_into_next_analysis(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Round 1: advisor returned a region — record it, XML-wrap it into the
+        next analysis input, log it, and surface it to the user (systemMessage)."""
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -179,9 +181,13 @@ class TestSubagentStop:
         assert "<region-1>" in analysis
         assert "consider error handling" in analysis
 
-    def test_termination_token_sets_done_and_stops(self, tmp_path, monkeypatch):
+        # real-time systemMessage (stdout) + post-hoc log both carry the region
+        assert "consider error handling" in capsys.readouterr().out
+        assert "consider error handling" in (tmp_path / "s1_anchor.log").read_text()
+
+    def test_termination_token_sets_done_and_stops(self, tmp_path, monkeypatch, capsys):
         """The advisor's termination token ends the turn — set done, allow stop,
-        and do not append a region."""
+        do not append a region, and notify the user (systemMessage)."""
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -194,6 +200,7 @@ class TestSubagentStop:
         ledger = load_ledger(tmp_path / "s1_anchor.json")
         assert ledger["done"] is True
         assert ledger["regions"] == ["r"]
+        assert "종료" in capsys.readouterr().out
 
     def test_round_limit_allows_stop(self, tmp_path, monkeypatch):
         arrange_mission(

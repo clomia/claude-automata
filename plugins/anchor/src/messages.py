@@ -16,3 +16,13 @@ def format_advisor_trigger(*, analysis_path: Path, action_path: Path) -> str:
         'description="region review", '
         f'prompt="history={analysis_path}, latest_action={action_path}")`'
     )
+
+
+def format_region_notice(round_number: int, region: str) -> str:
+    """User-facing systemMessage: the region the advisor surfaced for this round."""
+    return f"anchor · round {round_number} — advisor가 짚은 영역:\n\n{region}"
+
+
+def format_termination_notice() -> str:
+    """User-facing systemMessage: the parallax turn ended (no region left)."""
+    return "anchor · parallax 종료 — advisor가 더 surface할 영역을 찾지 못했습니다."

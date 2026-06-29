@@ -20,7 +20,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.messages import format_advisor_trigger
+from src.messages import (
+    format_advisor_trigger,
+    format_region_notice,
+    format_termination_notice,
+)
 from src.prompt import build_analysis_input
 from src.state import (
     ROUND_LIMIT,
@@ -85,6 +89,14 @@ def write_pretooluse_trace(data_dir: Path, session_id: str, raw: str) -> None:
         f.write(f"{timestamp} stdin={raw.strip()}\n")
 
 
+def emit_system_message(text: str) -> None:
+    """Print a hook systemMessage to stdout — shown in the user's UI, the same
+    channel the SessionStart updater uses.  Paired with exit 2: the block lives
+    in stderr, so if the runtime ignores stdout on exit 2 the loop is unaffected
+    and {session}_anchor.log still holds the region for /anchor:log."""
+    print(json.dumps({"systemMessage": text}, ensure_ascii=False))
+
+
 def subagent_stop() -> None:
     """SubagentStop hook entry point (matcher: anchor)."""
     raw = sys.stdin.read()
@@ -109,6 +121,7 @@ def subagent_stop() -> None:
         sys.exit(0)
 
     regions = state.region_history
+    region = None  # the advisor's region this round, for the user + the log
 
     # Record last round's advisor verdict (none in round 0, before any call).
     if state.current_round >= 1:
@@ -120,9 +133,11 @@ def subagent_stop() -> None:
                 regions=regions,
                 done=True,
             )
+            emit_system_message(format_termination_notice())
             sys.exit(0)
         if verdict:
-            regions = [*regions, verdict.strip()]
+            region = verdict.strip()
+            regions = [*regions, region]
 
     if state.current_round >= ROUND_LIMIT:
         save_ledger(
@@ -155,13 +170,19 @@ def subagent_stop() -> None:
         analysis_path=state.analysis_path,
         action_path=state.action_path,
     )
-    write_log(
-        state.log_path,
-        state.current_round + 1,
-        new_turn=new_turn,
-        advisor_trigger=trigger,
-    )
+
+    # Post-hoc log (browsable via /anchor:log): the advisor's region, if any,
+    # then the next-round trigger.
+    sections = {"region": region} if region else {}
+    sections["advisor_trigger"] = trigger
+    write_log(state.log_path, state.current_round + 1, new_turn=new_turn, **sections)
+
     state.advisor_token_path.write_text("")
+
+    # Real-time: surface the region to the user's UI via systemMessage, while
+    # the block (stderr + exit 2) drives the anchor to consult the advisor again.
+    if region:
+        emit_system_message(format_region_notice(state.current_round + 1, region))
     sys.stderr.write(trigger)
     sys.exit(2)
 

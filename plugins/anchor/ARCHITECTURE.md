@@ -126,7 +126,7 @@ region 한 문단**뿐이다. narrator 호출, region-history 누적 읽기, 5-s
 | `{session}_anchor.json` | hook | `round` · `regions` · `done` (모두 hook이 기록) |
 | `{session}_action.json` | hook | 이번 라운드 action 기록 (narrator가 읽음) |
 | `{session}_analysis.md` | hook | advisor 입력: original-mission + region-history XML 봉투 |
-| `{session}_anchor.log` | hook | 라운드별 분석 로그 (`/anchor-log`로 조회) |
+| `{session}_anchor.log` | hook | 라운드별 region·트리거 로그 (`/anchor:log` 조회) |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (SubagentStop set · PreToolUse 소비) |
 
 **상태는 hook이 단독 소유한다.** advisor는 분석만 하고 region 한 문단(또는 종료
@@ -229,6 +229,11 @@ parallax를 모르므로(루프는 전적으로 훅이 구동) advisor 없이 �
    매칭해 그 anchor transcript를 해소한 뒤 action·advisor 출력을 읽는다(메인이 anchor를 여러
    번 spawn해도 마지막=현재를 집는다). 해소 실패 시 정지를 허용한다(graceful). 이 경로·메타
    형식은 비공개 구조라 `_hook_trace.log`의 `anchor_transcript=` 줄로 실측·검증한다.
+11. **로깅: 실시간 + 사후.** advisor가 surface한 region은 background subagent 안에 묻혀 메인
+   UI에 보이지 않는다. hook이 그 region을 (a) **systemMessage**로 stdout에 실어 사용자 UI에
+   실시간 표시하고(SessionStart updater와 같은 채널), (b) `_anchor.log`에 적어 `/anchor:log`
+   사후 조회를 남긴다. 블록은 stderr+exit 2가 담당하므로, 런타임이 exit 2에서 stdout을
+   무시해도 루프는 그대로이고 (b)가 백업한다.
 
 ---
 
