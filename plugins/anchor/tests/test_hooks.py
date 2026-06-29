@@ -147,7 +147,7 @@ class TestSubagentStop:
         )
         with pytest.raises(SystemExit) as exc:
             subagent_stop()
-        assert exc.value.code == 2
+        assert exc.value.code == 0
         assert load_ledger(tmp_path / "s1_anchor.json")["round"] == 1
 
         # deterministic analysis input assembled by the hook (XML-wrapped)
@@ -156,7 +156,10 @@ class TestSubagentStop:
         assert "build the thing" in analysis
         assert "<parallax-region-history>" in analysis
         assert "No prior regions." in analysis
-        assert "advisor" in capsys.readouterr().err
+        # block + trigger come back as JSON on stdout (exit 0 so stdout is read)
+        out = capsys.readouterr().out
+        assert '"decision": "block"' in out
+        assert "advisor" in out
         assert (tmp_path / "s1_advisor_token").exists()
 
     def test_records_region_and_wraps_into_next_analysis(
@@ -172,7 +175,7 @@ class TestSubagentStop:
         )
         with pytest.raises(SystemExit) as exc:
             subagent_stop()
-        assert exc.value.code == 2
+        assert exc.value.code == 0
         ledger = load_ledger(tmp_path / "s1_anchor.json")
         assert ledger["round"] == 2
         assert ledger["regions"] == ["consider error handling"]
@@ -181,8 +184,10 @@ class TestSubagentStop:
         assert "<region-1>" in analysis
         assert "consider error handling" in analysis
 
-        # real-time systemMessage (stdout) + post-hoc log both carry the region
-        assert "consider error handling" in capsys.readouterr().out
+        # JSON on stdout: block + systemMessage(region); log carries region too
+        out = capsys.readouterr().out
+        assert '"decision": "block"' in out
+        assert "consider error handling" in out
         assert "consider error handling" in (tmp_path / "s1_anchor.log").read_text()
 
     def test_termination_token_sets_done_and_stops(self, tmp_path, monkeypatch, capsys):

@@ -156,7 +156,7 @@ self-anchoring은 compaction 감지 자체가 불필요해 더 강건하다.
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
 | **PreToolUse** | `Agent` | anchor가 Agent 호출 | `anchor:advisor` 호출이면 1회용 토큰 검사 → 허용(소비) 또는 `exit 2` deny(자발 호출 차단) |
-| **SubagentStop** | `anchor:anchor` | anchor가 종료 시도 | 종료 판정 → `exit 0`(허용) 또는 `exit 2`+stderr(advisor 호출 지시) |
+| **SubagentStop** | `anchor:anchor` | anchor가 종료 시도 | 종료 판정 → `exit 0`(허용) 또는 JSON `decision:block`+`reason`(advisor 호출 지시)+`systemMessage`(region) |
 | **SessionStart** | `startup\|clear` | 세션 시작 | 신규 릴리스 알림 (parallax updater 이식) |
 
 플러그인 에이전트는 `anchor:<agent>`로 scoped 등록되므로, Agent 호출의
@@ -230,10 +230,13 @@ parallax를 모르므로(루프는 전적으로 훅이 구동) advisor 없이 �
    번 spawn해도 마지막=현재를 집는다). 해소 실패 시 정지를 허용한다(graceful). 이 경로·메타
    형식은 비공개 구조라 `_hook_trace.log`의 `anchor_transcript=` 줄로 실측·검증한다.
 11. **로깅: 실시간 + 사후.** advisor가 surface한 region은 background subagent 안에 묻혀 메인
-   UI에 보이지 않는다. hook이 그 region을 (a) **systemMessage**로 stdout에 실어 사용자 UI에
-   실시간 표시하고(SessionStart updater와 같은 채널), (b) `_anchor.log`에 적어 `/anchor:log`
-   사후 조회를 남긴다. 블록은 stderr+exit 2가 담당하므로, 런타임이 exit 2에서 stdout을
-   무시해도 루프는 그대로이고 (b)가 백업한다.
+   UI에 보이지 않는다. hook이 한 JSON(exit 0)으로 `decision:block`(anchor 계속 — exit 2 역할),
+   `reason`(트리거), `systemMessage`(region)를 함께 낸다 — (a) systemMessage가 사용자 UI에
+   region을 실시간 표시한다(SessionStart updater와 같은 채널), (b) region은 `_anchor.log`에도
+   적혀 `/anchor:log`로 사후 조회된다. 처음엔 stderr+exit 2 + stdout systemMessage였으나
+   런타임이 exit 2에서 stdout을 버려 systemMessage가 안 떠서 exit 0+JSON으로 바꿨다.
+   `decision:block`이 SubagentStop 연속을 보장하는지는 라이브 검증 항목이다(안 되면 exit 2로
+   롤백, 그때 region은 (b)로만 본다).
 
 ---
 

@@ -179,12 +179,15 @@ def subagent_stop() -> None:
 
     state.advisor_token_path.write_text("")
 
-    # Real-time: surface the region to the user's UI via systemMessage, while
-    # the block (stderr + exit 2) drives the anchor to consult the advisor again.
+    # One JSON on exit 0: `decision: block` keeps anchor working (the exit-2
+    # role), `reason` feeds the trigger back to it, and `systemMessage` surfaces
+    # the region to the user's UI.  Must be exit 0 — the runtime ignores stdout
+    # on exit 2, which is why the systemMessage was invisible.
+    output: dict[str, str] = {"decision": "block", "reason": trigger}
     if region:
-        emit_system_message(format_region_notice(state.current_round + 1, region))
-    sys.stderr.write(trigger)
-    sys.exit(2)
+        output["systemMessage"] = format_region_notice(state.current_round + 1, region)
+    print(json.dumps(output, ensure_ascii=False))
+    sys.exit(0)
 
 
 def pre_tool_use() -> None:

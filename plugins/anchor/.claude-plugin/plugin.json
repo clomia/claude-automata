@@ -1,6 +1,6 @@
 {
   "name": "anchor",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Surfaces regions the agent overlooks and drives complex missions to completion through nested agents — the subscription-safe evolution of parallax",
   "author": {
     "name": "clomia",
