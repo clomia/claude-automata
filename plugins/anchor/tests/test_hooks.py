@@ -147,7 +147,7 @@ class TestSubagentStop:
         )
         with pytest.raises(SystemExit) as exc:
             subagent_stop()
-        assert exc.value.code == 0
+        assert exc.value.code == 2
         assert load_ledger(tmp_path / "s1_anchor.json")["round"] == 1
 
         # deterministic analysis input assembled by the hook (XML-wrapped)
@@ -156,17 +156,12 @@ class TestSubagentStop:
         assert "build the thing" in analysis
         assert "<parallax-region-history>" in analysis
         assert "No prior regions." in analysis
-        # block + trigger come back as JSON on stdout (exit 0 so stdout is read)
-        out = capsys.readouterr().out
-        assert '"decision": "block"' in out
-        assert "advisor" in out
+        assert "advisor" in capsys.readouterr().err
         assert (tmp_path / "s1_advisor_token").exists()
 
-    def test_records_region_and_wraps_into_next_analysis(
-        self, tmp_path, monkeypatch, capsys
-    ):
+    def test_records_region_and_wraps_into_next_analysis(self, tmp_path, monkeypatch):
         """Round 1: advisor returned a region — record it, XML-wrap it into the
-        next analysis input, log it, and surface it to the user (systemMessage)."""
+        next analysis input, and log it for /anchor:log."""
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -175,7 +170,7 @@ class TestSubagentStop:
         )
         with pytest.raises(SystemExit) as exc:
             subagent_stop()
-        assert exc.value.code == 0
+        assert exc.value.code == 2
         ledger = load_ledger(tmp_path / "s1_anchor.json")
         assert ledger["round"] == 2
         assert ledger["regions"] == ["consider error handling"]
@@ -184,15 +179,12 @@ class TestSubagentStop:
         assert "<region-1>" in analysis
         assert "consider error handling" in analysis
 
-        # JSON on stdout: block + systemMessage(region); log carries region too
-        out = capsys.readouterr().out
-        assert '"decision": "block"' in out
-        assert "consider error handling" in out
+        # region is recorded to the log for /anchor:log
         assert "consider error handling" in (tmp_path / "s1_anchor.log").read_text()
 
-    def test_termination_token_sets_done_and_stops(self, tmp_path, monkeypatch, capsys):
+    def test_termination_token_sets_done_and_stops(self, tmp_path, monkeypatch):
         """The advisor's termination token ends the turn — set done, allow stop,
-        do not append a region, and notify the user (systemMessage)."""
+        do not append a region."""
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -205,7 +197,6 @@ class TestSubagentStop:
         ledger = load_ledger(tmp_path / "s1_anchor.json")
         assert ledger["done"] is True
         assert ledger["regions"] == ["r"]
-        assert "종료" in capsys.readouterr().out
 
     def test_round_limit_allows_stop(self, tmp_path, monkeypatch):
         arrange_mission(

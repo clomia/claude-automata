@@ -20,11 +20,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.messages import (
-    format_advisor_trigger,
-    format_region_notice,
-    format_termination_notice,
-)
+from src.messages import format_advisor_trigger
 from src.prompt import build_analysis_input
 from src.state import (
     ROUND_LIMIT,
@@ -89,14 +85,6 @@ def write_pretooluse_trace(data_dir: Path, session_id: str, raw: str) -> None:
         f.write(f"{timestamp} stdin={raw.strip()}\n")
 
 
-def emit_system_message(text: str) -> None:
-    """Print a hook systemMessage to stdout — shown in the user's UI, the same
-    channel the SessionStart updater uses.  Paired with exit 2: the block lives
-    in stderr, so if the runtime ignores stdout on exit 2 the loop is unaffected
-    and {session}_anchor.log still holds the region for /anchor:log."""
-    print(json.dumps({"systemMessage": text}, ensure_ascii=False))
-
-
 def subagent_stop() -> None:
     """SubagentStop hook entry point (matcher: anchor)."""
     raw = sys.stdin.read()
@@ -133,7 +121,6 @@ def subagent_stop() -> None:
                 regions=regions,
                 done=True,
             )
-            emit_system_message(format_termination_notice())
             sys.exit(0)
         if verdict:
             region = verdict.strip()
@@ -178,16 +165,8 @@ def subagent_stop() -> None:
     write_log(state.log_path, state.current_round + 1, new_turn=new_turn, **sections)
 
     state.advisor_token_path.write_text("")
-
-    # One JSON on exit 0: `decision: block` keeps anchor working (the exit-2
-    # role), `reason` feeds the trigger back to it, and `systemMessage` surfaces
-    # the region to the user's UI.  Must be exit 0 — the runtime ignores stdout
-    # on exit 2, which is why the systemMessage was invisible.
-    output: dict[str, str] = {"decision": "block", "reason": trigger}
-    if region:
-        output["systemMessage"] = format_region_notice(state.current_round + 1, region)
-    print(json.dumps(output, ensure_ascii=False))
-    sys.exit(0)
+    sys.stderr.write(trigger)
+    sys.exit(2)
 
 
 def pre_tool_use() -> None:
