@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-pre-tool-use",
+            "timeout": 30,
+            "statusMessage": "parallax-loop: gating"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "parallax-loop:operator",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-subagent-stop",
+            "timeout": 120,
+            "statusMessage": "parallax-loop: advising"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-update-check"
+          }
+        ]
+      }
+    ]
+  }
+}

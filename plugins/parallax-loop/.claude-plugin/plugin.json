@@ -1,0 +1,22 @@
+{
+  "name": "parallax-loop",
+  "version": "0.3.0",
+  "description": "Surfaces regions the agent overlooks and drives complex missions to completion through nested agents — the subscription-safe evolution of parallax",
+  "author": {
+    "name": "clomia",
+    "email": "clomia.sig@gmail.com",
+    "url": "https://github.com/clomia"
+  },
+  "homepage": "https://github.com/clomia/claude-automata",
+  "repository": "https://github.com/clomia/claude-automata",
+  "license": "MIT",
+  "keywords": [
+    "reasoning",
+    "thinking",
+    "feedback-loop",
+    "nested-agents",
+    "context-injection",
+    "autonomy",
+    "agent-enhancement"
+  ]
+}

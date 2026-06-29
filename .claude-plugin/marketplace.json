@@ -14,8 +14,8 @@
       "source": "./plugins/parallax"
     },
     {
-      "name": "anchor",
-      "source": "./plugins/anchor"
+      "name": "parallax-loop",
+      "source": "./plugins/parallax-loop"
     }
   ]
 }
