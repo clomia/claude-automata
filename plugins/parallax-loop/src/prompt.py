@@ -43,13 +43,39 @@ def format_advisor_trigger(
     Lists the five sections in parallax's order.  The advisor reads each path
     and runs the inlined narrator call to assemble action-history — so the only
     context added to the operator is this short trigger, not the analysis.
+
+    The call MUST be synchronous (run_in_background=false) and verbatim: parallax
+    ran the advisor in-hook via subprocess.run, so its stdout WAS the region.
+    Here the hook cannot call the tool, so the operator relays it — but the region
+    only returns as this call's tool_result when the call blocks.  A backgrounded
+    call instead yields the harness's launch acknowledgement, which the hook would
+    record as a bogus region.  Verbatim copying keeps the operator from injecting
+    its own spin into the advisor's input (the five sections are the only context).
+
+    The inlined narrator call is likewise run_in_background=false: the advisor runs
+    it to assemble action-history, so it must block for the advisor to actually
+    receive the narrative (else the advisor analyzes blind to the operator's work).
+    Blocking also lands the narrative as the advisor's narrator tool_result, which
+    the hook recovers from the advisor's transcript to log it (parity with
+    parallax, whose in-hook narration was logged directly).
+
+    It opens with a one-line mission re-anchor: parallax re-injected the mission
+    on compaction (mechanism 2), but a subagent's compaction is undetectable from
+    the hook, so instead this recency-positioned reminder fires every round to make
+    self-anchoring deterministic without needing detection.
     """
     return (
-        "Consult advisor:\n"
-        '`Agent(subagent_type="parallax-loop:advisor", description="region review", prompt="""\n'
+        f"Re-anchor: your original mission lives at {mission_path}; re-read it if "
+        "your context has drifted or been compacted.\n"
+        "Then consult the advisor — invoke it EXACTLY as written below, a "
+        "synchronous call (run_in_background=false), copied verbatim with nothing "
+        "added to the prompt — then act on the single region it returns:\n"
+        '`Agent(subagent_type="parallax-loop:advisor", description="region review", '
+        'run_in_background=false, prompt="""\n'
         f"original-mission: {mission_path}\n"
         'actions-history: Agent(subagent_type="parallax-loop:narrator", '
-        f'description="narrate actions", prompt="{action_path}")\n'
+        'description="narrate actions", run_in_background=false, '
+        f'prompt="{action_path}")\n'
         f"parallax-region-history: {regions_path}\n"
         f"instructions: {instruction_path}\n"
         '""")`'

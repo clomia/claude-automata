@@ -50,6 +50,27 @@ class TestFormatAdvisorTrigger:
         assert 'subagent_type="parallax-loop:advisor"' in out
         assert 'subagent_type="parallax-loop:narrator"' in out
 
+    def test_carries_mission_reanchor(self):
+        """A per-round, recency-positioned mission re-anchor reminder makes
+        self-anchoring deterministic (parallax's mechanism 2 needs compaction
+        detection, unavailable for a subagent)."""
+        out = self.trigger()
+        assert "Re-anchor" in out
+        assert "/d/s1_mission.md" in out
+
+    def test_forces_synchronous_calls(self):
+        """Both the advisor call and its inlined narrator call must block: a
+        backgrounded call yields only the launch acknowledgement, so the advisor
+        would analyze without the narrative and the hook would log boilerplate."""
+        # the param immediately precedes each Agent call's prompt (advisor + narrator)
+        assert self.trigger().count("run_in_background=false, prompt=") == 2
+
+    def test_directs_verbatim_invocation(self):
+        """The operator must copy the call as-is, adding nothing to the prompt."""
+        out = self.trigger().lower()
+        assert "verbatim" in out
+        assert "synchronous" in out
+
     def test_no_leftover_placeholders(self):
         out = self.trigger()
         assert "{" not in out and "}" not in out

@@ -181,6 +181,54 @@ class TestSubagentStop:
         # region is recorded to the log for /parallax-loop:log
         assert "consider error handling" in (tmp_path / "s1_loop.log").read_text()
 
+    def test_logs_action_history_narrative(self, tmp_path, monkeypatch):
+        """Parity with parallax: the log records the narrator's action-history
+        narrative, recovered from the advisor's synchronous narrator call, next to
+        the region."""
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            advisor_returns("consider error handling"),
+            ledger={"round_number": 1, "regions": [], "done": False},
+        )
+        # the advisor subagent the operator's advisor call ("a1") spawned, whose
+        # narrator output is the action-history narrative
+        subdir = tmp_path / "main" / "subagents"
+        (subdir / "agent-ADV.meta.json").write_text(
+            json.dumps({"agentType": "parallax-loop:advisor", "toolUseId": "a1"})
+        )
+        write_jsonl(
+            subdir / "agent-ADV.jsonl",
+            [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "n1",
+                            "name": "Agent",
+                            "input": {"subagent_type": "parallax-loop:narrator"},
+                        }
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "n1",
+                            "content": "operator wrote the parser",
+                        }
+                    ],
+                },
+            ],
+        )
+        with pytest.raises(SystemExit):
+            subagent_stop()
+        log = (tmp_path / "s1_loop.log").read_text()
+        assert "operator wrote the parser" in log
+        assert "consider error handling" in log
+
     def test_termination_token_sets_done_and_stops(self, tmp_path, monkeypatch):
         """The advisor's termination token ends the turn — set done, allow stop,
         do not append a region."""

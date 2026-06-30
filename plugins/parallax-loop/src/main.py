@@ -28,6 +28,7 @@ from src.state import (
     save_ledger,
 )
 from src.transcript import (
+    extract_action_narrative,
     extract_advisor_output,
     find_operator_transcript,
     parse_round_actions,
@@ -122,10 +123,16 @@ def subagent_stop() -> None:
         regions_path=state.regions_path,
     )
 
-    # Post-hoc log (browsable via /parallax-loop:log): the advisor's region, if
-    # any, then the next-round trigger.
-    sections = {"region": region} if region else {}
-    sections["advisor_trigger"] = trigger
+    # Post-hoc log (browsable via /parallax-loop:log): parity with parallax —
+    # the action-history narrative the advisor saw (recovered from its synchronous
+    # narrator call) and the region it surfaced.  The trigger itself is not logged:
+    # it is static path-pointers, not progress.
+    narrative = extract_action_narrative(operator_transcript)
+    sections = {}
+    if narrative:
+        sections["action_history"] = narrative
+    if region:
+        sections["region"] = region
     write_log(state.log_path, state.current_round + 1, new_turn=new_turn, **sections)
 
     state.advisor_token_path.write_text("")

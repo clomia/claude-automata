@@ -3,6 +3,7 @@
 import json
 
 from src.transcript import (
+    extract_action_narrative,
     extract_advisor_output,
     find_operator_transcript,
     is_round_boundary,
@@ -200,6 +201,20 @@ class TestExtractAdvisorOutput:
         write_jsonl(t, agent_exchange("narration", subagent="narrator"))
         assert extract_advisor_output(str(t)) is None
 
+    def test_rejects_async_launch_boilerplate(self, tmp_path):
+        """A backgrounded call returns the launch acknowledgement, not a region.
+        The trigger forces run_in_background=false, but if a call still runs async
+        this envelope must never be recorded — it degrades to None (graceful stall)
+        instead of poisoning region-history."""
+        t = tmp_path / "t.jsonl"
+        boilerplate = (
+            "Async agent launched successfully.\n"
+            "agentId: abc (internal ID - do not mention to user.)\n"
+            "The agent is working in the background. You will be notified ..."
+        )
+        write_jsonl(t, agent_exchange(boilerplate))
+        assert extract_advisor_output(str(t)) is None
+
     def test_skips_denied_error_result(self, tmp_path):
         """A PreToolUse-denied advisor call leaves an is_error result; the most
         recent successful call is returned instead, keeping region-history clean."""
@@ -279,6 +294,67 @@ class TestFindOperatorTranscript:
         main = tmp_path / "sess.jsonl"
         write_jsonl(main, [{"role": "assistant", "content": "no spawn here"}])
         assert find_operator_transcript(str(main)) is None
+
+
+# ── extract_action_narrative ──
+
+
+class TestExtractActionNarrative:
+    @staticmethod
+    def write_operator(subdir, advisor_call_id="adv1", region="a region"):
+        """An operator transcript whose last advisor call is `advisor_call_id`."""
+        operator = subdir / "agent-OP.jsonl"
+        write_jsonl(operator, agent_exchange(region, call_id=advisor_call_id))
+        return operator
+
+    @staticmethod
+    def write_advisor(subdir, advisor_call_id="adv1", narration="narrated work"):
+        """The advisor subagent (spawned by `advisor_call_id`) and its narrator call."""
+        (subdir / "agent-ADV.meta.json").write_text(
+            json.dumps(
+                {"agentType": "parallax-loop:advisor", "toolUseId": advisor_call_id}
+            )
+        )
+        write_jsonl(
+            subdir / "agent-ADV.jsonl",
+            agent_exchange(narration, subagent="narrator", call_id="n1"),
+        )
+
+    def test_recovers_narration_from_advisor_transcript(self, tmp_path):
+        """The narrator runs inside the advisor; its narration is the advisor's
+        narrator tool_result, recovered one tier down from the operator."""
+        subdir = tmp_path / "subagents"
+        subdir.mkdir()
+        operator = self.write_operator(subdir)
+        self.write_advisor(subdir, narration="operator wrote the parser")
+        assert extract_action_narrative(str(operator)) == "operator wrote the parser"
+
+    def test_none_without_advisor_call(self, tmp_path):
+        subdir = tmp_path / "subagents"
+        subdir.mkdir()
+        operator = subdir / "agent-OP.jsonl"
+        write_jsonl(operator, [{"role": "assistant", "content": "just work"}])
+        assert extract_action_narrative(str(operator)) is None
+
+    def test_none_when_advisor_transcript_unresolved(self, tmp_path):
+        """Advisor call present but no matching subagent meta → None (graceful)."""
+        subdir = tmp_path / "subagents"
+        subdir.mkdir()
+        operator = self.write_operator(subdir)
+        assert extract_action_narrative(str(operator)) is None
+
+    def test_none_when_narration_ran_async(self, tmp_path):
+        """An async narrator call leaves launch boilerplate, not narration → None,
+        so the log never records the acknowledgement as the narrative."""
+        subdir = tmp_path / "subagents"
+        subdir.mkdir()
+        operator = self.write_operator(subdir)
+        boilerplate = (
+            "Async agent launched successfully.\nagentId: x\n"
+            "The agent is working in the background."
+        )
+        self.write_advisor(subdir, narration=boilerplate)
+        assert extract_action_narrative(str(operator)) is None
 
 
 # ── strip_subagent_meta ──

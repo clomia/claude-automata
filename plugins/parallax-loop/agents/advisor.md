@@ -1,7 +1,7 @@
 ---
 name: advisor
 description: operator가 고려하지 못한 영역을 surface한다. operator가 매 라운드 호출한다.
-disallowedTools: Write, Edit, NotebookEdit, Artifact
+disallowedTools: Bash, Write, Edit, NotebookEdit, Artifact
 model: opus[1m]
 effort: max
 ---

@@ -41,13 +41,18 @@ def content_blocks(msg: dict) -> list:
     return content if isinstance(content, list) else []
 
 
-def is_advisor_call(block: dict) -> bool:
-    """True for an Agent tool_use whose subagent is the advisor."""
+def is_subagent_call(block: dict, keyword: str) -> bool:
+    """True for an Agent tool_use whose subagent_type contains keyword."""
     return (
         block.get("type") == "tool_use"
         and block.get("name") in AGENT_TOOL_NAMES
-        and "advisor" in str(block.get("input", {}).get("subagent_type", ""))
+        and keyword in str(block.get("input", {}).get("subagent_type", ""))
     )
+
+
+def is_advisor_call(block: dict) -> bool:
+    """True for an Agent tool_use whose subagent is the advisor."""
+    return is_subagent_call(block, "advisor")
 
 
 def is_round_boundary(msg: dict) -> bool:
@@ -140,23 +145,39 @@ def strip_subagent_meta(text: str) -> str:
     return SUBAGENT_META.sub("", text).strip()
 
 
-def extract_advisor_output(transcript_path: str) -> str | None:
-    """Return the text the most recent successful advisor call returned, or None.
+# A backgrounded Agent call returns the harness's async-launch acknowledgement
+# ("Async agent launched successfully ... working in the background") in place of
+# the advisor's region.  The trigger forces run_in_background=false so calls block
+# and the region returns as the tool_result; should one still run async, this
+# envelope must never be recorded as a region — recognize and reject it so
+# region-history degrades to a graceful stall instead of poisoning.
+LAUNCH_BOILERPLATE_PREFIX = "Async agent launched successfully"
 
-    None when no advisor call is present (e.g. round 0).  A call denied by
-    PreToolUse gating leaves an error tool_result; those are skipped so a
-    blocked self-initiated call never reaches region-history.
+
+def is_launch_boilerplate(text: str) -> bool:
+    """True for the async-launch acknowledgement (a non-region the hook must drop)."""
+    return text.lstrip().startswith(LAUNCH_BOILERPLATE_PREFIX)
+
+
+def extract_subagent_output(transcript_path: str, keyword: str) -> str | None:
+    """Return the text the most recent successful `keyword` subagent call returned.
+
+    None when no such call is present, when the only result was denied
+    (is_error — e.g. a PreToolUse-gated self-initiated call), or when the call
+    ran async (the launch acknowledgement, never a real output).  The trigger
+    forces run_in_background=false so the output arrives as the call's
+    tool_result; the boilerplate guard rejects it if a call still ran async.
     """
     messages = load_messages(transcript_path)
 
-    advisor_ids = {
+    call_ids = {
         block.get("id")
         for msg in messages
         if msg.get("role") == "assistant"
         for block in content_blocks(msg)
-        if is_advisor_call(block)
+        if is_subagent_call(block, keyword)
     }
-    if not advisor_ids:
+    if not call_ids:
         return None
 
     output = None
@@ -166,11 +187,23 @@ def extract_advisor_output(transcript_path: str) -> str | None:
         for block in content_blocks(msg):
             if (
                 block.get("type") == "tool_result"
-                and block.get("tool_use_id") in advisor_ids
+                and block.get("tool_use_id") in call_ids
                 and not block.get("is_error")
             ):
                 output = result_text(block.get("content"))
-    return strip_subagent_meta(output) if output is not None else None
+    if output is None:
+        return None
+    cleaned = strip_subagent_meta(output)
+    return None if is_launch_boilerplate(cleaned) else cleaned
+
+
+def extract_advisor_output(transcript_path: str) -> str | None:
+    """Return the region the most recent successful advisor call returned, or None.
+
+    None in round 0 (no advisor call yet).  The hook records this as the round's
+    surfaced region (or detects the termination token within it).
+    """
+    return extract_subagent_output(transcript_path, "advisor")
 
 
 def is_operator_spawn(block: dict) -> bool:
@@ -201,8 +234,16 @@ def find_operator_transcript(main_transcript_path: str) -> str | None:
                 spawn_id = block.get("id")
     if spawn_id is None:
         return None
-
     subagents_dir = Path(main_transcript_path).with_suffix("") / "subagents"
+    return resolve_subagent_transcript(subagents_dir, spawn_id)
+
+
+def resolve_subagent_transcript(subagents_dir: Path, tool_use_id: str) -> str | None:
+    """Resolve the subagent transcript spawned by a given Agent tool_use id.
+
+    Each subagent writes agent-<id>.meta.json carrying its spawning call's
+    toolUseId; match it and return the sibling .jsonl transcript (or None).
+    """
     if not subagents_dir.is_dir():
         return None
     for meta_path in subagents_dir.glob("agent-*.meta.json"):
@@ -210,9 +251,42 @@ def find_operator_transcript(main_transcript_path: str) -> str | None:
             meta = json.loads(meta_path.read_text())
         except json.JSONDecodeError, OSError:
             continue
-        if meta.get("toolUseId") == spawn_id:
+        if meta.get("toolUseId") == tool_use_id:
             transcript = meta_path.with_name(
                 meta_path.name[: -len(".meta.json")] + ".jsonl"
             )
             return str(transcript) if transcript.exists() else None
     return None
+
+
+def last_subagent_call_id(messages: list[dict], keyword: str) -> str | None:
+    """The id of the last assistant Agent tool_use whose subagent matches keyword."""
+    found = None
+    for msg in messages:
+        if msg.get("role") != "assistant":
+            continue
+        for block in content_blocks(msg):
+            if is_subagent_call(block, keyword):
+                found = block.get("id")
+    return found
+
+
+def extract_action_narrative(operator_transcript_path: str) -> str | None:
+    """Return the narrator's action-history narrative for the latest advisor round.
+
+    The narrator runs inside the advisor (depth 3); its narrative is the advisor's
+    narrator-call tool_result.  Descend one level — resolve the advisor subagent
+    the operator's last advisor call spawned, then read that advisor's narrator
+    output — so the log can show how the round progressed (parallax logged the
+    in-hook narration directly; here it lives one tier down).  None when it can't
+    be resolved (no consultation yet, or the narrator did not run synchronously).
+    """
+    messages = load_messages(operator_transcript_path)
+    advisor_call_id = last_subagent_call_id(messages, "advisor")
+    if advisor_call_id is None:
+        return None
+    subagents_dir = Path(operator_transcript_path).parent
+    advisor_transcript = resolve_subagent_transcript(subagents_dir, advisor_call_id)
+    if advisor_transcript is None:
+        return None
+    return extract_subagent_output(advisor_transcript, "narrator")

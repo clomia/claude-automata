@@ -1,6 +1,6 @@
 {
   "name": "parallax-loop",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Surfaces regions the agent overlooks and drives complex missions to completion through nested agents — the subscription-safe evolution of parallax",
   "author": {
     "name": "clomia",

@@ -66,13 +66,15 @@ narrator   depth 3  Read (leaf)   서사 작성               action 기록을 m
 | Tier | 도구 (allowlist) | 모델 | effort | parallax 대응 |
 |---|---|---|---|---|
 | **operator** | 전체 (미설정 — 모든 도구 상속) | `opus[1m]` | inherit | 메인 에이전트 |
-| **advisor** | 전체 − `Write·Edit·NotebookEdit·Artifact` | `opus[1m]` | max | Advisor (`claude -p`, max) |
+| **advisor** | 전체 − `Bash·Write·Edit·NotebookEdit·Artifact` | `opus[1m]` | max | Advisor (`claude -p`, max) |
 | **narrator** | `Read` | `sonnet` | low | Narrator (`claude -p`, low) |
 
-- **advisor는 파일·콘텐츠 생성 도구가 막혀 있다(`disallowedTools: Write, Edit, NotebookEdit, Artifact`)** — 아무것도
-  쓰지 않는다. 조사 도구로 영역을 사실에 근거 짓고(parallax의 CRITIC 근거: advisor가 외부
-  도구로 확인한 뒤 surface), 결과는 region 한 문단으로 **반환**한다 — 그것을 state에 기록하는
-  것은 hook의 몫이다(아래 상태 권위).
+- **advisor는 부작용 도구가 막혀 있다(`disallowedTools: Bash, Write, Edit, NotebookEdit, Artifact`)** — 아무것도
+  쓰지 않는다. `Bash`까지 막는 것은 parallax(`DISALLOWED_TOOLS="Bash,Write,Edit,NotebookEdit"`)와 일치하며,
+  Write/Edit를 막아도 `Bash`로 `echo > file`·`rm`·테스트 실행 등 부작용이 가능해 "advisor는 state를
+  쓰지 않는다"(아래 상태 권위)가 무너지기 때문이다. 남은 read-only 조사 도구(`Read·Glob·Grep·Web*`)로
+  영역을 사실에 근거 짓고(parallax의 CRITIC 근거: advisor가 외부 도구로 확인한 뒤 surface), `Agent`로
+  narrator를 호출하며, 결과는 region 한 문단으로 **반환**한다 — 그것을 state에 기록하는 것은 hook의 몫이다.
 - **narrator는 `Read`뿐인 leaf** — `Agent`가 없어 트리가 그 아래로 자라지 않는다.
   단순 변환이라 `sonnet`/`low`로 충분(parallax 그대로).
 - depth 3에서 트리를 닫아 depth-5 cap에 2단계 여유를 남긴다.
@@ -151,9 +153,12 @@ hook이 region을 기록했으므로, 이 방향이 parallax에 더 충실하다
    compaction되면 original-mission 파일을 다시 읽으라"고 지시한다. 시스템 프롬프트는
    compaction 후에도 그대로 reload되므로 훅보다 강한 보장이다(부트스트랩의 통찰).
 
-훅 기반 mission 재주입(parallax 메커니즘 2)에 **의존하지 않는** 이유: subagent
-내부 compaction에서 `PostCompact` 훅이 발화하는지 미확정이기 때문(아래 리스크 §2).
-self-anchoring은 compaction 감지 자체가 불필요해 더 강건하다.
+훅 기반 mission 재주입(parallax 메커니즘 2)을 **그대로 옮기지 못하는** 이유: subagent
+내부 compaction에서 `PostCompact` 훅이 발화하는지 미확정이기 때문(아래 리스크 §2) — 컴팩션
+감지에 의존하는 mechanism 2는 재현 불가다. 대신 SubagentStop 트리거가 **매 라운드 한 줄
+재정박 리마인더**(mission 경로 + "흐려졌으면 다시 읽어라")를 recency 위치에 주입해(theory §2.8),
+비결정적인 self-anchoring(시스템 프롬프트)을 결정적 nudge로 보강한다 — 컴팩션 감지 없이
+mechanism 2의 정신(미션을 다시 박음)을 재현한다.
 
 ---
 
@@ -241,10 +246,31 @@ parallax 루프를 모르므로(루프는 전적으로 훅이 구동) advisor �
    `toolUseId`와 매칭해 그 operator transcript를 해소한 뒤 action·advisor 출력을 읽는다(메인이
    operator를 여러 번 spawn해도 마지막=현재를 집는다). 해소 실패 시 정지를 허용한다(graceful).
    이 경로·메타 형식은 비공개 구조이나 실세션 로그로 확인됐다.
-11. **로깅: 사후 조회.** advisor가 surface한 region은 `parallax-loop:advisor` 서브에이전트 로그에
-   그대로 나타나므로 메인에 따로 실시간 표시하지 않는다 — hook의 systemMessage는 exit 2에서
-   stdout이 버려져 안 떴고, exit 0+JSON `decision:block`은 SubagentStop 연속이 미검증이라 루프를
-   위험에 빠뜨린다. 대신 region을 `_loop.log`에 적어 `/parallax-loop:log`로 사후 조회한다.
+11. **로깅: 사후 조회 + 원본 패리티.** 메인에 실시간 표시하지 않는다 — hook의 systemMessage는
+   exit 2에서 stdout이 버려져 안 떴고, exit 0+JSON `decision:block`은 SubagentStop 연속이 미검증이라
+   루프를 위험에 빠뜨린다. 대신 `_loop.log`에 적어 `/parallax-loop:log`로 사후 조회한다. 라운드마다
+   기록하는 것은 **action-history 서사 + region** 두 가지로, 원본 parallax 로그(`analysis_prompt`의
+   서사 + `new_advice`)와 같은 substance다. 서사는 advisor가 동기 실행한 narrator의 출력인데,
+   nested 구조상 operator가 아니라 advisor 컨텍스트에만 들어가므로(§컨텍스트 경제), hook이
+   advisor 서브에이전트 transcript에서 그 narrator tool_result를 회수한다(`extract_action_narrative` —
+   operator transcript에서 마지막 advisor 호출 → advisor transcript → narrator 출력, 한 단계 하강).
+   트리거 자체는 정적 경로 pointer라 진행 파악에 무의미해 로그에 남기지 않는다(원본의 `analysis_prompt`
+   중 mission·region-history는 파일·라운드별 region으로 이미 보임).
+12. **advisor 호출은 동기다(`run_in_background=false`).** Agent 툴은 이 빌드에서 기본 async라,
+   백그라운드로 뜬 호출의 tool_result는 region이 아니라 "Async agent launched..." launch acknowledgement다 —
+   그것을 region으로 기록하면 region·종료토큰·라운드가 한 채널에서 한꺼번에 desync한다(첫 실세션
+   실측: round 30·done=false·region 전부 acknowledgement). 원본 parallax는 훅이 `subprocess.run(claude -p)`로
+   advisor를 동기 실행해 stdout을 곧 region으로 받았다. nested 경로에선 훅이 호출자가 될 수 없어
+   operator를 경유하지만, 그 relay는 호출이 **블로킹**일 때만 region을 tool_result로 운반한다. 그래서
+   trigger가 호출을 **동기로(`run_in_background=false`)·축자로(프롬프트에 아무것도 더하지 말 것)**
+   실행하라 지시하고(`prompt.py`), `extract_advisor_output`은 launch acknowledgement를 region으로 인정하지 않는
+   가드를 둔다(`transcript.py`) — 동기가 어떤 이유로 깨져도 region-history는 오염 대신 graceful
+   stall한다. 축자 지시는 operator가 advisor 입력에 자기 해석을 끼워 넣는 것도 막는다(5-section이
+   유일한 맥락). 이 동기·축자 relay가 원본의 in-hook 동기 실행을 nested 위에서 재현한다.
+   **advisor가 도는 inlined narrator 호출도 같은 이유로 `run_in_background=false`다** — async면
+   advisor가 narration(action-history)을 받지 못한 채 분석하게 되어(theory §2.9 narrator 계층 무력화)
+   원본과 어긋나고, 로그용 narration 회수(결정 11)도 불가능해진다. 동기여야 narration이 advisor의
+   narrator tool_result로 남아 분석 입력이자 로그 소스가 된다.
 
 ---
 
@@ -270,6 +296,13 @@ parallax 루프를 모르므로(루프는 전적으로 훅이 구동) advisor �
    SubagentStop 발동이 강한 전례다(미발동 시 게이팅만 무효화되고 루프는 현행대로 —
    graceful). 실세션 로그에서 PreToolUse가 advisor·narrator 호출에 발동하고 session_id가
    SubagentStop과 일치함을 확인했다.
+6. **background operator의 nested 동기 호출** — operator는 run skill에서 background로 spawn되는데
+   (메인을 자유롭게 두어 `/parallax-loop:log` 실시간 조회를 위함), 그 안에서 `run_in_background=false`가
+   honor되어 advisor가 동기로 도는지는 nested-from-background 케이스라 실세션으로만 확정된다
+   (foreground 부모에선 동기 확정). honor되지 않으면 §핵심 설계 결정 12의 가드로 graceful stall하며,
+   fallback은 run skill에서 operator를 foreground로 돌리는 것이다(fg·bg 모두 ban-safe; 잃는 것은
+   실시간 로그뿐, `_loop.log` 사후 조회는 유지). 첫 async 기본값은 이 리스크 목록이 예상 못 한 항목으로,
+   첫 실세션에서 드러나 결정 12로 대응했다.
 
 ---
 
