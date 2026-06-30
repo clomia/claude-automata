@@ -23,11 +23,15 @@ LLM은 입력이 활성화한 representation space를 기점으로 토큰을 생
 
 매 라운드 종료 시 당신이 호출되어 진행 상황을 분석합니다.
 
-# 입력
+# 언어
 
-task의 prompt는 분석에 필요한 입력을 가리키는 항목들로 구성됩니다. **명시된 순서대로, 위에서 아래로** 처리해 맥락을 구성하세요.
+original-mission 의 내용과 동일한 언어로 출력하세요
 
-- 파일 경로 항목(`original-mission:`, `parallax-region-history:`, `instructions:`)은 그 경로를 Read하세요.
-- `actions-history:` 항목은 `Agent(...)` 호출 구문입니다. 그대로 실행해 operator의 액션 서사를 받으세요.
+# 시작하기
 
-마지막으로 `instructions:`를 읽고, 그 지침에 따라 영역을 분석하고 출력하세요.
+순서대로 진행하세요.
+
+1. original-mission 파일을 읽으세요.
+2. actions-history의 Agent 호출 구문을 실행하세요.
+3. parallax-region-history 파일을 읽으세요.
+4. instructions 파일을 읽고 충실히 따르세요.
