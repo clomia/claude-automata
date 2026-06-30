@@ -1,4 +1,32 @@
 {
+	"model": "opus[1m]",
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "xhigh",
+	"includeCoAuthoredBy": false,
+  "gitAttribution": false,
+	"enableAllProjectMcpServers": true,
+	"autoMemoryEnabled": false,
+	"disableAgentView": true,
+	"extraKnownMarketplaces": {
+		"claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    }
+  },
+  "enabledPlugins": {
+		"pyright-lsp@claude-plugins-official": true
+  },
+	"permissions": {
+		"defaultMode": "bypassPermissions",
+		"deny": [
+			"Read(.private/**)",
+			"Edit(.private/**)",
+			"Grep(.private/**)",
+			"Glob(.private/**)"
+		]
+	},
 	"hooks": {
 		"PostToolUse": [
 			{
