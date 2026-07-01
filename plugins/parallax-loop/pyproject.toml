@@ -1,12 +1,14 @@
 [project]
 name = "parallax-loop"
-version = "0.4.2"
+version = "0.6.0"
 requires-python = ">=3.14"
 dependencies = ["pydantic>=2.12.5"]
 
 [project.scripts]
-parallax-loop-subagent-stop = "src.main:subagent_stop"
+parallax-loop-stop = "src.main:stop"
 parallax-loop-pre-tool-use = "src.main:pre_tool_use"
+parallax-loop-user-prompt-submit = "src.main:user_prompt_submit"
+parallax-loop-mark-compaction = "src.main:mark_compaction"
 parallax-loop-update-check = "src.updater:check_for_update"
 
 [build-system]

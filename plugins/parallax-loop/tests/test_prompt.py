@@ -19,17 +19,18 @@ class TestFormatRegionHistory:
 
 
 class TestFormatAdvisorTrigger:
-    def trigger(self):
+    def trigger(self, mission_text=None):
         return format_advisor_trigger(
             mission_path=Path("/d/s1_mission.md"),
             action_path=Path("/d/s1_action.json"),
             regions_path=Path("/d/s1_regions.md"),
             instruction_path=Path("/p/prompts/instruction.md"),
+            mission_text=mission_text,
         )
 
-    def test_lists_four_sections_in_parallax_order(self):
-        """role lives in the advisor system prompt; the trigger carries the
-        other four, in parallax's order, for the advisor to read top-to-bottom."""
+    def test_lists_sections_in_parallax_order(self):
+        """role lives in the advisor system prompt; the trigger carries the other
+        four in parallax's order, with the narrator call inlined under actions-history."""
         out = self.trigger()
         assert (
             out.index("original-mission:")
@@ -45,31 +46,32 @@ class TestFormatAdvisorTrigger:
         assert "/d/s1_regions.md" in out
         assert "/p/prompts/instruction.md" in out
 
-    def test_action_history_is_an_inlined_narrator_call(self):
+    def test_inlines_narrator_call_under_advisor(self):
+        """The hook authors both invocations verbatim — the advisor call with the
+        narrator call inlined inside it (the literal call, nothing for the LLM to
+        construct)."""
         out = self.trigger()
         assert 'subagent_type="parallax-loop:advisor"' in out
         assert 'subagent_type="parallax-loop:narrator"' in out
 
-    def test_carries_mission_reanchor(self):
-        """A per-round, recency-positioned mission re-anchor reminder makes
-        self-anchoring deterministic (parallax's mechanism 2 needs compaction
-        detection, unavailable for a subagent)."""
-        out = self.trigger()
-        assert "Re-anchor" in out
-        assert "/d/s1_mission.md" in out
-
-    def test_forces_synchronous_calls(self):
-        """Both the advisor call and its inlined narrator call must block: a
-        backgrounded call yields only the launch acknowledgement, so the advisor
-        would analyze without the narrative and the hook would log boilerplate."""
-        # the param immediately precedes each Agent call's prompt (advisor + narrator)
+    def test_both_calls_synchronous(self):
+        """advisor + inlined narrator, both run_in_background=false (the param
+        precedes each call's prompt)."""
         assert self.trigger().count("run_in_background=false, prompt=") == 2
 
-    def test_directs_verbatim_invocation(self):
-        """The operator must copy the call as-is, adding nothing to the prompt."""
+    def test_directs_verbatim_synchronous(self):
         out = self.trigger().lower()
         assert "verbatim" in out
         assert "synchronous" in out
+
+    def test_mission_text_inlined_when_compacted(self):
+        """Mechanism 2: the mission text is inlined at recency on a compacted round."""
+        out = self.trigger(mission_text="THE MISSION BODY")
+        assert "THE MISSION BODY" in out
+        assert "compaction" in out.lower()
+
+    def test_no_mission_text_by_default(self):
+        assert "THE MISSION BODY" not in self.trigger()
 
     def test_no_leftover_placeholders(self):
         out = self.trigger()

@@ -37,39 +37,38 @@ def format_advisor_trigger(
     action_path: Path,
     regions_path: Path,
     instruction_path: Path = INSTRUCTION_PATH,
+    mission_text: str | None = None,
 ) -> str:
-    """Build the stderr feedback that drives the operator to invoke the advisor.
+    """Build the stderr feedback that drives the main agent to invoke the advisor.
 
-    Lists the five sections in parallax's order.  The advisor reads each path
-    and runs the inlined narrator call to assemble action-history — so the only
-    context added to the operator is this short trigger, not the analysis.
+    The trigger spells out the advisor's Agent-tool call verbatim, with the
+    narrator's Agent-tool call inlined inside it — the hook authors the exact
+    invocations (as parallax's hook did via subprocess.run), and the main agent
+    and advisor relay them as written.  Handing over the literal call is the
+    simplest, most deterministic path: nothing is left for the LLM to construct.
+    The five sections appear in parallax's order; the advisor reads/runs them
+    top-to-bottom (advisor.md), reconstructing the same ordered context.
 
-    The call MUST be synchronous (run_in_background=false) and verbatim: parallax
-    ran the advisor in-hook via subprocess.run, so its stdout WAS the region.
-    Here the hook cannot call the tool, so the operator relays it — but the region
-    only returns as this call's tool_result when the call blocks.  A backgrounded
-    call instead yields the harness's launch acknowledgement, which the hook would
-    record as a bogus region.  Verbatim copying keeps the operator from injecting
-    its own spin into the advisor's input (the five sections are the only context).
+    The call is synchronous (run_in_background=false): parallax ran the advisor
+    in-hook so its stdout WAS the region.  Here the hook cannot call the tool, so
+    the main agent relays it — and the region returns as this call's tool_result
+    only when the call blocks.  The inlined narrator call blocks for the same
+    reason: the advisor must receive the narrative to analyze on it.
 
-    The inlined narrator call is likewise run_in_background=false: the advisor runs
-    it to assemble action-history, so it must block for the advisor to actually
-    receive the narrative (else the advisor analyzes blind to the operator's work).
-    Blocking also lands the narrative as the advisor's narrator tool_result, which
-    the hook recovers from the advisor's transcript to log it (parity with
-    parallax, whose in-hook narration was logged directly).
-
-    It opens with a one-line mission re-anchor: parallax re-injected the mission
-    on compaction (mechanism 2), but a subagent's compaction is undetectable from
-    the hook, so instead this recency-positioned reminder fires every round to make
-    self-anchoring deterministic without needing detection.
+    On a compacted round, mission_text is the original-mission's full text,
+    re-injected at this recency position (parallax mechanism 2) — the discrete
+    compaction event puts the mission text itself into context.
     """
-    return (
-        f"Re-anchor: your original mission lives at {mission_path}; re-read it if "
-        "your context has drifted or been compacted.\n"
-        "Then consult the advisor — invoke it EXACTLY as written below, a "
-        "synchronous call (run_in_background=false), copied verbatim with nothing "
-        "added to the prompt — then act on the single region it returns:\n"
+    prefix = ""
+    if mission_text:
+        prefix = (
+            "Your original mission, re-injected after a compaction — hold to it:\n\n"
+            f"{mission_text}\n\n"
+        )
+    return prefix + (
+        "Consult the advisor — invoke it EXACTLY as written below, a synchronous "
+        "call (run_in_background=false), copied verbatim — then act on the single "
+        "region it returns:\n"
         '`Agent(subagent_type="parallax-loop:advisor", description="region review", '
         'run_in_background=false, prompt="""\n'
         f"original-mission: {mission_path}\n"

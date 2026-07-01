@@ -1,11 +1,11 @@
-"""State — external inputs for an operator SubagentStop, assembled into one object.
+"""State — external inputs for a main-session Stop, assembled into one object.
 
 Parses the hook event, locates the per-session workspace files under
 CLAUDE_PLUGIN_DATA, and loads the persisted round/regions/done ledger.
 
 The hook owns the entire ledger: it reads the advisor's returned region from
 the transcript and records round, regions, and done.  The advisor only
-analyzes and returns text — it no longer writes state.  The original-mission
+analyzes and returns text — it does not write state.  The original-mission
 lives in an external file (not the transcript), so there is no
 transcript-vs-capture reconciliation.
 """
@@ -20,23 +20,22 @@ ROUND_LIMIT = 30
 
 
 class HookInput(BaseModel):
-    """SubagentStop hook event data from stdin."""
+    """Stop hook event data from stdin."""
 
     model_config = ConfigDict(extra="ignore")
 
     session_id: str
     transcript_path: str
-    stop_hook_active: bool = False
 
 
 class State(BaseModel):
-    """All external inputs for one SubagentStop, assembled into one object."""
+    """All external inputs for one Stop, assembled into one object."""
 
     session_id: str
     transcript_path: str
-    stop_hook_active: bool
     data_dir: Path
     mission_active: bool
+    compacted: bool
     current_round: int
     region_history: list[str]
     done: bool
@@ -44,6 +43,14 @@ class State(BaseModel):
     @property
     def mission_path(self) -> Path:
         return self.data_dir / f"{self.session_id}_mission.md"
+
+    @property
+    def active_path(self) -> Path:
+        return self.data_dir / f"{self.session_id}_active"
+
+    @property
+    def compacted_path(self) -> Path:
+        return self.data_dir / f"{self.session_id}_compacted"
 
     @property
     def state_path(self) -> Path:
@@ -86,10 +93,13 @@ def save_ledger(
 
 
 def advisor_token_file(data_dir: Path, session_id: str) -> Path:
-    """The single-use token a SubagentStop writes to authorize one advisor call.
+    """The single-use token a Stop writes to authorize one advisor call.
 
-    PreToolUse consumes (deletes) it; an advisor call with no fresh token is
-    self-initiated and gets denied.
+    PreToolUse consumes (deletes) it on the advisor call, so its presence at the
+    next Stop signals the advisor was NOT called this round — the hook uses this
+    to skip stale-region extraction (no fresh verdict to record).  A call with no
+    fresh token is self-initiated and gets denied.  UserPromptSubmit clears it at
+    the turn boundary so it never leaks into the next mission.
     """
     return data_dir / f"{session_id}_advisor_token"
 
@@ -98,21 +108,28 @@ def build_state(stdin_raw: str) -> State:
     """Collect all external inputs and assemble a State. No side effects.
 
     mission_active gates the whole hook: it is True only when a
-    {session}_mission.md file exists, which /parallax-loop:run writes at
-    handoff.  Absent that file the stopping subagent is not a parallax-loop run.
+    {session}_active marker exists.  /parallax-loop:run creates it at handoff,
+    UserPromptSubmit clears it on every new user turn, and stop() clears it when
+    the loop terminates.  Absent the marker the stopping session is not an
+    active parallax-loop run.
+
+    compacted reflects a {session}_compacted marker the PostCompact hook touches;
+    on a compacted round stop() re-injects the original-mission text into the
+    trigger (parallax mechanism 2) and clears the marker.
     """
     hook = HookInput.model_validate_json(stdin_raw)
     data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
 
-    mission_active = (data_dir / f"{hook.session_id}_mission.md").exists()
+    mission_active = (data_dir / f"{hook.session_id}_active").exists()
+    compacted = (data_dir / f"{hook.session_id}_compacted").exists()
     ledger = load_ledger(data_dir / f"{hook.session_id}_loop.json")
 
     return State(
         session_id=hook.session_id,
         transcript_path=hook.transcript_path,
-        stop_hook_active=hook.stop_hook_active,
         data_dir=data_dir,
         mission_active=mission_active,
+        compacted=compacted,
         current_round=ledger.get("round", 0),
         region_history=ledger.get("regions", []),
         done=ledger.get("done", False),

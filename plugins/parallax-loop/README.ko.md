@@ -27,7 +27,7 @@ parallax-loop은 같은 parallax 메커니즘 — 격리된 advisor가 매 라�
 
 ### 동작 원리 — [**아키텍처 (ARCHITECTURE.md)**](ARCHITECTURE.md)
 
-4단계 에이전트 트리(main→operator→advisor→narrator), parallax 루프, compaction 저항,
+3단계 에이전트 트리(main→advisor→narrator), parallax 루프, compaction 저항,
 그리고 그 설계 결정들을 설명합니다.
 
 ### 사전 요구사항
@@ -40,10 +40,11 @@ uv가 없어도 트리는 프롬프트 기반 규율로 계속 동작합니다 �
 
 ### 비용
 
-operator·advisor는 **1M 컨텍스트의 Opus**로, narrator는 Sonnet으로 실행됩니다. 미션은
-깊은 트리로 펼쳐지며, 이는 추론 최대화를 위한 의도적 선택입니다 — 토큰 소모가 큽니다.
-일관된 트리를 위해 `main`도 `opus[1m]`로 실행하길 권장합니다. parallax-loop이 미션 단위
-opt-in인 이유가 이것입니다 — 사소한 요청은 `main`이 핸드오프 없이 직접 처리합니다.
+advisor는 **1M 컨텍스트의 Opus**로, narrator는 Sonnet으로 실행됩니다. `main`이 미션을
+직접 수행하고 매 라운드 advisor를 호출하며, 이는 추론 최대화를 위한 의도적 선택입니다 —
+토큰 소모가 큽니다. 일관된 결과를 위해 `main`을 `opus[1m]`로 실행하길 권장합니다.
+parallax-loop이 미션 단위 opt-in인 이유가 이것입니다 — 사소한 요청은 `main`이 핸드오프
+없이 직접 처리합니다.
 
 ### 플러그인 설치
 

@@ -22,9 +22,9 @@ def make_state(tmp_path, **overrides):
     defaults = dict(
         session_id="s1",
         transcript_path="/t.jsonl",
-        stop_hook_active=False,
         data_dir=tmp_path,
         mission_active=True,
+        compacted=False,
         current_round=0,
         region_history=[],
         done=False,
@@ -43,15 +43,10 @@ class TestHookInput:
 
     def test_ignores_extra_fields(self):
         hook = HookInput.model_validate_json(
-            make_stdin(cwd="/x", agent_type="operator")
+            make_stdin(cwd="/x", stop_hook_active=True)
         )
         assert not hasattr(hook, "cwd")
-
-    def test_stop_hook_active_defaults_false(self):
-        hook = HookInput.model_validate_json(
-            json.dumps({"session_id": "s", "transcript_path": "/t"})
-        )
-        assert hook.stop_hook_active is False
+        assert not hasattr(hook, "stop_hook_active")
 
 
 # ── Ledger persistence ──
@@ -79,32 +74,43 @@ class TestStatePaths:
     def test_per_session_paths(self, tmp_path):
         state = make_state(tmp_path)
         assert state.mission_path == tmp_path / "s1_mission.md"
+        assert state.active_path == tmp_path / "s1_active"
+        assert state.compacted_path == tmp_path / "s1_compacted"
         assert state.state_path == tmp_path / "s1_loop.json"
         assert state.action_path == tmp_path / "s1_action.json"
         assert state.regions_path == tmp_path / "s1_regions.md"
         assert state.log_path == tmp_path / "s1_loop.log"
+        assert state.advisor_token_path == tmp_path / "s1_advisor_token"
 
 
 # ── build_state ──
 
 
 class TestBuildState:
-    def test_inactive_without_mission_file(self, tmp_path, monkeypatch):
+    def test_inactive_without_active_marker(self, tmp_path, monkeypatch):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         state = build_state(make_stdin())
         assert state.mission_active is False
+        assert state.compacted is False
         assert state.current_round == 0
         assert state.region_history == []
         assert state.done is False
 
-    def test_active_with_mission_file(self, tmp_path, monkeypatch):
-        (tmp_path / "s1_mission.md").write_text("# Mission")
+    def test_active_with_active_marker(self, tmp_path, monkeypatch):
+        (tmp_path / "s1_active").touch()
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         state = build_state(make_stdin())
         assert state.mission_active is True
 
+    def test_compacted_marker_detected(self, tmp_path, monkeypatch):
+        (tmp_path / "s1_active").touch()
+        (tmp_path / "s1_compacted").touch()
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        state = build_state(make_stdin())
+        assert state.compacted is True
+
     def test_loads_persisted_ledger(self, tmp_path, monkeypatch):
-        (tmp_path / "s1_mission.md").write_text("m")
+        (tmp_path / "s1_active").touch()
         save_ledger(
             tmp_path / "s1_loop.json",
             round_number=3,

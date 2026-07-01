@@ -1,5 +1,26 @@
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-user-prompt-submit"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-mark-compaction"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Agent",
@@ -13,13 +34,12 @@
         ]
       }
     ],
-    "SubagentStop": [
+    "Stop": [
       {
-        "matcher": "parallax-loop:operator",
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-subagent-stop",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-stop",
             "timeout": 120,
             "statusMessage": "parallax-loop: advising"
           }

@@ -30,7 +30,7 @@ longer true.
 
 ### How it works — [**Architecture (ARCHITECTURE.md)**](ARCHITECTURE.md)
 
-The four-tier agent tree (main→operator→advisor→narrator), the parallax loop,
+The three-tier agent tree (main→advisor→narrator), the parallax loop,
 compaction resistance, and the decisions behind them.
 
 ### Prerequisite
@@ -43,11 +43,11 @@ hook-enforced advisor invocation is disabled.
 
 ### Cost
 
-operator and advisor run on **1M-context Opus**; narrator runs on Sonnet. The
-mission unfolds across a deep tree — a deliberate choice for maximum reasoning,
-with heavy token use. For a consistent tree, running `main` on `opus[1m]` is
-recommended. This is why parallax-loop is per-mission opt-in — trivial requests are
-handled by `main` directly, without a handoff.
+advisor runs on **1M-context Opus**; narrator runs on Sonnet. `main` runs the
+mission directly and calls the advisor each round — a deliberate choice for
+maximum reasoning, with heavy token use. For consistent results, running `main`
+on `opus[1m]` is recommended. This is why parallax-loop is per-mission opt-in —
+trivial requests are handled by `main` directly, without a handoff.
 
 ### Install
 
