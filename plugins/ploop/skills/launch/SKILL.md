@@ -13,8 +13,8 @@ $ARGUMENTS
 
 ## 준비
 
-1. `uv run --project "${CLAUDE_PLUGIN_ROOT}" mission-path` 를 실행하여 출력된 경로에 미션을 저장(`Write`)하세요.
-2. `uv run --project "${CLAUDE_PLUGIN_ROOT}" activation` 를 실행하여 parallax loop를 활성화 하세요.
+1. `uv run --project "${CLAUDE_PLUGIN_ROOT}" mission-path "${CLAUDE_PLUGIN_DATA}"` 를 실행하여 출력된 경로에 미션을 저장(`Write`)하세요.
+2. `uv run --project "${CLAUDE_PLUGIN_ROOT}" activation "${CLAUDE_PLUGIN_DATA}"` 를 실행하여 parallax loop를 활성화 하세요.
 
 ## 시작
 

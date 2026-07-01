@@ -288,14 +288,14 @@ class TestMarkCompaction:
 
 class TestLaunchCli:
     def test_mission_path_prints_path(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "s1")
+        monkeypatch.setattr("sys.argv", ["mission-path", str(tmp_path)])
         mission_path()
         assert capsys.readouterr().out.strip() == str(tmp_path / "s1_mission.md")
 
     def test_activate_creates_marker(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "s1")
+        monkeypatch.setattr("sys.argv", ["activation", str(tmp_path)])
         activate()
         assert (tmp_path / "s1_active").exists()
 

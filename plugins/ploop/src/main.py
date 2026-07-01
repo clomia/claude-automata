@@ -236,14 +236,20 @@ def mark_compaction() -> None:
 
 
 def mission_path() -> None:
-    """CLI: print the mission-file path /ploop:launch writes and reads."""
-    data_dir, session_id = session_workspace()
+    """CLI: print the mission-file path /ploop:launch writes and reads.
+
+    argv[1] is the plugin data dir, passed by the skill as ${CLAUDE_PLUGIN_DATA}.
+    """
+    data_dir, session_id = session_workspace(sys.argv[1])
     print(mission_file(data_dir, session_id))
 
 
 def activate() -> None:
-    """CLI: create the active marker that turns the loop on for /ploop:launch."""
-    data_dir, session_id = session_workspace()
+    """CLI: create the active marker that turns the loop on for /ploop:launch.
+
+    argv[1] is the plugin data dir, passed by the skill as ${CLAUDE_PLUGIN_DATA}.
+    """
+    data_dir, session_id = session_workspace(sys.argv[1])
     active_file(data_dir, session_id).touch()
 
 
