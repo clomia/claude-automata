@@ -1,15 +1,17 @@
 [project]
 name = "ploop"
-version = "0.8.0"
+version = "0.9.0"
 requires-python = ">=3.14"
 dependencies = ["pydantic>=2.12.5"]
 
 [project.scripts]
-ploop-stop = "src.main:stop"
-ploop-pre-tool-use = "src.main:pre_tool_use"
-ploop-user-prompt-submit = "src.main:user_prompt_submit"
-ploop-mark-compaction = "src.main:mark_compaction"
-ploop-update-check = "src.updater:check_for_update"
+stop = "src.main:stop"
+pre-tool-use = "src.main:pre_tool_use"
+user-prompt-submit = "src.main:user_prompt_submit"
+mark-compaction = "src.main:mark_compaction"
+update-check = "src.updater:check_for_update"
+mission-path = "src.main:mission_path"
+activation = "src.main:activate"
 
 [build-system]
 requires = ["uv_build>=0.11.0,<0.12.0"]

@@ -30,9 +30,12 @@ from pathlib import Path
 from src.prompt import format_advisor_trigger, format_region_history
 from src.state import (
     ROUND_LIMIT,
+    active_file,
     advisor_token_file,
     build_state,
+    mission_file,
     save_ledger,
+    session_workspace,
 )
 from src.transcript import (
     extract_advisor_output,
@@ -189,7 +192,7 @@ def pre_tool_use() -> None:
         sys.exit(0)
 
     # Self-initiated advisor call: deny so the main agent keeps working.
-    sys.stderr.write("The advisor cannot be called right now.")
+    sys.stderr.write("The Advisor cannot be invoked arbitrarily.")
     sys.exit(2)
 
 
@@ -230,6 +233,18 @@ def mark_compaction() -> None:
     data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
     session_id = data.get("session_id", "")
     (data_dir / f"{session_id}_compacted").touch()
+
+
+def mission_path() -> None:
+    """CLI: print the mission-file path /ploop:launch writes and reads."""
+    data_dir, session_id = session_workspace()
+    print(mission_file(data_dir, session_id))
+
+
+def activate() -> None:
+    """CLI: create the active marker that turns the loop on for /ploop:launch."""
+    data_dir, session_id = session_workspace()
+    active_file(data_dir, session_id).touch()
 
 
 if __name__ == "__main__":

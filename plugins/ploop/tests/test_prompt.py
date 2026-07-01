@@ -55,20 +55,23 @@ class TestFormatAdvisorTrigger:
         assert 'subagent_type="ploop:narrator"' in out
 
     def test_both_calls_synchronous(self):
-        """advisor + inlined narrator, both run_in_background=false (the param
-        precedes each call's prompt)."""
-        assert self.trigger().count("run_in_background=false, prompt=") == 2
+        """advisor + inlined narrator both set run_in_background=false."""
+        assert self.trigger().count("run_in_background=false") == 2
 
-    def test_directs_verbatim_synchronous(self):
-        out = self.trigger().lower()
-        assert "verbatim" in out
-        assert "synchronous" in out
+    def test_directs_exact_fenced_invocation(self):
+        """The trigger names the advisor and demands a verbatim invocation,
+        fenced as a literal code block."""
+        out = self.trigger()
+        assert "advisor" in out
+        assert "exactly" in out.lower()
+        assert out.count("```") == 2
 
     def test_mission_text_inlined_when_compacted(self):
-        """Mechanism 2: the mission text is inlined at recency on a compacted round."""
+        """Mechanism 2: the mission text is inlined ahead of the section list on a
+        compacted round (recency position)."""
         out = self.trigger(mission_text="THE MISSION BODY")
         assert "THE MISSION BODY" in out
-        assert "compaction" in out.lower()
+        assert out.index("THE MISSION BODY") < out.index("original-mission:")
 
     def test_no_mission_text_by_default(self):
         assert "THE MISSION BODY" not in self.trigger()

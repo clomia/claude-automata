@@ -16,6 +16,7 @@ The advisor reads/runs them top-to-bottom, reconstructing the same ordered
 context parallax assembled in code.
 """
 
+import textwrap
 from pathlib import Path
 
 INSTRUCTION_PATH = Path(__file__).resolve().parent.parent / "prompts" / "instruction.md"
@@ -61,21 +62,26 @@ def format_advisor_trigger(
     """
     prefix = ""
     if mission_text:
-        prefix = (
-            "Your original mission, re-injected after a compaction — hold to it:\n\n"
-            f"{mission_text}\n\n"
+        prefix = f"Your mission — stay anchored to it:\n\n{mission_text}\n\n---\n\n"
+    body = textwrap.dedent(f'''\
+        Invoke the advisor. Run the call below EXACTLY as written:
+
+        ```
+        Agent(
+          subagent_type="ploop:advisor",
+          description="review and advise",
+          run_in_background=false,
+          prompt="""
+            original-mission: {mission_path}
+            actions-history: Agent(
+              subagent_type="ploop:narrator",
+              description="narrate action history",
+              run_in_background=false,
+              prompt="{action_path}"
+            )
+            parallax-region-history: {regions_path}
+            instructions: {instruction_path}
+          """
         )
-    return prefix + (
-        "Consult the advisor — invoke it EXACTLY as written below, a synchronous "
-        "call (run_in_background=false), copied verbatim — then act on the single "
-        "region it returns:\n"
-        '`Agent(subagent_type="ploop:advisor", description="region review", '
-        'run_in_background=false, prompt="""\n'
-        f"original-mission: {mission_path}\n"
-        'actions-history: Agent(subagent_type="ploop:narrator", '
-        'description="narrate actions", run_in_background=false, '
-        f'prompt="{action_path}")\n'
-        f"parallax-region-history: {regions_path}\n"
-        f"instructions: {instruction_path}\n"
-        '""")`'
-    )
+        ```''')
+    return prefix + body

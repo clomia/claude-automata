@@ -346,7 +346,7 @@ ploop/
 ├── hooks/hooks.json                  # UserPromptSubmit + PostCompact + PreToolUse(Agent) + Stop + SessionStart
 ├── bin/ploop-hook                    # uv 가용성 체크 래퍼 (parallax 상속)
 ├── src/                              # 훅 구현 (런타임 의존성: pydantic)
-│   ├── main.py                       # stop · pre_tool_use · user_prompt_submit · mark_compaction 엔트리포인트
+│   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·user_prompt_submit·mark_compaction) + launch CLI(mission_path·activate)
 │   ├── state.py                      # 상태 조립 + 영속화 (active 게이트 · round/regions/done)
 │   ├── transcript.py                 # action 추출(advisor 호출 strip) + advisor 출력 추출(meta strip)
 │   ├── prompt.py                     # region-history 포맷 + 5-section advisor trigger 조립

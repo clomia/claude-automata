@@ -18,7 +18,7 @@ if [ -z "$entry" ]; then
 fi
 
 if ! command -v uv >/dev/null 2>&1; then
-    if [ "$entry" = "ploop-update-check" ]; then
+    if [ "$entry" = "update-check" ]; then
         printf '%s' '{"systemMessage":"ploop requires uv (Python package manager). Install it from https://docs.astral.sh/uv/getting-started/installation/ — without uv, the ploop durability hook will not run."}'
     fi
     exit 0

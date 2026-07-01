@@ -19,6 +19,14 @@ from pydantic import BaseModel, ConfigDict
 ROUND_LIMIT = 30
 
 
+def mission_file(data_dir: Path, session_id: str) -> Path:
+    return data_dir / f"{session_id}_mission.md"
+
+
+def active_file(data_dir: Path, session_id: str) -> Path:
+    return data_dir / f"{session_id}_active"
+
+
 class HookInput(BaseModel):
     """Stop hook event data from stdin."""
 
@@ -42,11 +50,11 @@ class State(BaseModel):
 
     @property
     def mission_path(self) -> Path:
-        return self.data_dir / f"{self.session_id}_mission.md"
+        return mission_file(self.data_dir, self.session_id)
 
     @property
     def active_path(self) -> Path:
-        return self.data_dir / f"{self.session_id}_active"
+        return active_file(self.data_dir, self.session_id)
 
     @property
     def compacted_path(self) -> Path:
@@ -102,6 +110,16 @@ def advisor_token_file(data_dir: Path, session_id: str) -> Path:
     the turn boundary so it never leaks into the next mission.
     """
     return data_dir / f"{session_id}_advisor_token"
+
+
+def session_workspace() -> tuple[Path, str]:
+    """(data_dir, session_id) for the running session, read from the environment.
+
+    /ploop:launch's CLI entry points call this — they run outside the hook
+    stdin protocol, so session identity comes straight from the environment
+    Claude Code sets for every session rather than from a hook payload.
+    """
+    return Path(os.environ["CLAUDE_PLUGIN_DATA"]), os.environ["CLAUDE_CODE_SESSION_ID"]
 
 
 def build_state(stdin_raw: str) -> State:

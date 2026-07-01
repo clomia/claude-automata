@@ -13,7 +13,9 @@ import pytest
 
 from src.main import (
     TERMINATION_TOKEN,
+    activate,
     mark_compaction,
+    mission_path,
     pre_tool_use,
     stop,
     user_prompt_submit,
@@ -279,6 +281,23 @@ class TestMarkCompaction:
         arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
         mark_compaction()
         assert (tmp_path / "s1_compacted").exists()
+
+
+# ── /ploop:launch CLI entry points ──
+
+
+class TestLaunchCli:
+    def test_mission_path_prints_path(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "s1")
+        mission_path()
+        assert capsys.readouterr().out.strip() == str(tmp_path / "s1_mission.md")
+
+    def test_activate_creates_marker(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "s1")
+        activate()
+        assert (tmp_path / "s1_active").exists()
 
 
 # ── write_log ──
