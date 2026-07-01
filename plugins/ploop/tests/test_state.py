@@ -9,7 +9,6 @@ from src.state import (
     build_state,
     load_ledger,
     save_ledger,
-    session_workspace,
 )
 
 
@@ -127,8 +126,3 @@ class TestBuildState:
 
 def test_round_limit_constant():
     assert ROUND_LIMIT == 30
-
-
-def test_session_workspace_pairs_data_dir_with_session(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "s1")
-    assert session_workspace(str(tmp_path)) == (tmp_path, "s1")

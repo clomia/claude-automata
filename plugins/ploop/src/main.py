@@ -1,4 +1,4 @@
-"""Main — ploop Stop, PreToolUse, SubagentStop, UserPromptSubmit, PostCompact entry points.
+"""Main — ploop Stop, PreToolUse, SubagentStop, UserPromptSubmit, PostCompact, UserPromptExpansion entry points.
 
 On each main-agent stop the hook owns both ends of the parallax round:
 
@@ -16,9 +16,10 @@ The hook never runs the advisor itself — it drives the main agent (the LLM) to
 call it via the Agent tool, which keeps the loop on the subscription path.
 
 The Stop hook fires on every main-session stop, so an active marker gates it:
-/ploop:launch writes the marker (and the mission), UserPromptSubmit clears
-it (with the ledger and the token) on every new user turn, and stop() clears it
-when the loop terminates — so an ESC-interrupted mission never silently resumes.
+the launch() UserPromptExpansion hook writes the marker (and the mission) when
+/ploop:launch expands, UserPromptSubmit clears it (with the ledger and the token)
+on every new user turn, and stop() clears it when the loop terminates — so an
+ESC-interrupted mission never silently resumes.
 """
 
 import json
@@ -36,7 +37,6 @@ from src.state import (
     build_state,
     mission_file,
     save_ledger,
-    session_workspace,
 )
 from src.transcript import (
     advisor_output_settled,
@@ -278,21 +278,32 @@ def subagent_stop() -> None:
     advisor_running_file(data_dir, session_id).unlink(missing_ok=True)
 
 
-def mission_path() -> None:
-    """CLI: print the mission-file path /ploop:launch writes and reads.
+def launch() -> None:
+    """UserPromptExpansion hook (matcher: launch): the whole /ploop:launch prep.
 
-    argv[1] is the plugin data dir, passed by the skill as ${CLAUDE_PLUGIN_DATA}.
+    Fires when the user types /ploop:launch <mission>, before the expanded skill
+    reaches the model.  The mission rides in command_args as structured JSON, so
+    multi-line text with quotes, newlines, or `$` is captured verbatim — no shell
+    quoting to corrupt it.  Writes the stripped mission and arms the loop; it must
+    never block (a blocked expansion erases the turn), so it always exits 0.
+
+    UserPromptSubmit clears the prior turn's state just before this fires, so the
+    handler only writes.  CLAUDE_PLUGIN_DATA comes from the environment (exported
+    to hook processes); session_id comes from the payload.
     """
-    data_dir, session_id = session_workspace(sys.argv[1])
-    print(mission_file(data_dir, session_id))
-
-
-def activate() -> None:
-    """CLI: create the active marker that turns the loop on for /ploop:launch.
-
-    argv[1] is the plugin data dir, passed by the skill as ${CLAUDE_PLUGIN_DATA}.
-    """
-    data_dir, session_id = session_workspace(sys.argv[1])
+    try:
+        data = json.loads(sys.stdin.read())
+    except json.JSONDecodeError:
+        sys.exit(0)
+    command = str(data.get("command_name", ""))
+    if command.rsplit(":", 1)[-1] != "launch":
+        sys.exit(0)
+    mission = str(data.get("command_args", "")).strip()
+    if not mission:
+        sys.exit(0)
+    data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
+    session_id = str(data.get("session_id", ""))
+    mission_file(data_dir, session_id).write_text(mission)
     active_file(data_dir, session_id).touch()
 
 

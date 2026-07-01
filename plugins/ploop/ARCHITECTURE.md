@@ -140,8 +140,8 @@ instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그
 
 | 파일 | 작성자 | 내용 |
 |---|---|---|
-| `{session}_mission.md` | main (launch skill) | original-mission 정의 (외부 보존 anchor) |
-| `{session}_active` | main 생성 · hook 삭제 | 활성화 마커 (Stop 게이트) |
+| `{session}_mission.md` | launch 훅 (UserPromptExpansion) | original-mission 정의 (외부 보존 anchor) |
+| `{session}_active` | launch 훅 생성 · hook 삭제 | 활성화 마커 (Stop 게이트) |
 | `{session}_loop.json` | hook | `round` · `regions` · `done` |
 | `{session}_action.json` | hook | 이번 라운드 action 기록 (narrator가 읽음) |
 | `{session}_regions.md` | hook | advisor 입력의 parallax-region-history (XML) |
@@ -156,12 +156,12 @@ advisor 반환값을 트랜스크립트에서 추출(`extract_advisor_output`)�
 종료 토큰이면 `done`을 세운다. `round`도 hook이 증가시키는 안전망이다. 단일 작성자라 race가
 없고, advisor 프롬프트는 순수 분석으로 남는다 — parallax advisor도 텍스트만 반환하고 hook이
 region을 기록했으므로, 이 방향이 parallax에 충실하다. (`mission.md`·`active` 마커는 활성화
-신호라 main이 만든다 — parallax도 미션·활성화는 사용자 입력/UserPromptSubmit이, loop state는
+신호라 launch 훅(UserPromptExpansion)이 만든다 — parallax도 미션·활성화는 사용자 입력/UserPromptSubmit이, loop state는
 hook이 소유했다.)
 
 **활성화 lifecycle.** Stop 훅은 메인 세션 정지마다 발화하므로 active 마커가 루프를 게이트한다.
 
-1. `/ploop:launch`가 `mission.md`와 `active` 마커를 쓰고, main이 미션을 직접 수행하기
+1. `/ploop:launch`의 UserPromptExpansion 훅이 `mission.md`와 `active` 마커를 쓰고, main이 미션을 직접 수행하기
    시작한다.
 2. `UserPromptSubmit`이 매 새 사용자 턴마다 `active`·`loop.json`·`advisor_token`·`compacted`를
    지운다(turn-boundary cleanup). 명시적 launch만 (재)활성화하므로, ESC로 끊긴 미션이 다음 사용자
@@ -175,7 +175,7 @@ hook이 소유했다.)
 
 **미션 정박은 네 겹이며, 마지막이 parallax 메커니즘을 그대로 보존한다.**
 
-1. **외부 보존(메커니즘 1)** — launch가 original-mission을 `mission.md`에 기록한다. 트랜스크립트와
+1. **외부 보존(메커니즘 1)** — launch 훅이 original-mission을 `mission.md`에 기록한다. 트랜스크립트와
    독립이라 main 내부가 어떻게 compaction되든 원본은 보존된다.
 2. **self-anchoring(launch 스킬 본문)** — launch 스킬의 본문이 "mission.md를 닻으로, 흐려지면 다시
    읽으라"고 지시한다. 호출된 스킬 본문은 auto-compact 후에도 re-inject되어(스킬당 앞 5,000토큰·
@@ -242,8 +242,8 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
 4. **작업 transcript = 메인 transcript.** Stop 훅은 메인 세션 transcript를 직접 건넨다. main이
    미션을 직접 수행하므로 action과 advisor 호출(tool_use/tool_result)이 모두 거기 있다 — operator의
    별도 transcript를 `subagents/meta.json`으로 해소하던 단계가 통째로 사라진다.
-5. **활성화 게이트 + UserPromptSubmit turn cleanup.** `/ploop:launch`가 `mission.md`·`active`
-   마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돌고, 종료 시
+5. **활성화 게이트 + UserPromptSubmit turn cleanup.** `/ploop:launch`의 UserPromptExpansion 훅이
+   `mission.md`·`active` 마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돌고, 종료 시
    마커를 지운다. UserPromptSubmit이 매 사용자 턴 마커·`loop.json`을 지워, ESC로 끊긴 미션이
    무단 재개되지 않는다. parallax의 활성화 패턴을 그대로 옮긴 것.
 6. **미션 정박 — 메커니즘 1 + 2 (parallax 그대로).** 외부 보존(`mission.md`, 메커니즘 1)으로
@@ -265,9 +265,11 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    리터럴 호출을 그대로 건네는 것이 가장 단순·결정론적이다 — LLM이 구성할 것이 없다. advisor는 네
    경로를 위에서 아래로 읽어 parallax와 동일 순서로 맥락을 쌓는다(advisor.md). nested 구조상 두 가지가
    어긋난다. **(a)** action narrative만
-   런타임 수집(narrating은 LLM이라 hook이 못 부른다). **(b)** 정박 미션이 parallax의 *사용자 원문*에서
-   ploop의 *main 작성 명세*(`mission.md`)로 바뀌었고 advisor에도 전파된다 — main이 미션을
-   정의하는 설계의 의도된 결과이나 source of truth가 한 단계 멀어진 트레이드다. action-history는 advisor
+   런타임 수집(narrating은 LLM이라 hook이 못 부른다). **(b)** 정박 미션이 parallax의 *세션 원문*에서
+   ploop의 *launch 핸드오프 텍스트*(`mission.md`)로 바뀌었고 advisor에도 전파된다 — launch 훅이
+   `/ploop:launch` 인자를 축자 캡처하므로(모델 전사 단계 없음) mission.md는 핸드오프 원문과 정확히
+   일치하나, 정박 대상이 세션 최초 프롬프트가 아닌 별도 핸드오프 텍스트라는 점은 parallax와의 의도된
+   차이다. action-history는 advisor
    호출을 strip해 region-history와 분리를 지킨다.
 8. **단일 모델 `opus[1m]`(main·advisor).** 추론 최대화와 compaction 빈도 감소가 같은 선택으로
    수렴. narrator만 단순 변환이라 `sonnet`/`low`로 parallax를 충실히 보존. main은 세션 모델이라
@@ -353,11 +355,11 @@ ploop/
 │   ├── advisor.md                    # parallax role 이식 + 5-section 순서 지침 (Write 없음)
 │   └── narrator.md                   # parallax conversion 이식
 ├── prompts/instruction.md            # advisor 분석·출력 지침 (parallax instruction 이식)
-├── skills/launch/SKILL.md            # /ploop:launch — 미션 핸드오프 + main 직접 수행 + self-anchoring
-├── hooks/hooks.json                  # UserPromptSubmit + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
+├── skills/launch/SKILL.md            # /ploop:launch — main 직접 수행 + self-anchoring (미션 저장·활성화는 launch 훅)
+├── hooks/hooks.json                  # UserPromptSubmit + UserPromptExpansion(launch) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
 ├── bin/ploop-hook                    # uv 가용성 체크 래퍼 (parallax 상속)
 ├── src/                              # 훅 구현 (런타임 의존성: pydantic)
-│   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·user_prompt_submit·mark_compaction) + launch CLI(mission_path·activate)
+│   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·user_prompt_submit·mark_compaction·launch)
 │   ├── state.py                      # 상태 조립 + 영속화 (active 게이트 · round/regions/done)
 │   ├── transcript.py                 # action 추출(advisor 호출 strip) + advisor 출력 추출(meta strip)
 │   ├── prompt.py                     # region-history 포맷 + 5-section advisor trigger 조립

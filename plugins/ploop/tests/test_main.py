@@ -13,9 +13,8 @@ import pytest
 
 from src.main import (
     TERMINATION_TOKEN,
-    activate,
+    launch,
     mark_compaction,
-    mission_path,
     pre_tool_use,
     stop,
     subagent_stop,
@@ -380,21 +379,51 @@ class TestMarkCompaction:
         assert (tmp_path / "s1_compacted").exists()
 
 
-# ── /ploop:launch CLI entry points ──
+# ── /ploop:launch UserPromptExpansion hook ──
 
 
-class TestLaunchCli:
-    def test_mission_path_prints_path(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "s1")
-        monkeypatch.setattr("sys.argv", ["mission-path", str(tmp_path)])
-        mission_path()
-        assert capsys.readouterr().out.strip() == str(tmp_path / "s1_mission.md")
+class TestLaunch:
+    def make_stdin(self, **payload):
+        return io.StringIO(json.dumps(payload))
 
-    def test_activate_creates_marker(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "s1")
-        monkeypatch.setattr("sys.argv", ["activation", str(tmp_path)])
-        activate()
+    def test_writes_stripped_mission_and_arms_loop(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        mission = '  do the thing\nwith "quotes" and $vars  '
+        monkeypatch.setattr(
+            "sys.stdin",
+            self.make_stdin(
+                command_name="ploop:launch", command_args=mission, session_id="s1"
+            ),
+        )
+        launch()
+        saved = (tmp_path / "s1_mission.md").read_text()
+        assert saved == 'do the thing\nwith "quotes" and $vars'
         assert (tmp_path / "s1_active").exists()
+
+    def test_ignores_non_launch_command(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr(
+            "sys.stdin",
+            self.make_stdin(
+                command_name="other:cmd", command_args="x", session_id="s1"
+            ),
+        )
+        with pytest.raises(SystemExit):
+            launch()
+        assert not (tmp_path / "s1_mission.md").exists()
+        assert not (tmp_path / "s1_active").exists()
+
+    def test_blank_mission_does_not_arm(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr(
+            "sys.stdin",
+            self.make_stdin(
+                command_name="ploop:launch", command_args="   ", session_id="s1"
+            ),
+        )
+        with pytest.raises(SystemExit):
+            launch()
+        assert not (tmp_path / "s1_active").exists()
 
 
 # ── write_log ──

@@ -10,6 +10,17 @@
         ]
       }
     ],
+    "UserPromptExpansion": [
+      {
+        "matcher": "launch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook launch"
+          }
+        ]
+      }
+    ],
     "PostCompact": [
       {
         "matcher": "auto",

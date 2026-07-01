@@ -128,19 +128,6 @@ def advisor_token_file(data_dir: Path, session_id: str) -> Path:
     return data_dir / f"{session_id}_advisor_token"
 
 
-def session_workspace(data_dir: str) -> tuple[Path, str]:
-    """(data_dir, session_id) for a /ploop:launch CLI entry point.
-
-    data_dir is passed in: the launch skill supplies it as ${CLAUDE_PLUGIN_DATA},
-    which Claude Code substitutes inline in skill content.  That variable is NOT
-    exported into Bash-tool subprocesses (only hook/MCP/LSP processes get it), so
-    the CLI — run via `uv run` in a Bash subprocess — cannot read it from the
-    environment.  The session id does come from the environment: CLAUDE_CODE_SESSION_ID
-    is set in Bash subprocesses and matches the hook payload's session_id.
-    """
-    return Path(data_dir), os.environ["CLAUDE_CODE_SESSION_ID"]
-
-
 def build_state(stdin_raw: str) -> State:
     """Collect all external inputs and assemble a State. No side effects.
 
