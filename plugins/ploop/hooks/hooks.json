@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-user-prompt-submit"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook ploop-user-prompt-submit"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-mark-compaction"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook ploop-mark-compaction"
           }
         ]
       }
@@ -27,9 +27,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-pre-tool-use",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook ploop-pre-tool-use",
             "timeout": 30,
-            "statusMessage": "parallax-loop: gating"
+            "statusMessage": "ploop: gating"
           }
         ]
       }
@@ -39,9 +39,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-stop",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook ploop-stop",
             "timeout": 120,
-            "statusMessage": "parallax-loop: advising"
+            "statusMessage": "ploop: advising"
           }
         ]
       }
@@ -52,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/parallax-loop-hook parallax-loop-update-check"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook ploop-update-check"
           }
         ]
       }

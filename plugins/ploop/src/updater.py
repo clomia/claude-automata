@@ -1,4 +1,4 @@
-"""Update notifier — SessionStart hook that surfaces newer parallax-loop releases.
+"""Update notifier — SessionStart hook that surfaces newer ploop releases.
 
 Runs on SessionStart with source in {startup, clear}.  Reads the installed
 version from .claude-plugin/plugin.json, fetches the same manifest from the
@@ -21,8 +21,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-REMOTE_URL = "https://raw.githubusercontent.com/clomia/claude-automata/main/plugins/parallax-loop/.claude-plugin/plugin.json"
-PLUGIN_NAME = "parallax-loop"
+REMOTE_URL = "https://raw.githubusercontent.com/clomia/claude-automata/main/plugins/ploop/.claude-plugin/plugin.json"
+PLUGIN_NAME = "ploop"
 COOLDOWN_SECONDS = 6 * 60 * 60
 HTTP_TIMEOUT = 3.0
 CACHE_FILENAME = "update_cache.json"
@@ -130,9 +130,9 @@ def check_for_update() -> None:
 
     if cached_remote and is_newer(cached_remote, local_version):
         message = (
-            f"parallax-loop update available: {local_version} -> {cached_remote}\n"
+            f"ploop update available: {local_version} -> {cached_remote}\n"
             f"Run: claude plugin marketplace update claude-automata "
-            f"&& claude plugin update parallax-loop@claude-automata"
+            f"&& claude plugin update ploop@claude-automata"
         )
         sys.stdout.write(json.dumps({"systemMessage": message}))
 

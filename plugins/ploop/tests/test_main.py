@@ -26,7 +26,7 @@ def make_stdin(*, session_id="s1", transcript_path="/t.jsonl"):
     return json.dumps({"session_id": session_id, "transcript_path": transcript_path})
 
 
-def make_pretooluse_stdin(*, session_id="s1", subagent_type="parallax-loop:advisor"):
+def make_pretooluse_stdin(*, session_id="s1", subagent_type="ploop:advisor"):
     return json.dumps(
         {
             "session_id": session_id,
@@ -129,7 +129,7 @@ class TestStop:
         assert str(tmp_path / "s1_mission.md") in err
         assert "parallax-region-history:" in err
         assert "instructions:" in err
-        assert "parallax-loop:advisor" in err
+        assert "ploop:advisor" in err
         assert (tmp_path / "s1_advisor_token").exists()
 
     def test_records_region_into_next_regions_file(self, tmp_path, monkeypatch):
@@ -237,7 +237,7 @@ class TestPreToolUse:
         arrange(
             tmp_path,
             monkeypatch,
-            make_pretooluse_stdin(subagent_type="parallax-loop:narrator"),
+            make_pretooluse_stdin(subagent_type="ploop:narrator"),
         )
         with pytest.raises(SystemExit) as exc:
             pre_tool_use()

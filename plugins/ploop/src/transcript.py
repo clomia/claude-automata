@@ -64,7 +64,7 @@ def is_round_boundary(msg: dict) -> bool:
 def strip_advisor_exchanges(messages: list[dict]) -> list[dict]:
     """Drop the main agent's Agent(advisor) call and its result from the messages.
 
-    The advisor call is parallax-loop machinery, not the main agent's domain
+    The advisor call is ploop machinery, not the main agent's domain
     work.  In parallax the advisor ran as an external process and never touched
     the main transcript, so action-history was pure work.  Here the main agent
     calls it in-context, so we strip the call and its result to keep

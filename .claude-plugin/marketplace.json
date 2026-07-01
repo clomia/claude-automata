@@ -14,8 +14,8 @@
       "source": "./plugins/parallax"
     },
     {
-      "name": "parallax-loop",
-      "source": "./plugins/parallax-loop"
+      "name": "ploop",
+      "source": "./plugins/ploop"
     }
   ]
 }

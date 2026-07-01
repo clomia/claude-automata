@@ -1,11 +1,11 @@
 ---
 name: run
-description: 정의된 미션을 parallax-loop에 핸드오프한다 — 미션 명세를 외부 파일에 기록하고 메인 에이전트가 직접 parallax 루프로 미션을 끝까지 수행한다
+description: 정의된 미션을 ploop에 핸드오프한다 — 미션 명세를 외부 파일에 기록하고 메인 에이전트가 직접 parallax 루프로 미션을 끝까지 수행한다
 argument-hint: "[미션 이름 또는 짧은 설명]"
 disable-model-invocation: true
 ---
 
-정의된 미션을 parallax-loop에 핸드오프합니다. 다음 순서로 직접 수행하세요.
+정의된 미션을 ploop에 핸드오프합니다. 다음 순서로 직접 수행하세요.
 
 ## 1. 미션이 완전히 명세되었는지 확인
 
@@ -44,7 +44,7 @@ echo "active:  ${CLAUDE_PLUGIN_DATA}/${CLAUDE_SESSION_ID}_active"
 
 ## 4. 루프 켜기
 
-확인한 active 절대경로에 빈 파일을 만드세요(`Write`로 빈 내용, 또는 `Bash`의 `touch`). 이 마커가 parallax-loop을 이 세션에 활성화합니다 — 마커가 없으면 아무것도 발화하지 않습니다.
+확인한 active 절대경로에 빈 파일을 만드세요(`Write`로 빈 내용, 또는 `Bash`의 `touch`). 이 마커가 ploop을 이 세션에 활성화합니다 — 마커가 없으면 아무것도 발화하지 않습니다.
 
 ## 5. 미션 수행 — 당신의 닻은 original-mission
 
@@ -52,4 +52,4 @@ echo "active:  ${CLAUDE_PLUGIN_DATA}/${CLAUDE_SESSION_ID}_active"
 
 먼저 mission 파일을 `Read`해 미션을 내재화하세요. 이 파일은 컨텍스트 바깥에 영속하는 source of truth이니, compaction되거나 맥락이 흐려지면 언제든 다시 `Read`해 재정박(anchor)하세요.
 
-mission의 언어와 동일한 언어로 작업하세요. 이 미션은 매우 오래 걸릴 수 있습니다 — 도중에 멈추지 말고 끝까지 완수하세요. 진행 상황은 `/parallax-loop:log`로 확인할 수 있습니다.
+mission의 언어와 동일한 언어로 작업하세요. 이 미션은 매우 오래 걸릴 수 있습니다 — 도중에 멈추지 말고 끝까지 완수하세요. 진행 상황은 `/ploop:log`로 확인할 수 있습니다.

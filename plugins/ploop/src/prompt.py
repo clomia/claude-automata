@@ -1,7 +1,7 @@
 """Prompt — assemble the advisor's input artifacts and the trigger.
 
 parallax's prompt.py built all five sections into one string and handed the
-advisor a finished prompt.  parallax-loop can't run the advisor from the hook,
+advisor a finished prompt.  ploop can't run the advisor from the hook,
 so it writes the deterministic section (parallax-region-history) to a file and
 emits a trigger that points the advisor at the five sections in parallax's
 order:
@@ -69,10 +69,10 @@ def format_advisor_trigger(
         "Consult the advisor — invoke it EXACTLY as written below, a synchronous "
         "call (run_in_background=false), copied verbatim — then act on the single "
         "region it returns:\n"
-        '`Agent(subagent_type="parallax-loop:advisor", description="region review", '
+        '`Agent(subagent_type="ploop:advisor", description="region review", '
         'run_in_background=false, prompt="""\n'
         f"original-mission: {mission_path}\n"
-        'actions-history: Agent(subagent_type="parallax-loop:narrator", '
+        'actions-history: Agent(subagent_type="ploop:narrator", '
         'description="narrate actions", run_in_background=false, '
         f'prompt="{action_path}")\n'
         f"parallax-region-history: {regions_path}\n"

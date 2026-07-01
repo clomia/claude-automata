@@ -39,8 +39,8 @@ wheels = [
 ]
 
 [[package]]
-name = "parallax-loop"
-version = "0.5.0"
+name = "ploop"
+version = "0.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },

@@ -17,7 +17,7 @@ claude plugin marketplace add clomia/claude-automata
 ## Plugins
 
 - **[Parallax](plugins/parallax/README.md)** — Autopilot for long, complex tasks _(Anthropic API only)_
-- **[parallax-loop](plugins/parallax-loop/README.md)** — Orchestrator for large, long-running tasks via a deep nested-agent tree
+- **[ploop](plugins/ploop/README.md)** — Orchestrator for large, long-running tasks via a deep nested-agent tree
 
 # Appendix: Plugin Management Commands
 

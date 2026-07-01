@@ -108,10 +108,10 @@ def build_state(stdin_raw: str) -> State:
     """Collect all external inputs and assemble a State. No side effects.
 
     mission_active gates the whole hook: it is True only when a
-    {session}_active marker exists.  /parallax-loop:run creates it at handoff,
+    {session}_active marker exists.  /ploop:run creates it at handoff,
     UserPromptSubmit clears it on every new user turn, and stop() clears it when
     the loop terminates.  Absent the marker the stopping session is not an
-    active parallax-loop run.
+    active ploop run.
 
     compacted reflects a {session}_compacted marker the PostCompact hook touches;
     on a compacted round stop() re-injects the original-mission text into the

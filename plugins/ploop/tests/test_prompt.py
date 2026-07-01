@@ -51,8 +51,8 @@ class TestFormatAdvisorTrigger:
         narrator call inlined inside it (the literal call, nothing for the LLM to
         construct)."""
         out = self.trigger()
-        assert 'subagent_type="parallax-loop:advisor"' in out
-        assert 'subagent_type="parallax-loop:narrator"' in out
+        assert 'subagent_type="ploop:advisor"' in out
+        assert 'subagent_type="ploop:narrator"' in out
 
     def test_both_calls_synchronous(self):
         """advisor + inlined narrator, both run_in_background=false (the param

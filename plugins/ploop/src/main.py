@@ -1,4 +1,4 @@
-"""Main — the parallax-loop Stop, PreToolUse, UserPromptSubmit, and PostCompact entry points.
+"""Main — the ploop Stop, PreToolUse, UserPromptSubmit, and PostCompact entry points.
 
 On each main-agent stop the hook owns both ends of the parallax round:
 
@@ -16,7 +16,7 @@ The hook never runs the advisor itself — it drives the main agent (the LLM) to
 call it via the Agent tool, which keeps the loop on the subscription path.
 
 The Stop hook fires on every main-session stop, so an active marker gates it:
-/parallax-loop:run writes the marker (and the mission), UserPromptSubmit clears
+/ploop:run writes the marker (and the mission), UserPromptSubmit clears
 it (with the ledger and the token) on every new user turn, and stop() clears it
 when the loop terminates — so an ESC-interrupted mission never silently resumes.
 """
@@ -63,7 +63,7 @@ def stop() -> None:
     """Stop hook entry point (fires on every main-session stop)."""
     state = build_state(sys.stdin.read())
 
-    # Not an active parallax-loop run: no active marker — allow the stop.
+    # Not an active ploop run: no active marker — allow the stop.
     if not state.mission_active:
         sys.exit(0)
 
@@ -138,7 +138,7 @@ def stop() -> None:
         mission_text=mission_text,
     )
 
-    # Post-hoc log (browsable via /parallax-loop:log): the region the advisor
+    # Post-hoc log (browsable via /ploop:log): the region the advisor
     # surfaced (parallax's new_advice parity).  Numbered by current_round so the
     # first region is "Round 1"; round 0 has no region, so it is not logged.
     if region:
@@ -157,7 +157,7 @@ def stop() -> None:
 def pre_tool_use() -> None:
     """PreToolUse hook (matcher: Agent): gate the main agent's advisor invocation.
 
-    Allow an Agent(parallax-loop:advisor) call only when a Stop hook set the
+    Allow an Agent(ploop:advisor) call only when a Stop hook set the
     single-use token; a self-initiated call (no token) is denied so the main
     agent keeps working until it stops and the hook drives the call properly.
     """
@@ -178,7 +178,7 @@ def pre_tool_use() -> None:
     if "advisor" not in subagent_type:
         sys.exit(0)
 
-    # Outside an active parallax-loop run — do not interfere.
+    # Outside an active ploop run — do not interfere.
     if not (data_dir / f"{session_id}_active").exists():
         sys.exit(0)
 
@@ -197,7 +197,7 @@ def user_prompt_submit() -> None:
     """UserPromptSubmit hook: turn-boundary cleanup.
 
     Every new user-initiated turn clears the prior mission's loop ledger, active
-    marker, advisor token, and compaction marker.  /parallax-loop:run re-activates
+    marker, advisor token, and compaction marker.  /ploop:run re-activates
     by re-creating the active marker after this fires; any other direct user input
     is an intervention that leaves the loop off — so an ESC-interrupted mission
     never silently resumes on the next stop, and a stale token can't authorize a

@@ -149,7 +149,7 @@ class TestExtractAdvisorOutput:
         """The Task alias and a plugin-namespaced subagent_type both resolve."""
         t = tmp_path / "t.jsonl"
         write_jsonl(
-            t, agent_exchange("region", tool="Task", subagent="parallax-loop:advisor")
+            t, agent_exchange("region", tool="Task", subagent="ploop:advisor")
         )
         assert extract_advisor_output(str(t)) == "region"
 
@@ -214,7 +214,7 @@ class TestExtractAdvisorOutput:
                             "type": "tool_use",
                             "id": "a2",
                             "name": "Agent",
-                            "input": {"subagent_type": "parallax-loop:advisor"},
+                            "input": {"subagent_type": "ploop:advisor"},
                         }
                     ],
                 },

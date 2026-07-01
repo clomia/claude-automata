@@ -1,6 +1,6 @@
-# parallax-loop — 아키텍처
+# ploop — 아키텍처
 
-parallax-loop은 **parallax 루프** — 격리된 advisor가 매 라운드 main이 고려하지 못한
+ploop은 **parallax 루프** — 격리된 advisor가 매 라운드 main이 고려하지 못한
 영역을 surface해 결과 신뢰도를 극한까지 끌어올리는 자율 루프 — 를 Claude Code의
 **nested subagent** 위에서 구현한 플러그인이다. parallax가 Stop 훅에서 `claude -p`를
 외부 스폰하느라 구독 요금제에서 계정 차단 위험을 안았던 자리를, advisor·narrator를
@@ -12,7 +12,7 @@ parallax-loop은 **parallax 루프** — 격리된 advisor가 매 라운드 main
 ## 용어
 
 - **parallax loop** — 훅·advisor·narrator로 매 라운드 미고려 영역을 surface해 main에
-  주입하는 자율 루프. 이 플러그인(`parallax-loop`)이 그것을 구현한다.
+  주입하는 자율 루프. 이 플러그인(`ploop`)이 그것을 구현한다.
 - **main** — parallax main 역할을 하는 세션 에이전트(depth 0). 미션을 직접 실행하고
   매 라운드 advisor를 호출한다. parallax의 메인 에이전트와 같은 위상이다.
 - **original-mission** — main을 미션에 붙들어 매는 SSoT. 트랜스크립트 바깥 외부
@@ -33,18 +33,18 @@ parallax는 Anthropic API 요금제 전용으로 묶였고, 구독 사용자는 
 parallax 개발 당시에는 nested subagent가 불가능해 이 방법뿐이었다. 그러나 `Agent` 툴
 subagent는 **모든 요금제에서 지원되는 정식 기능**이고(메인 세션과 동일 quota 공유),
 서브에이전트는 다시 서브에이전트를 spawn할 수 있다(v2.1.172+, depth 5 cap).
-parallax-loop은 같은 루프를 이 정식 경로 위에서 재구현해 요금제 위협을 없앤다 — main이
+ploop은 같은 루프를 이 정식 경로 위에서 재구현해 요금제 위협을 없앤다 — main이
 advisor를 `Agent` 툴로 호출하고, advisor가 narrator를 호출한다.
 
-| | parallax | parallax-loop |
+| | parallax | ploop |
 |---|---|---|
 | advisor/narrator 실행 | 훅이 `claude -p` 스폰 | main·advisor가 **Agent 툴** 호출 |
 | 격리 | 별도 프로세스 | 별도 subagent (동일 격리) |
 | 요금제 | API 전용 · **구독 차단 위험** | **구독 정식** (nested agent) |
-| 트리거 | `parallaxthink` 키워드 | `/parallax-loop:run` (미션 핸드오프) |
+| 트리거 | `parallaxthink` 키워드 | `/ploop:run` (미션 핸드오프) |
 | parallax main 역할 | 세션 메인 에이전트 | 세션 메인 에이전트 (**동일**) |
 
-마지막 행이 핵심이다. parallax-loop은 advisor/narrator의 실행 경로만 nested로 바꾸고,
+마지막 행이 핵심이다. ploop은 advisor/narrator의 실행 경로만 nested로 바꾸고,
 parallax main 역할은 parallax와 똑같이 세션 에이전트에 둔다. (초기 버전은 그 역할을
 `operator` subagent(depth 1)에 두어 트리가 한 단계 깊었으나, operator는 격리 이점을
 주지 않으면서 부채만 떠안겨 제거했다 — git history.)
@@ -145,7 +145,7 @@ instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그
 | `{session}_loop.json` | hook | `round` · `regions` · `done` |
 | `{session}_action.json` | hook | 이번 라운드 action 기록 (narrator가 읽음) |
 | `{session}_regions.md` | hook | advisor 입력의 parallax-region-history (XML) |
-| `{session}_loop.log` | hook | 라운드별 로그 (`/parallax-loop:log` 조회) |
+| `{session}_loop.log` | hook | 라운드별 로그 (`/ploop:log` 조회) |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (Stop set · PreToolUse 소비) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 마커 (Stop이 메커니즘 2로 소비) |
 
@@ -160,7 +160,7 @@ hook이 소유했다.)
 
 **활성화 lifecycle.** Stop 훅은 메인 세션 정지마다 발화하므로 active 마커가 루프를 게이트한다.
 
-1. `/parallax-loop:run`이 `mission.md`와 `active` 마커를 쓰고, main이 미션을 직접 수행하기
+1. `/ploop:run`이 `mission.md`와 `active` 마커를 쓰고, main이 미션을 직접 수행하기
    시작한다.
 2. `UserPromptSubmit`이 매 새 사용자 턴마다 `active`·`loop.json`·`advisor_token`·`compacted`를
    지운다(turn-boundary cleanup). 명시적 run만 (재)활성화하므로, ESC로 끊긴 미션이 다음 사용자
@@ -206,10 +206,10 @@ hook이 소유했다.)
 | **Stop** | (전체) | main이 종료 시도 | active 게이트 → 종료 판정 → `exit 0`(허용) 또는 `exit 2`+stderr(advisor 호출 지시) |
 | **SessionStart** | `startup\|clear` | 세션 시작 | 신규 릴리스 알림 (parallax updater 이식) |
 
-플러그인 에이전트는 `parallax-loop:<agent>`로 scoped 등록되므로, Agent 호출의 subagent_type이
+플러그인 에이전트는 `ploop:<agent>`로 scoped 등록되므로, Agent 호출의 subagent_type이
 그 scoped 이름을 쓴다. Stop 훅은 본질적으로 메인 세션 정지에만 발화하고 advisor·narrator의
-정지는 `SubagentStop`이라, parallax-loop:operator만 잡던 matcher 정규식이 더는 필요 없다. 훅은
-`bin/parallax-loop-hook` 셸 래퍼를 거쳐 `uv`를 호출한다 — 래퍼가 uv 가용성을 먼저 확인하므로,
+정지는 `SubagentStop`이라, ploop:operator만 잡던 matcher 정규식이 더는 필요 없다. 훅은
+`bin/ploop-hook` 셸 래퍼를 거쳐 `uv`를 호출한다 — 래퍼가 uv 가용성을 먼저 확인하므로,
 uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일원화한다.
 
 **Graceful degradation.** `uv`가 없으면 훅 spawn은 무해하게 실패한다. main은 parallax 루프를
@@ -229,7 +229,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
 2. **훅은 코드라 툴을 호출할 수 없다 → 훅은 트리거, 실행은 Agent 툴.** Claude Code 훅은
    stdout/stderr/exit code로만 통신하며 tool call을 발화하지 못한다. 그래서 `claude -p`를 Agent
    툴로 *직접 치환*하는 것은 불가능하다. 대신 Stop이 `exit 2`+stderr로 main에게 advisor 호출을
-   **지시**하고, main(LLM)이 Agent 툴로 실행한다. 이 한 단계가 parallax→parallax-loop 전환의
+   **지시**하고, main(LLM)이 Agent 툴로 실행한다. 이 한 단계가 parallax→ploop 전환의
    본질이다. main의 컨텍스트(run 스킬·트리거)는 parallax 루프 메커니즘을 advisor라는 단어로
    **언급하지 않는다** — 자발적으로 부르면 경로 대신 자기 의견을 advisor에 전달하거나 narrator를
    건너뛰기 때문이다. advisor의 존재는 stderr 지시가 처음 알린다.
@@ -240,7 +240,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
 4. **작업 transcript = 메인 transcript.** Stop 훅은 메인 세션 transcript를 직접 건넨다. main이
    미션을 직접 수행하므로 action과 advisor 호출(tool_use/tool_result)이 모두 거기 있다 — operator의
    별도 transcript를 `subagents/meta.json`으로 해소하던 단계가 통째로 사라진다.
-5. **활성화 게이트 + UserPromptSubmit turn cleanup.** `/parallax-loop:run`이 `mission.md`·`active`
+5. **활성화 게이트 + UserPromptSubmit turn cleanup.** `/ploop:run`이 `mission.md`·`active`
    마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돌고, 종료 시
    마커를 지운다. UserPromptSubmit이 매 사용자 턴 마커·`loop.json`을 지워, ESC로 끊긴 미션이
    무단 재개되지 않는다. parallax의 활성화 패턴을 그대로 옮긴 것.
@@ -255,7 +255,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    `role`·`conversion`·`instruction`을 이식하며, 분석 대상을 원본과 같은 **"main agent"**로 부른다
    (operator subagent 시절에는 "operator"로 멀어졌던 것을 원복). parallax `prompt.py`는 5-section
    (role·original-mission·action-history·parallax-region-history·instructions)을 한 XML로 조립해
-   advisor에 넘겼다. parallax-loop은 hook이 advisor를 직접 못 부르므로 같은 **순서**를 trigger로
+   advisor에 넘겼다. ploop은 hook이 advisor를 직접 못 부르므로 같은 **순서**를 trigger로
    재현한다 — role은 advisor 시스템 프롬프트, original-mission·region-history·instructions는 파일,
    action-history는 advisor가 트리거에 inline된 narrator Agent 호출을 실행해 조립한다. **트리거는
    advisor의 Agent 호출을 — 그 안에 narrator Agent 호출을 inline해 — 축자로 작성해 넘긴다. hook이
@@ -264,7 +264,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    경로를 위에서 아래로 읽어 parallax와 동일 순서로 맥락을 쌓는다(advisor.md). nested 구조상 두 가지가
    어긋난다. **(a)** action narrative만
    런타임 수집(narrating은 LLM이라 hook이 못 부른다). **(b)** 정박 미션이 parallax의 *사용자 원문*에서
-   parallax-loop의 *main 작성 명세*(`mission.md`)로 바뀌었고 advisor에도 전파된다 — main이 미션을
+   ploop의 *main 작성 명세*(`mission.md`)로 바뀌었고 advisor에도 전파된다 — main이 미션을
    정의하는 설계의 의도된 결과이나 source of truth가 한 단계 멀어진 트레이드다. action-history는 advisor
    호출을 strip해 region-history와 분리를 지킨다.
 8. **단일 모델 `opus[1m]`(main·advisor).** 추론 최대화와 compaction 빈도 감소가 같은 선택으로
@@ -286,11 +286,11 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     돌아오고, narrator narration이 advisor의 분석 입력이 된다. 빈 출력·async처럼 Claude Code 보장 밖
     케이스는 별도 가드 없이 parallax의 단순 규칙(빈 출력=종료)으로 처리한다.
 11. **로깅: region 사후 조회.** `_loop.log`에 라운드마다 advisor가 surface한 **region**을 적어
-    `/parallax-loop:log`로 조회한다 — 원본 parallax 로그의 load-bearing 콘텐츠(`new_advice`, 추론 trace)와
+    `/ploop:log`로 조회한다 — 원본 parallax 로그의 load-bearing 콘텐츠(`new_advice`, 추론 trace)와
     같다. action-history 서사는 로그하지 않는다: parallax에선 hook 로컬변수라 로깅이 공짜였지만 nested에선
     narration이 advisor 컨텍스트에 갇혀 cross-transcript 하강이 필요한데, 그 내용(main 작업)은 사용자가
     세션에서 이미 본 것이라 비용 대비 가치가 없다(narrator는 advisor의 분석 입력으로는 계속 돈다).
-12. **플러그인 영역만, `settings.json` 불간섭.** 활성화는 `/parallax-loop:run` 핸드오프. 미션 없이는
+12. **플러그인 영역만, `settings.json` 불간섭.** 활성화는 `/ploop:run` 핸드오프. 미션 없이는
     아무것도 발화하지 않는다. 프로젝트 CLAUDE.md·rules는 main·advisor·narrator가 모두 상속한다(custom
     subagent 차단 옵션 부재) — main은 코드 작업에 프로젝트 코딩 규칙이 *필요*하므로 이를 수용한다.
     advisor·narrator도 함께 상속받아 약한 오염 여지가 있으나, 차단이 all-or-nothing이라 main의 필요를
@@ -336,17 +336,17 @@ foreground라 동기 호출이 보장된다.
 ## 파일 맵
 
 ```
-parallax-loop/
+ploop/
 ├── .claude-plugin/plugin.json        # manifest
 ├── agents/                           # 2개 tier 정의 (frontmatter 봉인 + 프롬프트 본문)
 │   ├── advisor.md                    # parallax role 이식 + 5-section 순서 지침 (Write 없음)
 │   └── narrator.md                   # parallax conversion 이식
 ├── prompts/instruction.md            # advisor 분석·출력 지침 (parallax instruction 이식)
 ├── skills/
-│   ├── run/SKILL.md                  # /parallax-loop:run — 미션 핸드오프 + main 직접 수행 + self-anchoring
-│   └── log/SKILL.md                  # /parallax-loop:log — 분석 로그 조회
+│   ├── run/SKILL.md                  # /ploop:run — 미션 핸드오프 + main 직접 수행 + self-anchoring
+│   └── log/SKILL.md                  # /ploop:log — 분석 로그 조회
 ├── hooks/hooks.json                  # UserPromptSubmit + PostCompact + PreToolUse(Agent) + Stop + SessionStart
-├── bin/parallax-loop-hook            # uv 가용성 체크 래퍼 (parallax 상속)
+├── bin/ploop-hook                    # uv 가용성 체크 래퍼 (parallax 상속)
 ├── src/                              # 훅 구현 (런타임 의존성: pydantic)
 │   ├── main.py                       # stop · pre_tool_use · user_prompt_submit · mark_compaction 엔트리포인트
 │   ├── state.py                      # 상태 조립 + 영속화 (active 게이트 · round/regions/done)
