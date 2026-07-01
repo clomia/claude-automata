@@ -37,6 +37,7 @@ def format_advisor_trigger(
     mission_path: Path,
     action_path: Path,
     regions_path: Path,
+    present_path: Path,
     instruction_path: Path = INSTRUCTION_PATH,
     mission_text: str | None = None,
 ) -> str:
@@ -50,11 +51,12 @@ def format_advisor_trigger(
     The five sections appear in parallax's order; the advisor reads/runs them
     top-to-bottom (advisor.md), reconstructing the same ordered context.
 
-    The call is synchronous (run_in_background=false): parallax ran the advisor
-    in-hook so its stdout WAS the region.  Here the hook cannot call the tool, so
-    the main agent relays it — and the region returns as this call's tool_result
-    only when the call blocks.  The inlined narrator call blocks for the same
-    reason: the advisor must receive the narrative to analyze on it.
+    The call is synchronous (run_in_background=false): the advisor Writes its
+    region to present_path — a clean file channel, since its chat message may carry
+    reasoning prose the hook must not record.  The hook reads the file; the blocking
+    tool_result carries only the termination token (or a non-compliant fallback).
+    The inlined narrator call blocks so the advisor receives the narrative to
+    analyze on.
 
     On a compacted round, mission_text is the original-mission's full text,
     re-injected at this recency position (parallax mechanism 2) — the discrete
@@ -81,6 +83,7 @@ def format_advisor_trigger(
             )
             parallax-region-history: {regions_path}
             instructions: {instruction_path}
+            present-region-path: {present_path}
           """
         )
         ```''')

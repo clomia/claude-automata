@@ -1,7 +1,7 @@
 ---
 name: advisor
 description: parallax loop를 통해 main agent가 놓친 영역을 찾아줍니다.
-disallowedTools: Bash, Write, Edit, NotebookEdit, Artifact
+disallowedTools: Bash, Edit, NotebookEdit, Artifact
 model: opus[1m]
 effort: max
 ---

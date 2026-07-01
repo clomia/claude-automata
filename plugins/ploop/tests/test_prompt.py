@@ -24,6 +24,7 @@ class TestFormatAdvisorTrigger:
             mission_path=Path("/d/s1_mission.md"),
             action_path=Path("/d/s1_action.json"),
             regions_path=Path("/d/s1_regions.md"),
+            present_path=Path("/d/s1_present.md"),
             instruction_path=Path("/p/prompts/instruction.md"),
             mission_text=mission_text,
         )
@@ -37,6 +38,7 @@ class TestFormatAdvisorTrigger:
             < out.index("actions-history:")
             < out.index("parallax-region-history:")
             < out.index("instructions:")
+            < out.index("present-region-path:")
         )
 
     def test_carries_all_paths(self):
@@ -44,6 +46,7 @@ class TestFormatAdvisorTrigger:
         assert "/d/s1_mission.md" in out
         assert "/d/s1_action.json" in out
         assert "/d/s1_regions.md" in out
+        assert "/d/s1_present.md" in out
         assert "/p/prompts/instruction.md" in out
 
     def test_inlines_narrator_call_under_advisor(self):

@@ -1,6 +1,6 @@
 [project]
 name = "ploop"
-version = "0.10.0"
+version = "0.11.0"
 requires-python = ">=3.14"
 dependencies = ["pydantic>=2.12.5"]
 
