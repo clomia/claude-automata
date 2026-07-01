@@ -131,7 +131,11 @@ def result_text(content) -> str | None:
 # authored: "agentId: <id> (...)\n<usage>...</usage>".  parallax's advisor ran
 # as a plain claude -p process whose stdout was pure region text; the Agent
 # tool reintroduces this envelope.  Strip it so it never reaches region-history.
-SUBAGENT_META = re.compile(r"\n*agentId:.*?</usage>\s*$", re.DOTALL)
+# Anchor to the full envelope shape (an agentId line immediately followed by the
+# <usage>...</usage> block at end-of-text): a bare "agentId:.*?</usage>" would
+# bridge from the FIRST "agentId:" in the region's own prose to the final
+# </usage>, swallowing the region — and any termination token inside it.
+SUBAGENT_META = re.compile(r"\n*agentId:[^\n]*\n\s*<usage>.*?</usage>\s*$", re.DOTALL)
 
 
 def strip_subagent_meta(text: str) -> str:
@@ -173,3 +177,37 @@ def extract_advisor_output(transcript_path: str) -> str | None:
     if output is None:
         return None
     return strip_subagent_meta(output)
+
+
+def advisor_output_settled(transcript_path: str) -> bool:
+    """True if the most recent advisor call has returned a completed result.
+
+    A finished subagent's tool_result ends with the "agentId: ...</usage>"
+    envelope.  Its absence means the call is still in flight — no tool_result yet,
+    or the user pushed the call to the background (whose launch ack lacks the
+    envelope).  The Stop hook uses this to avoid re-triggering an advisor that is
+    still running.  Returns False when no advisor call exists at all.
+    """
+    messages = load_messages(transcript_path)
+
+    last_id = None
+    for msg in messages:
+        if msg.get("role") != "assistant":
+            continue
+        for block in content_blocks(msg):
+            if is_advisor_call(block):
+                last_id = block.get("id")
+    if last_id is None:
+        return False
+
+    text = None
+    for msg in messages:
+        if msg.get("role") != "user":
+            continue
+        for block in content_blocks(msg):
+            if (
+                block.get("type") == "tool_result"
+                and block.get("tool_use_id") == last_id
+            ):
+                text = result_text(block.get("content"))
+    return text is not None and "</usage>" in text

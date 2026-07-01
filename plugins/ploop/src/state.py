@@ -27,6 +27,17 @@ def active_file(data_dir: Path, session_id: str) -> Path:
     return data_dir / f"{session_id}_active"
 
 
+def advisor_running_file(data_dir: Path, session_id: str) -> Path:
+    """Marker present while an advisor call is in flight.
+
+    PreToolUse touches it when it authorizes an advisor call; SubagentStop removes
+    it when the advisor finishes.  Its presence at a Stop means an advisor is still
+    running — e.g. the user pushed it to the background — so the hook must not
+    re-trigger and spawn a cascade of advisors.
+    """
+    return data_dir / f"{session_id}_advisor_running"
+
+
 class HookInput(BaseModel):
     """Stop hook event data from stdin."""
 
@@ -80,15 +91,20 @@ class State(BaseModel):
     def advisor_token_path(self) -> Path:
         return advisor_token_file(self.data_dir, self.session_id)
 
+    @property
+    def advisor_running_path(self) -> Path:
+        return advisor_running_file(self.data_dir, self.session_id)
+
 
 def load_ledger(state_file: Path) -> dict:
     """Load the {round, regions, done} ledger. Empty dict on any failure."""
     if not state_file.exists():
         return {}
     try:
-        return json.loads(state_file.read_text())
+        ledger = json.loads(state_file.read_text())
     except json.JSONDecodeError, OSError:
         return {}
+    return ledger if isinstance(ledger, dict) else {}
 
 
 def save_ledger(

@@ -82,6 +82,7 @@ class TestStatePaths:
         assert state.regions_path == tmp_path / "s1_regions.md"
         assert state.log_path == tmp_path / "s1_loop.log"
         assert state.advisor_token_path == tmp_path / "s1_advisor_token"
+        assert state.advisor_running_path == tmp_path / "s1_advisor_running"
 
 
 # ── build_state ──

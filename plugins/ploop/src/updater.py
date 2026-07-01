@@ -49,7 +49,7 @@ def fetch_remote_version() -> str | None:
             manifest = json.loads(response.read())
     except OSError, urllib.error.URLError, json.JSONDecodeError:
         return None
-    return manifest.get("version")
+    return manifest.get("version") if isinstance(manifest, dict) else None
 
 
 def parse_version(v: str) -> tuple[int, ...]:
@@ -70,9 +70,10 @@ def load_cache(cache_file: Path) -> dict:
     if not cache_file.exists():
         return {}
     try:
-        return json.loads(cache_file.read_text())
+        cache = json.loads(cache_file.read_text())
     except OSError, json.JSONDecodeError:
         return {}
+    return cache if isinstance(cache, dict) else {}
 
 
 def save_cache(cache_file: Path, payload: dict) -> None:

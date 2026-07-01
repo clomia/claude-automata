@@ -18,6 +18,7 @@ from src.main import (
     mission_path,
     pre_tool_use,
     stop,
+    subagent_stop,
     user_prompt_submit,
     write_log,
 )
@@ -211,13 +212,69 @@ class TestStop:
             stop()
         assert exc.value.code == 0
         assert not (tmp_path / "s1_active").exists()
+        # the round-limit round's region is logged, not dropped before write_log
+        assert "a late region" in (tmp_path / "s1_loop.log").read_text()
+
+    def test_backgrounded_advisor_pauses_without_retrigger(self, tmp_path, monkeypatch):
+        """Running marker present and the advisor's result not settled (user pushed
+        it to the background): allow the stop, don't re-trigger — no cascade."""
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            advisor_returns("Async agent launched. Working in the background."),
+            ledger={"round_number": 1, "regions": [], "done": False},
+        )
+        (tmp_path / "s1_advisor_running").touch()
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 0
+        # ledger untouched, marker left in place — the loop just waits
+        assert load_ledger(tmp_path / "s1_loop.json")["round"] == 1
+        assert (tmp_path / "s1_advisor_running").exists()
+
+    def test_stale_running_marker_cleared_when_result_settled(
+        self, tmp_path, monkeypatch
+    ):
+        """Marker present but the advisor actually completed (result carries the
+        </usage> envelope): clear the stale marker and process, don't stall."""
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            advisor_returns("real region\nagentId: x\n<usage>u</usage>"),
+            ledger={"round_number": 1, "regions": [], "done": False},
+        )
+        (tmp_path / "s1_advisor_running").touch()
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        assert not (tmp_path / "s1_advisor_running").exists()
+        assert load_ledger(tmp_path / "s1_loop.json")["regions"] == ["real region"]
+
+    def test_token_present_skips_stale_extraction(self, tmp_path, monkeypatch):
+        """Advisor NOT invoked this round (token still present): don't re-append a
+        prior round's region as a duplicate."""
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            advisor_returns("prior region\nagentId: x\n<usage>u</usage>"),
+            ledger={"round_number": 2, "regions": ["prior region"], "done": False},
+        )
+        (tmp_path / "s1_advisor_token").write_text("")
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["regions"] == ["prior region"]  # not duplicated
+        assert ledger["round"] == 3
 
 
 # ── pre_tool_use gating ──
 
 
 class TestPreToolUse:
-    def test_token_present_allows_and_consumes(self, tmp_path, monkeypatch):
+    def test_token_present_allows_consumes_and_marks_running(
+        self, tmp_path, monkeypatch
+    ):
         (tmp_path / "s1_active").touch()
         token = tmp_path / "s1_advisor_token"
         token.write_text("")
@@ -226,6 +283,14 @@ class TestPreToolUse:
             pre_tool_use()
         assert exc.value.code == 0
         assert not token.exists()
+        assert (tmp_path / "s1_advisor_running").exists()
+
+    def test_no_active_marker_allows_manual_advisor(self, tmp_path, monkeypatch):
+        """Outside an active mission the advisor gate does not interfere."""
+        arrange(tmp_path, monkeypatch, make_pretooluse_stdin())
+        with pytest.raises(SystemExit) as exc:
+            pre_tool_use()
+        assert exc.value.code == 0
 
     def test_no_token_denies_self_initiated_call(self, tmp_path, monkeypatch):
         (tmp_path / "s1_active").touch()
@@ -246,6 +311,32 @@ class TestPreToolUse:
         assert exc.value.code == 0
 
 
+# ── subagent_stop advisor-running marker ──
+
+
+class TestSubagentStop:
+    def test_advisor_stop_clears_running_marker(self, tmp_path, monkeypatch):
+        (tmp_path / "s1_advisor_running").touch()
+        arrange(
+            tmp_path,
+            monkeypatch,
+            json.dumps({"session_id": "s1", "agent_type": "advisor"}),
+        )
+        subagent_stop()
+        assert not (tmp_path / "s1_advisor_running").exists()
+
+    def test_narrator_stop_leaves_marker(self, tmp_path, monkeypatch):
+        (tmp_path / "s1_advisor_running").touch()
+        arrange(
+            tmp_path,
+            monkeypatch,
+            json.dumps({"session_id": "s1", "agent_type": "narrator"}),
+        )
+        with pytest.raises(SystemExit):
+            subagent_stop()
+        assert (tmp_path / "s1_advisor_running").exists()
+
+
 # ── user_prompt_submit turn-boundary cleanup ──
 
 
@@ -254,7 +345,12 @@ class TestUserPromptSubmit:
         """A new user turn clears active marker, ledger, token, and compaction
         marker — so an ESC-interrupted mission never resumes and no stale token
         leaks; the mission anchor stays."""
-        for name in ("s1_active", "s1_advisor_token", "s1_compacted"):
+        for name in (
+            "s1_active",
+            "s1_advisor_token",
+            "s1_advisor_running",
+            "s1_compacted",
+        ):
             (tmp_path / name).touch()
         (tmp_path / "s1_mission.md").write_text("m")
         save_ledger(
@@ -269,6 +365,7 @@ class TestUserPromptSubmit:
         assert not (tmp_path / "s1_active").exists()
         assert not (tmp_path / "s1_loop.json").exists()
         assert not (tmp_path / "s1_advisor_token").exists()
+        assert not (tmp_path / "s1_advisor_running").exists()
         assert not (tmp_path / "s1_compacted").exists()
         assert (tmp_path / "s1_mission.md").exists()
 

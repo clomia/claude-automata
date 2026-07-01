@@ -1,4 +1,4 @@
-"""Main — the ploop Stop, PreToolUse, UserPromptSubmit, and PostCompact entry points.
+"""Main — ploop Stop, PreToolUse, SubagentStop, UserPromptSubmit, PostCompact entry points.
 
 On each main-agent stop the hook owns both ends of the parallax round:
 
@@ -31,6 +31,7 @@ from src.prompt import format_advisor_trigger, format_region_history
 from src.state import (
     ROUND_LIMIT,
     active_file,
+    advisor_running_file,
     advisor_token_file,
     build_state,
     mission_file,
@@ -38,6 +39,7 @@ from src.state import (
     session_workspace,
 )
 from src.transcript import (
+    advisor_output_settled,
     extract_advisor_output,
     parse_round_actions,
 )
@@ -79,12 +81,32 @@ def stop() -> None:
     # here.  There is no operator subagent transcript to resolve.
     transcript = state.transcript_path
 
+    # An advisor call is still in flight: PreToolUse set the running marker and
+    # neither SubagentStop nor a completed result has cleared it.  This is the
+    # user pushing the advisor to the background — the main session stops, but
+    # re-triggering here would spawn a second advisor, and again on the next stop:
+    # a cascade.  Allow this stop and wait; the loop resumes when the advisor
+    # finishes (SubagentStop clears the marker).  If the marker is stale
+    # (SubagentStop missed) yet the advisor actually completed, its settled result
+    # is in the transcript, so clear the marker and fall through rather than stall.
+    if state.advisor_running_path.exists():
+        if advisor_output_settled(transcript):
+            state.advisor_running_path.unlink(missing_ok=True)
+        else:
+            sys.exit(0)
+
     regions = state.region_history
     region = None  # the advisor's region this round, recorded to the log
 
+    # The advisor ran this round iff PreToolUse consumed the token a prior Stop
+    # wrote.  If the token is still here the main agent ignored the trigger and no
+    # advisor ran — skip extraction so a prior round's region is not re-appended as
+    # a duplicate; the trigger is re-injected below (bounded by ROUND_LIMIT).
+    advisor_invoked = not state.advisor_token_path.exists()
+
     # Record last round's advisor verdict (none in round 0, before any call).
     # parallax's rule: an empty output or the termination token ends the turn.
-    if state.current_round >= 1:
+    if state.current_round >= 1 and advisor_invoked:
         verdict = extract_advisor_output(transcript)
         if not verdict or TERMINATION_TOKEN in verdict:
             save_ledger(
@@ -97,6 +119,14 @@ def stop() -> None:
             sys.exit(0)
         region = verdict
         regions = [*regions, region]
+        # Log the surfaced region now, before any round-limit exit below.
+        # Numbered by current_round so the first region is "Round 1".
+        write_log(
+            state.log_path,
+            state.current_round,
+            new_turn=(state.current_round == 1),
+            region=region,
+        )
 
     if state.current_round >= ROUND_LIMIT:
         save_ledger(
@@ -141,17 +171,6 @@ def stop() -> None:
         mission_text=mission_text,
     )
 
-    # Post-hoc log: the region the advisor surfaced (parallax's new_advice
-    # parity).  Numbered by current_round so the first region is "Round 1";
-    # round 0 has no region, so it is not logged.
-    if region:
-        write_log(
-            state.log_path,
-            state.current_round,
-            new_turn=(state.current_round == 1),
-            region=region,
-        )
-
     state.advisor_token_path.write_text("")
     sys.stderr.write(trigger)
     sys.exit(2)
@@ -185,10 +204,13 @@ def pre_tool_use() -> None:
     if not (data_dir / f"{session_id}_active").exists():
         sys.exit(0)
 
-    # Authorized by a Stop directive: consume the token and allow.
+    # Authorized by a Stop directive: consume the token, mark the advisor in
+    # flight (so a stop while it runs — e.g. after the user backgrounds it —
+    # won't re-trigger), and allow.
     token = advisor_token_file(data_dir, session_id)
     if token.exists():
         token.unlink()
+        advisor_running_file(data_dir, session_id).touch()
         sys.exit(0)
 
     # Self-initiated advisor call: deny so the main agent keeps working.
@@ -200,7 +222,7 @@ def user_prompt_submit() -> None:
     """UserPromptSubmit hook: turn-boundary cleanup.
 
     Every new user-initiated turn clears the prior mission's loop ledger, active
-    marker, advisor token, and compaction marker.  /ploop:launch re-activates
+    marker, advisor token, advisor-running marker, and compaction marker.  /ploop:launch re-activates
     by re-creating the active marker after this fires; any other direct user input
     is an intervention that leaves the loop off — so an ESC-interrupted mission
     never silently resumes on the next stop, and a stale token can't authorize a
@@ -216,6 +238,7 @@ def user_prompt_submit() -> None:
     (data_dir / f"{session_id}_loop.json").unlink(missing_ok=True)
     (data_dir / f"{session_id}_active").unlink(missing_ok=True)
     (data_dir / f"{session_id}_advisor_token").unlink(missing_ok=True)
+    (data_dir / f"{session_id}_advisor_running").unlink(missing_ok=True)
     (data_dir / f"{session_id}_compacted").unlink(missing_ok=True)
 
 
@@ -233,6 +256,26 @@ def mark_compaction() -> None:
     data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
     session_id = data.get("session_id", "")
     (data_dir / f"{session_id}_compacted").touch()
+
+
+def subagent_stop() -> None:
+    """SubagentStop hook: clear the advisor-running marker when the advisor finishes.
+
+    Paired with the marker PreToolUse sets, this lets stop() tell an in-flight
+    advisor (e.g. one the user pushed to the background) from a completed one, so
+    it never re-triggers a second advisor while one still runs.  Only the advisor
+    clears the marker; narrator and other subagent stops are ignored.
+    """
+    try:
+        data = json.loads(sys.stdin.read())
+    except json.JSONDecodeError:
+        sys.exit(0)
+    agent_type = str(data.get("agent_type") or data.get("subagent_type") or "")
+    if "advisor" not in agent_type:
+        sys.exit(0)
+    data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
+    session_id = data.get("session_id", "")
+    advisor_running_file(data_dir, session_id).unlink(missing_ok=True)
 
 
 def mission_path() -> None:

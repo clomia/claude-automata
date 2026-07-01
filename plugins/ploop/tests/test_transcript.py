@@ -3,6 +3,7 @@
 import json
 
 from src.transcript import (
+    advisor_output_settled,
     extract_advisor_output,
     is_round_boundary,
     parse_round_actions,
@@ -247,8 +248,59 @@ class TestStripSubagentMeta:
     def test_preserves_clean_text(self):
         assert strip_subagent_meta("just a region") == "just a region"
 
+    def test_preserves_region_prose_containing_agent_id(self):
+        """The envelope anchor must not bridge from an 'agentId:' inside the
+        region's own prose to the final </usage> — that would swallow the region
+        (and any termination token in it)."""
+        region = "The agentId: token flow is fully covered. DONE_TOKEN"
+        assert strip_subagent_meta(f"{region}\n{self.META}") == region
+
     def test_extract_advisor_output_strips_meta(self, tmp_path):
         """The Agent tool_result envelope must never reach region-history."""
         t = tmp_path / "t.jsonl"
         write_jsonl(t, agent_exchange(f"the region\n{self.META}"))
         assert extract_advisor_output(str(t)) == "the region"
+
+
+# ── advisor_output_settled ──
+
+
+class TestAdvisorOutputSettled:
+    def test_completed_result_with_usage_envelope(self, tmp_path):
+        t = tmp_path / "t.jsonl"
+        write_jsonl(t, agent_exchange("region\nagentId: x\n<usage>u</usage>"))
+        assert advisor_output_settled(str(t)) is True
+
+    def test_no_result_is_in_flight(self, tmp_path):
+        """Advisor tool_use with no tool_result yet — still running."""
+        t = tmp_path / "t.jsonl"
+        write_jsonl(
+            t,
+            [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "a1",
+                            "name": "Agent",
+                            "input": {"subagent_type": "advisor"},
+                        }
+                    ],
+                }
+            ],
+        )
+        assert advisor_output_settled(str(t)) is False
+
+    def test_background_ack_without_envelope_is_in_flight(self, tmp_path):
+        """A user-backgrounded call leaves a launch ack lacking the </usage> block."""
+        t = tmp_path / "t.jsonl"
+        write_jsonl(
+            t, agent_exchange("Async agent launched. Working in the background.")
+        )
+        assert advisor_output_settled(str(t)) is False
+
+    def test_no_advisor_call(self, tmp_path):
+        t = tmp_path / "t.jsonl"
+        write_jsonl(t, [{"role": "assistant", "content": "just working"}])
+        assert advisor_output_settled(str(t)) is False

@@ -147,6 +147,7 @@ instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그
 | `{session}_regions.md` | hook | advisor 입력의 parallax-region-history (XML) |
 | `{session}_loop.log` | hook | 라운드별 사후 로그 (region) |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (Stop set · PreToolUse 소비) |
+| `{session}_advisor_running` | hook | advisor in-flight 마커 (PreToolUse set · SubagentStop clear · Stop 가드) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 마커 (Stop이 메커니즘 2로 소비) |
 
 **loop 상태(round·regions·done)는 hook이 단독 소유한다.** advisor는 분석만 하고 region 한
@@ -200,10 +201,11 @@ hook이 소유했다.)
 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
-| **UserPromptSubmit** | (전체) | 새 사용자 턴 | `active`·`loop.json`·`advisor_token`·`compacted` 삭제 (turn cleanup → ESC 후 무단 재개·토큰 누출 차단) |
+| **UserPromptSubmit** | (전체) | 새 사용자 턴 | `active`·`loop.json`·`advisor_token`·`advisor_running`·`compacted` 삭제 (turn cleanup → ESC 후 무단 재개·토큰 누출 차단) |
 | **PostCompact** | `auto` | auto-compaction 후 | `compacted` 마커 touch (Stop이 메커니즘 2로 미션 텍스트 재주입) |
-| **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비) 또는 `exit 2` deny(자발 호출 차단) |
-| **Stop** | (전체) | main이 종료 시도 | active 게이트 → 종료 판정 → `exit 0`(허용) 또는 `exit 2`+stderr(advisor 호출 지시) |
+| **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` 마커 set) 또는 `exit 2` deny(자발 호출 차단) |
+| **Stop** | (전체) | main이 종료 시도 | active 게이트 → **in-flight 가드** → 종료 판정 → `exit 0`(허용) 또는 `exit 2`+stderr(advisor 호출 지시) |
+| **SubagentStop** | (전체) | subagent 종료 | `advisor` 종료면 `advisor_running` 마커 clear (in-flight 추적) |
 | **SessionStart** | `startup\|clear` | 세션 시작 | 신규 릴리스 알림 (parallax updater 이식) |
 
 플러그인 에이전트는 `ploop:<agent>`로 scoped 등록되므로, Agent 호출의 subagent_type이
@@ -278,7 +280,8 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    남으므로 `extract_advisor_output`은 `is_error`를 걸러 성공한 호출만 기록한다. narrator는 read-only
    leaf이자 hook 사이클 밖이라 게이팅하지 않는다. UserPromptSubmit이 토큰을 turn-boundary에서 지워
    stale 토큰이 다음 미션의 라운드 0 자발 호출을 인가하지 못하게 한다. (고지능 모델은 트리거에 순응해
-   매 라운드 advisor를 호출하므로, parallax처럼 미호출 케이스 대응은 두지 않는다.)
+   매 라운드 advisor를 호출한다고 가정하나, 만일 미호출로 정지하면 — 토큰이 소비되지 않고 남는다 —
+   Stop은 stale region 추출을 건너뛰어 직전 region이 중복 기록되지 않게 한다.)
 10. **advisor·narrator 호출은 동기다(`run_in_background=false`).** Agent 툴은 이 빌드에서 기본 async라,
     백그라운드 호출의 tool_result는 region이 아니라 launch acknowledgement다. main은 **foreground**이고,
     trigger가 advisor·narrator 호출을 모두 `run_in_background=false`로 작성해(narrator는 advisor 프롬프트에
@@ -295,6 +298,14 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     subagent 차단 옵션 부재) — main은 코드 작업에 프로젝트 코딩 규칙이 *필요*하므로 이를 수용한다.
     advisor·narrator도 함께 상속받아 약한 오염 여지가 있으나, 차단이 all-or-nothing이라 main의 필요를
     우선한다.
+13. **advisor in-flight 가드(background 전환 cascade 차단).** advisor 호출을 `run_in_background=false`로
+    지시해도 사용자가 단축키로 실행 중인 advisor를 background로 보낼 수 있다. 그 순간 main 세션 Stop이
+    발화하는데, 그대로 재주입하면 advisor가 하나 더 spawn되고 다음 정지에 또 spawn되어 **무한 증식**한다
+    (nested 전환이 낳은 신규 리스크 — parallax는 advisor를 hook 안에서 동기 실행해 이 틈이 없었다).
+    PreToolUse가 advisor 인가 시 `advisor_running` 마커를 set하고 SubagentStop이 종료 시 clear한다. Stop은
+    마커가 있으면 재주입하지 않고 `exit 0`으로 대기한다 — 단 마커가 남았어도 transcript에 완료 결과
+    (`</usage>` 엔벨로프)가 보이면(SubagentStop 누락) 마커를 정리하고 진행해 stall을 피한다. background로
+    보낸 advisor의 region은 유실될 수 있으나 cascade는 확실히 차단된다.
 
 ---
 
@@ -343,10 +354,10 @@ ploop/
 │   └── narrator.md                   # parallax conversion 이식
 ├── prompts/instruction.md            # advisor 분석·출력 지침 (parallax instruction 이식)
 ├── skills/launch/SKILL.md            # /ploop:launch — 미션 핸드오프 + main 직접 수행 + self-anchoring
-├── hooks/hooks.json                  # UserPromptSubmit + PostCompact + PreToolUse(Agent) + Stop + SessionStart
+├── hooks/hooks.json                  # UserPromptSubmit + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
 ├── bin/ploop-hook                    # uv 가용성 체크 래퍼 (parallax 상속)
 ├── src/                              # 훅 구현 (런타임 의존성: pydantic)
-│   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·user_prompt_submit·mark_compaction) + launch CLI(mission_path·activate)
+│   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·user_prompt_submit·mark_compaction) + launch CLI(mission_path·activate)
 │   ├── state.py                      # 상태 조립 + 영속화 (active 게이트 · round/regions/done)
 │   ├── transcript.py                 # action 추출(advisor 호출 strip) + advisor 출력 추출(meta strip)
 │   ├── prompt.py                     # region-history 포맷 + 5-section advisor trigger 조립
