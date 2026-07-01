@@ -17,10 +17,11 @@ call it via the Agent tool, which keeps the loop on the subscription path.
 
 The Stop hook fires on every main-session stop, so an active marker gates it: the
 launch() UserPromptExpansion hook writes the marker (and mission) when /ploop:launch
-expands; UserPromptSubmit clears it on every other new user turn — a launching
-sentinel spares it on the launch turn, since expansion runs before submit — and
-stop() clears it when the loop terminates, so an ESC-interrupted mission never
-silently resumes.
+expands; UserPromptSubmit clears it on a new user turn — but spares it on the launch
+turn (a launching sentinel, since expansion runs before submit) and while a
+background advisor is in flight (so an incidental question can't abort a mid-round
+mission) — and stop() clears it when the loop terminates, so an ESC-interrupted
+mission never silently resumes.
 """
 
 import json
@@ -36,10 +37,12 @@ from src.state import (
     advisor_running_file,
     advisor_token_file,
     build_state,
+    clear_round_state,
     mission_file,
     save_ledger,
 )
 from src.transcript import (
+    advisor_in_flight,
     advisor_output_settled,
     extract_advisor_output,
     parse_round_actions,
@@ -51,18 +54,16 @@ TERMINATION_TOKEN = "I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLA
 
 
 def write_log(
-    log_file: Path, round_number: int, *, new_turn: bool, **sections: str
+    log_file: Path, round_number: int, region: str, *, new_turn: bool
 ) -> None:
-    """Append a round's log. Overwrites when a new mission begins (round 1)."""
+    """Append a round's region to the log; overwrite when a new mission begins."""
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    header = f"[[ Round {round_number} - {timestamp} ]]\n\n"
-    body = ""
-    for title, content in sections.items():
-        label = title.replace("_", " ").title()
-        body += f"[[ Round {round_number} / {label} ]]\n\n{content}\n\n"
-    mode = "w" if new_turn else "a"
-    with open(log_file, mode) as f:
-        f.write(header + body)
+    entry = (
+        f"[[ Round {round_number} - {timestamp} ]]\n\n"
+        f"[[ Round {round_number} / Region ]]\n\n{region}\n\n"
+    )
+    with open(log_file, "w" if new_turn else "a") as f:
+        f.write(entry)
 
 
 def stop() -> None:
@@ -77,24 +78,24 @@ def stop() -> None:
     if state.done:
         sys.exit(0)
 
+    # Consume any launching sentinel that outlived the turn boundary (possible only
+    # if UserPromptSubmit didn't run before this Stop) so it can't later spare the
+    # active marker on an intervention turn.
+    state.launching_path.unlink(missing_ok=True)
+
     # The main session transcript IS the work transcript: the main agent runs
     # the mission directly, so its actions and the Agent(advisor) exchange live
     # here.  There is no operator subagent transcript to resolve.
     transcript = state.transcript_path
 
-    # An advisor call is still in flight: PreToolUse set the running marker and
-    # neither SubagentStop nor a completed result has cleared it.  This is the
-    # user pushing the advisor to the background — the main session stops, but
-    # re-triggering here would spawn a second advisor, and again on the next stop:
-    # a cascade.  Allow this stop and wait; the loop resumes when the advisor
-    # finishes (SubagentStop clears the marker).  If the marker is stale
-    # (SubagentStop missed) yet the advisor actually completed, its settled result
-    # is in the transcript, so clear the marker and fall through rather than stall.
-    if state.advisor_running_path.exists():
-        if advisor_output_settled(transcript):
-            state.advisor_running_path.unlink(missing_ok=True)
-        else:
-            sys.exit(0)
+    # A background advisor still running: PreToolUse set the marker and neither
+    # SubagentStop nor a settled result has cleared it.  Re-triggering here would
+    # cascade a second advisor, so wait — the loop resumes when SubagentStop clears
+    # the marker.  A stale marker (SubagentStop missed but the result settled) is not
+    # in flight, so fall through and clear it rather than stall.
+    if advisor_in_flight(state.advisor_running_path, transcript):
+        sys.exit(0)
+    state.advisor_running_path.unlink(missing_ok=True)
 
     regions = state.region_history
     region = None  # the advisor's region this round, recorded to the log
@@ -108,34 +109,35 @@ def stop() -> None:
     # Record last round's advisor verdict (none in round 0, before any call).
     # parallax's rule: an empty output or the termination token ends the turn.
     if state.current_round >= 1 and advisor_invoked:
-        # The advisor Writes its advice to advice_path — a clean channel immune to
-        # the reasoning prose its chat message may carry.  Fall back to scraping the
-        # transcript when the file is absent: on termination the advisor emits the
-        # token there instead of writing, and a non-compliant advisor that narrates
-        # without writing still degrades to the pre-file behavior.
+        # The advice file is the region's clean channel; the advisor Writes its one
+        # paragraph there.  Trust the transcript fallback ONLY once the result has
+        # settled (sync path): an unsettled result is a backgrounded call's
+        # launch-ack, not this round's region — skip recording and re-run (bounded by
+        # ROUND_LIMIT) rather than log garbage or falsely terminate the mission.
         advice = (
             state.advice_path.read_text().strip() if state.advice_path.exists() else ""
         )
-        verdict = advice or extract_advisor_output(transcript)
-        if not verdict or TERMINATION_TOKEN in verdict:
-            save_ledger(
-                state.state_path,
-                round_number=state.current_round,
-                regions=regions,
-                done=True,
+        if advice or advisor_output_settled(transcript):
+            verdict = advice or extract_advisor_output(transcript)
+            if not verdict or TERMINATION_TOKEN in verdict:
+                save_ledger(
+                    state.state_path,
+                    round_number=state.current_round,
+                    regions=regions,
+                    done=True,
+                )
+                state.active_path.unlink(missing_ok=True)
+                sys.exit(0)
+            region = verdict
+            regions = [*regions, region]
+            # Log the surfaced region now, before any round-limit exit below.
+            # Numbered by current_round so the first region is "Round 1".
+            write_log(
+                state.log_path,
+                state.current_round,
+                region,
+                new_turn=(state.current_round == 1),
             )
-            state.active_path.unlink(missing_ok=True)
-            sys.exit(0)
-        region = verdict
-        regions = [*regions, region]
-        # Log the surfaced region now, before any round-limit exit below.
-        # Numbered by current_round so the first region is "Round 1".
-        write_log(
-            state.log_path,
-            state.current_round,
-            new_turn=(state.current_round == 1),
-            region=region,
-        )
 
     if state.current_round >= ROUND_LIMIT:
         save_ledger(
@@ -234,14 +236,15 @@ def pre_tool_use() -> None:
 def user_prompt_submit() -> None:
     """UserPromptSubmit hook: turn-boundary cleanup.
 
-    Every new user turn clears the prior mission's loop ledger, advisor token,
-    advisor-running marker, compaction marker, and advice file.  The active marker is
-    cleared too EXCEPT on a /ploop:launch turn: UserPromptExpansion (launch) runs
-    first and sets a fresh active marker plus a launching sentinel, which this hook
-    consumes to spare it.  Any other direct user input is an intervention that leaves
-    the loop off — so an ESC-interrupted mission never silently resumes, and a stale
-    token can't authorize a self-initiated advisor call.  The mission file is left
-    intact as the durable anchor; the next run overwrites it.
+    Clears the prior mission's loop ledger, token, advisor-running marker, compaction
+    marker, advice file, and active marker — with two exceptions.  (1) On a
+    /ploop:launch turn UserPromptExpansion (launch) ran first and set a fresh active
+    marker plus a launching sentinel, which this hook consumes to spare that marker.
+    (2) While a background advisor is in flight (advisor-running marker present) the
+    loop is mid-round and main has merely yielded, so an incidental user turn leaves
+    all state intact.  Otherwise a direct user turn is an intervention that turns the
+    loop off — an ESC-interrupted mission never silently resumes.  The mission file is
+    the durable anchor.
     """
     try:
         data = json.loads(sys.stdin.read())
@@ -249,20 +252,22 @@ def user_prompt_submit() -> None:
         sys.exit(0)
     data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
     session_id = data.get("session_id", "")
-    # A /ploop:launch turn expands (UserPromptExpansion → launch()) BEFORE this
-    # fires, setting a fresh mission + active marker and a launching sentinel.
-    # Consume the sentinel and spare that active marker; every other turn clears
-    # active too, so an ESC-interrupted mission never silently resumes.
+    # A background advisor GENUINELY in flight means the loop is mid-round: main
+    # invoked it asynchronously and yielded, so an incidental user turn must NOT
+    # abort the mission.  (A stale marker — SubagentStop missed, result settled — is
+    # not in flight, so it falls through and gets cleared below.)
+    if advisor_in_flight(
+        advisor_running_file(data_dir, session_id), data.get("transcript_path", "")
+    ):
+        return
+    # /ploop:launch turn: launch() (UserPromptExpansion) ran first and set a fresh
+    # mission + active marker plus a launching sentinel; consume it and spare active.
     launching = data_dir / f"{session_id}_launching"
     keep_active = launching.exists()
     launching.unlink(missing_ok=True)
-    (data_dir / f"{session_id}_loop.json").unlink(missing_ok=True)
+    clear_round_state(data_dir, session_id)
     if not keep_active:
         (data_dir / f"{session_id}_active").unlink(missing_ok=True)
-    (data_dir / f"{session_id}_advisor_token").unlink(missing_ok=True)
-    (data_dir / f"{session_id}_advisor_running").unlink(missing_ok=True)
-    (data_dir / f"{session_id}_compacted").unlink(missing_ok=True)
-    (data_dir / f"{session_id}_advice.md").unlink(missing_ok=True)
 
 
 def mark_compaction() -> None:
@@ -320,13 +325,16 @@ def launch() -> None:
     except json.JSONDecodeError:
         sys.exit(0)
     command = str(data.get("command_name", ""))
-    if command.rsplit(":", 1)[-1] != "launch":
+    if command != "ploop:launch":
         sys.exit(0)
     mission = str(data.get("command_args", "")).strip()
     if not mission:
         sys.exit(0)
     data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
     session_id = str(data.get("session_id", ""))
+    # Fresh start, independent of whether/when UserPromptSubmit fires this turn:
+    # clear the prior mission's per-round state before arming.
+    clear_round_state(data_dir, session_id)
     mission_file(data_dir, session_id).write_text(mission)
     active_file(data_dir, session_id).touch()
     # UserPromptExpansion runs BEFORE UserPromptSubmit on a slash-command turn, so

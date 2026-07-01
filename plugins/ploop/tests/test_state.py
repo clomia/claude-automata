@@ -6,6 +6,7 @@ from src.state import (
     ROUND_LIMIT,
     State,
     HookInput,
+    advice_file,
     build_state,
     load_ledger,
     save_ledger,
@@ -71,7 +72,8 @@ class TestLedger:
 
 
 class TestStatePaths:
-    def test_per_session_paths(self, tmp_path):
+    def test_per_session_paths(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
         state = make_state(tmp_path)
         assert state.mission_path == tmp_path / "s1_mission.md"
         assert state.active_path == tmp_path / "s1_active"
@@ -79,10 +81,18 @@ class TestStatePaths:
         assert state.state_path == tmp_path / "s1_loop.json"
         assert state.action_path == tmp_path / "s1_action.json"
         assert state.regions_path == tmp_path / "s1_regions.md"
-        assert state.advice_path == tmp_path / "s1_advice.md"
+        assert state.advice_path == tmp_path / "ploop_s1_advice.md"
         assert state.log_path == tmp_path / "s1_loop.log"
         assert state.advisor_token_path == tmp_path / "s1_advisor_token"
         assert state.advisor_running_path == tmp_path / "s1_advisor_running"
+
+
+def test_advice_file_lives_outside_the_protected_claude_dir():
+    """The advisor's Write target must be unprotected (not under ~/.claude), else an
+    auto-mode Write to it is classifier-gated and can be silently blocked."""
+    path = str(advice_file("s1"))
+    assert ".claude" not in path
+    assert "s1" in path
 
 
 # ── build_state ──

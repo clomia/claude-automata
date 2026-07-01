@@ -211,3 +211,11 @@ def advisor_output_settled(transcript_path: str) -> bool:
             ):
                 text = result_text(block.get("content"))
     return text is not None and "</usage>" in text
+
+
+def advisor_in_flight(running_marker: Path, transcript_path: str) -> bool:
+    """True while a background advisor is genuinely running: its marker is present
+    and its result has not settled.  Shared by the Stop hook (wait, don't cascade a
+    second advisor) and UserPromptSubmit (don't let an incidental turn abort a
+    mid-round mission).  A present-but-settled marker is stale, not in flight."""
+    return running_marker.exists() and not advisor_output_settled(transcript_path)

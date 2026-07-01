@@ -42,8 +42,14 @@ def write_jsonl(path, messages):
     path.write_text("\n".join(json.dumps({"message": m}) for m in messages))
 
 
-def advisor_returns(region):
-    """A main agent turn whose Agent(advisor) call returned `region`."""
+def advisor_returns(region, *, settled=True):
+    """A main agent turn whose Agent(advisor) call returned `region`.
+
+    settled=True appends the completed-subagent envelope (the "agentId ...</usage>"
+    block a finished Agent call carries); settled=False models a still-in-flight or
+    backgrounded call whose tool_result is only a launch-ack.
+    """
+    envelope = "\nagentId: a1\n<usage>0</usage>" if settled else ""
     return [
         {"role": "user", "content": "advisor trigger"},
         {
@@ -60,7 +66,11 @@ def advisor_returns(region):
         {
             "role": "user",
             "content": [
-                {"type": "tool_result", "tool_use_id": "a1", "content": region}
+                {
+                    "type": "tool_result",
+                    "tool_use_id": "a1",
+                    "content": f"{region}{envelope}",
+                }
             ],
         },
         {"role": "assistant", "content": "working on the region"},
@@ -121,9 +131,11 @@ class TestStop:
                 {"role": "assistant", "content": "initial work"},
             ],
         )
+        (tmp_path / "s1_launching").touch()  # a leaked sentinel must be consumed
         with pytest.raises(SystemExit) as exc:
             stop()
         assert exc.value.code == 2
+        assert not (tmp_path / "s1_launching").exists()  # consumed by stop()
         assert load_ledger(tmp_path / "s1_loop.json")["round"] == 1
         assert "No prior regions." in (tmp_path / "s1_regions.md").read_text()
         err = capsys.readouterr().err
@@ -160,20 +172,23 @@ class TestStop:
     ):
         """The region is read from the advisor's advice file (not scraped from its
         prose-polluted transcript), stripped, then cleared as the next round arms."""
+        monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns("analysis prose... --- consider concurrency"),
+            advisor_returns(
+                "analysis prose... --- consider concurrency", settled=False
+            ),
             ledger={"round_number": 1, "regions": [], "done": False},
         )
-        (tmp_path / "s1_advice.md").write_text("  consider concurrency  ")
+        (tmp_path / "ploop_s1_advice.md").write_text("  consider concurrency  ")
         with pytest.raises(SystemExit) as exc:
             stop()
         assert exc.value.code == 2
         assert load_ledger(tmp_path / "s1_loop.json")["regions"] == [
             "consider concurrency"
         ]
-        assert not (tmp_path / "s1_advice.md").exists()
+        assert not (tmp_path / "ploop_s1_advice.md").exists()
 
     def test_empty_verdict_terminates(self, tmp_path, monkeypatch):
         """parallax's rule: an empty advisor output ends the turn (done, deactivate)."""
@@ -240,7 +255,9 @@ class TestStop:
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns("Async agent launched. Working in the background."),
+            advisor_returns(
+                "Async agent launched. Working in the background.", settled=False
+            ),
             ledger={"round_number": 1, "regions": [], "done": False},
         )
         (tmp_path / "s1_advisor_running").touch()
@@ -259,7 +276,7 @@ class TestStop:
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns("real region\nagentId: x\n<usage>u</usage>"),
+            advisor_returns("real region"),
             ledger={"round_number": 1, "regions": [], "done": False},
         )
         (tmp_path / "s1_advisor_running").touch()
@@ -275,7 +292,7 @@ class TestStop:
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns("prior region\nagentId: x\n<usage>u</usage>"),
+            advisor_returns("prior region"),
             ledger={"round_number": 2, "regions": ["prior region"], "done": False},
         )
         (tmp_path / "s1_advisor_token").write_text("")
@@ -285,6 +302,23 @@ class TestStop:
         ledger = load_ledger(tmp_path / "s1_loop.json")
         assert ledger["regions"] == ["prior region"]  # not duplicated
         assert ledger["round"] == 3
+
+    def test_unsettled_advisor_without_advice_reruns(self, tmp_path, monkeypatch):
+        """Advisor invoked but result unsettled (backgrounded launch-ack) and no
+        advice file: don't record the ack or terminate — re-arm and re-run."""
+        monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            advisor_returns("Async agent launched", settled=False),
+            ledger={"round_number": 1, "regions": [], "done": False},
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2  # re-armed, not terminated
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["done"] is False
+        assert ledger["regions"] == []  # the ack was NOT recorded as a region
 
 
 # ── pre_tool_use gating ──
@@ -364,12 +398,7 @@ class TestUserPromptSubmit:
         """A new user turn clears active marker, ledger, token, and compaction
         marker — so an ESC-interrupted mission never resumes and no stale token
         leaks; the mission anchor stays."""
-        for name in (
-            "s1_active",
-            "s1_advisor_token",
-            "s1_advisor_running",
-            "s1_compacted",
-        ):
+        for name in ("s1_active", "s1_advisor_token", "s1_compacted"):
             (tmp_path / name).touch()
         (tmp_path / "s1_mission.md").write_text("m")
         save_ledger(
@@ -384,7 +413,6 @@ class TestUserPromptSubmit:
         assert not (tmp_path / "s1_active").exists()
         assert not (tmp_path / "s1_loop.json").exists()
         assert not (tmp_path / "s1_advisor_token").exists()
-        assert not (tmp_path / "s1_advisor_running").exists()
         assert not (tmp_path / "s1_compacted").exists()
         assert (tmp_path / "s1_mission.md").exists()
 
@@ -405,6 +433,42 @@ class TestUserPromptSubmit:
         assert not (tmp_path / "s1_loop.json").exists()  # stale ledger cleared
         assert not (tmp_path / "s1_advisor_token").exists()
         assert (tmp_path / "s1_mission.md").exists()
+
+    def test_background_advisor_in_flight_preserves_loop(self, tmp_path, monkeypatch):
+        """A genuinely in-flight background advisor (running marker + unsettled
+        launch-ack) makes an incidental user turn leave the whole loop intact."""
+        for name in ("s1_active", "s1_advisor_running"):
+            (tmp_path / name).touch()
+        save_ledger(
+            tmp_path / "s1_loop.json", round_number=2, regions=["r"], done=False
+        )
+        main = tmp_path / "s1.jsonl"
+        write_jsonl(main, advisor_returns("launched", settled=False))
+        arrange(
+            tmp_path,
+            monkeypatch,
+            json.dumps({"session_id": "s1", "transcript_path": str(main)}),
+        )
+        user_prompt_submit()
+        assert (tmp_path / "s1_active").exists()  # loop survives the interjection
+        assert (tmp_path / "s1_loop.json").exists()
+        assert (tmp_path / "s1_advisor_running").exists()
+
+    def test_stale_running_marker_settled_is_cleared(self, tmp_path, monkeypatch):
+        """A running marker whose advisor result HAS settled (SubagentStop missed) is
+        stale, not in-flight: cleanup clears it and the active marker."""
+        for name in ("s1_active", "s1_advisor_running"):
+            (tmp_path / name).touch()
+        main = tmp_path / "s1.jsonl"
+        write_jsonl(main, advisor_returns("done region"))
+        arrange(
+            tmp_path,
+            monkeypatch,
+            json.dumps({"session_id": "s1", "transcript_path": str(main)}),
+        )
+        user_prompt_submit()
+        assert not (tmp_path / "s1_active").exists()
+        assert not (tmp_path / "s1_advisor_running").exists()
 
 
 # ── mark_compaction ──
@@ -433,18 +497,24 @@ class TestLaunch:
                 command_name="ploop:launch", command_args=mission, session_id="s1"
             ),
         )
+        save_ledger(
+            tmp_path / "s1_loop.json", round_number=9, regions=["stale"], done=True
+        )
         launch()
         saved = (tmp_path / "s1_mission.md").read_text()
         assert saved == 'do the thing\nwith "quotes" and $vars'
         assert (tmp_path / "s1_active").exists()
         assert (tmp_path / "s1_launching").exists()  # sentinel for user_prompt_submit
+        assert not (tmp_path / "s1_loop.json").exists()  # prior ledger cleared
 
-    def test_ignores_non_launch_command(self, tmp_path, monkeypatch):
+    def test_ignores_non_ploop_launch_command(self, tmp_path, monkeypatch):
+        """The guard matches the full scoped name, so another plugin's :launch
+        cannot hijack ploop's launch."""
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         monkeypatch.setattr(
             "sys.stdin",
             self.make_stdin(
-                command_name="other:cmd", command_args="x", session_id="s1"
+                command_name="other:launch", command_args="x", session_id="s1"
             ),
         )
         with pytest.raises(SystemExit):
@@ -472,15 +542,15 @@ class TestWriteLog:
     def test_new_turn_overwrites(self, tmp_path):
         log = tmp_path / "l.log"
         log.write_text("stale content")
-        write_log(log, 1, new_turn=True, region="fresh")
+        write_log(log, 1, "fresh", new_turn=True)
         content = log.read_text()
         assert "stale content" not in content
         assert "[[ Round 1" in content
 
     def test_appends_across_rounds(self, tmp_path):
         log = tmp_path / "l.log"
-        write_log(log, 1, new_turn=True, region="r1")
-        write_log(log, 2, new_turn=False, region="r2")
+        write_log(log, 1, "r1", new_turn=True)
+        write_log(log, 2, "r2", new_turn=False)
         content = log.read_text()
         assert "[[ Round 1" in content
         assert "[[ Round 2" in content

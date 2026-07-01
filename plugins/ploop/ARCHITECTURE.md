@@ -75,7 +75,7 @@ narrator  depth 2  Read(leaf)  narrate          action records -> markdown
 
 - **advisor는 `Write`로 region만 파일에 쓰고, 나머지 부작용 도구는 막혀 있다(`disallowedTools: Bash, Edit, NotebookEdit, Artifact`)** —
   subagent의 최종 메시지는 커스터마이징 불가라 max-effort 추론 prose가 섞인다(하네스 한계). 그래서 region을
-  `advice.md`에 Write해 채팅 채널의 오염과 격리한다 — hook은 그 파일을 읽는다. `Bash`를 계속 막는 것은
+  `advice.md`(비보호 시스템 temp — `CLAUDE_PLUGIN_DATA`는 보호된 `~/.claude` 하위라 auto 모드 Write가 classifier에 막힌다)에 Write해 채팅 채널의 오염과 격리한다 — hook은 그 파일을 읽는다. `Bash`를 계속 막는 것은
   parallax(`DISALLOWED_TOOLS="Bash,Write,Edit,NotebookEdit"`)의 취지 — `Bash`면 `rm`·테스트 실행 등 임의
   부작용이 가능 — 를 지키되, `Write`만 좁게 열어 region 출력 채널로 삼은 의식적 완화다(사용 전제는 auto/bypass
   권한 모드). 남은 read-only 도구(`Read·Glob·Grep·Web*`)로 영역을 근거 짓고 `Agent`로 narrator를 호출하며,
@@ -136,8 +136,8 @@ instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그
 
 ## 상태와 미션 보존
 
-모든 상태는 사용자 레포 바깥, `CLAUDE_PLUGIN_DATA`에 둔다(레포 비오염, parallax 일관). 한
-세션에 하나의 미션을 가정해 `session_id`로 키잉한다.
+상태는 사용자 레포 바깥에 둔다(레포 비오염, parallax 일관) — 대부분 `CLAUDE_PLUGIN_DATA`, 단
+`advice.md`만 비보호 시스템 temp(아래 근거). 한 세션에 하나의 미션을 가정해 `session_id`로 키잉한다.
 
 | 파일 | 작성자 | 내용 |
 |---|---|---|
@@ -146,16 +146,18 @@ instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그
 | `{session}_loop.json` | hook | `round` · `regions` · `done` |
 | `{session}_action.json` | hook | 이번 라운드 action 기록 (narrator가 읽음) |
 | `{session}_regions.md` | hook | advisor 입력의 parallax-region-history (XML) |
-| `{session}_advice.md` | advisor (`Write`) | advisor의 조언(=미고려 region) — main·hook이 읽음 · prose 격리 |
+| `advice.md` (temp) | advisor (`Write`) | advisor의 조언(=미고려 region) — 비보호 temp라 auto 모드 Write 승인 · main·hook이 읽음 · prose 격리 |
 | `{session}_loop.log` | hook | 라운드별 사후 로그 (region) |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (Stop set · PreToolUse 소비) |
-| `{session}_advisor_running` | hook | advisor in-flight 마커 (PreToolUse set · SubagentStop clear · Stop 가드) |
+| `{session}_advisor_running` | hook | advisor in-flight 마커 (PreToolUse set · SubagentStop clear · Stop·UserPromptSubmit이 `advisor_in_flight`로 판정) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 마커 (Stop이 메커니즘 2로 소비) |
+| `{session}_launching` | launch 훅 | launch 턴 sentinel — 확장이 제출보다 먼저라 UserPromptSubmit이 `active`를 보존하게 함 |
 
 **loop 상태(round·regions·done)는 hook이 단독 소유한다.** advisor는 분석 후 region 한 문단을
 `advice.md`에 Write(없으면 종료 토큰을 메시지로 반환)할 뿐 loop ledger는 건드리지 않는다. hook이 다음
 라운드 시작에 직전 advisor의 `advice.md`를 읽어(부재 시 트랜스크립트를 `extract_advisor_output`으로
-폴백) `regions`에 append하거나, 종료 토큰이면 `done`을 세운다. main도 트리거 지시대로 같은 `advice.md`를
+폴백하되 결과가 settled일 때만 — background launch-ack을 region으로 오기록하지 않도록) `regions`에
+append하거나, 종료 토큰이면 `done`을 세운다. main도 트리거 지시대로 같은 `advice.md`를
 읽어 그 조언에 따라 작업하므로 `advice.md`는 main·hook 양쪽의 깨끗한 단일 소스다. `round`도 hook이 증가시키는 안전망이다.
 단일 작성자(hook)가 ledger를 소유해 race가 없고, advisor는 자기 region payload만 파일로 넘긴다 —
 parallax advisor도 region 텍스트를 냈고 hook이 ledger를 기록했으므로, 이 방향이 parallax에 충실하다. (`mission.md`·`active` 마커는 활성화
@@ -205,7 +207,7 @@ hook이 소유했다.)
 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
-| **UserPromptSubmit** | (전체) | 새 사용자 턴 | `active`·`loop.json`·`advisor_token`·`advisor_running`·`compacted` 삭제 (turn cleanup → ESC 후 무단 재개·토큰 누출 차단) |
+| **UserPromptSubmit** | (전체) | 새 사용자 턴 | `loop.json`·토큰·running·compacted·advice·`active` 삭제 (turn cleanup). 단 launch 턴엔 `active` 보존(launching sentinel), background advisor in-flight 중엔 전체 보존 |
 | **PostCompact** | `auto` | auto-compaction 후 | `compacted` 마커 touch (Stop이 메커니즘 2로 미션 텍스트 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` 마커 set) 또는 `exit 2` deny(자발 호출 차단) |
 | **Stop** | (전체) | main이 종료 시도 | active 게이트 → **in-flight 가드** → 종료 판정 → `exit 0`(허용) 또는 `exit 2`+stderr(advisor 호출 지시) |
