@@ -148,9 +148,7 @@ class TestExtractAdvisorOutput:
     def test_recognizes_task_alias_and_namespaced_type(self, tmp_path):
         """The Task alias and a plugin-namespaced subagent_type both resolve."""
         t = tmp_path / "t.jsonl"
-        write_jsonl(
-            t, agent_exchange("region", tool="Task", subagent="ploop:advisor")
-        )
+        write_jsonl(t, agent_exchange("region", tool="Task", subagent="ploop:advisor"))
         assert extract_advisor_output(str(t)) == "region"
 
     def test_takes_most_recent_advisor_call(self, tmp_path):
