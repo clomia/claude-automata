@@ -9,10 +9,9 @@ working until the mission is fully covered. It reimplements
 [parallax](../parallax/)'s mechanism on top of Claude Code's nested subagents, so
 it runs **safely on subscription plans**.
 
-- Define the mission with Claude, then hand it off with `/ploop:run`.
+- Define the mission with Claude, then hand it off with `/ploop:launch`.
   - The handoff is a deliberate gate: it writes the mission spec to disk and
     launches the parallax loop. Use it for large missions, not trivial one-off edits.
-- Check progress with `/ploop:log`.
 
 ### Relationship to parallax — what changed
 

@@ -108,7 +108,7 @@ def build_state(stdin_raw: str) -> State:
     """Collect all external inputs and assemble a State. No side effects.
 
     mission_active gates the whole hook: it is True only when a
-    {session}_active marker exists.  /ploop:run creates it at handoff,
+    {session}_active marker exists.  /ploop:launch creates it at handoff,
     UserPromptSubmit clears it on every new user turn, and stop() clears it when
     the loop terminates.  Absent the marker the stopping session is not an
     active ploop run.

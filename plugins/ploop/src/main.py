@@ -16,7 +16,7 @@ The hook never runs the advisor itself — it drives the main agent (the LLM) to
 call it via the Agent tool, which keeps the loop on the subscription path.
 
 The Stop hook fires on every main-session stop, so an active marker gates it:
-/ploop:run writes the marker (and the mission), UserPromptSubmit clears
+/ploop:launch writes the marker (and the mission), UserPromptSubmit clears
 it (with the ledger and the token) on every new user turn, and stop() clears it
 when the loop terminates — so an ESC-interrupted mission never silently resumes.
 """
@@ -77,7 +77,7 @@ def stop() -> None:
     transcript = state.transcript_path
 
     regions = state.region_history
-    region = None  # the advisor's region this round, for the user + the log
+    region = None  # the advisor's region this round, recorded to the log
 
     # Record last round's advisor verdict (none in round 0, before any call).
     # parallax's rule: an empty output or the termination token ends the turn.
@@ -138,9 +138,9 @@ def stop() -> None:
         mission_text=mission_text,
     )
 
-    # Post-hoc log (browsable via /ploop:log): the region the advisor
-    # surfaced (parallax's new_advice parity).  Numbered by current_round so the
-    # first region is "Round 1"; round 0 has no region, so it is not logged.
+    # Post-hoc log: the region the advisor surfaced (parallax's new_advice
+    # parity).  Numbered by current_round so the first region is "Round 1";
+    # round 0 has no region, so it is not logged.
     if region:
         write_log(
             state.log_path,
@@ -197,7 +197,7 @@ def user_prompt_submit() -> None:
     """UserPromptSubmit hook: turn-boundary cleanup.
 
     Every new user-initiated turn clears the prior mission's loop ledger, active
-    marker, advisor token, and compaction marker.  /ploop:run re-activates
+    marker, advisor token, and compaction marker.  /ploop:launch re-activates
     by re-creating the active marker after this fires; any other direct user input
     is an intervention that leaves the loop off — so an ESC-interrupted mission
     never silently resumes on the next stop, and a stale token can't authorize a

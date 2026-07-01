@@ -41,7 +41,7 @@ advisor를 `Agent` 툴로 호출하고, advisor가 narrator를 호출한다.
 | advisor/narrator 실행 | 훅이 `claude -p` 스폰 | main·advisor가 **Agent 툴** 호출 |
 | 격리 | 별도 프로세스 | 별도 subagent (동일 격리) |
 | 요금제 | API 전용 · **구독 차단 위험** | **구독 정식** (nested agent) |
-| 트리거 | `parallaxthink` 키워드 | `/ploop:run` (미션 핸드오프) |
+| 트리거 | `parallaxthink` 키워드 | `/ploop:launch` (미션 핸드오프) |
 | parallax main 역할 | 세션 메인 에이전트 | 세션 메인 에이전트 (**동일**) |
 
 마지막 행이 핵심이다. ploop은 advisor/narrator의 실행 경로만 nested로 바꾸고,
@@ -140,12 +140,12 @@ instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그
 
 | 파일 | 작성자 | 내용 |
 |---|---|---|
-| `{session}_mission.md` | main (run skill) | original-mission 정의 (외부 보존 anchor) |
+| `{session}_mission.md` | main (launch skill) | original-mission 정의 (외부 보존 anchor) |
 | `{session}_active` | main 생성 · hook 삭제 | 활성화 마커 (Stop 게이트) |
 | `{session}_loop.json` | hook | `round` · `regions` · `done` |
 | `{session}_action.json` | hook | 이번 라운드 action 기록 (narrator가 읽음) |
 | `{session}_regions.md` | hook | advisor 입력의 parallax-region-history (XML) |
-| `{session}_loop.log` | hook | 라운드별 로그 (`/ploop:log` 조회) |
+| `{session}_loop.log` | hook | 라운드별 사후 로그 (region) |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (Stop set · PreToolUse 소비) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 마커 (Stop이 메커니즘 2로 소비) |
 
@@ -160,10 +160,10 @@ hook이 소유했다.)
 
 **활성화 lifecycle.** Stop 훅은 메인 세션 정지마다 발화하므로 active 마커가 루프를 게이트한다.
 
-1. `/ploop:run`이 `mission.md`와 `active` 마커를 쓰고, main이 미션을 직접 수행하기
+1. `/ploop:launch`가 `mission.md`와 `active` 마커를 쓰고, main이 미션을 직접 수행하기
    시작한다.
 2. `UserPromptSubmit`이 매 새 사용자 턴마다 `active`·`loop.json`·`advisor_token`·`compacted`를
-   지운다(turn-boundary cleanup). 명시적 run만 (재)활성화하므로, ESC로 끊긴 미션이 다음 사용자
+   지운다(turn-boundary cleanup). 명시적 launch만 (재)활성화하므로, ESC로 끊긴 미션이 다음 사용자
    입력에 조용히 재개되지 않고, stale 토큰이 다음 미션의 라운드 0 자발 호출을 인가하지도 못한다.
    `mission.md`는 anchor로 보존된다.
 3. Stop 훅이 종료(done/limit) 시 `active` 마커를 지운다.
@@ -174,9 +174,9 @@ hook이 소유했다.)
 
 **미션 정박은 네 겹이며, 마지막이 parallax 메커니즘을 그대로 보존한다.**
 
-1. **외부 보존(메커니즘 1)** — run이 original-mission을 `mission.md`에 기록한다. 트랜스크립트와
+1. **외부 보존(메커니즘 1)** — launch가 original-mission을 `mission.md`에 기록한다. 트랜스크립트와
    독립이라 main 내부가 어떻게 compaction되든 원본은 보존된다.
-2. **self-anchoring(run 스킬 본문)** — run 스킬의 본문이 "mission.md를 닻으로, 흐려지면 다시
+2. **self-anchoring(launch 스킬 본문)** — launch 스킬의 본문이 "mission.md를 닻으로, 흐려지면 다시
    읽으라"고 지시한다. 호출된 스킬 본문은 auto-compact 후에도 re-inject되어(스킬당 앞 5,000토큰·
    합산 25,000토큰 예산) 보존되므로 이 지시는 compaction을 견딘다(메인 세션은 커스텀 시스템
    프롬프트를 못 받지만 스킬 re-inject가 그 자리를 메운다 — 초기 operator subagent 시스템 프롬프트의 역할).
@@ -230,7 +230,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    stdout/stderr/exit code로만 통신하며 tool call을 발화하지 못한다. 그래서 `claude -p`를 Agent
    툴로 *직접 치환*하는 것은 불가능하다. 대신 Stop이 `exit 2`+stderr로 main에게 advisor 호출을
    **지시**하고, main(LLM)이 Agent 툴로 실행한다. 이 한 단계가 parallax→ploop 전환의
-   본질이다. main의 컨텍스트(run 스킬·트리거)는 parallax 루프 메커니즘을 advisor라는 단어로
+   본질이다. main의 컨텍스트(launch 스킬·트리거)는 parallax 루프 메커니즘을 advisor라는 단어로
    **언급하지 않는다** — 자발적으로 부르면 경로 대신 자기 의견을 advisor에 전달하거나 narrator를
    건너뛰기 때문이다. advisor의 존재는 stderr 지시가 처음 알린다.
 3. **loop 상태는 hook이 단독 소유.** advisor는 region/종료토큰을 반환만 하고, hook이 트랜스크립트에서
@@ -240,7 +240,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
 4. **작업 transcript = 메인 transcript.** Stop 훅은 메인 세션 transcript를 직접 건넨다. main이
    미션을 직접 수행하므로 action과 advisor 호출(tool_use/tool_result)이 모두 거기 있다 — operator의
    별도 transcript를 `subagents/meta.json`으로 해소하던 단계가 통째로 사라진다.
-5. **활성화 게이트 + UserPromptSubmit turn cleanup.** `/ploop:run`이 `mission.md`·`active`
+5. **활성화 게이트 + UserPromptSubmit turn cleanup.** `/ploop:launch`가 `mission.md`·`active`
    마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돌고, 종료 시
    마커를 지운다. UserPromptSubmit이 매 사용자 턴 마커·`loop.json`을 지워, ESC로 끊긴 미션이
    무단 재개되지 않는다. parallax의 활성화 패턴을 그대로 옮긴 것.
@@ -248,7 +248,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    미션 원문은 디스크에 영속하고, `PostCompact`가 `_compacted`를 touch하면 compacted 라운드의
    Stop이 트리거에 미션 원문 텍스트를 inline한다(메커니즘 2 — discrete compaction 이벤트에 무조건
    텍스트 주입). 메인 세션 `PostCompact`는 공식 문서로 보장된다. advisor가 매 라운드 original-mission을
-   읽고 미션-grounded region을 surface하므로 main은 advisor 경유로도 간접 정박된다. run 스킬 본문의
+   읽고 미션-grounded region을 surface하므로 main은 advisor 경유로도 간접 정박된다. launch 스킬 본문의
    self-anchoring은 main이 mission.md를 닻으로 삼게 부트스트랩한다. parallax에 없던 "매 라운드
    포인터"는 메커니즘 2·advisor·스킬과 중복이라 두지 않는다(irreducible).
 7. **프롬프트는 parallax 원본 충실.** advisor·narrator·instruction은 parallax의
@@ -285,12 +285,12 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     inline) 동기 실행을 지시하며, 고지능 모델이 이를 따른다. 동기여야 region이 advisor 호출의 tool_result로
     돌아오고, narrator narration이 advisor의 분석 입력이 된다. 빈 출력·async처럼 Claude Code 보장 밖
     케이스는 별도 가드 없이 parallax의 단순 규칙(빈 출력=종료)으로 처리한다.
-11. **로깅: region 사후 조회.** `_loop.log`에 라운드마다 advisor가 surface한 **region**을 적어
-    `/ploop:log`로 조회한다 — 원본 parallax 로그의 load-bearing 콘텐츠(`new_advice`, 추론 trace)와
+11. **로깅: region 사후 기록.** `_loop.log`에 라운드마다 advisor가 surface한 **region**을 적어
+    파일로 사후 조회할 수 있게 한다 — 원본 parallax 로그의 load-bearing 콘텐츠(`new_advice`, 추론 trace)와
     같다. action-history 서사는 로그하지 않는다: parallax에선 hook 로컬변수라 로깅이 공짜였지만 nested에선
     narration이 advisor 컨텍스트에 갇혀 cross-transcript 하강이 필요한데, 그 내용(main 작업)은 사용자가
     세션에서 이미 본 것이라 비용 대비 가치가 없다(narrator는 advisor의 분석 입력으로는 계속 돈다).
-12. **플러그인 영역만, `settings.json` 불간섭.** 활성화는 `/ploop:run` 핸드오프. 미션 없이는
+12. **플러그인 영역만, `settings.json` 불간섭.** 활성화는 `/ploop:launch` 핸드오프. 미션 없이는
     아무것도 발화하지 않는다. 프로젝트 CLAUDE.md·rules는 main·advisor·narrator가 모두 상속한다(custom
     subagent 차단 옵션 부재) — main은 코드 작업에 프로젝트 코딩 규칙이 *필요*하므로 이를 수용한다.
     advisor·narrator도 함께 상속받아 약한 오염 여지가 있으나, 차단이 all-or-nothing이라 main의 필요를
@@ -342,9 +342,7 @@ ploop/
 │   ├── advisor.md                    # parallax role 이식 + 5-section 순서 지침 (Write 없음)
 │   └── narrator.md                   # parallax conversion 이식
 ├── prompts/instruction.md            # advisor 분석·출력 지침 (parallax instruction 이식)
-├── skills/
-│   ├── run/SKILL.md                  # /ploop:run — 미션 핸드오프 + main 직접 수행 + self-anchoring
-│   └── log/SKILL.md                  # /ploop:log — 분석 로그 조회
+├── skills/launch/SKILL.md            # /ploop:launch — 미션 핸드오프 + main 직접 수행 + self-anchoring
 ├── hooks/hooks.json                  # UserPromptSubmit + PostCompact + PreToolUse(Agent) + Stop + SessionStart
 ├── bin/ploop-hook                    # uv 가용성 체크 래퍼 (parallax 상속)
 ├── src/                              # 훅 구현 (런타임 의존성: pydantic)

@@ -1,5 +1,5 @@
 ---
-name: run
+name: launch
 description: 정의된 미션을 ploop에 핸드오프한다 — 미션 명세를 외부 파일에 기록하고 메인 에이전트가 직접 parallax 루프로 미션을 끝까지 수행한다
 argument-hint: "[미션 이름 또는 짧은 설명]"
 disable-model-invocation: true
@@ -52,4 +52,4 @@ echo "active:  ${CLAUDE_PLUGIN_DATA}/${CLAUDE_SESSION_ID}_active"
 
 먼저 mission 파일을 `Read`해 미션을 내재화하세요. 이 파일은 컨텍스트 바깥에 영속하는 source of truth이니, compaction되거나 맥락이 흐려지면 언제든 다시 `Read`해 재정박(anchor)하세요.
 
-mission의 언어와 동일한 언어로 작업하세요. 이 미션은 매우 오래 걸릴 수 있습니다 — 도중에 멈추지 말고 끝까지 완수하세요. 진행 상황은 `/ploop:log`로 확인할 수 있습니다.
+mission의 언어와 동일한 언어로 작업하세요. 이 미션은 매우 오래 걸릴 수 있습니다 — 도중에 멈추지 말고 끝까지 완수하세요.

@@ -1,6 +1,6 @@
 {
   "name": "ploop",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Surfaces regions the agent overlooks and drives complex missions to completion through nested agents — the subscription-safe evolution of parallax",
   "author": {
     "name": "clomia",
