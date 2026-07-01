@@ -292,7 +292,7 @@ def subagent_stop() -> None:
 
 
 def launch() -> None:
-    """UserPromptExpansion hook (matcher: launch): the whole /ploop:launch prep.
+    """UserPromptExpansion hook: the whole /ploop:launch prep (command guard scopes it).
 
     Fires when the user types /ploop:launch <mission>, before the expanded skill
     reaches the model.  The mission rides in command_args as structured JSON, so
@@ -304,8 +304,27 @@ def launch() -> None:
     handler only writes.  CLAUDE_PLUGIN_DATA comes from the environment (exported
     to hook processes); session_id comes from the payload.
     """
+    raw = sys.stdin.read()
+    # TEMP DIAGNOSTIC (remove after root-causing the no-arm bug): capture the raw
+    # UserPromptExpansion payload so we can confirm this hook fires and see the
+    # exact field names/values it carries.
     try:
-        data = json.loads(sys.stdin.read())
+        Path(
+            os.environ.get("CLAUDE_PLUGIN_DATA") or "/tmp", "ploop_launch_debug.json"
+        ).write_text(
+            json.dumps(
+                {
+                    "raw": raw,
+                    "env_CLAUDE_PLUGIN_DATA": os.environ.get("CLAUDE_PLUGIN_DATA"),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+    except OSError:
+        pass
+    try:
+        data = json.loads(raw)
     except json.JSONDecodeError:
         sys.exit(0)
     command = str(data.get("command_name", ""))
