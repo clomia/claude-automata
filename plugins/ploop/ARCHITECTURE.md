@@ -164,12 +164,13 @@ hook이 소유했다.)
 
 **활성화 lifecycle.** Stop 훅은 메인 세션 정지마다 발화하므로 active 마커가 루프를 게이트한다.
 
-1. `/ploop:launch`의 UserPromptExpansion 훅이 `mission.md`와 `active` 마커를 쓰고, main이 미션을 직접 수행하기
-   시작한다.
-2. `UserPromptSubmit`이 매 새 사용자 턴마다 `active`·`loop.json`·`advisor_token`·`compacted`를
-   지운다(turn-boundary cleanup). 명시적 launch만 (재)활성화하므로, ESC로 끊긴 미션이 다음 사용자
-   입력에 조용히 재개되지 않고, stale 토큰이 다음 미션의 라운드 0 자발 호출을 인가하지도 못한다.
-   `mission.md`는 anchor로 보존된다.
+1. `/ploop:launch`의 UserPromptExpansion 훅이 `mission.md`·`active` 마커와 `launching` sentinel을
+   쓴다(슬래시 커맨드 턴은 **확장이 제출보다 먼저**다). main이 미션을 직접 수행하기 시작한다.
+2. `UserPromptSubmit`이 매 새 사용자 턴마다 `loop.json`·`advisor_token`·`compacted`·`advice.md`를
+   지운다(turn-boundary cleanup). `active`도 지우되 **launch 턴에선 `launching` sentinel을 소비하며
+   `active`를 보존**한다 — 확장(launch)이 제출보다 먼저라 방금 만든 마커를 자기 cleanup이 지우는 것을
+   막는 장치다. 그 외 턴은 `active`도 지우므로 ESC로 끊긴 미션이 조용히 재개되지 않고, stale 토큰이
+   다음 미션의 라운드 0 자발 호출을 인가하지도 못한다. `mission.md`는 anchor로 보존된다.
 3. Stop 훅이 종료(done/limit) 시 `active` 마커를 지운다.
 
 이는 parallax의 `_active` 마커 + UserPromptSubmit turn-boundary cleanup 패턴을 그대로 옮긴
@@ -247,7 +248,8 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    별도 transcript를 `subagents/meta.json`으로 해소하던 단계가 통째로 사라진다.
 5. **활성화 게이트 + UserPromptSubmit turn cleanup.** `/ploop:launch`의 UserPromptExpansion 훅이
    `mission.md`·`active` 마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돌고, 종료 시
-   마커를 지운다. UserPromptSubmit이 매 사용자 턴 마커·`loop.json`을 지워, ESC로 끊긴 미션이
+   마커를 지운다. UserPromptSubmit이 매 사용자 턴 `active`·`loop.json`을 지우되, **확장이 제출보다 먼저인
+   launch 턴에선 `launching` sentinel로 `active`를 보존**한다 — 그 외 턴은 지우므로 ESC로 끊긴 미션이
    무단 재개되지 않는다. parallax의 활성화 패턴을 그대로 옮긴 것.
 6. **미션 정박 — 메커니즘 1 + 2 (parallax 그대로).** 외부 보존(`mission.md`, 메커니즘 1)으로
    미션 원문은 디스크에 영속하고, `PostCompact`가 `_compacted`를 touch하면 compacted 라운드의

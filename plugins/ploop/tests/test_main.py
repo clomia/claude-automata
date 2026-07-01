@@ -388,6 +388,24 @@ class TestUserPromptSubmit:
         assert not (tmp_path / "s1_compacted").exists()
         assert (tmp_path / "s1_mission.md").exists()
 
+    def test_launch_turn_keeps_active_via_sentinel(self, tmp_path, monkeypatch):
+        """On a /ploop:launch turn the launching sentinel is present: the fresh
+        active marker (and mission) survive cleanup; the sentinel is consumed."""
+        (tmp_path / "s1_active").touch()
+        (tmp_path / "s1_mission.md").write_text("fresh mission")
+        (tmp_path / "s1_launching").touch()
+        save_ledger(
+            tmp_path / "s1_loop.json", round_number=9, regions=["stale"], done=True
+        )
+        (tmp_path / "s1_advisor_token").touch()
+        arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
+        user_prompt_submit()
+        assert (tmp_path / "s1_active").exists()  # spared
+        assert not (tmp_path / "s1_launching").exists()  # consumed
+        assert not (tmp_path / "s1_loop.json").exists()  # stale ledger cleared
+        assert not (tmp_path / "s1_advisor_token").exists()
+        assert (tmp_path / "s1_mission.md").exists()
+
 
 # ── mark_compaction ──
 
@@ -419,6 +437,7 @@ class TestLaunch:
         saved = (tmp_path / "s1_mission.md").read_text()
         assert saved == 'do the thing\nwith "quotes" and $vars'
         assert (tmp_path / "s1_active").exists()
+        assert (tmp_path / "s1_launching").exists()  # sentinel for user_prompt_submit
 
     def test_ignores_non_launch_command(self, tmp_path, monkeypatch):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))

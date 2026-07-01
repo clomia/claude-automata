@@ -15,11 +15,12 @@ On each main-agent stop the hook owns both ends of the parallax round:
 The hook never runs the advisor itself — it drives the main agent (the LLM) to
 call it via the Agent tool, which keeps the loop on the subscription path.
 
-The Stop hook fires on every main-session stop, so an active marker gates it:
-the launch() UserPromptExpansion hook writes the marker (and the mission) when
-/ploop:launch expands, UserPromptSubmit clears it (with the ledger and the token)
-on every new user turn, and stop() clears it when the loop terminates — so an
-ESC-interrupted mission never silently resumes.
+The Stop hook fires on every main-session stop, so an active marker gates it: the
+launch() UserPromptExpansion hook writes the marker (and mission) when /ploop:launch
+expands; UserPromptSubmit clears it on every other new user turn — a launching
+sentinel spares it on the launch turn, since expansion runs before submit — and
+stop() clears it when the loop terminates, so an ESC-interrupted mission never
+silently resumes.
 """
 
 import json
@@ -233,12 +234,13 @@ def pre_tool_use() -> None:
 def user_prompt_submit() -> None:
     """UserPromptSubmit hook: turn-boundary cleanup.
 
-    Every new user-initiated turn clears the prior mission's loop ledger, active
-    marker, advisor token, advisor-running marker, compaction marker, and advice file.  /ploop:launch re-activates
-    by re-creating the active marker after this fires; any other direct user input
-    is an intervention that leaves the loop off — so an ESC-interrupted mission
-    never silently resumes on the next stop, and a stale token can't authorize a
-    self-initiated advisor call in the next mission.  The mission file is left
+    Every new user turn clears the prior mission's loop ledger, advisor token,
+    advisor-running marker, compaction marker, and advice file.  The active marker is
+    cleared too EXCEPT on a /ploop:launch turn: UserPromptExpansion (launch) runs
+    first and sets a fresh active marker plus a launching sentinel, which this hook
+    consumes to spare it.  Any other direct user input is an intervention that leaves
+    the loop off — so an ESC-interrupted mission never silently resumes, and a stale
+    token can't authorize a self-initiated advisor call.  The mission file is left
     intact as the durable anchor; the next run overwrites it.
     """
     try:
@@ -247,8 +249,16 @@ def user_prompt_submit() -> None:
         sys.exit(0)
     data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
     session_id = data.get("session_id", "")
+    # A /ploop:launch turn expands (UserPromptExpansion → launch()) BEFORE this
+    # fires, setting a fresh mission + active marker and a launching sentinel.
+    # Consume the sentinel and spare that active marker; every other turn clears
+    # active too, so an ESC-interrupted mission never silently resumes.
+    launching = data_dir / f"{session_id}_launching"
+    keep_active = launching.exists()
+    launching.unlink(missing_ok=True)
     (data_dir / f"{session_id}_loop.json").unlink(missing_ok=True)
-    (data_dir / f"{session_id}_active").unlink(missing_ok=True)
+    if not keep_active:
+        (data_dir / f"{session_id}_active").unlink(missing_ok=True)
     (data_dir / f"{session_id}_advisor_token").unlink(missing_ok=True)
     (data_dir / f"{session_id}_advisor_running").unlink(missing_ok=True)
     (data_dir / f"{session_id}_compacted").unlink(missing_ok=True)
@@ -300,31 +310,13 @@ def launch() -> None:
     quoting to corrupt it.  Writes the stripped mission and arms the loop; it must
     never block (a blocked expansion erases the turn), so it always exits 0.
 
-    UserPromptSubmit clears the prior turn's state just before this fires, so the
-    handler only writes.  CLAUDE_PLUGIN_DATA comes from the environment (exported
-    to hook processes); session_id comes from the payload.
+    On a slash-command turn UserPromptExpansion runs BEFORE UserPromptSubmit, so a
+    launching sentinel tells that later cleanup to spare the active marker this sets.
+    CLAUDE_PLUGIN_DATA comes from the environment (exported to hook processes);
+    session_id comes from the payload.
     """
-    raw = sys.stdin.read()
-    # TEMP DIAGNOSTIC (remove after root-causing the no-arm bug): capture the raw
-    # UserPromptExpansion payload so we can confirm this hook fires and see the
-    # exact field names/values it carries.
     try:
-        Path(
-            os.environ.get("CLAUDE_PLUGIN_DATA") or "/tmp", "ploop_launch_debug.json"
-        ).write_text(
-            json.dumps(
-                {
-                    "raw": raw,
-                    "env_CLAUDE_PLUGIN_DATA": os.environ.get("CLAUDE_PLUGIN_DATA"),
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
-    except OSError:
-        pass
-    try:
-        data = json.loads(raw)
+        data = json.loads(sys.stdin.read())
     except json.JSONDecodeError:
         sys.exit(0)
     command = str(data.get("command_name", ""))
@@ -337,6 +329,10 @@ def launch() -> None:
     session_id = str(data.get("session_id", ""))
     mission_file(data_dir, session_id).write_text(mission)
     active_file(data_dir, session_id).touch()
+    # UserPromptExpansion runs BEFORE UserPromptSubmit on a slash-command turn, so
+    # the turn-boundary cleanup would otherwise wipe the active marker just set.  A
+    # launching sentinel tells user_prompt_submit() to spare it this turn.
+    (data_dir / f"{session_id}_launching").touch()
 
 
 if __name__ == "__main__":
