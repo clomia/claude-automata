@@ -75,7 +75,7 @@ narrator  depth 2  Read(leaf)  narrate          action records -> markdown
 
 - **advisor는 `Write`로 region만 파일에 쓰고, 나머지 부작용 도구는 막혀 있다(`disallowedTools: Bash, Edit, NotebookEdit, Artifact`)** —
   subagent의 최종 메시지는 커스터마이징 불가라 max-effort 추론 prose가 섞인다(하네스 한계). 그래서 region을
-  `present.md`에 Write해 채팅 채널의 오염과 격리한다 — hook은 그 파일을 읽는다. `Bash`를 계속 막는 것은
+  `advice.md`에 Write해 채팅 채널의 오염과 격리한다 — hook은 그 파일을 읽는다. `Bash`를 계속 막는 것은
   parallax(`DISALLOWED_TOOLS="Bash,Write,Edit,NotebookEdit"`)의 취지 — `Bash`면 `rm`·테스트 실행 등 임의
   부작용이 가능 — 를 지키되, `Write`만 좁게 열어 region 출력 채널로 삼은 의식적 완화다(사용 전제는 auto/bypass
   권한 모드). 남은 read-only 도구(`Read·Glob·Grep·Web*`)로 영역을 근거 짓고 `Agent`로 narrator를 호출하며,
@@ -125,8 +125,8 @@ Stop 훅은 메인 세션 정지마다 발화하므로 active 마커가 게이�
 
 ## 컨텍스트 경제 — nested가 `claude -p`보다 우월한 지점
 
-main의 컨텍스트에 더해지는 것은 **① 짧은 stderr 트리거 + ② advisor가 반환한 region 한
-문단**뿐이다. narrator 호출, region-history 누적 읽기, 5-section 분석은 모두 **advisor(depth 1)의
+main의 컨텍스트에 더해지는 것은 **① 짧은 stderr 트리거 + ② main이 트리거 지시로 읽는
+`advice.md`의 조언 한 문단**뿐이다. narrator 호출, region-history 누적 읽기, 5-section 분석은 모두 **advisor(depth 1)의
 컨텍스트에서** 소비되어 main에 닿지 않는다. region을 "한 문단으로만 출력"하는 parallax
 instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그 탐색 비용을 main에 전가하지
 않는다 — 원본 parallax가 narrator·advisor를 hook 코드로 실행해 메인 컨텍스트를 보호한 것과
@@ -146,16 +146,17 @@ instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그
 | `{session}_loop.json` | hook | `round` · `regions` · `done` |
 | `{session}_action.json` | hook | 이번 라운드 action 기록 (narrator가 읽음) |
 | `{session}_regions.md` | hook | advisor 입력의 parallax-region-history (XML) |
-| `{session}_present.md` | advisor (`Write`) | 이번 라운드 advisor가 제시한 region (hook이 읽음 · prose 격리) |
+| `{session}_advice.md` | advisor (`Write`) | advisor의 조언(=미고려 region) — main·hook이 읽음 · prose 격리 |
 | `{session}_loop.log` | hook | 라운드별 사후 로그 (region) |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight 마커 (PreToolUse set · SubagentStop clear · Stop 가드) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 마커 (Stop이 메커니즘 2로 소비) |
 
 **loop 상태(round·regions·done)는 hook이 단독 소유한다.** advisor는 분석 후 region 한 문단을
-`present.md`에 Write(없으면 종료 토큰을 메시지로 반환)할 뿐 loop ledger는 건드리지 않는다. hook이 다음
-라운드 시작에 직전 advisor의 `present.md`를 읽어(부재 시 트랜스크립트를 `extract_advisor_output`으로
-폴백) `regions`에 append하거나, 종료 토큰이면 `done`을 세운다. `round`도 hook이 증가시키는 안전망이다.
+`advice.md`에 Write(없으면 종료 토큰을 메시지로 반환)할 뿐 loop ledger는 건드리지 않는다. hook이 다음
+라운드 시작에 직전 advisor의 `advice.md`를 읽어(부재 시 트랜스크립트를 `extract_advisor_output`으로
+폴백) `regions`에 append하거나, 종료 토큰이면 `done`을 세운다. main도 트리거 지시대로 같은 `advice.md`를
+읽어 그 조언에 따라 작업하므로 `advice.md`는 main·hook 양쪽의 깨끗한 단일 소스다. `round`도 hook이 증가시키는 안전망이다.
 단일 작성자(hook)가 ledger를 소유해 race가 없고, advisor는 자기 region payload만 파일로 넘긴다 —
 parallax advisor도 region 텍스트를 냈고 hook이 ledger를 기록했으므로, 이 방향이 parallax에 충실하다. (`mission.md`·`active` 마커는 활성화
 신호라 launch 훅(UserPromptExpansion)이 만든다 — parallax도 미션·활성화는 사용자 입력/UserPromptSubmit이, loop state는
@@ -237,7 +238,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    본질이다. main의 컨텍스트(launch 스킬·트리거)는 parallax 루프 메커니즘을 advisor라는 단어로
    **언급하지 않는다** — 자발적으로 부르면 경로 대신 자기 의견을 advisor에 전달하거나 narrator를
    건너뛰기 때문이다. advisor의 존재는 stderr 지시가 처음 알린다.
-3. **loop 상태는 hook이 단독 소유.** advisor는 region을 `present.md`에 Write(또는 종료토큰 반환)만 하고,
+3. **loop 상태는 hook이 단독 소유.** advisor는 region을 `advice.md`에 Write(또는 종료토큰 반환)만 하고,
    hook이 그 파일을 읽어(부재 시 트랜스크립트 폴백) round·regions·done을 모두 기록한다. 단일 작성자라
    동시성 문제가 없고, advisor 프롬프트가 순수 분석으로 남는다. 폴백 경로에서 Agent tool_result 끝에 붙는
    subagent 메타(`agentId`·`usage`)는 추출 시 strip해 region-history 오염을 막는다.
@@ -323,7 +324,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    리셋하는지 미확정. 30라운드가 잘리면 그때 설정한다. **parallax가 같은 Stop 훅 위에서 30라운드를
    돌았다는 점이 강한 전례다.**
 2. **트랜스크립트 형식 가정.** `parse_round_actions`가 "마지막 훅 주입 이후"를 라운드 action으로 잡고,
-   `extract_advisor_output`이 `Agent(advisor)` tool_result에서 advisor 반환을 읽는다(이제 `present.md`
+   `extract_advisor_output`이 `Agent(advisor)` tool_result에서 advisor 반환을 읽는다(이제 `advice.md`
    부재 시의 폴백·종료토큰 경로) — 둘 다 트랜스크립트 메시지·블록 형식에 의존한다. 어긋나면 action 범위가
    넓어지거나 region 기록이 누락될 수 있다(graceful, 치명적이지 않음).
 3. **main의 지시 순응도** — stderr "advisor 호출"에 main이 실제로 응하는가. round 안전망이 미응답 시에도
@@ -354,7 +355,7 @@ foreground라 동기 호출이 보장된다.
 ploop/
 ├── .claude-plugin/plugin.json        # manifest
 ├── agents/                           # 2개 tier 정의 (frontmatter 봉인 + 프롬프트 본문)
-│   ├── advisor.md                    # parallax role 이식 + 5-section 순서 지침 (Write: region→present.md)
+│   ├── advisor.md                    # parallax role 이식 + 5-section 순서 지침 (Write: region→advice.md)
 │   └── narrator.md                   # parallax conversion 이식
 ├── prompts/instruction.md            # advisor 분석·출력 지침 (parallax instruction 이식)
 ├── skills/launch/SKILL.md            # /ploop:launch — main 직접 수행 + self-anchoring (미션 저장·활성화는 launch 훅)

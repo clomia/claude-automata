@@ -107,17 +107,15 @@ def stop() -> None:
     # Record last round's advisor verdict (none in round 0, before any call).
     # parallax's rule: an empty output or the termination token ends the turn.
     if state.current_round >= 1 and advisor_invoked:
-        # The advisor Writes its region to present_path — a clean channel immune to
+        # The advisor Writes its advice to advice_path — a clean channel immune to
         # the reasoning prose its chat message may carry.  Fall back to scraping the
         # transcript when the file is absent: on termination the advisor emits the
         # token there instead of writing, and a non-compliant advisor that narrates
         # without writing still degrades to the pre-file behavior.
-        presented = (
-            state.present_path.read_text().strip()
-            if state.present_path.exists()
-            else ""
+        advice = (
+            state.advice_path.read_text().strip() if state.advice_path.exists() else ""
         )
-        verdict = presented or extract_advisor_output(transcript)
+        verdict = advice or extract_advisor_output(transcript)
         if not verdict or TERMINATION_TOKEN in verdict:
             save_ledger(
                 state.state_path,
@@ -178,13 +176,13 @@ def stop() -> None:
         mission_path=state.mission_path,
         action_path=state.action_path,
         regions_path=state.regions_path,
-        present_path=state.present_path,
+        advice_path=state.advice_path,
         mission_text=mission_text,
     )
 
-    # Clear this round's region file as we arm the next: an absent file next round
+    # Clear this round's advice file as we arm the next: an absent file next round
     # then unambiguously means the advisor wrote nothing (termination / no compliance).
-    state.present_path.unlink(missing_ok=True)
+    state.advice_path.unlink(missing_ok=True)
     state.advisor_token_path.write_text("")
     sys.stderr.write(trigger)
     sys.exit(2)
@@ -236,7 +234,7 @@ def user_prompt_submit() -> None:
     """UserPromptSubmit hook: turn-boundary cleanup.
 
     Every new user-initiated turn clears the prior mission's loop ledger, active
-    marker, advisor token, advisor-running marker, compaction marker, and region file.  /ploop:launch re-activates
+    marker, advisor token, advisor-running marker, compaction marker, and advice file.  /ploop:launch re-activates
     by re-creating the active marker after this fires; any other direct user input
     is an intervention that leaves the loop off — so an ESC-interrupted mission
     never silently resumes on the next stop, and a stale token can't authorize a
@@ -254,7 +252,7 @@ def user_prompt_submit() -> None:
     (data_dir / f"{session_id}_advisor_token").unlink(missing_ok=True)
     (data_dir / f"{session_id}_advisor_running").unlink(missing_ok=True)
     (data_dir / f"{session_id}_compacted").unlink(missing_ok=True)
-    (data_dir / f"{session_id}_present.md").unlink(missing_ok=True)
+    (data_dir / f"{session_id}_advice.md").unlink(missing_ok=True)
 
 
 def mark_compaction() -> None:

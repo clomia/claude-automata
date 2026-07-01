@@ -155,10 +155,10 @@ class TestStop:
         assert "consider error handling" in log
         assert "[[ Round 1" in log
 
-    def test_present_file_overrides_transcript_and_clears_on_arm(
+    def test_advice_file_overrides_transcript_and_clears_on_arm(
         self, tmp_path, monkeypatch
     ):
-        """The region is read from the advisor's present file (not scraped from its
+        """The region is read from the advisor's advice file (not scraped from its
         prose-polluted transcript), stripped, then cleared as the next round arms."""
         arrange_mission(
             tmp_path,
@@ -166,14 +166,14 @@ class TestStop:
             advisor_returns("analysis prose... --- consider concurrency"),
             ledger={"round_number": 1, "regions": [], "done": False},
         )
-        (tmp_path / "s1_present.md").write_text("  consider concurrency  ")
+        (tmp_path / "s1_advice.md").write_text("  consider concurrency  ")
         with pytest.raises(SystemExit) as exc:
             stop()
         assert exc.value.code == 2
         assert load_ledger(tmp_path / "s1_loop.json")["regions"] == [
             "consider concurrency"
         ]
-        assert not (tmp_path / "s1_present.md").exists()
+        assert not (tmp_path / "s1_advice.md").exists()
 
     def test_empty_verdict_terminates(self, tmp_path, monkeypatch):
         """parallax's rule: an empty advisor output ends the turn (done, deactivate)."""

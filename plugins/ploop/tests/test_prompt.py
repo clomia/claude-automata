@@ -24,7 +24,7 @@ class TestFormatAdvisorTrigger:
             mission_path=Path("/d/s1_mission.md"),
             action_path=Path("/d/s1_action.json"),
             regions_path=Path("/d/s1_regions.md"),
-            present_path=Path("/d/s1_present.md"),
+            advice_path=Path("/d/s1_advice.md"),
             instruction_path=Path("/p/prompts/instruction.md"),
             mission_text=mission_text,
         )
@@ -38,7 +38,7 @@ class TestFormatAdvisorTrigger:
             < out.index("actions-history:")
             < out.index("parallax-region-history:")
             < out.index("instructions:")
-            < out.index("present-region-path:")
+            < out.index("advice-path:")
         )
 
     def test_carries_all_paths(self):
@@ -46,8 +46,15 @@ class TestFormatAdvisorTrigger:
         assert "/d/s1_mission.md" in out
         assert "/d/s1_action.json" in out
         assert "/d/s1_regions.md" in out
-        assert "/d/s1_present.md" in out
+        assert "/d/s1_advice.md" in out
         assert "/p/prompts/instruction.md" in out
+
+    def test_directs_main_to_read_advice(self):
+        """The trigger tells the main agent to read the advice file after the call
+        returns — deterministic delivery, not reliant on the advisor's message."""
+        out = self.trigger()
+        assert "read its advice at" in out
+        assert "/d/s1_advice.md" in out
 
     def test_inlines_narrator_call_under_advisor(self):
         """The hook authors both invocations verbatim — the advisor call with the

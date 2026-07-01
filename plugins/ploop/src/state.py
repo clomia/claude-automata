@@ -84,8 +84,8 @@ class State(BaseModel):
         return self.data_dir / f"{self.session_id}_regions.md"
 
     @property
-    def present_path(self) -> Path:
-        return self.data_dir / f"{self.session_id}_present.md"
+    def advice_path(self) -> Path:
+        return self.data_dir / f"{self.session_id}_advice.md"
 
     @property
     def log_path(self) -> Path:

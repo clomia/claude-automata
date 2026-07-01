@@ -37,7 +37,7 @@ def format_advisor_trigger(
     mission_path: Path,
     action_path: Path,
     regions_path: Path,
-    present_path: Path,
+    advice_path: Path,
     instruction_path: Path = INSTRUCTION_PATH,
     mission_text: str | None = None,
 ) -> str:
@@ -52,11 +52,12 @@ def format_advisor_trigger(
     top-to-bottom (advisor.md), reconstructing the same ordered context.
 
     The call is synchronous (run_in_background=false): the advisor Writes its
-    region to present_path — a clean file channel, since its chat message may carry
-    reasoning prose the hook must not record.  The hook reads the file; the blocking
-    tool_result carries only the termination token (or a non-compliant fallback).
-    The inlined narrator call blocks so the advisor receives the narrative to
-    analyze on.
+    advice to advice_path — a clean file channel, since its chat message may carry
+    reasoning prose neither the main agent nor the hook should read.  The trigger
+    then directs the main agent to read that file, and the hook reads it too for the
+    ledger; the blocking tool_result carries only the termination token (or a
+    non-compliant fallback).  The inlined narrator call blocks so the advisor
+    receives the narrative to analyze on.
 
     On a compacted round, mission_text is the original-mission's full text,
     re-injected at this recency position (parallax mechanism 2) — the discrete
@@ -83,8 +84,11 @@ def format_advisor_trigger(
             )
             parallax-region-history: {regions_path}
             instructions: {instruction_path}
-            present-region-path: {present_path}
+            advice-path: {advice_path}
           """
         )
-        ```''')
+        ```
+
+        When the advisor returns, read its advice at {advice_path}.
+    ''')
     return prefix + body

@@ -79,7 +79,7 @@ class TestStatePaths:
         assert state.state_path == tmp_path / "s1_loop.json"
         assert state.action_path == tmp_path / "s1_action.json"
         assert state.regions_path == tmp_path / "s1_regions.md"
-        assert state.present_path == tmp_path / "s1_present.md"
+        assert state.advice_path == tmp_path / "s1_advice.md"
         assert state.log_path == tmp_path / "s1_loop.log"
         assert state.advisor_token_path == tmp_path / "s1_advisor_token"
         assert state.advisor_running_path == tmp_path / "s1_advisor_running"
