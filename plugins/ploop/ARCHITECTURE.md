@@ -93,10 +93,11 @@ narrator  depth 2  Read Write  narrate          action records -> narration.md
 main round N work ── stops
    |
    |  <-- Stop hook
+   |        log completed round: narration + the advice it answered
    |        record last advisor verdict from advice.md (parallax's rule):
    |          absent file or termination token -> done + deactivate
    |            -> exit 2: "summarize {session}_loop.log" (if any region surfaced)
-   |          region -> append + log (narration.md pairs with the region)
+   |          region -> append
    |        round >= ROUND_LIMIT  ->  deactivate + same summary injection
    |        else:  parse round actions (advisor calls stripped) -> {session}_action.json
    |               write {session}_regions.md (parallax-region-history XML)
@@ -152,7 +153,7 @@ instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그
 | `{session}_regions.md` | hook | advisor 입력의 parallax-region-history (XML) |
 | `advice.md` (temp) | advisor (`Write`) | region 또는 종료 토큰 (유일 채널) — 비보호 temp라 auto 모드 Write 승인 · main·hook이 읽음 · prose 격리 |
 | `narration.md` (temp) | narrator (`Write`) | action-history 서사 (advice와 동일 채널) — advisor가 분석 입력으로 · hook이 라운드 로그로 읽음 |
-| `{session}_loop.log` | hook | 라운드별 로그 (action-history + region 쌍) — 미션 전체 흐름의 완전 기록 · launch가 리셋 · 종료 요약의 소스 |
+| `{session}_loop.log` | hook | 완결 라운드 로그 (서사 + 그 라운드의 advice) — 미션 전체 흐름의 완전 기록 · launch가 리셋 · 종료 요약의 소스 |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight 마커 (PreToolUse set · SubagentStop이 유일 clearer · Stop·UserPromptSubmit이 존재로 in-flight 판정) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 마커 (Stop이 메커니즘 2로 소비) |
@@ -301,15 +302,20 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     inline) 동기 실행을 지시하며, 고지능 모델이 이를 따른다. 동기여야 advisor가 정지 전에 `advice.md`를
     남기고(hook이 다음 Stop에 읽는다), narrator narration이 advisor의 분석 입력이 된다. 빈 출력·async처럼
     Claude Code 보장 밖 케이스는 별도 가드 없이 parallax의 단순 규칙(빈 출력=종료)으로 처리한다.
-11. **로깅: parallax 로그 그대로 — 라운드마다 action-history + region 쌍.** `_loop.log`에 narrator의
-    narration(advisor가 분석한 작업)과 advisor의 region(그 분석의 판정)을 쌍으로 적는다 — parallax가
-    `analysis_prompt`(narration 포함)·`new_advice`를 쌍으로 남긴 것과 같은 형태다. 장기 미션에서 main
-    컨텍스트는 여러 번 auto-compaction되므로 이 로그가 턴 전체의 유일한 완전 기록이다. 번호는 region
-    ordinal이라 skip 라운드에도 `regions.md`와 어긋나지 않고, launch가 리셋해 한 미션이 로그 하나를
-    소유하며 종료 후에도 남는다. narration이 advisor 컨텍스트에 갇히는 nested 문제는 narrator가
-    `narration.md`(advice와 동일한 temp 채널)에 Write해 해소한다 — advisor는 분석 입력으로, hook은
-    로그로 같은 파일을 읽는다. 종료 시(단 region을 하나라도 surface한 턴) 마지막 stderr 주입이 main에게
-    로그를 읽어 사용자에게 전체 라운드를 요약하게 한다.
+11. **로깅: 완결된 라운드 단위 — 서사 + 그 라운드의 advice.** `_loop.log`의 한 엔트리는 라운드 하나의
+    완결이다: 라운드 작업의 서사(advice가 도착해 읽히는 장면으로 시작해 반응 작업으로 이어진다) 뒤에 그
+    advice 전문이 `/ Advice`로 붙는다(라운드 0은 미션 초기 작업이라 advice 섹션이 없다). 서사가 advice
+    요약을 품고 전문이 뒤따르는 중복은 의도된 것이며, advisor도 같은 서사를 분석 입력으로 받아 자신의
+    직전 advice에 main이 어떻게 반응했는지 그대로 본다. nested 구조상 라운드 N의 narration은 다음 advisor
+    호출에서 생성되므로 엔트리는 한 정지 늦게 완결 기록되고, 번호는 advice ordinal이라 skip 라운드에도
+    `regions.md`와 어긋나지 않으며, 종료 토큰 같은 기계 신호는 로그에 남지 않는다. parallax의
+    production-pairing(작업→그 작업이 낳은 판정)을 response-pairing(advice→그에 대한 반응)으로 재설계한
+    것이다 — 인과 순서가 파일에서 그대로 읽힌다. 장기 미션에서 main 컨텍스트는 여러 번 auto-compaction
+    되므로 이 로그가 턴 전체의 유일한 완전 기록이다. launch가 리셋해 한 미션이 로그 하나를 소유하며 종료
+    후에도 남고, 종료 시(단 advice를 하나라도 받은 턴) 마지막 stderr 주입이 main에게 로그를 읽어
+    사용자에게 전체 라운드를 요약하게 한다. narration이 advisor 컨텍스트에 갇히는 nested 문제는 narrator가
+    `narration.md`(advice와 동일한 temp 채널)에 Write해 해소한다 — advisor는 분석 입력으로, hook은 로그로
+    같은 파일을 읽는다.
 12. **플러그인 영역만, `settings.json` 불간섭.** 활성화는 `/ploop:launch` 핸드오프. 미션 없이는
     아무것도 발화하지 않는다. 프로젝트 CLAUDE.md·rules는 main·advisor·narrator가 모두 상속한다(custom
     subagent 차단 옵션 부재) — main은 코드 작업에 프로젝트 코딩 규칙이 *필요*하므로 이를 수용한다.

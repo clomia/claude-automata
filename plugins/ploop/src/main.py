@@ -35,22 +35,24 @@ def read_event() -> dict:
         sys.exit(0)
 
 
-def write_log(log_path: Path, round_number: int, **sections: str) -> None:
-    """Append a round's sections to the mission log (parallax's log shape).
+def write_log(
+    log_path: Path, round_number: int, narration: str, advice: str | None
+) -> None:
+    """Append one completed round to the mission log.
 
-    Numbered by region ordinal, so the entries stay aligned with regions.md even
-    when a round is skipped.  launch() resets the file; the finished log outlives
-    the mission so the whole turn stays reconstructable after any compaction.
+    An entry is the round's narrated work — which itself opens with the round's
+    advice arriving and being read — followed by that advice verbatim under
+    /Advice (round 0 is the mission's initial work, so it has none).  Numbered
+    by advice ordinal, so entries stay aligned with regions.md even when a round
+    is skipped.  launch() resets the file; the finished log outlives the mission
+    so the whole turn stays reconstructable after any compaction.
     """
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    header = f"[[ Round {round_number} - {timestamp} ]]\n\n"
-    body = "".join(
-        f"[[ Round {round_number} / {title.replace('_', ' ').title()} ]]"
-        f"\n\n{content}\n\n"
-        for title, content in sections.items()
-    )
+    entry = f"[[ Round {round_number} - {timestamp} ]]\n\n{narration}\n\n"
+    if advice is not None:
+        entry += f"[[ Round {round_number} / Advice ]]\n\n{advice}\n\n"
     with open(log_path, "a") as f:
-        f.write(header + body)
+        f.write(entry)
 
 
 def end_loop(
@@ -110,23 +112,21 @@ def stop() -> None:
 
     # Record last round's verdict (none in round 0, before any call).  Past the
     # in-flight guard the advisor has finished, so an absent advice file means it
-    # wrote nothing.  The log pairs the narrated work the advisor analyzed with
-    # the verdict it produced, so the whole turn's flow reads back from the file.
+    # wrote nothing.  The narration narrates the round just completed: it opens
+    # with the prior advice arriving and shows how the main agent responded, so
+    # the log entry pairs it with that advice — true cause -> effect order.  The
+    # termination token is machinery and never enters the log.
     if current_round >= 1 and advisor_invoked:
         advice = ws.advice_path.read_text().strip() if ws.advice_path.exists() else ""
         narration = (
             ws.narration_path.read_text().strip() if ws.narration_path.exists() else ""
         ) or "(no narration)"
+        write_log(
+            ws.log_path, len(regions), narration, regions[-1] if regions else None
+        )
         if not advice or TERMINATION_TOKEN in advice:
-            write_log(
-                ws.log_path,
-                len(regions) + 1,
-                action_history=narration,
-                region=advice or "(no output)",
-            )
             end_loop(ws, current_round, regions, done=True)
         regions = [*regions, advice]
-        write_log(ws.log_path, len(regions), action_history=narration, region=advice)
 
     if current_round >= ROUND_LIMIT:
         end_loop(ws, current_round, regions, done=False)

@@ -140,7 +140,7 @@ class TestStop:
         assert "ploop:advisor" in err
         assert (tmp_path / "s1_advisor_token").exists()
 
-    def test_records_region_and_narration_into_log(self, tmp_path, monkeypatch):
+    def test_records_region_and_logs_completed_round_zero(self, tmp_path, monkeypatch):
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -158,13 +158,14 @@ class TestStop:
         regions = (tmp_path / "s1_regions.md").read_text()
         assert "<region-1>" in regions
         assert "consider error handling" in regions
-        # The log pairs the narrated work with the region it produced (parallax's
-        # shape), under "Round 1" — the first region is round 1.
+        # The narration narrates round 0 (mission work, no advice answered), so
+        # the completed entry is "Round 0" with no Advice section; the fresh
+        # advice is not logged yet — its round completes at the next stop.
         log = (tmp_path / "s1_loop.log").read_text()
-        assert "[[ Round 1 / Action History ]]" in log
+        assert "[[ Round 0 - " in log
         assert "initial work narrative" in log
-        assert "[[ Round 1 / Region ]]" in log
-        assert "consider error handling" in log
+        assert "/ Advice" not in log
+        assert "consider error handling" not in log
 
     def test_advice_and_narration_cleared_on_arm(self, tmp_path, monkeypatch):
         """Both temp channels are read (advice stripped), then cleared as the next
@@ -186,22 +187,29 @@ class TestStop:
         assert not (tmp_path / "ploop_s1_advice.md").exists()
         assert not (tmp_path / "ploop_s1_narration.md").exists()
 
-    def test_log_numbering_is_ordinal_after_skipped_round(self, tmp_path, monkeypatch):
-        """A skipped round advances current_round without a region; numbering by
-        region ordinal keeps the log aligned with regions.md — no drift, no gap."""
+    def test_log_pairs_narration_with_the_advice_it_answered(
+        self, tmp_path, monkeypatch
+    ):
+        """The entry pairs the narrated round with the advice it responded to
+        (regions[-1]), numbered by that advice's ordinal — aligned with
+        regions.md even after a skipped round, and the fresh advice waits for
+        its own round to complete."""
         arrange_mission(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
             ledger={"round_number": 4, "regions": ["r1", "r2"], "done": False},
             advice="r3",
-            narration="work",
+            narration="worked on r2",
         )
         with pytest.raises(SystemExit) as exc:
             stop()
         assert exc.value.code == 2
         log = (tmp_path / "s1_loop.log").read_text()
-        assert "[[ Round 3" in log
+        assert "[[ Round 2 - " in log
+        assert "[[ Round 2 / Advice ]]" in log
+        assert log.index("worked on r2") < log.index("r2\n")
+        assert "r3" not in log
         assert "Round 4" not in log
 
     def test_absent_advice_terminates(self, tmp_path, monkeypatch):
@@ -221,7 +229,7 @@ class TestStop:
         assert load_ledger(tmp_path / "s1_loop.json")["done"] is True
         assert not (tmp_path / "s1_active").exists()
         log = (tmp_path / "s1_loop.log").read_text()
-        assert "(no output)" in log
+        assert "[[ Round 0 - " in log
         assert "(no narration)" in log
 
     def test_compacted_round_inlines_mission_text(self, tmp_path, monkeypatch, capsys):
@@ -245,8 +253,9 @@ class TestStop:
         self, tmp_path, monkeypatch, capsys
     ):
         """Termination on a turn that surfaced regions: done + deactivated, the
-        final round's work logged beside the token, and one last injection has
-        the main agent summarize the round log."""
+        final round completed in the log (its narration + the advice it
+        answered; the token is machinery and never logged), and one last
+        injection has the main agent summarize the round log."""
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -262,10 +271,11 @@ class TestStop:
         assert ledger["done"] is True
         assert ledger["regions"] == ["r"]
         assert not (tmp_path / "s1_active").exists()
-        # terminating entry: the final work, numbered after the last region
         log = (tmp_path / "s1_loop.log").read_text()
-        assert "[[ Round 2 / Action History ]]" in log
+        assert "[[ Round 1 - " in log
         assert "final round work" in log
+        assert "[[ Round 1 / Advice ]]" in log
+        assert TERMINATION_TOKEN not in log
         # the summary trigger points the main agent at the log
         err = capsys.readouterr().err
         assert str(tmp_path / "s1_loop.log") in err
@@ -285,8 +295,10 @@ class TestStop:
             stop()
         assert exc.value.code == 2
         assert not (tmp_path / "s1_active").exists()
-        # the round-limit round's region is logged, not dropped before write_log
-        assert "a late region" in (tmp_path / "s1_loop.log").read_text()
+        # the limit-cut advice is preserved in the ledger; its round never ran,
+        # so it has no completed log entry
+        assert load_ledger(tmp_path / "s1_loop.json")["regions"] == ["a late region"]
+        assert "a late region" not in (tmp_path / "s1_loop.log").read_text()
         assert str(tmp_path / "s1_loop.log") in capsys.readouterr().err
 
     def test_running_marker_pauses_without_retrigger(self, tmp_path, monkeypatch):
@@ -524,18 +536,23 @@ class TestLaunch:
 
 
 class TestWriteLog:
-    def test_appends_titled_sections_across_rounds(self, tmp_path):
+    def test_round_zero_has_no_advice_section(self, tmp_path):
         log = tmp_path / "l.log"
-        write_log(log, 1, action_history="work-1", region="r1")
-        write_log(log, 2, action_history="work-2", region="r2")
+        write_log(log, 0, "mission work", None)
         content = log.read_text()
-        assert "[[ Round 1 / Action History ]]" in content
-        assert "[[ Round 1 / Region ]]" in content
-        assert "[[ Round 2 / Region ]]" in content
-        # sections appear in call order, rounds in append order
+        assert "[[ Round 0 - " in content
+        assert "mission work" in content
+        assert "/ Advice" not in content
+
+    def test_appends_completed_rounds_with_advice(self, tmp_path):
+        log = tmp_path / "l.log"
+        write_log(log, 0, "w0", None)
+        write_log(log, 1, "answered a1 with w1", "a1")
+        content = log.read_text()
+        assert "[[ Round 1 / Advice ]]" in content
+        # narration first, then the advice it answered; rounds in append order
         assert (
-            content.index("work-1")
-            < content.index("r1")
-            < content.index("work-2")
-            < content.index("r2")
+            content.index("w0")
+            < content.index("answered a1 with w1")
+            < content.index("a1", content.index("[[ Round 1 / Advice ]]"))
         )
