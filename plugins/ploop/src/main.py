@@ -44,9 +44,7 @@ def block_expansion(reason: str) -> None:
     the reason is shown to the user only, and no state is touched — a live loop
     survives its own guard.
     """
-    sys.stdout.write(
-        json.dumps({"decision": "block", "reason": reason}, ensure_ascii=False)
-    )
+    sys.stdout.write(json.dumps({"decision": "block", "reason": reason}))
     sys.exit(0)
 
 
@@ -284,13 +282,11 @@ def launch() -> None:
     ws = Workspace.from_env(event.get("session_id", ""))
     if ws.active_path.exists():
         block_expansion(
-            "이미 활성화된 parallax loop가 있습니다. /ploop:stop으로 종료한 뒤 다시 실행하세요."
+            "A parallax loop is already active. Stop it with /ploop:stop, then launch again."
         )
     mission = str(event.get("command_args", "")).strip()
     if not mission:
-        block_expansion(
-            "미션이 비어 있습니다. /ploop:launch <mission> 형식으로 실행하세요."
-        )
+        block_expansion("The mission is empty. Run it as /ploop:launch <mission>.")
     ws.clear_round_state()
     ws.log_path.write_text(f"[[ MISSION ]]\n\n{mission}\n\n")
     ws.mission_path.write_text(mission)
@@ -321,7 +317,7 @@ def stop_command() -> None:
         sys.exit(0)
     ws = Workspace.from_env(event.get("session_id", ""))
     if not ws.active_path.exists():
-        block_expansion("활성화된 parallax loop가 없습니다.")
+        block_expansion("No active parallax loop.")
     ws.clear_round_state()
     ws.active_path.unlink(missing_ok=True)
     sys.stdout.write(

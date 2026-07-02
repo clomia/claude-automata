@@ -1,6 +1,6 @@
 ---
 name: narrator
-description: main agent의 작업 기록을 마크다운 서사로 변환한다. advisor가 호출한다.
+description: Describes the main agent's actions to the advisor in the parallax loop.
 tools: Read, Write
 model: sonnet[1m]
 effort: low
