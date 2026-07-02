@@ -213,11 +213,12 @@ class TestStop:
         assert "r3" not in log
         assert "Round 4" not in log
 
-    def test_absent_advice_terminates(self, tmp_path, monkeypatch):
+    def test_absent_advice_terminates(self, tmp_path, monkeypatch, capsys):
         """advice.md is the sole channel: the advisor finished (no running marker)
         and wrote nothing, so the turn ends — the parallax loop's empty-output=terminate rule.
-        No region was ever surfaced, so no summary turn is spent (exit 0), but the
-        final work still lands in the log."""
+        No region was ever surfaced, so there is no log worth a summary, but the
+        end notice still reaches the main agent (exit 2) and the final work
+        lands in the log."""
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -226,7 +227,8 @@ class TestStop:
         )
         with pytest.raises(SystemExit) as exc:
             stop()
-        assert exc.value.code == 0
+        assert exc.value.code == 2
+        assert "parallax loop has ended" in capsys.readouterr().err
         assert load_ledger(tmp_path / "s1_loop.json")["done"] is True
         assert not (tmp_path / "s1_active").exists()
         log = (tmp_path / "s1_loop.log").read_text()
@@ -467,11 +469,12 @@ class TestUserPromptSubmit:
         assert (tmp_path / "s1_advisor_running").exists()  # SubagentStop clears it
         assert capsys.readouterr().out == ""  # loop not ended → no notice
 
-    def test_intervention_termination_announces_end(
+    def test_intervention_termination_notifies_agent(
         self, tmp_path, monkeypatch, capsys
     ):
-        """Deactivating a live loop announces the end on both channels: a
-        user-facing systemMessage and an additionalContext note to the main agent."""
+        """Deactivating a live loop tells the main agent via additionalContext —
+        the notice instructs it to relay the end to the user, so no separate
+        user channel is needed."""
         (tmp_path / "s1_active").touch()
         save_ledger(
             tmp_path / "s1_loop.json", round_number=2, regions=["r"], done=False
@@ -479,9 +482,10 @@ class TestUserPromptSubmit:
         arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
         user_prompt_submit()
         out = json.loads(capsys.readouterr().out)
-        assert out["systemMessage"]
         assert out["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
-        assert out["hookSpecificOutput"]["additionalContext"]
+        assert (
+            "parallax loop has ended" in out["hookSpecificOutput"]["additionalContext"]
+        )
         assert not (tmp_path / "s1_active").exists()
 
     def test_ordinary_turn_stays_silent(self, tmp_path, monkeypatch, capsys):

@@ -18,6 +18,7 @@ from pathlib import Path
 
 from src.prompt import (
     format_advisor_trigger,
+    format_end_notice,
     format_region_history,
     format_summary_trigger,
 )
@@ -70,8 +71,9 @@ def write_log(
 
 
 def end_loop(ws: Workspace, current_round: int, regions: list[str]) -> None:
-    """Terminate the loop: mark it done, drop the active gate, and — if the turn
-    surfaced any region — have the main agent summarize the round log for the user.
+    """Terminate the loop: mark it done, drop the active gate, and tell the main
+    agent — the round-log summary when the turn surfaced any region, a brief end
+    notice otherwise.  Every termination path reaches the main agent.
 
     The advisor ending the turn (termination token / empty advice) is the loop's
     only automatic exit; there is no round cap.  Over a long mission the main
@@ -82,8 +84,9 @@ def end_loop(ws: Workspace, current_round: int, regions: list[str]) -> None:
     ws.active_path.unlink(missing_ok=True)
     if regions:
         sys.stderr.write(format_summary_trigger(ws.log_path))
-        sys.exit(2)
-    sys.exit(0)
+    else:
+        sys.stderr.write(format_end_notice("the advisor surfaced no region"))
+    sys.exit(2)
 
 
 def stop() -> None:
@@ -219,10 +222,10 @@ def user_prompt_submit() -> None:
     fresh active marker) and a background advisor in flight (the running marker
     — the loop is mid-round and main has merely yielded to the user).
 
-    When this turn actually deactivates a live loop, it announces the end on both
-    channels — a user-facing systemMessage and an additionalContext note to the
-    main agent — so the intervention end is never silent.  (The natural end and
-    /ploop:stop already announce themselves via the final summary.)
+    When this turn actually deactivates a live loop, the end notice goes to the
+    main agent as additionalContext — every termination path reaches the main
+    agent, and the notice has it relay the end to the user.  (The natural end
+    and /ploop:stop already reach it via their final triggers.)
     """
     event = read_event()
     ws = Workspace.from_env(event.get("session_id", ""))
@@ -238,14 +241,12 @@ def user_prompt_submit() -> None:
             sys.stdout.write(
                 json.dumps(
                     {
-                        "systemMessage": "ploop: the parallax loop has ended.",
                         "hookSpecificOutput": {
                             "hookEventName": "UserPromptSubmit",
-                            "additionalContext": (
-                                "The parallax loop has ended: a direct turn ended it, "
-                                "so no further advisor rounds will run."
+                            "additionalContext": format_end_notice(
+                                "a direct user turn ended it"
                             ),
-                        },
+                        }
                     }
                 )
             )

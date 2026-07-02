@@ -96,6 +96,19 @@ def format_advisor_trigger(
     return prefix + body
 
 
+def format_end_notice(cause: str) -> str:
+    """Build the notice that tells the main agent the loop has ended.
+
+    Every termination path must reach the main agent — told explicitly, it
+    relays the end to the user in its reply.  Ends that carry a log worth
+    recapping use format_summary_trigger instead.
+    """
+    return (
+        f"The parallax loop has ended ({cause}); no further advisor rounds "
+        f"will run. Mention this briefly to the user.\n"
+    )
+
+
 def format_summary_trigger(log_path: Path) -> str:
     """Build the stderr feedback for the loop's final stop.
 
