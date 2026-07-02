@@ -37,6 +37,19 @@ def read_event() -> dict:
         sys.exit(0)
 
 
+def block_expansion(reason: str) -> None:
+    """Deny a slash-command expansion (decision: block).
+
+    The turn is erased before submission: the skill body never enters context,
+    the reason is shown to the user only, and no state is touched — a live loop
+    survives its own guard.
+    """
+    sys.stdout.write(
+        json.dumps({"decision": "block", "reason": reason}, ensure_ascii=False)
+    )
+    sys.exit(0)
+
+
 def write_log(
     log_path: Path, round_number: int, narration: str, advice: str | None
 ) -> None:
@@ -252,19 +265,32 @@ def launch() -> None:
     Fires when /ploop:launch <mission> expands — before UserPromptSubmit, hence
     the launching sentinel that tells that later cleanup to spare the fresh
     active marker.  The mission rides in command_args as structured JSON, so
-    multi-line text with quotes or `$` is captured verbatim.  Clears the prior
-    mission's round state, starts the round log with the mission text (a mission
-    owns one log, and its final summary reads the goal first; the finished log
-    survives ordinary turns), writes the mission anchor, and arms the loop.  It must never block (a blocked expansion erases
-    the turn), so every path exits 0.
+    multi-line text with quotes or `$` is captured verbatim.
+
+    Two guards block the expansion (block_expansion — pure, turn erased): an
+    armed loop (active marker), because relaunching over it would overwrite the
+    mission and log mid-flight and orphan an in-flight advisor — /ploop:stop
+    ends it first; and a blank mission, because the skill body would otherwise
+    announce an activation this hook never armed (a ghost loop).
+
+    A real launch clears the prior mission's round state, starts the round log
+    with the mission text (a mission owns one log, and its final summary reads
+    the goal first; the finished log survives ordinary turns), writes the
+    mission anchor, and arms the loop.
     """
     event = read_event()
     if event.get("command_name", "") != "ploop:launch":
         sys.exit(0)
+    ws = Workspace.from_env(event.get("session_id", ""))
+    if ws.active_path.exists():
+        block_expansion(
+            "이미 활성화된 parallax loop가 있습니다. /ploop:stop으로 종료한 뒤 다시 실행하세요."
+        )
     mission = str(event.get("command_args", "")).strip()
     if not mission:
-        sys.exit(0)
-    ws = Workspace.from_env(event.get("session_id", ""))
+        block_expansion(
+            "미션이 비어 있습니다. /ploop:launch <mission> 형식으로 실행하세요."
+        )
     ws.clear_round_state()
     ws.log_path.write_text(f"[[ MISSION ]]\n\n{mission}\n\n")
     ws.mission_path.write_text(mission)
@@ -276,35 +302,35 @@ def stop_command() -> None:
     """UserPromptExpansion hook (matcher: ploop:stop): stop the loop on demand.
 
     The loop has no round cap — it ends when the advisor finds no further region,
-    or here, when the user runs /ploop:stop.  This deactivates it (drops the active
-    gate and clears per-round state) so the next stop is allowed and nothing leaks
-    into a later mission.  Unlike an incidental user turn (which user_prompt_submit
-    spares while a background advisor is in flight), it stops unconditionally —
-    clearing the running marker before UserPromptSubmit reads it.
+    or here, when the user runs /ploop:stop.  With no armed loop (never launched,
+    already ended, or a double-stop) the expansion is blocked (block_expansion —
+    pure, turn erased): the skill body never enters context, so the main agent
+    can't announce a termination that didn't happen.
 
-    If a loop was actually running (active marker present), it hands the main agent
-    the round log to recap the turn — the same summary instruction the natural end
-    injects, carried as UserPromptExpansion additionalContext (the only channel with
-    the session's real log path; the static skill body can't hold it).  Gating on
-    the active marker, not the log's existence, means a double-stop or a stop after
-    the loop already ended injects no redundant recap.  Runs before UserPromptSubmit
-    and must never block, so it always exits 0.
+    An armed loop is deactivated: the active gate and per-round state are cleared,
+    so the next stop is allowed and nothing leaks into a later mission.  Unlike an
+    incidental user turn (which user_prompt_submit spares while a background
+    advisor is in flight), it stops unconditionally — clearing the running marker
+    before UserPromptSubmit reads it.  It hands the main agent the round log to
+    recap the turn — the same summary instruction the natural end injects, carried
+    as UserPromptExpansion additionalContext (the only channel with the session's
+    real log path; the static skill body can't hold it).
     """
     event = read_event()
     if event.get("command_name", "") != "ploop:stop":
         sys.exit(0)
     ws = Workspace.from_env(event.get("session_id", ""))
-    was_active = ws.active_path.exists()
+    if not ws.active_path.exists():
+        block_expansion("활성화된 parallax loop가 없습니다.")
     ws.clear_round_state()
     ws.active_path.unlink(missing_ok=True)
-    if was_active:
-        sys.stdout.write(
-            json.dumps(
-                {
-                    "hookSpecificOutput": {
-                        "hookEventName": "UserPromptExpansion",
-                        "additionalContext": format_summary_trigger(ws.log_path),
-                    }
+    sys.stdout.write(
+        json.dumps(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptExpansion",
+                    "additionalContext": format_summary_trigger(ws.log_path),
                 }
-            )
+            }
         )
+    )

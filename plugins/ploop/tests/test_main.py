@@ -523,7 +523,9 @@ class TestLaunch:
         assert not (tmp_path / "s1_mission.md").exists()
         assert not (tmp_path / "s1_active").exists()
 
-    def test_blank_mission_does_not_arm(self, tmp_path, monkeypatch):
+    def test_blank_mission_blocks_expansion(self, tmp_path, monkeypatch, capsys):
+        """A blank mission is blocked at expansion — otherwise the skill body
+        would announce an activation the hook never armed (a ghost loop)."""
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         monkeypatch.setattr(
             "sys.stdin",
@@ -531,9 +533,37 @@ class TestLaunch:
                 command_name="ploop:launch", command_args="   ", session_id="s1"
             ),
         )
-        with pytest.raises(SystemExit):
+        with pytest.raises(SystemExit) as exc:
             launch()
+        assert exc.value.code == 0
+        assert json.loads(capsys.readouterr().out)["decision"] == "block"
         assert not (tmp_path / "s1_active").exists()
+
+    def test_armed_loop_blocks_relaunch_untouched(self, tmp_path, monkeypatch, capsys):
+        """Relaunching over an armed loop is blocked purely: mission, log, and
+        the in-flight marker survive — the running loop is not disturbed, and
+        the reason routes the user to /ploop:stop."""
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        (tmp_path / "s1_active").touch()
+        (tmp_path / "s1_mission.md").write_text("old mission")
+        (tmp_path / "s1_loop.log").write_text("old log")
+        (tmp_path / "s1_advisor_running").touch()
+        monkeypatch.setattr(
+            "sys.stdin",
+            self.make_stdin(
+                command_name="ploop:launch", command_args="new mission", session_id="s1"
+            ),
+        )
+        with pytest.raises(SystemExit) as exc:
+            launch()
+        assert exc.value.code == 0
+        out = json.loads(capsys.readouterr().out)
+        assert out["decision"] == "block"
+        assert "/ploop:stop" in out["reason"]
+        assert (tmp_path / "s1_mission.md").read_text() == "old mission"
+        assert (tmp_path / "s1_loop.log").read_text() == "old log"
+        assert (tmp_path / "s1_advisor_running").exists()
+        assert not (tmp_path / "s1_launching").exists()
 
 
 # ── /ploop:stop UserPromptExpansion hook ──
@@ -580,14 +610,19 @@ class TestStopCommand:
         assert str(tmp_path / "s1_loop.log") in context
         assert "summary" in context
 
-    def test_inactive_stop_injects_no_recap(self, tmp_path, monkeypatch, capsys):
-        """Gated on the active marker, not the log: a stop with no running loop
-        (already ended / double-stop) leaves the prior log but injects no redundant
-        recap."""
+    def test_inactive_stop_blocks_expansion(self, tmp_path, monkeypatch, capsys):
+        """No armed loop (already ended / double-stop): the expansion is blocked
+        purely — the skill body never runs, so no false termination notice, and
+        the prior mission's record survives untouched."""
         (tmp_path / "s1_loop.log").write_text("[[ MISSION ]]\n\nm\n\n")  # stale log
+        (tmp_path / "s1_mission.md").write_text("m")
         self.arrange(tmp_path, monkeypatch)
-        stop_command()
-        assert capsys.readouterr().out == ""
+        with pytest.raises(SystemExit) as exc:
+            stop_command()
+        assert exc.value.code == 0
+        assert json.loads(capsys.readouterr().out)["decision"] == "block"
+        assert (tmp_path / "s1_loop.log").read_text() == "[[ MISSION ]]\n\nm\n\n"
+        assert (tmp_path / "s1_mission.md").exists()
 
     def test_stops_even_while_advisor_in_flight(self, tmp_path, monkeypatch):
         """Unlike an incidental user turn (which user_prompt_submit spares while a

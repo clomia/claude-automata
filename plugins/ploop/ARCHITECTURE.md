@@ -156,6 +156,10 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
 
 1. `/ploop:launch`의 UserPromptExpansion 훅이 `mission.md`·`active` 마커와 `launching` sentinel을
    쓴다(슬래시 커맨드 턴은 **확장이 제출보다 먼저**다). main이 미션을 직접 수행하기 시작한다.
+   `active`가 이미 있거나(중복 launch — 진행 중인 미션의 기록을 덮어쓰고 in-flight advisor를 고아로
+   만든다) 미션이 비어 있으면(스킬 본문이 arm되지 않은 활성화를 알리는 유령 루프) 확장을
+   **차단**한다(`decision: block`) — 턴이 지워져 스킬 본문이 컨텍스트에 들어가지 않고, 사유는
+   사용자에게만 보이며, 차단 경로는 상태를 건드리지 않아 돌던 루프가 무사하다.
 2. `UserPromptSubmit`이 매 새 사용자 턴마다 `loop.json`·`advisor_token`·`compacted`·`advice.md`·
    `narration.md`를 지운다(turn-boundary cleanup). `active`도 지우되 **launch 턴에선 `launching` sentinel을 소비하며
    `active`를 보존**한다 — 확장(launch)이 제출보다 먼저라 방금 만든 마커를 자기 cleanup이 지우는 것을
@@ -167,7 +171,8 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
    `advisor_running`을 UserPromptSubmit이 읽기 전에 지운다(그래서 우연한 turn의 in-flight 보존과 달리
    확정 종료다). 그리고 그 라운드 로그를 **additionalContext**로 main에 건네 자연 종료와 같은 요약을
    유도한다 — 세션별 실제 로그 경로를 담을 수 있는 유일한 채널이다(정적 스킬 본문은 못 담는다). 스킬
-   본문은 사용자에게 종료를 알린다.
+   본문은 사용자에게 종료를 알린다. `active`가 없으면(미실행·자연 종료 후·중복 stop) launch 가드와
+   같은 방식으로 확장을 차단해, 스킬 본문이 일어나지 않은 종료를 알리는 것을 막는다.
 
 (operator subagent 시절에는 SubagentStop이 미션 전용 subagent에만 발화해 이 게이트가
 불필요했으나, main 승격으로 Stop이 일반 대화에도 발화하면서 활성화 게이트가 필요해졌다 — git history.)
@@ -200,7 +205,7 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
-| **UserPromptExpansion** | `ploop:launch` · `ploop:stop` | 슬래시 커맨드 확장(제출 전) | launch: 미션·`active`·`launching` 기록(활성화) · stop: `active`+라운드 상태 삭제(비활성화, in-flight 무관) |
+| **UserPromptExpansion** | `ploop:launch` · `ploop:stop` | 슬래시 커맨드 확장(제출 전) | launch: 미션·`active`·`launching` 기록(활성화) — `active` 존재·빈 미션이면 차단 · stop: `active`+라운드 상태 삭제(비활성화, in-flight 무관) — 비활성이면 차단 |
 | **UserPromptSubmit** | (전체) | 새 사용자 턴 | `loop.json`·토큰·running·compacted·advice·narration·`active` 삭제 (turn cleanup). 단 launch 턴엔 `active` 보존(launching sentinel), background advisor in-flight 중엔 전체 보존 |
 | **PostCompact** | `auto` | auto-compaction 후 | `compacted` 마커 touch (Stop이 메커니즘 2로 미션 텍스트 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` 마커 set) 또는 `exit 2` deny(자발 호출 차단) |
@@ -315,7 +320,8 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     clearer**다. Stop·UserPromptSubmit은 마커가 있으면 in-flight로 보고 재주입/정리를 하지 않는다(Stop은
     `exit 0` 대기, UserPromptSubmit은 loop state 보존). background로 보낸 advisor의 region은 유실될 수
     있으나 cascade는 확실히 차단된다. **수용한 트레이드오프**: SubagentStop이 누락되면 마커가 leak해
-    루프가 멈출 수 있다(다음 `/ploop:launch`가 clear). settled 기반 self-heal은 트랜스크립트 형식 의존을
+    루프가 멈출 수 있다(복구는 `/ploop:stop` — `active`가 남아 있어 launch는 차단되고, 그 차단 사유가
+    stop으로 안내한다). settled 기반 self-heal은 트랜스크립트 형식 의존을
     낳아 제거했다 — advice.md 단일 채널로 전환하며 맞바꾼 단순화다.
 
 ---
