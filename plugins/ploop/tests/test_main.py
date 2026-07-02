@@ -566,6 +566,27 @@ class TestStopCommand:
         assert (tmp_path / "s1_mission.md").exists()  # anchor kept
         assert (tmp_path / "s1_loop.log").exists()  # record kept
 
+    def test_delivers_log_path_to_main_agent(self, tmp_path, monkeypatch, capsys):
+        """The log is seeded at launch, so its presence means a mission ran: stop
+        hands the main agent the real session log path (the only channel that can,
+        since the skill body is static) as UserPromptExpansion additionalContext."""
+        (tmp_path / "s1_active").touch()
+        (tmp_path / "s1_loop.log").write_text("[[ MISSION ]]\n\nm\n\n")
+        self.arrange(tmp_path, monkeypatch)
+        stop_command()
+        out = json.loads(capsys.readouterr().out)
+        assert out["hookSpecificOutput"]["hookEventName"] == "UserPromptExpansion"
+        context = out["hookSpecificOutput"]["additionalContext"]
+        assert str(tmp_path / "s1_loop.log") in context
+        assert "summary" in context
+
+    def test_no_mission_no_log_delivery(self, tmp_path, monkeypatch, capsys):
+        """No prior mission (no log): nothing to summarize, so no context is
+        injected — the skill body's stop notice is enough."""
+        self.arrange(tmp_path, monkeypatch)
+        stop_command()
+        assert capsys.readouterr().out == ""
+
     def test_stops_even_while_advisor_in_flight(self, tmp_path, monkeypatch):
         """Unlike an incidental user turn (which user_prompt_submit spares while a
         background advisor runs), /ploop:stop is unconditional: it clears the

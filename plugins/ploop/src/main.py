@@ -280,13 +280,30 @@ def stop_command() -> None:
     gate and clears per-round state) so the next stop is allowed and nothing leaks
     into a later mission.  Unlike an incidental user turn (which user_prompt_submit
     spares while a background advisor is in flight), it stops unconditionally —
-    clearing the running marker before UserPromptSubmit reads it.  The skill body
-    tells the user the loop stopped.  Runs before UserPromptSubmit and must never
-    block, so it always exits 0.
+    clearing the running marker before UserPromptSubmit reads it.
+
+    It then hands the main agent the round log so it can recap the turn: the same
+    summary instruction the natural end injects, carried as UserPromptExpansion
+    additionalContext (the only channel with the session's real log path — the
+    static skill body can't hold it).  The log is seeded at launch, so its
+    presence means a mission ran; skip the delivery if there was none.  Runs before
+    UserPromptSubmit and must never block, so it always exits 0.
     """
     event = read_event()
     if event.get("command_name", "") != "ploop:stop":
         sys.exit(0)
     ws = Workspace.from_env(event.get("session_id", ""))
+    had_mission = ws.log_path.exists()
     ws.clear_round_state()
     ws.active_path.unlink(missing_ok=True)
+    if had_mission:
+        sys.stdout.write(
+            json.dumps(
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": "UserPromptExpansion",
+                        "additionalContext": format_summary_trigger(ws.log_path),
+                    }
+                }
+            )
+        )

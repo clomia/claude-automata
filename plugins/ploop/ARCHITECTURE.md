@@ -165,7 +165,9 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
 4. `/ploop:stop`의 UserPromptExpansion 훅(`stop_command`)이 사용자 요청으로 언제든 루프를
    비활성화한다 — `active`와 라운드 상태를 지운다. background advisor in-flight 중에도 무조건 멈추도록
    `advisor_running`을 UserPromptSubmit이 읽기 전에 지운다(그래서 우연한 turn의 in-flight 보존과 달리
-   확정 종료다). 스킬 본문이 사용자에게 종료를 알린다.
+   확정 종료다). 그리고 그 라운드 로그를 **additionalContext**로 main에 건네 자연 종료와 같은 요약을
+   유도한다 — 세션별 실제 로그 경로를 담을 수 있는 유일한 채널이다(정적 스킬 본문은 못 담는다). 스킬
+   본문은 사용자에게 종료를 알린다.
 
 (operator subagent 시절에는 SubagentStop이 미션 전용 subagent에만 발화해 이 게이트가
 불필요했으나, main 승격으로 Stop이 일반 대화에도 발화하면서 활성화 게이트가 필요해졌다 — git history.)
