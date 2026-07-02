@@ -16,8 +16,6 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-ROUND_LIMIT = 30
-
 
 @dataclass(frozen=True)
 class Workspace:

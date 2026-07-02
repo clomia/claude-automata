@@ -3,7 +3,9 @@
 A hook is code and cannot call tools, so the loop is driven by feedback: stop()
 blocks the main agent's stop (exit 2) and injects the next instruction — invoke
 the advisor, or summarize the finished round log.  The active marker written at
-/ploop:launch gates everything; see ARCHITECTURE.md for the loop design.
+/ploop:launch gates everything; the loop ends when the advisor surfaces no
+further region, or when the user runs /ploop:stop — there is no round cap.  See
+ARCHITECTURE.md for the loop design.
 
 Hooks must never break the session: malformed events and missing files degrade
 to exit 0 (allow the action).
@@ -19,7 +21,7 @@ from src.prompt import (
     format_region_history,
     format_summary_trigger,
 )
-from src.state import ROUND_LIMIT, Workspace, load_ledger, save_ledger
+from src.state import Workspace, load_ledger, save_ledger
 from src.transcript import parse_round_actions
 
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
@@ -56,17 +58,16 @@ def write_log(
         f.write(entry)
 
 
-def end_loop(
-    ws: Workspace, current_round: int, regions: list[str], *, done: bool
-) -> None:
-    """Terminate the loop: persist the final ledger and drop the active gate.
+def end_loop(ws: Workspace, current_round: int, regions: list[str]) -> None:
+    """Terminate the loop: mark it done, drop the active gate, and — if the turn
+    surfaced any region — have the main agent summarize the round log for the user.
 
-    When the turn surfaced any region, block this one stop (exit 2) to have the
-    main agent summarize the round log for the user — over a long mission its
-    context may have compacted the early rounds away, so the log is the one
-    complete record.  The active marker is already gone, so the next stop passes.
+    The advisor ending the turn (termination token / empty advice) is the loop's
+    only automatic exit; there is no round cap.  Over a long mission the main
+    agent's context may have compacted the early rounds away, so the log is the
+    one complete record.  The active marker is dropped, so the next stop passes.
     """
-    save_ledger(ws.ledger_path, round_number=current_round, regions=regions, done=done)
+    save_ledger(ws.ledger_path, round_number=current_round, regions=regions, done=True)
     ws.active_path.unlink(missing_ok=True)
     if regions:
         sys.stderr.write(format_summary_trigger(ws.log_path))
@@ -108,7 +109,8 @@ def stop() -> None:
     # The advisor ran this round iff PreToolUse consumed the token a prior Stop
     # wrote.  A leftover token means the main agent ignored the trigger and no
     # advisor ran — skip recording so a prior round's region is not re-appended
-    # as a duplicate; the trigger is re-injected below (bounded by ROUND_LIMIT).
+    # as a duplicate; the trigger is re-injected below.  A main that keeps
+    # re-stopping without working trips the harness Stop-block cap.
     advisor_invoked = not ws.advisor_token_path.exists()
 
     # Record last round's verdict (none in round 0, before any call).  Past the
@@ -126,11 +128,8 @@ def stop() -> None:
             ws.log_path, len(regions), narration, regions[-1] if regions else None
         )
         if not advice or TERMINATION_TOKEN in advice:
-            end_loop(ws, current_round, regions, done=True)
+            end_loop(ws, current_round, regions)
         regions = [*regions, advice]
-
-    if current_round >= ROUND_LIMIT:
-        end_loop(ws, current_round, regions, done=False)
 
     # This round's inputs for the next advisor call: the main agent's actions
     # (narrated by the narrator) and the accumulated parallax-region-history.
@@ -271,3 +270,23 @@ def launch() -> None:
     ws.mission_path.write_text(mission)
     ws.active_path.touch()
     ws.launching_path.touch()
+
+
+def stop_command() -> None:
+    """UserPromptExpansion hook (matcher: ploop:stop): stop the loop on demand.
+
+    The loop has no round cap — it ends when the advisor finds no further region,
+    or here, when the user runs /ploop:stop.  This deactivates it (drops the active
+    gate and clears per-round state) so the next stop is allowed and nothing leaks
+    into a later mission.  Unlike an incidental user turn (which user_prompt_submit
+    spares while a background advisor is in flight), it stops unconditionally —
+    clearing the running marker before UserPromptSubmit reads it.  The skill body
+    tells the user the loop stopped.  Runs before UserPromptSubmit and must never
+    block, so it always exits 0.
+    """
+    event = read_event()
+    if event.get("command_name", "") != "ploop:stop":
+        sys.exit(0)
+    ws = Workspace.from_env(event.get("session_id", ""))
+    ws.clear_round_state()
+    ws.active_path.unlink(missing_ok=True)

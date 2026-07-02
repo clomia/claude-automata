@@ -17,11 +17,12 @@ from src.main import (
     mark_compaction,
     pre_tool_use,
     stop,
+    stop_command,
     subagent_stop,
     user_prompt_submit,
     write_log,
 )
-from src.state import ROUND_LIMIT, load_ledger, save_ledger
+from src.state import load_ledger, save_ledger
 
 # A minimal round transcript: a trigger boundary + the main agent's own work.
 # The region no longer comes from here — advice.md is the sole channel — so this
@@ -281,25 +282,24 @@ class TestStop:
         assert str(tmp_path / "s1_loop.log") in err
         assert "summary" in err
 
-    def test_round_limit_ends_loop_and_triggers_summary(
-        self, tmp_path, monkeypatch, capsys
-    ):
+    def test_no_round_cap_arms_indefinitely(self, tmp_path, monkeypatch):
+        """There is no round limit: a high round still arms the next round rather
+        than terminating — only the advisor (or /ploop:stop) ends the loop."""
         arrange_mission(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
-            ledger={"round_number": ROUND_LIMIT, "regions": [], "done": False},
-            advice="a late region",
+            ledger={"round_number": 999, "regions": ["r"] * 999, "done": False},
+            advice="still more",
+            narration="work",
         )
         with pytest.raises(SystemExit) as exc:
             stop()
-        assert exc.value.code == 2
-        assert not (tmp_path / "s1_active").exists()
-        # the limit-cut advice is preserved in the ledger; its round never ran,
-        # so it has no completed log entry
-        assert load_ledger(tmp_path / "s1_loop.json")["regions"] == ["a late region"]
-        assert "a late region" not in (tmp_path / "s1_loop.log").read_text()
-        assert str(tmp_path / "s1_loop.log") in capsys.readouterr().err
+        assert exc.value.code == 2  # armed, not terminated
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["round"] == 1000
+        assert ledger["done"] is False
+        assert (tmp_path / "s1_active").exists()
 
     def test_running_marker_pauses_without_retrigger(self, tmp_path, monkeypatch):
         """Running marker present (advisor in flight — e.g. the user pushed it to the
@@ -534,6 +534,57 @@ class TestLaunch:
         with pytest.raises(SystemExit):
             launch()
         assert not (tmp_path / "s1_active").exists()
+
+
+# ── /ploop:stop UserPromptExpansion hook ──
+
+
+class TestStopCommand:
+    def make_stdin(self, **payload):
+        return io.StringIO(json.dumps(payload))
+
+    def arrange(self, tmp_path, monkeypatch, *, command_name="ploop:stop"):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr(
+            "sys.stdin",
+            self.make_stdin(command_name=command_name, session_id="s1"),
+        )
+
+    def test_deactivates_and_clears_round_state(self, tmp_path, monkeypatch):
+        for name in ("s1_active", "s1_advisor_token", "s1_compacted"):
+            (tmp_path / name).touch()
+        save_ledger(
+            tmp_path / "s1_loop.json", round_number=5, regions=["r"], done=False
+        )
+        (tmp_path / "s1_mission.md").write_text("m")
+        (tmp_path / "s1_loop.log").write_text("log")
+        self.arrange(tmp_path, monkeypatch)
+        stop_command()
+        assert not (tmp_path / "s1_active").exists()  # loop deactivated
+        assert not (tmp_path / "s1_loop.json").exists()
+        assert not (tmp_path / "s1_advisor_token").exists()
+        assert (tmp_path / "s1_mission.md").exists()  # anchor kept
+        assert (tmp_path / "s1_loop.log").exists()  # record kept
+
+    def test_stops_even_while_advisor_in_flight(self, tmp_path, monkeypatch):
+        """Unlike an incidental user turn (which user_prompt_submit spares while a
+        background advisor runs), /ploop:stop is unconditional: it clears the
+        running marker and the active gate."""
+        for name in ("s1_active", "s1_advisor_running"):
+            (tmp_path / name).touch()
+        self.arrange(tmp_path, monkeypatch)
+        stop_command()
+        assert not (tmp_path / "s1_active").exists()
+        assert not (tmp_path / "s1_advisor_running").exists()
+
+    def test_ignores_other_plugin_stop(self, tmp_path, monkeypatch):
+        """The guard matches the full scoped name, so another plugin's :stop
+        cannot deactivate ploop."""
+        (tmp_path / "s1_active").touch()
+        self.arrange(tmp_path, monkeypatch, command_name="other:stop")
+        with pytest.raises(SystemExit):
+            stop_command()
+        assert (tmp_path / "s1_active").exists()  # untouched
 
 
 # ── write_log ──

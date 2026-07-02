@@ -13,7 +13,7 @@ parallax loop는 다음 네 가지 추상 원칙을 동시에 구현하는 외�
 3. **추상 수준의 영역.** 메인 에이전트에 주입되는 것은 무엇을 어떻게 하라는 지시가 아니라, 무엇을 더 생각해 볼 것인지의 영역이다. 영역은 다음 생성의 활성화를 옮길 뿐, 구체적 행동을 결정하지 않는다. 자율적 추론이 보존된다.
 4. **정보 변환 계층.** 메인 에이전트의 원시 행동 기록(JSON)은 사용자가 터미널에서 관찰하는 수준의 마크다운 서사로 변환되어 Advisor에게 전달된다. Advisor는 사용자와 같은 추상 수준에서 다음 영역을 결정한다.
 
-루프 종료는 고정된 라운드 한계와, Advisor가 출력하는 전용 종료 토큰의 두 신호로 결정된다. 도메인별 수렴 메트릭을 요구하지 않는다.
+루프 종료는 Advisor가 출력하는 전용 종료 토큰으로 결정되며, 사용자가 수동으로 끝낼 수도 있다. 고정된 라운드 한계는 두지 않는다 — 도메인별 수렴 메트릭도 요구하지 않는다.
 
 ## 2. 근거
 
@@ -115,7 +115,7 @@ ploop은 이 관찰을 두 방식으로 활용한다. 첫째, 피드백을 Stop 
 
 다중 라운드 루프의 가장 까다로운 문제는 언제 멈출지를 결정하는 것이다. 도메인별 정답 함수가 있다면 verifier가 종료를 결정할 수 있지만(Snell et al.), 일반 코딩·문서 작업에는 그런 함수가 없다.
 
-parallax loop는 이 문제를 두 신호의 결합으로 해결한다. 첫째, Advisor가 더 surface할 영역이 없다고 판단하면 전용 종료 토큰(`I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLAX_TURN`)을 출력하도록 명시적 지시를 받는다. 격리된 컨텍스트가 매 라운드 새로 판단하므로, 메인 에이전트의 누적 영역이 충분히 넓어진 시점에 자연스럽게 종료 신호가 나온다. 둘째, 신호가 나오지 않더라도 30라운드의 절대 한계(`src/state.py`의 `ROUND_LIMIT = 30`)가 무한 루프를 차단한다.
+parallax loop는 이 문제를 의미론적 종료로 해결한다. Advisor가 더 surface할 영역이 없다고 판단하면 전용 종료 토큰(`I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLAX_TURN`)을 출력하도록 명시적 지시를 받는다. 격리된 컨텍스트가 매 라운드 새로 판단하므로, 메인 에이전트의 누적 영역이 충분히 넓어진 시점에 자연스럽게 종료 신호가 나온다. 고정된 라운드 상한은 두지 않는다 — region-history가 컨텍스트가 아니라 파일에 누적되어 라운드 수가 컨텍스트를 잠식하지 않으므로, 종료를 숫자가 아닌 '더 surface할 영역이 있는가'라는 의미론적 판단에만 맡길 수 있다. 그 판단이 나오지 않으면 사용자가 언제든 수동으로 루프를 끝낸다.
 
 이 결합은 검증 가능성 가정을 두지 않으면서 수렴을 감지한다. Advisor가 매번 새 컨텍스트로 전체 region history를 보고 판단하므로, "더 surface할 가치가 있는 영역이 남았는가"는 도메인과 무관하게 같은 절차로 평가된다.
 
@@ -155,7 +155,7 @@ parallax loop는 **원본 미션 텍스트가 변하지 않는다**는 가정 �
 
 [**Technical Report: Evaluating Goal Drift in Language Model Agents** (Chen et al., 2025)](https://arxiv.org/abs/2505.02709)은 SOTA 에이전트들이 모두 어느 정도의 goal drift — 시간이 지남에 따라 원래 지시된 목표에서 벗어나는 현상 — 를 보인다는 것을 측정했다. 가장 강건한 Claude 3.5 Sonnet 변형조차 100K 토큰 규모에서 일부 drift를 보였고, 저자들은 그 원인을 "models' increasing susceptibility to pattern-matching behaviors as the context length grows"로 지목한다. 컨텍스트가 자라면 에이전트는 시스템 프롬프트의 명시적 미션보다 트랜스크립트 안의 누적된 패턴에 점점 더 끌려간다.
 
-[**Drift No More? Context Equilibria in Multi-Turn LLM Interactions** (2025)](https://arxiv.org/abs/2510.07777)는 같은 현상을 다중 턴 상호작용 위에서 turn-wise KL divergence로 정식화한다. drift는 단일 턴의 오류가 아니라 여러 턴에 걸쳐 누적되는 시간적 현상이며, 정적 평가 메트릭으로는 잘 포착되지 않는다. parallax loop처럼 라운드 루프로 작업을 길게 끌고 가는 시스템에서는 이 누적이 치명적이다 — 매 라운드 미션 해석이 약간씩 어긋나면, 라운드 한계까지 도달했을 때 메인 에이전트와 Advisor 모두 사용자가 의도한 작업과는 다른 어떤 것을 수행하고 있게 된다.
+[**Drift No More? Context Equilibria in Multi-Turn LLM Interactions** (2025)](https://arxiv.org/abs/2510.07777)는 같은 현상을 다중 턴 상호작용 위에서 turn-wise KL divergence로 정식화한다. drift는 단일 턴의 오류가 아니라 여러 턴에 걸쳐 누적되는 시간적 현상이며, 정적 평가 메트릭으로는 잘 포착되지 않는다. parallax loop처럼 라운드 루프로 작업을 길게 끌고 가는 시스템에서는 이 누적이 치명적이다 — 매 라운드 미션 해석이 약간씩 어긋나면, 루프가 충분히 길어졌을 때 메인 에이전트와 Advisor 모두 사용자가 의도한 작업과는 다른 어떤 것을 수행하고 있게 된다.
 
 #### Compaction은 본질적으로 손실이며, 무엇이 손실되는지를 사전에 통제할 수 없다
 
@@ -173,7 +173,7 @@ parallax loop는 **원본 미션 텍스트가 변하지 않는다**는 가정 �
 
 #### 결합의 효과
 
-두 메커니즘이 결합되면 parallax loop는 원본 미션 텍스트가 변하지 않는다는 가정을 compaction에 대해 견고하게 유지할 수 있다. Advisor는 외부 채널로 미션 anchor를 잃지 않고, 메인 에이전트는 compaction 사건이 발생할 때마다 같은 anchor를 새 입력으로 다시 받는다. 이 안전판 위에서 ploop은 단일 컨텍스트 윈도우보다 훨씬 긴 작업을 라운드 한계까지 같은 미션 정렬을 유지한 채 수행할 수 있다.
+두 메커니즘이 결합되면 parallax loop는 원본 미션 텍스트가 변하지 않는다는 가정을 compaction에 대해 견고하게 유지할 수 있다. Advisor는 외부 채널로 미션 anchor를 잃지 않고, 메인 에이전트는 compaction 사건이 발생할 때마다 같은 anchor를 새 입력으로 다시 받는다. 이 안전판 위에서 ploop은 단일 컨텍스트 윈도우보다 훨씬 긴 작업을 종료 시점까지 같은 미션 정렬을 유지한 채 수행할 수 있다.
 
 이 절의 메커니즘들은 추론 고도화와는 다른 차원의 문제를 푼다. 그러나 ploop이 긴 작업에 적용 가능한 도구가 되기 위한 전제 조건이며, 핵심 루프와 같은 통합 지점(`UserPromptSubmit`/`PostCompact`/`Stop` 훅)에서 무게 추가 없이 함께 구현되어 있다.
 

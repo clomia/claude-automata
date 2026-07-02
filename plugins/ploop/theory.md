@@ -13,7 +13,7 @@ The parallax loop is an external Advisor loop that simultaneously implements the
 3. **Abstract-level regions.** What is injected into the main agent is not an instruction about what to do or how to do it, but a region indicating what to consider further. The region only shifts the activation of the next generation; it does not determine the concrete action. Autonomous reasoning is preserved.
 4. **Information transformation layer.** The main agent's raw action records (JSON) are transformed into a markdown narrative at the abstraction level a user observes in the terminal, then delivered to the Advisor. The Advisor decides the next region at the same abstraction level as the user.
 
-Loop termination is determined by two signals: a fixed round limit, and a dedicated termination token output by the Advisor. No domain-specific convergence metric is required.
+Loop termination is determined by a dedicated termination token output by the Advisor, and the user may end it manually. There is no fixed round limit — and no domain-specific convergence metric is required.
 
 ## 2. Evidence
 
@@ -115,7 +115,7 @@ In addition, the value of inter-layer information transfer demonstrated by Mixtu
 
 The trickiest problem in a multi-round loop is deciding when to stop. If a domain-specific correctness function exists, a verifier can decide termination (Snell et al.), but no such function exists for general coding or document work.
 
-The parallax loop solves this with a combination of two signals. First, the Advisor receives an explicit instruction to output a dedicated termination token (`I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLAX_TURN`) when it judges there are no more regions worth surfacing. Because an isolated context judges anew each round, the termination signal naturally appears once the main agent's accumulated regions are sufficiently broad. Second, even without the signal, an absolute limit of 30 rounds (`ROUND_LIMIT = 30` in `src/state.py`) cuts off infinite loops.
+The parallax loop solves this with semantic termination. The Advisor receives an explicit instruction to output a dedicated termination token (`I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLAX_TURN`) when it judges there are no more regions worth surfacing. Because an isolated context judges anew each round, the termination signal naturally appears once the main agent's accumulated regions are sufficiently broad. There is no fixed round cap: region history accumulates in a file rather than the context, so the number of rounds does not erode the context window, and termination can rest entirely on the semantic judgment of whether a region is left to surface rather than on a number. If that judgment never comes, the user ends the loop manually at any time.
 
 This combination detects convergence without assuming verifiability. Because the Advisor judges from a fresh context each round on the entire region history, "is there a region worth surfacing left" is evaluated by the same procedure regardless of domain.
 
@@ -155,7 +155,7 @@ The two mechanisms block the same risk from different sides. Mechanism 1 keeps t
 
 [**Technical Report: Evaluating Goal Drift in Language Model Agents** (Chen et al., 2025)](https://arxiv.org/abs/2505.02709) measured that SOTA agents all show some degree of goal drift — deviation from the originally instructed goal over time. Even the most robust Claude 3.5 Sonnet variant showed some drift at the 100K token scale, and the authors point to the cause as "models' increasing susceptibility to pattern-matching behaviors as the context length grows." As context grows, the agent is increasingly pulled by accumulated patterns inside the transcript rather than by the explicit mission in the system prompt.
 
-[**Drift No More? Context Equilibria in Multi-Turn LLM Interactions** (2025)](https://arxiv.org/abs/2510.07777) formalizes the same phenomenon over multi-turn interaction as turn-wise KL divergence. Drift is not a single-turn error but a temporal phenomenon that accumulates across many turns and is poorly captured by static evaluation metrics. In a system like ploop that drags work out long with a round loop, this accumulation is fatal — if mission interpretation is slightly off each round, by the time the round limit is reached both the main agent and the Advisor are doing something different from what the user intended.
+[**Drift No More? Context Equilibria in Multi-Turn LLM Interactions** (2025)](https://arxiv.org/abs/2510.07777) formalizes the same phenomenon over multi-turn interaction as turn-wise KL divergence. Drift is not a single-turn error but a temporal phenomenon that accumulates across many turns and is poorly captured by static evaluation metrics. In a system like ploop that drags work out long with a round loop, this accumulation is fatal — if mission interpretation is slightly off each round, by the time the loop has run long enough, both the main agent and the Advisor are doing something different from what the user intended.
 
 #### Compaction is intrinsically lossy, and what is lost cannot be controlled in advance
 
@@ -173,7 +173,7 @@ The basis for Mechanism 2 re-pinning the mission as the most recent input rather
 
 #### Effect of the combination
 
-When the two mechanisms combine, the parallax loop can robustly maintain the assumption that the original mission text does not change against compaction. The Advisor does not lose the mission anchor through the external channel, and the main agent receives the same anchor as new input every time a compaction event occurs. On top of this safety net, ploop can perform work much longer than a single context window up to the round limit while maintaining the same mission alignment.
+When the two mechanisms combine, the parallax loop can robustly maintain the assumption that the original mission text does not change against compaction. The Advisor does not lose the mission anchor through the external channel, and the main agent receives the same anchor as new input every time a compaction event occurs. On top of this safety net, ploop can perform work much longer than a single context window, up to termination, while maintaining the same mission alignment.
 
 The mechanisms in this section solve a problem of a different dimension from reasoning enhancement. But they are a precondition for ploop to be a tool applicable to long work, and they are implemented at the same integration points (`UserPromptSubmit`/`PostCompact`/`Stop` hooks) as the core loop without added weight.
 

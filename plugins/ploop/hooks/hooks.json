@@ -19,6 +19,15 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook launch"
           }
         ]
+      },
+      {
+        "matcher": "ploop:stop",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook stop-command"
+          }
+        ]
       }
     ],
     "PostCompact": [

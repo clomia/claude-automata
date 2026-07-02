@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from src.state import ROUND_LIMIT, Workspace, load_ledger, save_ledger
+from src.state import Workspace, load_ledger, save_ledger
 
 
 # ── Ledger persistence ──
@@ -74,7 +74,3 @@ class TestWorkspace:
         assert ws.mission_path.exists()
         assert ws.active_path.exists()
         assert ws.log_path.exists()
-
-
-def test_round_limit_constant():
-    assert ROUND_LIMIT == 30

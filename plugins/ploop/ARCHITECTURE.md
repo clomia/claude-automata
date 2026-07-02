@@ -82,8 +82,7 @@ main round N work ── stops
    |        record last advisor verdict from advice.md (parallax's rule):
    |          absent file or termination token -> done + deactivate
    |            -> exit 2: "summarize {session}_loop.log" (if any region surfaced)
-   |          region -> append
-   |        round >= ROUND_LIMIT  ->  deactivate + same summary injection
+   |          region -> append   (no round cap; /ploop:stop also deactivates)
    |        else:  parse round actions (advisor calls stripped) -> {session}_action.json
    |               write {session}_regions.md (parallax-region-history XML)
    |               round++,  exit 2 + stderr: advisor trigger (+ mission text if compacted)
@@ -100,8 +99,10 @@ main ─ work on the surfaced region (round N+1) ── stops ── (loop)
 ```
 
 종료는 parallax loop의 규칙대로 결정된다: advisor가 `advice.md`에 아무것도 쓰지 않거나 전용 종료 토큰을 쓰면 `done`
-플래그가 서고 active 마커가 정리되며(`if not advice or TERMINATION_TOKEN in advice`), 그 전이라도
-`ROUND_LIMIT`(30)이 무한 루프를 막는다. region을 하나라도 surface한 턴이면 종료 정지를 한 번 더 막아
+플래그가 서고 active 마커가 정리된다(`if not advice or TERMINATION_TOKEN in advice`). **숫자 라운드 상한은 두지
+않는다** — region-history는 파일이라 컨텍스트를 잠식하지 않고 advisor는 매 라운드 stateless하게 리셋되므로,
+종료는 "더 surface할 영역이 있는가"라는 의미론적 판단(advisor 종료 토큰)에 맡긴다. 그 판단이 안 나오면
+사용자가 `/ploop:stop`으로 언제든 끝낸다(아래 Hooks). region을 하나라도 surface한 턴이면 종료 정지를 한 번 더 막아
 main이 `loop.log`를 읽고 사용자에게 전체 라운드를 요약하게 한다 — 장기 미션에서 main 컨텍스트는 여러 번
 auto-compaction되므로 로그가 턴의 유일한 완전 기록이다. 그 다음 정지는 active 마커가 없어 통과한다. 고지능 모델 advisor가 빈
 출력이나 async를 내는 것은 Claude Code 보장 범위 밖이라 별도 대응(stall·미호출 감지)을 두지
@@ -160,7 +161,11 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
    `active`를 보존**한다 — 확장(launch)이 제출보다 먼저라 방금 만든 마커를 자기 cleanup이 지우는 것을
    막는 장치다. 그 외 턴은 `active`도 지우므로 ESC로 끊긴 미션이 조용히 재개되지 않고, stale 토큰이
    다음 미션의 라운드 0 자발 호출을 인가하지도 못한다. `mission.md`는 anchor로 보존된다.
-3. Stop 훅이 종료(done/limit) 시 `active` 마커를 지운다.
+3. Stop 훅이 종료(advisor 종료 판정) 시 `active` 마커를 지운다.
+4. `/ploop:stop`의 UserPromptExpansion 훅(`stop_command`)이 사용자 요청으로 언제든 루프를
+   비활성화한다 — `active`와 라운드 상태를 지운다. background advisor in-flight 중에도 무조건 멈추도록
+   `advisor_running`을 UserPromptSubmit이 읽기 전에 지운다(그래서 우연한 turn의 in-flight 보존과 달리
+   확정 종료다). 스킬 본문이 사용자에게 종료를 알린다.
 
 (operator subagent 시절에는 SubagentStop이 미션 전용 subagent에만 발화해 이 게이트가
 불필요했으나, main 승격으로 Stop이 일반 대화에도 발화하면서 활성화 게이트가 필요해졌다 — git history.)
@@ -193,6 +198,7 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
+| **UserPromptExpansion** | `ploop:launch` · `ploop:stop` | 슬래시 커맨드 확장(제출 전) | launch: 미션·`active`·`launching` 기록(활성화) · stop: `active`+라운드 상태 삭제(비활성화, in-flight 무관) |
 | **UserPromptSubmit** | (전체) | 새 사용자 턴 | `loop.json`·토큰·running·compacted·advice·narration·`active` 삭제 (turn cleanup). 단 launch 턴엔 `active` 보존(launching sentinel), background advisor in-flight 중엔 전체 보존 |
 | **PostCompact** | `auto` | auto-compaction 후 | `compacted` 마커 touch (Stop이 메커니즘 2로 미션 텍스트 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` 마커 set) 또는 `exit 2` deny(자발 호출 차단) |
@@ -234,11 +240,14 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
 4. **작업 transcript = 메인 transcript.** Stop 훅은 메인 세션 transcript를 직접 건넨다. main이
    미션을 직접 수행하므로 action과 advisor 호출(tool_use/tool_result)이 모두 거기 있다 — operator의
    별도 transcript를 `subagents/meta.json`으로 해소하던 단계가 통째로 사라진다.
-5. **활성화 게이트 + UserPromptSubmit turn cleanup.** `/ploop:launch`의 UserPromptExpansion 훅이
-   `mission.md`·`active` 마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돌고, 종료 시
-   마커를 지운다. UserPromptSubmit이 매 사용자 턴 `active`·`loop.json`을 지우되, **확장이 제출보다 먼저인
-   launch 턴에선 `launching` sentinel로 `active`를 보존**한다 — 그 외 턴은 지우므로 ESC로 끊긴 미션이
-   무단 재개되지 않는다.
+5. **활성화 게이트 + 의미론적 종료(숫자 상한 없음).** `/ploop:launch`의 UserPromptExpansion 훅이
+   `mission.md`·`active` 마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돈다.
+   루프는 라운드 상한 없이 **의미론적으로만** 끝난다 — advisor가 종료 판정을 내면 Stop이 `active`를 지우거나,
+   사용자가 `/ploop:stop`(UserPromptExpansion `stop_command`)으로 언제든 비활성화한다(region-history가 파일이라
+   컨텍스트를 안 잠식하므로 숫자 캡이 불필요 — `/goal`도 동일 설계). 더해 UserPromptSubmit이 매 사용자 턴
+   `active`·`loop.json`을 지우되, **확장이 제출보다 먼저인 launch 턴에선 `launching` sentinel로 `active`를
+   보존**한다 — 그 외 턴은 지우므로 ESC로 끊긴 미션이 무단 재개되지 않는다. (`/ploop:stop`은 그 암묵적
+   정리와 달리 background advisor in-flight 중에도 확정 종료한다.)
 6. **미션 정박 — 메커니즘 1 + 2 ([이론 §4](theory.ko.md)).** 외부 보존(`mission.md`, 메커니즘 1)으로
    미션 원문은 디스크에 영속하고, `PostCompact`가 `_compacted`를 touch하면 compacted 라운드의
    Stop이 트리거에 미션 원문 텍스트를 inline한다(메커니즘 2 — discrete compaction 이벤트에 무조건
@@ -314,10 +323,14 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
 설계는 성립하나 라이브 트리 없이 유닛 테스트할 수 없던 항목들이다. 모두 **graceful degrade**하도록
 설계했다.
 
-1. **Stop block cap.** 조사상 "연속 차단 N회 후 강제 종료"(`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`).
-   루프는 최대 30라운드를 도는데 메인 세션 Stop의 cap이 같은지, 라운드 사이 실제 작업이 카운터를
-   리셋하는지 미확정. 30라운드가 잘리면 그때 설정한다. **실측에서 ploop이 같은 Stop 훅 위에서
-   10라운드 이상을 완주했다 — 강한 전례다.**
+1. **Stop block cap — 확인됨(resolved).** Claude Code는 Stop 훅이 **연속** N회 턴 종료를 막으면 강제
+   종료한다(`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, **기본 8**). 바이너리 실측 결과 이 카운터는 **생산적
+   작업(tool-use) 턴마다 0으로 리셋**된다(`transition: next_turn` → count 0) — "작업 없이 연속으로 멈추려는"
+   무진전 루프만 잡는다. ploop은 매 라운드 advisor 호출·region 작업(= tool call)을 하므로 카운터가 매번
+   리셋되어 이 cap에 걸리지 않는다. 숫자 라운드 상한을 제거한 뒤 이 백스톱이 유일한 자동 안전망이다:
+   main이 트리거를 무시하고 작업 없이 계속 멈추면 8회에서 하네스가 끝낸다. 단 advisor가 종료 토큰을 안 내고
+   main이 무한히 **일하는** "생산적 무한 루프"는 이 cap도 못 막으므로(작업이 리셋), 그 경우엔 `/ploop:stop`이
+   종료 수단이다 — `/goal`도 동일 트레이드오프를 수용한다.
 2. **트랜스크립트 형식 가정.** `parse_round_actions`가 "마지막 훅 주입 이후"를 라운드 action으로 잡아
    narrator 입력을 만든다 — 트랜스크립트 메시지·블록 형식에 의존한다. 어긋나면 action 범위가 넓어질 수
    있다(graceful, 치명적이지 않음). region 캡처는 이 의존에서 빠졌다 — advice.md 단일 채널로 전환하며
@@ -355,10 +368,11 @@ ploop/
 │   └── narrator.md                   # action-history 서사 변환 (Write: narration→narration.md)
 ├── prompts/instruction.md            # advisor 분석·출력 지침
 ├── skills/launch/SKILL.md            # /ploop:launch — main 직접 수행 + self-anchoring (미션 저장·활성화는 launch 훅)
-├── hooks/hooks.json                  # UserPromptSubmit + UserPromptExpansion(launch) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
+├── skills/stop/SKILL.md              # /ploop:stop — 루프 종료 알림 (비활성화는 stop_command 훅)
+├── hooks/hooks.json                  # UserPromptSubmit + UserPromptExpansion(launch·stop) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
 ├── bin/ploop-hook                    # uv 가용성 체크 래퍼
 ├── src/                              # 훅 구현 (런타임 의존성 없음)
-│   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·user_prompt_submit·mark_compaction·launch)
+│   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·user_prompt_submit·mark_compaction·launch·stop_command)
 │   ├── state.py                      # Workspace(세션 파일 경로의 단일 창구) + ledger 영속화
 │   ├── transcript.py                 # action 추출(advisor 호출 strip) — narrator 입력용
 │   ├── prompt.py                     # region-history 포맷 + 5-section advisor trigger 조립
