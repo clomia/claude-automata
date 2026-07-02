@@ -41,6 +41,24 @@ def advice_file(session_id: str) -> Path:
     return Path(tempfile.gettempdir()) / f"ploop_{session_id}_advice.md"
 
 
+def narration_file(session_id: str) -> Path:
+    """The narrator's action-history narrative — advice_file's channel exactly:
+    an unprotected temp path so the narrator's Write is auto-approved.  Written
+    once per round; the advisor reads it as analysis input and the hook reads it
+    into the round log.
+    """
+    return Path(tempfile.gettempdir()) / f"ploop_{session_id}_narration.md"
+
+
+def log_file(data_dir: Path, session_id: str) -> Path:
+    """The mission's round log (action-history + region per round).
+
+    launch() resets it — not the turn-boundary cleanup, so the finished log
+    survives for the post-mission summary and later inspection.
+    """
+    return data_dir / f"{session_id}_loop.log"
+
+
 def advisor_running_file(data_dir: Path, session_id: str) -> Path:
     """Marker present while an advisor call is in flight.
 
@@ -102,12 +120,16 @@ class State(BaseModel):
         return advice_file(self.session_id)
 
     @property
+    def narration_path(self) -> Path:
+        return narration_file(self.session_id)
+
+    @property
     def launching_path(self) -> Path:
         return self.data_dir / f"{self.session_id}_launching"
 
     @property
     def log_path(self) -> Path:
-        return self.data_dir / f"{self.session_id}_loop.log"
+        return log_file(self.data_dir, self.session_id)
 
     @property
     def advisor_token_path(self) -> Path:
@@ -155,6 +177,7 @@ def clear_round_state(data_dir: Path, session_id: str) -> None:
     for suffix in ("loop.json", "advisor_token", "advisor_running", "compacted"):
         (data_dir / f"{session_id}_{suffix}").unlink(missing_ok=True)
     advice_file(session_id).unlink(missing_ok=True)
+    narration_file(session_id).unlink(missing_ok=True)
 
 
 def build_state(stdin_raw: str) -> State:

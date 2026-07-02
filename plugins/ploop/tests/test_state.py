@@ -9,6 +9,7 @@ from src.state import (
     advice_file,
     build_state,
     load_ledger,
+    narration_file,
     save_ledger,
 )
 
@@ -82,17 +83,18 @@ class TestStatePaths:
         assert state.action_path == tmp_path / "s1_action.json"
         assert state.regions_path == tmp_path / "s1_regions.md"
         assert state.advice_path == tmp_path / "ploop_s1_advice.md"
+        assert state.narration_path == tmp_path / "ploop_s1_narration.md"
         assert state.log_path == tmp_path / "s1_loop.log"
         assert state.advisor_token_path == tmp_path / "s1_advisor_token"
         assert state.advisor_running_path == tmp_path / "s1_advisor_running"
 
 
-def test_advice_file_lives_outside_the_protected_claude_dir():
-    """The advisor's Write target must be unprotected (not under ~/.claude), else an
-    auto-mode Write to it is classifier-gated and can be silently blocked."""
-    path = str(advice_file("s1"))
-    assert ".claude" not in path
-    assert "s1" in path
+def test_temp_channels_live_outside_the_protected_claude_dir():
+    """The advisor's and narrator's Write targets must be unprotected (not under
+    ~/.claude), else an auto-mode Write is classifier-gated and silently blocked."""
+    for path in (str(advice_file("s1")), str(narration_file("s1"))):
+        assert ".claude" not in path
+        assert "s1" in path
 
 
 # ── build_state ──

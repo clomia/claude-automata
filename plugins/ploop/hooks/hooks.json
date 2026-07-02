@@ -12,6 +12,7 @@
     ],
     "UserPromptExpansion": [
       {
+        "matcher": "ploop:launch",
         "hooks": [
           {
             "type": "command",

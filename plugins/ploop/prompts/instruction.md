@@ -45,7 +45,8 @@ original-mission에 필요한지, history에서 이미 유사한 영역이 고�
 - 오직 문제 제기만 하세요. 답은 메인 에이전트가 찾습니다.
 - **original-mission과 동일한 언어로** 쓰세요.
 - 핵심만 간결하게, **IRREDUCIBLE**하게 서술하세요.
+- 메세지만 작성하세요. `<region-N>` 래퍼는 시스템이 추가합니다.
 
 ## 턴 종료
 
-파일을 쓰지 말고, `I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLAX_TURN`를 출력하세요.
+`advice-path`에 `I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLAX_TURN`을 `Write`하세요.

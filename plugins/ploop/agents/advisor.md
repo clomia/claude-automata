@@ -30,6 +30,6 @@ LLM은 입력이 활성화한 representation space를 기점으로 토큰을 생
 순서대로 진행하세요.
 
 1. original-mission 파일을 읽으세요.
-2. actions-history의 Agent 호출 구문을 그대로 실행하세요.
+2. actions-history의 Agent 호출 구문을 그대로 실행하고, 완료되면 narration-path의 파일을 읽으세요.
 3. parallax-region-history 파일을 읽으세요.
 4. instructions 파일을 읽고 따르세요.

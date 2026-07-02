@@ -1,9 +1,9 @@
 """Tests for the main module — Stop, PreToolUse, UserPromptSubmit, PostCompact entry points.
 
 The hook owns the whole ledger: it records the advisor's prior-round verdict
-(region, or done on empty output / the termination token — parallax's rule),
-then drives the next round.  These tests drive `stop` with a main transcript
-that mocks the main agent's Agent(advisor) exchange directly.
+(the region it wrote to advice.md, or done on an absent file / the termination
+token — parallax's rule), then drives the next round.  These tests drive `stop`
+with a main transcript plus the advisor's advice.md, the sole region channel.
 """
 
 import io
@@ -22,6 +22,14 @@ from src.main import (
     write_log,
 )
 from src.state import ROUND_LIMIT, load_ledger, save_ledger
+
+# A minimal round transcript: a trigger boundary + the main agent's own work.
+# The region no longer comes from here — advice.md is the sole channel — so this
+# only feeds parse_round_actions (which writes the narrator's action file).
+ROUND_WORK = [
+    {"role": "user", "content": "advisor trigger"},
+    {"role": "assistant", "content": "working on the region"},
+]
 
 
 def make_stdin(*, session_id="s1", transcript_path="/t.jsonl"):
@@ -42,59 +50,37 @@ def write_jsonl(path, messages):
     path.write_text("\n".join(json.dumps({"message": m}) for m in messages))
 
 
-def advisor_returns(region, *, settled=True):
-    """A main agent turn whose Agent(advisor) call returned `region`.
-
-    settled=True appends the completed-subagent envelope (the "agentId ...</usage>"
-    block a finished Agent call carries); settled=False models a still-in-flight or
-    backgrounded call whose tool_result is only a launch-ack.
-    """
-    envelope = "\nagentId: a1\n<usage>0</usage>" if settled else ""
-    return [
-        {"role": "user", "content": "advisor trigger"},
-        {
-            "role": "assistant",
-            "content": [
-                {
-                    "type": "tool_use",
-                    "id": "a1",
-                    "name": "Agent",
-                    "input": {"subagent_type": "advisor"},
-                }
-            ],
-        },
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "tool_result",
-                    "tool_use_id": "a1",
-                    "content": f"{region}{envelope}",
-                }
-            ],
-        },
-        {"role": "assistant", "content": "working on the region"},
-    ]
-
-
 def arrange(tmp_path, monkeypatch, stdin):
     monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
     monkeypatch.setattr("sys.stdin", io.StringIO(stdin))
 
 
 def arrange_mission(
-    tmp_path, monkeypatch, main_messages, *, session_id="s1", ledger=None
+    tmp_path,
+    monkeypatch,
+    main_messages,
+    *,
+    session_id="s1",
+    ledger=None,
+    advice=None,
+    narration=None,
 ):
     """Activate a mission and write the main transcript holding `main_messages`.
 
-    The main agent runs the mission directly, so its work — including the
-    Agent(advisor) exchange — lives in the main session transcript the Stop hook
-    receives.  The active marker gates the loop; the mission file is the anchor.
+    The main agent runs the mission directly, so its work lives in the main session
+    transcript the Stop hook receives.  The active marker gates the loop; the mission
+    file is the anchor.  `advice` / `narration` (when given) are the advisor's and
+    narrator's temp-channel files, routed under tmp_path via gettempdir.
     """
+    monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
     (tmp_path / f"{session_id}_active").touch()
     (tmp_path / f"{session_id}_mission.md").write_text("build the thing")
     if ledger:
         save_ledger(tmp_path / f"{session_id}_loop.json", **ledger)
+    if advice is not None:
+        (tmp_path / f"ploop_{session_id}_advice.md").write_text(advice)
+    if narration is not None:
+        (tmp_path / f"ploop_{session_id}_narration.md").write_text(narration)
     main = tmp_path / f"{session_id}.jsonl"
     write_jsonl(main, main_messages)
     arrange(
@@ -146,12 +132,14 @@ class TestStop:
         assert "ploop:advisor" in err
         assert (tmp_path / "s1_advisor_token").exists()
 
-    def test_records_region_into_next_regions_file(self, tmp_path, monkeypatch):
+    def test_records_region_and_narration_into_log(self, tmp_path, monkeypatch):
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns("consider error handling"),
+            ROUND_WORK,
             ledger={"round_number": 1, "regions": [], "done": False},
+            advice="consider error handling",
+            narration="initial work narrative",
         )
         with pytest.raises(SystemExit) as exc:
             stop()
@@ -162,26 +150,25 @@ class TestStop:
         regions = (tmp_path / "s1_regions.md").read_text()
         assert "<region-1>" in regions
         assert "consider error handling" in regions
-        # logged under "Round 1" (parallax parity: the first region is round 1)
+        # The log pairs the narrated work with the region it produced (parallax's
+        # shape), under "Round 1" — the first region is round 1.
         log = (tmp_path / "s1_loop.log").read_text()
+        assert "[[ Round 1 / Action History ]]" in log
+        assert "initial work narrative" in log
+        assert "[[ Round 1 / Region ]]" in log
         assert "consider error handling" in log
-        assert "[[ Round 1" in log
 
-    def test_advice_file_overrides_transcript_and_clears_on_arm(
-        self, tmp_path, monkeypatch
-    ):
-        """The region is read from the advisor's advice file (not scraped from its
-        prose-polluted transcript), stripped, then cleared as the next round arms."""
-        monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+    def test_advice_and_narration_cleared_on_arm(self, tmp_path, monkeypatch):
+        """Both temp channels are read (advice stripped), then cleared as the next
+        round arms — an absent file next round unambiguously means no write."""
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns(
-                "analysis prose... --- consider concurrency", settled=False
-            ),
+            ROUND_WORK,
             ledger={"round_number": 1, "regions": [], "done": False},
+            advice="  consider concurrency  ",
+            narration="did things",
         )
-        (tmp_path / "ploop_s1_advice.md").write_text("  consider concurrency  ")
         with pytest.raises(SystemExit) as exc:
             stop()
         assert exc.value.code == 2
@@ -189,13 +176,35 @@ class TestStop:
             "consider concurrency"
         ]
         assert not (tmp_path / "ploop_s1_advice.md").exists()
+        assert not (tmp_path / "ploop_s1_narration.md").exists()
 
-    def test_empty_verdict_terminates(self, tmp_path, monkeypatch):
-        """parallax's rule: an empty advisor output ends the turn (done, deactivate)."""
+    def test_log_numbering_is_ordinal_after_skipped_round(self, tmp_path, monkeypatch):
+        """A skipped round advances current_round without a region; numbering by
+        region ordinal keeps the log aligned with regions.md — no drift, no gap."""
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns(""),
+            ROUND_WORK,
+            ledger={"round_number": 4, "regions": ["r1", "r2"], "done": False},
+            advice="r3",
+            narration="work",
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        log = (tmp_path / "s1_loop.log").read_text()
+        assert "[[ Round 3" in log
+        assert "Round 4" not in log
+
+    def test_absent_advice_terminates(self, tmp_path, monkeypatch):
+        """advice.md is the sole channel: the advisor finished (no running marker)
+        and wrote nothing, so the turn ends — parallax's empty-output=terminate.
+        No region was ever surfaced, so no summary turn is spent (exit 0), but the
+        final work still lands in the log."""
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
             ledger={"round_number": 1, "regions": [], "done": False},
         )
         with pytest.raises(SystemExit) as exc:
@@ -203,6 +212,9 @@ class TestStop:
         assert exc.value.code == 0
         assert load_ledger(tmp_path / "s1_loop.json")["done"] is True
         assert not (tmp_path / "s1_active").exists()
+        log = (tmp_path / "s1_loop.log").read_text()
+        assert "(no output)" in log
+        assert "(no narration)" in log
 
     def test_compacted_round_inlines_mission_text(self, tmp_path, monkeypatch, capsys):
         """Mechanism 2: a compacted round re-injects the original-mission text into
@@ -210,8 +222,9 @@ class TestStop:
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns("region"),
+            ROUND_WORK,
             ledger={"round_number": 1, "regions": [], "done": False},
+            advice="region",
         )
         (tmp_path / "s1_compacted").touch()
         with pytest.raises(SystemExit):
@@ -220,44 +233,62 @@ class TestStop:
         assert "build the thing" in err  # original-mission text inlined
         assert not (tmp_path / "s1_compacted").exists()  # consumed
 
-    def test_termination_token_sets_done_and_deactivates(self, tmp_path, monkeypatch):
+    def test_termination_token_ends_loop_and_triggers_summary(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Termination on a turn that surfaced regions: done + deactivated, the
+        final round's work logged beside the token, and one last injection has
+        the main agent summarize the round log."""
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns(f"All paths covered. {TERMINATION_TOKEN}"),
+            ROUND_WORK,
             ledger={"round_number": 2, "regions": ["r"], "done": False},
+            advice=f"All paths covered. {TERMINATION_TOKEN}",
+            narration="final round work",
         )
         with pytest.raises(SystemExit) as exc:
             stop()
-        assert exc.value.code == 0
+        assert exc.value.code == 2
         ledger = load_ledger(tmp_path / "s1_loop.json")
         assert ledger["done"] is True
         assert ledger["regions"] == ["r"]
         assert not (tmp_path / "s1_active").exists()
+        # terminating entry: the final work, numbered after the last region
+        log = (tmp_path / "s1_loop.log").read_text()
+        assert "[[ Round 2 / Action History ]]" in log
+        assert "final round work" in log
+        # the summary trigger points the main agent at the log
+        err = capsys.readouterr().err
+        assert str(tmp_path / "s1_loop.log") in err
+        assert "summary" in err
 
-    def test_round_limit_deactivates_and_allows_stop(self, tmp_path, monkeypatch):
+    def test_round_limit_ends_loop_and_triggers_summary(
+        self, tmp_path, monkeypatch, capsys
+    ):
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns("a late region"),
+            ROUND_WORK,
             ledger={"round_number": ROUND_LIMIT, "regions": [], "done": False},
+            advice="a late region",
         )
         with pytest.raises(SystemExit) as exc:
             stop()
-        assert exc.value.code == 0
+        assert exc.value.code == 2
         assert not (tmp_path / "s1_active").exists()
         # the round-limit round's region is logged, not dropped before write_log
         assert "a late region" in (tmp_path / "s1_loop.log").read_text()
+        assert str(tmp_path / "s1_loop.log") in capsys.readouterr().err
 
-    def test_backgrounded_advisor_pauses_without_retrigger(self, tmp_path, monkeypatch):
-        """Running marker present and the advisor's result not settled (user pushed
-        it to the background): allow the stop, don't re-trigger — no cascade."""
+    def test_running_marker_pauses_without_retrigger(self, tmp_path, monkeypatch):
+        """Running marker present (advisor in flight — e.g. the user pushed it to the
+        background): allow the stop, don't re-trigger — no cascade.  SubagentStop is
+        the marker's sole clearer, so the loop just waits for it."""
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns(
-                "Async agent launched. Working in the background.", settled=False
-            ),
+            ROUND_WORK,
             ledger={"round_number": 1, "regions": [], "done": False},
         )
         (tmp_path / "s1_advisor_running").touch()
@@ -268,32 +299,15 @@ class TestStop:
         assert load_ledger(tmp_path / "s1_loop.json")["round"] == 1
         assert (tmp_path / "s1_advisor_running").exists()
 
-    def test_stale_running_marker_cleared_when_result_settled(
-        self, tmp_path, monkeypatch
-    ):
-        """Marker present but the advisor actually completed (result carries the
-        </usage> envelope): clear the stale marker and process, don't stall."""
-        arrange_mission(
-            tmp_path,
-            monkeypatch,
-            advisor_returns("real region"),
-            ledger={"round_number": 1, "regions": [], "done": False},
-        )
-        (tmp_path / "s1_advisor_running").touch()
-        with pytest.raises(SystemExit) as exc:
-            stop()
-        assert exc.value.code == 2
-        assert not (tmp_path / "s1_advisor_running").exists()
-        assert load_ledger(tmp_path / "s1_loop.json")["regions"] == ["real region"]
-
-    def test_token_present_skips_stale_extraction(self, tmp_path, monkeypatch):
+    def test_token_present_skips_recording(self, tmp_path, monkeypatch):
         """Advisor NOT invoked this round (token still present): don't re-append a
-        prior round's region as a duplicate."""
+        prior round's region as a duplicate, even if a stale advice file lingers."""
         arrange_mission(
             tmp_path,
             monkeypatch,
-            advisor_returns("prior region"),
+            ROUND_WORK,
             ledger={"round_number": 2, "regions": ["prior region"], "done": False},
+            advice="prior region",
         )
         (tmp_path / "s1_advisor_token").write_text("")
         with pytest.raises(SystemExit) as exc:
@@ -302,23 +316,6 @@ class TestStop:
         ledger = load_ledger(tmp_path / "s1_loop.json")
         assert ledger["regions"] == ["prior region"]  # not duplicated
         assert ledger["round"] == 3
-
-    def test_unsettled_advisor_without_advice_reruns(self, tmp_path, monkeypatch):
-        """Advisor invoked but result unsettled (backgrounded launch-ack) and no
-        advice file: don't record the ack or terminate — re-arm and re-run."""
-        monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
-        arrange_mission(
-            tmp_path,
-            monkeypatch,
-            advisor_returns("Async agent launched", settled=False),
-            ledger={"round_number": 1, "regions": [], "done": False},
-        )
-        with pytest.raises(SystemExit) as exc:
-            stop()
-        assert exc.value.code == 2  # re-armed, not terminated
-        ledger = load_ledger(tmp_path / "s1_loop.json")
-        assert ledger["done"] is False
-        assert ledger["regions"] == []  # the ack was NOT recorded as a region
 
 
 # ── pre_tool_use gating ──
@@ -434,41 +431,19 @@ class TestUserPromptSubmit:
         assert not (tmp_path / "s1_advisor_token").exists()
         assert (tmp_path / "s1_mission.md").exists()
 
-    def test_background_advisor_in_flight_preserves_loop(self, tmp_path, monkeypatch):
-        """A genuinely in-flight background advisor (running marker + unsettled
-        launch-ack) makes an incidental user turn leave the whole loop intact."""
+    def test_running_marker_preserves_loop(self, tmp_path, monkeypatch):
+        """A running marker (advisor in flight) makes an incidental user turn leave
+        the whole loop intact — SubagentStop, not this hook, clears the marker."""
         for name in ("s1_active", "s1_advisor_running"):
             (tmp_path / name).touch()
         save_ledger(
             tmp_path / "s1_loop.json", round_number=2, regions=["r"], done=False
         )
-        main = tmp_path / "s1.jsonl"
-        write_jsonl(main, advisor_returns("launched", settled=False))
-        arrange(
-            tmp_path,
-            monkeypatch,
-            json.dumps({"session_id": "s1", "transcript_path": str(main)}),
-        )
+        arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
         user_prompt_submit()
         assert (tmp_path / "s1_active").exists()  # loop survives the interjection
         assert (tmp_path / "s1_loop.json").exists()
         assert (tmp_path / "s1_advisor_running").exists()
-
-    def test_stale_running_marker_settled_is_cleared(self, tmp_path, monkeypatch):
-        """A running marker whose advisor result HAS settled (SubagentStop missed) is
-        stale, not in-flight: cleanup clears it and the active marker."""
-        for name in ("s1_active", "s1_advisor_running"):
-            (tmp_path / name).touch()
-        main = tmp_path / "s1.jsonl"
-        write_jsonl(main, advisor_returns("done region"))
-        arrange(
-            tmp_path,
-            monkeypatch,
-            json.dumps({"session_id": "s1", "transcript_path": str(main)}),
-        )
-        user_prompt_submit()
-        assert not (tmp_path / "s1_active").exists()
-        assert not (tmp_path / "s1_advisor_running").exists()
 
 
 # ── mark_compaction ──
@@ -500,12 +475,14 @@ class TestLaunch:
         save_ledger(
             tmp_path / "s1_loop.json", round_number=9, regions=["stale"], done=True
         )
+        (tmp_path / "s1_loop.log").write_text("prior mission log")
         launch()
         saved = (tmp_path / "s1_mission.md").read_text()
         assert saved == 'do the thing\nwith "quotes" and $vars'
         assert (tmp_path / "s1_active").exists()
         assert (tmp_path / "s1_launching").exists()  # sentinel for user_prompt_submit
         assert not (tmp_path / "s1_loop.json").exists()  # prior ledger cleared
+        assert not (tmp_path / "s1_loop.log").exists()  # a mission owns one log
 
     def test_ignores_non_ploop_launch_command(self, tmp_path, monkeypatch):
         """The guard matches the full scoped name, so another plugin's :launch
@@ -539,18 +516,18 @@ class TestLaunch:
 
 
 class TestWriteLog:
-    def test_new_turn_overwrites(self, tmp_path):
+    def test_appends_titled_sections_across_rounds(self, tmp_path):
         log = tmp_path / "l.log"
-        log.write_text("stale content")
-        write_log(log, 1, "fresh", new_turn=True)
+        write_log(log, 1, action_history="work-1", region="r1")
+        write_log(log, 2, action_history="work-2", region="r2")
         content = log.read_text()
-        assert "stale content" not in content
-        assert "[[ Round 1" in content
-
-    def test_appends_across_rounds(self, tmp_path):
-        log = tmp_path / "l.log"
-        write_log(log, 1, "r1", new_turn=True)
-        write_log(log, 2, "r2", new_turn=False)
-        content = log.read_text()
-        assert "[[ Round 1" in content
-        assert "[[ Round 2" in content
+        assert "[[ Round 1 / Action History ]]" in content
+        assert "[[ Round 1 / Region ]]" in content
+        assert "[[ Round 2 / Region ]]" in content
+        # sections appear in call order, rounds in append order
+        assert (
+            content.index("work-1")
+            < content.index("r1")
+            < content.index("work-2")
+            < content.index("r2")
+        )

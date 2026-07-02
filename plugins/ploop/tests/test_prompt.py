@@ -1,8 +1,12 @@
-"""Tests for the prompt module — region-history formatting and the trigger."""
+"""Tests for the prompt module — region-history formatting and the triggers."""
 
 from pathlib import Path
 
-from src.prompt import format_advisor_trigger, format_region_history
+from src.prompt import (
+    format_advisor_trigger,
+    format_region_history,
+    format_summary_trigger,
+)
 
 
 class TestFormatRegionHistory:
@@ -25,6 +29,7 @@ class TestFormatAdvisorTrigger:
             action_path=Path("/d/s1_action.json"),
             regions_path=Path("/d/s1_regions.md"),
             advice_path=Path("/d/s1_advice.md"),
+            narration_path=Path("/t/s1_narration.md"),
             instruction_path=Path("/p/prompts/instruction.md"),
             mission_text=mission_text,
         )
@@ -47,7 +52,14 @@ class TestFormatAdvisorTrigger:
         assert "/d/s1_action.json" in out
         assert "/d/s1_regions.md" in out
         assert "/d/s1_advice.md" in out
+        assert "/t/s1_narration.md" in out
         assert "/p/prompts/instruction.md" in out
+
+    def test_narrator_prompt_labels_match_narrator_contract(self):
+        """narrator.md contracts on the `actions` / `narration-path` labels."""
+        out = self.trigger()
+        assert "actions: /d/s1_action.json" in out
+        assert "narration-path: /t/s1_narration.md" in out
 
     def test_directs_main_to_read_advice(self):
         """The trigger tells the main agent to read the advice file after the call
@@ -88,4 +100,12 @@ class TestFormatAdvisorTrigger:
 
     def test_no_leftover_placeholders(self):
         out = self.trigger()
+        assert "{" not in out and "}" not in out
+
+
+class TestFormatSummaryTrigger:
+    def test_directs_main_to_summarize_the_log(self):
+        out = format_summary_trigger(Path("/d/s1_loop.log"))
+        assert "/d/s1_loop.log" in out
+        assert "summary" in out
         assert "{" not in out and "}" not in out

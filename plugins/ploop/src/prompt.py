@@ -38,6 +38,7 @@ def format_advisor_trigger(
     action_path: Path,
     regions_path: Path,
     advice_path: Path,
+    narration_path: Path,
     instruction_path: Path = INSTRUCTION_PATH,
     mission_text: str | None = None,
 ) -> str:
@@ -53,11 +54,12 @@ def format_advisor_trigger(
 
     The call is synchronous (run_in_background=false): the advisor Writes its
     advice to advice_path — a clean file channel, since its chat message may carry
-    reasoning prose neither the main agent nor the hook should read.  The trigger
-    then directs the main agent to read that file, and the hook reads it too for the
-    ledger; the blocking tool_result carries only the termination token (or a
-    non-compliant fallback).  The inlined narrator call blocks so the advisor
-    receives the narrative to analyze on.
+    reasoning prose neither the main agent nor the hook should read.  Both a region
+    and the termination token go to advice_path (the sole channel); the trigger
+    directs the main agent to read that file, and the hook reads it too for the
+    ledger.  The narrator hands off through the same kind of channel: it Writes the
+    narrative to narration_path, which the advisor reads as analysis input after the
+    inlined call blocks — and the hook reads into the round log.
 
     On a compacted round, mission_text is the original-mission's full text,
     re-injected at this recency position (parallax mechanism 2) — the discrete
@@ -71,24 +73,40 @@ def format_advisor_trigger(
 
         ```
         Agent(
-          subagent_type="ploop:advisor",
-          description="review and advise",
-          run_in_background=false,
-          prompt="""
-            original-mission: {mission_path}
-            actions-history: Agent(
-              subagent_type="ploop:narrator",
-              description="narrate action history",
-              run_in_background=false,
-              prompt="{action_path}"
-            )
-            parallax-region-history: {regions_path}
-            instructions: {instruction_path}
-            advice-path: {advice_path}
-          """
+            subagent_type="ploop:advisor",
+            description="review and advise",
+            run_in_background=false,
+            prompt="""
+                original-mission: {mission_path}
+                actions-history: Agent(
+                    subagent_type="ploop:narrator",
+                    description="narrate action history",
+                    run_in_background=false,
+                    prompt='
+                        actions: {action_path}
+                        narration-path: {narration_path}
+                    '
+                )
+                parallax-region-history: {regions_path}
+                instructions: {instruction_path}
+                advice-path: {advice_path}
+            """
         )
         ```
 
         When the advisor returns, read its advice at {advice_path}.
     ''')
     return prefix + body
+
+
+def format_summary_trigger(log_path: Path) -> str:
+    """Build the stderr feedback for the loop's final stop.
+
+    Over a long mission the main agent's context may have auto-compacted several
+    times, so the round log on disk is the one complete record of the turn.  The
+    trigger has the main agent read it and hand the user a compact recap.
+    """
+    return (
+        f"The parallax loop has ended. "
+        f"Read {log_path} and give the user a brief summary.\n"
+    )

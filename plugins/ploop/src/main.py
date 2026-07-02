@@ -2,15 +2,18 @@
 
 On each main-agent stop the hook owns both ends of the parallax round:
 
-1) It reads what the advisor returned last round (extract_advisor_output) and
-   records it — appending the region to history, or ending the turn on an
-   empty output or the termination token (parallax's own rule).  This is the
-   advisor's old "record & return" step, lifted into code so the advisor prompt
-   stays a pure analysis prompt.
+1) It reads the region the advisor wrote to advice.md last round and records it
+   — appending the region to history and logging it beside the narrated work it
+   came from (parallax's log shape), or ending the turn on an absent file (the
+   advisor wrote nothing) or the termination token (parallax's own rule).  This
+   is the advisor's old "record & return" step, lifted into code so the advisor
+   prompt stays a pure analysis prompt.
 2) If not done and under the round limit, it records this round's actions for
    the narrator, advances the round, and injects (exit 2 + stderr) the trigger
    that drives the main agent to invoke the advisor again.  On a compacted round
-   the trigger carries the original-mission text (parallax mechanism 2).
+   the trigger carries the original-mission text (parallax mechanism 2).  When
+   the loop ends after surfacing regions, one final injection has the main agent
+   summarize the round log for the user — the log outlives compaction.
 
 The hook never runs the advisor itself — it drives the main agent (the LLM) to
 call it via the Agent tool, which keeps the loop on the subscription path.
@@ -30,40 +33,67 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.prompt import format_advisor_trigger, format_region_history
+from src.prompt import (
+    format_advisor_trigger,
+    format_region_history,
+    format_summary_trigger,
+)
 from src.state import (
     ROUND_LIMIT,
+    State,
     active_file,
     advisor_running_file,
     advisor_token_file,
     build_state,
     clear_round_state,
+    log_file,
     mission_file,
     save_ledger,
 )
-from src.transcript import (
-    advisor_in_flight,
-    advisor_output_settled,
-    extract_advisor_output,
-    parse_round_actions,
-)
+from src.transcript import parse_round_actions
 
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
 # survives any surrounding prose the model emits alongside it.
 TERMINATION_TOKEN = "I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLAX_TURN"
 
 
-def write_log(
-    log_file: Path, round_number: int, region: str, *, new_turn: bool
-) -> None:
-    """Append a round's region to the log; overwrite when a new mission begins."""
+def write_log(log_path: Path, round_number: int, **sections: str) -> None:
+    """Append a round's sections to the mission log (parallax's log shape).
+
+    Numbered by region ordinal, so the entries stay aligned with regions.md even
+    when a round is skipped.  launch() resets the file; the finished log outlives
+    the mission so the whole turn stays reconstructable after any compaction.
+    """
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    entry = (
-        f"[[ Round {round_number} - {timestamp} ]]\n\n"
-        f"[[ Round {round_number} / Region ]]\n\n{region}\n\n"
+    header = f"[[ Round {round_number} - {timestamp} ]]\n\n"
+    body = "".join(
+        f"[[ Round {round_number} / {title.replace('_', ' ').title()} ]]"
+        f"\n\n{content}\n\n"
+        for title, content in sections.items()
     )
-    with open(log_file, "w" if new_turn else "a") as f:
-        f.write(entry)
+    with open(log_path, "a") as f:
+        f.write(header + body)
+
+
+def end_loop(state: State, regions: list[str], *, done: bool) -> None:
+    """Terminate the loop: persist the final ledger and drop the active gate.
+
+    When the turn surfaced any region, block this one stop (exit 2) to have the
+    main agent summarize the round log for the user — over a long mission its
+    context may have compacted the early rounds away, so the log is the one
+    complete record.  The active marker is already gone, so the next stop passes.
+    """
+    save_ledger(
+        state.state_path,
+        round_number=state.current_round,
+        regions=regions,
+        done=done,
+    )
+    state.active_path.unlink(missing_ok=True)
+    if regions:
+        sys.stderr.write(format_summary_trigger(state.log_path))
+        sys.exit(2)
+    sys.exit(0)
 
 
 def stop() -> None:
@@ -88,66 +118,51 @@ def stop() -> None:
     # here.  There is no operator subagent transcript to resolve.
     transcript = state.transcript_path
 
-    # A background advisor still running: PreToolUse set the marker and neither
-    # SubagentStop nor a settled result has cleared it.  Re-triggering here would
-    # cascade a second advisor, so wait — the loop resumes when SubagentStop clears
-    # the marker.  A stale marker (SubagentStop missed but the result settled) is not
-    # in flight, so fall through and clear it rather than stall.
-    if advisor_in_flight(state.advisor_running_path, transcript):
+    # A background advisor still running: PreToolUse set the marker and SubagentStop
+    # (its sole clearer) has not removed it.  Re-triggering here would cascade a
+    # second advisor, so wait — the loop resumes when SubagentStop clears the marker.
+    if state.advisor_running_path.exists():
         sys.exit(0)
-    state.advisor_running_path.unlink(missing_ok=True)
 
     regions = state.region_history
-    region = None  # the advisor's region this round, recorded to the log
 
     # The advisor ran this round iff PreToolUse consumed the token a prior Stop
     # wrote.  If the token is still here the main agent ignored the trigger and no
-    # advisor ran — skip extraction so a prior round's region is not re-appended as
+    # advisor ran — skip recording so a prior round's region is not re-appended as
     # a duplicate; the trigger is re-injected below (bounded by ROUND_LIMIT).
     advisor_invoked = not state.advisor_token_path.exists()
 
     # Record last round's advisor verdict (none in round 0, before any call).
-    # parallax's rule: an empty output or the termination token ends the turn.
+    # advice.md is the SOLE region/termination channel: the advisor Writes its one
+    # paragraph there, or the termination token.  We are past the in-flight guard, so
+    # the advisor has finished (SubagentStop cleared its marker); an absent file
+    # therefore means it wrote nothing, which ends the turn — parallax's rule that an
+    # empty output (or the termination token) deactivates the loop.
     if state.current_round >= 1 and advisor_invoked:
-        # The advice file is the region's clean channel; the advisor Writes its one
-        # paragraph there.  Trust the transcript fallback ONLY once the result has
-        # settled (sync path): an unsettled result is a backgrounded call's
-        # launch-ack, not this round's region — skip recording and re-run (bounded by
-        # ROUND_LIMIT) rather than log garbage or falsely terminate the mission.
         advice = (
             state.advice_path.read_text().strip() if state.advice_path.exists() else ""
         )
-        if advice or advisor_output_settled(transcript):
-            verdict = advice or extract_advisor_output(transcript)
-            if not verdict or TERMINATION_TOKEN in verdict:
-                save_ledger(
-                    state.state_path,
-                    round_number=state.current_round,
-                    regions=regions,
-                    done=True,
-                )
-                state.active_path.unlink(missing_ok=True)
-                sys.exit(0)
-            region = verdict
-            regions = [*regions, region]
-            # Log the surfaced region now, before any round-limit exit below.
-            # Numbered by current_round so the first region is "Round 1".
+        # The log entry pairs the narrated work the advisor analyzed with the
+        # verdict it produced — parallax's log shape, so the whole turn's flow
+        # (work -> region -> work -> ...) reads back from the file alone.
+        narration = (
+            state.narration_path.read_text().strip()
+            if state.narration_path.exists()
+            else ""
+        ) or "(no narration)"
+        if not advice or TERMINATION_TOKEN in advice:
             write_log(
                 state.log_path,
-                state.current_round,
-                region,
-                new_turn=(state.current_round == 1),
+                len(regions) + 1,
+                action_history=narration,
+                region=advice or "(no output)",
             )
+            end_loop(state, regions, done=True)
+        regions = [*regions, advice]
+        write_log(state.log_path, len(regions), action_history=narration, region=advice)
 
     if state.current_round >= ROUND_LIMIT:
-        save_ledger(
-            state.state_path,
-            round_number=state.current_round,
-            regions=regions,
-            done=False,
-        )
-        state.active_path.unlink(missing_ok=True)
-        sys.exit(0)
+        end_loop(state, regions, done=False)
 
     # Record this round's actions for the narrator (read later via advisor).
     actions = parse_round_actions(transcript)
@@ -180,12 +195,15 @@ def stop() -> None:
         action_path=state.action_path,
         regions_path=state.regions_path,
         advice_path=state.advice_path,
+        narration_path=state.narration_path,
         mission_text=mission_text,
     )
 
-    # Clear this round's advice file as we arm the next: an absent file next round
-    # then unambiguously means the advisor wrote nothing (termination / no compliance).
+    # Clear this round's advice and narration files as we arm the next: an absent
+    # file next round then unambiguously means its agent wrote nothing (termination
+    # / no compliance) rather than a stale carry-over.
     state.advice_path.unlink(missing_ok=True)
+    state.narration_path.unlink(missing_ok=True)
     state.advisor_token_path.write_text("")
     sys.stderr.write(trigger)
     sys.exit(2)
@@ -252,13 +270,11 @@ def user_prompt_submit() -> None:
         sys.exit(0)
     data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
     session_id = data.get("session_id", "")
-    # A background advisor GENUINELY in flight means the loop is mid-round: main
-    # invoked it asynchronously and yielded, so an incidental user turn must NOT
-    # abort the mission.  (A stale marker — SubagentStop missed, result settled — is
-    # not in flight, so it falls through and gets cleared below.)
-    if advisor_in_flight(
-        advisor_running_file(data_dir, session_id), data.get("transcript_path", "")
-    ):
+    # A background advisor in flight means the loop is mid-round: main invoked it
+    # asynchronously and yielded, so an incidental user turn must NOT abort the
+    # mission.  SubagentStop is the marker's sole clearer, so its presence alone
+    # means in-flight.
+    if advisor_running_file(data_dir, session_id).exists():
         return
     # /ploop:launch turn: launch() (UserPromptExpansion) ran first and set a fresh
     # mission + active marker plus a launching sentinel; consume it and spare active.
@@ -333,8 +349,11 @@ def launch() -> None:
     data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
     session_id = str(data.get("session_id", ""))
     # Fresh start, independent of whether/when UserPromptSubmit fires this turn:
-    # clear the prior mission's per-round state before arming.
+    # clear the prior mission's per-round state before arming.  The round log
+    # resets here and only here — a mission owns one log for its whole turn, and
+    # the finished log must survive ordinary turns for summary and inspection.
     clear_round_state(data_dir, session_id)
+    log_file(data_dir, session_id).unlink(missing_ok=True)
     mission_file(data_dir, session_id).write_text(mission)
     active_file(data_dir, session_id).touch()
     # UserPromptExpansion runs BEFORE UserPromptSubmit on a slash-command turn, so
