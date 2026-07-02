@@ -567,9 +567,9 @@ class TestStopCommand:
         assert (tmp_path / "s1_loop.log").exists()  # record kept
 
     def test_delivers_log_path_to_main_agent(self, tmp_path, monkeypatch, capsys):
-        """The log is seeded at launch, so its presence means a mission ran: stop
-        hands the main agent the real session log path (the only channel that can,
-        since the skill body is static) as UserPromptExpansion additionalContext."""
+        """A running loop (active marker) is stopped: it hands the main agent the
+        real session log path — the only channel that can, since the skill body is
+        static — as UserPromptExpansion additionalContext."""
         (tmp_path / "s1_active").touch()
         (tmp_path / "s1_loop.log").write_text("[[ MISSION ]]\n\nm\n\n")
         self.arrange(tmp_path, monkeypatch)
@@ -580,9 +580,11 @@ class TestStopCommand:
         assert str(tmp_path / "s1_loop.log") in context
         assert "summary" in context
 
-    def test_no_mission_no_log_delivery(self, tmp_path, monkeypatch, capsys):
-        """No prior mission (no log): nothing to summarize, so no context is
-        injected — the skill body's stop notice is enough."""
+    def test_inactive_stop_injects_no_recap(self, tmp_path, monkeypatch, capsys):
+        """Gated on the active marker, not the log: a stop with no running loop
+        (already ended / double-stop) leaves the prior log but injects no redundant
+        recap."""
+        (tmp_path / "s1_loop.log").write_text("[[ MISSION ]]\n\nm\n\n")  # stale log
         self.arrange(tmp_path, monkeypatch)
         stop_command()
         assert capsys.readouterr().out == ""
