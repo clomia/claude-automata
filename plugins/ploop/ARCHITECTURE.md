@@ -165,6 +165,9 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
    `active`를 보존**한다 — 확장(launch)이 제출보다 먼저라 방금 만든 마커를 자기 cleanup이 지우는 것을
    막는 장치다. 그 외 턴은 `active`도 지우므로 ESC로 끊긴 미션이 조용히 재개되지 않고, stale 토큰이
    다음 미션의 라운드 0 자발 호출을 인가하지도 못한다. `mission.md`는 anchor로 보존된다.
+   이 cleanup이 실제로 살아있는 루프를 비활성화할 때는 종료를 **양쪽 채널로** 알린다 —
+   사용자용 `systemMessage`와 main용 `additionalContext` — 개입 종료가 조용히 묻히지 않게 한다
+   (자연 종료·`/ploop:stop`은 최종 요약으로 이미 스스로를 알린다).
 3. Stop 훅이 종료(advisor 종료 판정) 시 `active` 마커를 지운다.
 4. `/ploop:stop`의 UserPromptExpansion 훅(`stop_command`)이 사용자 요청으로 언제든 루프를
    비활성화한다 — `active`와 라운드 상태를 지운다. background advisor in-flight 중에도 무조건 멈추도록
@@ -206,7 +209,7 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
 | **UserPromptExpansion** | `ploop:launch` · `ploop:stop` | 슬래시 커맨드 확장(제출 전) | launch: 미션·`active`·`launching` 기록(활성화) — `active` 존재·빈 미션이면 차단 · stop: `active`+라운드 상태 삭제(비활성화, in-flight 무관) — 비활성이면 차단 |
-| **UserPromptSubmit** | (전체) | 새 사용자 턴 | `loop.json`·토큰·running·compacted·advice·narration·`active` 삭제 (turn cleanup). 단 launch 턴엔 `active` 보존(launching sentinel), background advisor in-flight 중엔 전체 보존 |
+| **UserPromptSubmit** | (전체) | 새 사용자 턴 | `loop.json`·토큰·running·compacted·advice·narration·`active` 삭제 (turn cleanup). 단 launch 턴엔 `active` 보존(launching sentinel), background advisor in-flight 중엔 전체 보존 · 살아있는 루프를 끄면 종료 알림(`systemMessage`+`additionalContext`) |
 | **PostCompact** | `auto` | auto-compaction 후 | `compacted` 마커 touch (Stop이 메커니즘 2로 미션 텍스트 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` 마커 set) 또는 `exit 2` deny(자발 호출 차단) |
 | **Stop** | (전체) | main이 종료 시도 | active 게이트 → **in-flight 가드** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 로그 요약 지시) 또는 `exit 0`(허용) |

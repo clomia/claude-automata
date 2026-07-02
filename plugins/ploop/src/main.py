@@ -218,6 +218,11 @@ def user_prompt_submit() -> None:
     sentinel, set because UserPromptExpansion runs before this hook, spares the
     fresh active marker) and a background advisor in flight (the running marker
     — the loop is mid-round and main has merely yielded to the user).
+
+    When this turn actually deactivates a live loop, it announces the end on both
+    channels — a user-facing systemMessage and an additionalContext note to the
+    main agent — so the intervention end is never silent.  (The natural end and
+    /ploop:stop already announce themselves via the final summary.)
     """
     event = read_event()
     ws = Workspace.from_env(event.get("session_id", ""))
@@ -227,7 +232,23 @@ def user_prompt_submit() -> None:
     ws.launching_path.unlink(missing_ok=True)
     ws.clear_round_state()
     if not keep_active:
+        ended = ws.active_path.exists()
         ws.active_path.unlink(missing_ok=True)
+        if ended:
+            sys.stdout.write(
+                json.dumps(
+                    {
+                        "systemMessage": "ploop: the parallax loop has ended.",
+                        "hookSpecificOutput": {
+                            "hookEventName": "UserPromptSubmit",
+                            "additionalContext": (
+                                "The parallax loop has ended: a direct turn ended it, "
+                                "so no further advisor rounds will run."
+                            ),
+                        },
+                    }
+                )
+            )
 
 
 def mark_compaction() -> None:

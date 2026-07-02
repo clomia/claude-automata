@@ -433,7 +433,7 @@ class TestUserPromptSubmit:
         assert not (tmp_path / "s1_compacted").exists()
         assert (tmp_path / "s1_mission.md").exists()
 
-    def test_launch_turn_keeps_active_via_sentinel(self, tmp_path, monkeypatch):
+    def test_launch_turn_keeps_active_via_sentinel(self, tmp_path, monkeypatch, capsys):
         """On a /ploop:launch turn the launching sentinel is present: the fresh
         active marker (and mission) survive cleanup; the sentinel is consumed."""
         (tmp_path / "s1_active").touch()
@@ -450,8 +450,9 @@ class TestUserPromptSubmit:
         assert not (tmp_path / "s1_loop.json").exists()  # stale ledger cleared
         assert not (tmp_path / "s1_advisor_token").exists()
         assert (tmp_path / "s1_mission.md").exists()
+        assert capsys.readouterr().out == ""  # loop not ended → no notice
 
-    def test_running_marker_preserves_loop(self, tmp_path, monkeypatch):
+    def test_running_marker_preserves_loop(self, tmp_path, monkeypatch, capsys):
         """A running marker (advisor in flight) makes an incidental user turn leave
         the whole loop intact — SubagentStop, not this hook, clears the marker."""
         for name in ("s1_active", "s1_advisor_running"):
@@ -463,7 +464,31 @@ class TestUserPromptSubmit:
         user_prompt_submit()
         assert (tmp_path / "s1_active").exists()  # loop survives the interjection
         assert (tmp_path / "s1_loop.json").exists()
-        assert (tmp_path / "s1_advisor_running").exists()
+        assert (tmp_path / "s1_advisor_running").exists()  # SubagentStop clears it
+        assert capsys.readouterr().out == ""  # loop not ended → no notice
+
+    def test_intervention_termination_announces_end(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Deactivating a live loop announces the end on both channels: a
+        user-facing systemMessage and an additionalContext note to the main agent."""
+        (tmp_path / "s1_active").touch()
+        save_ledger(
+            tmp_path / "s1_loop.json", round_number=2, regions=["r"], done=False
+        )
+        arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
+        user_prompt_submit()
+        out = json.loads(capsys.readouterr().out)
+        assert out["systemMessage"]
+        assert out["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
+        assert out["hookSpecificOutput"]["additionalContext"]
+        assert not (tmp_path / "s1_active").exists()
+
+    def test_ordinary_turn_stays_silent(self, tmp_path, monkeypatch, capsys):
+        """A turn with no live loop deactivates nothing, so it emits no notice."""
+        arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
+        user_prompt_submit()
+        assert capsys.readouterr().out == ""
 
 
 # ── mark_compaction ──
