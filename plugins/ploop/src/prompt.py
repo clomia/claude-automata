@@ -1,10 +1,9 @@
 """Prompt — assemble the advisor's input artifacts and the trigger.
 
-parallax's prompt.py built all five sections into one string and handed the
-advisor a finished prompt.  ploop can't run the advisor from the hook,
-so it writes the deterministic section (parallax-region-history) to a file and
-emits a trigger that points the advisor at the five sections in parallax's
-order:
+The parallax loop feeds the advisor five sections in a canonical order.  ploop
+can't run the advisor from the hook, so it writes the deterministic section
+(parallax-region-history) to a file and emits a trigger that points the advisor
+at the five sections in that order:
 
     role (advisor system prompt)
     -> original-mission        (mission file)
@@ -12,8 +11,7 @@ order:
     -> parallax-region-history (regions file)
     -> instructions            (static prompt file)
 
-The advisor reads/runs them top-to-bottom, reconstructing the same ordered
-context parallax assembled in code.
+The advisor reads/runs them top-to-bottom, building the ordered context.
 """
 
 import textwrap
@@ -23,7 +21,7 @@ INSTRUCTION_PATH = Path(__file__).resolve().parent.parent / "prompts" / "instruc
 
 
 def format_region_history(region_history: list[str]) -> str:
-    """Format prior regions as <region-N> blocks (parallax prompt.py)."""
+    """Format prior regions as <region-N> blocks (parallax-region-history)."""
     if not region_history:
         return "No prior regions."
     return "\n\n".join(
@@ -46,11 +44,10 @@ def format_advisor_trigger(
 
     The trigger spells out the advisor's Agent-tool call verbatim, with the
     narrator's Agent-tool call inlined inside it — the hook authors the exact
-    invocations (as parallax's hook did via subprocess.run), and the main agent
-    and advisor relay them as written.  Handing over the literal call is the
+    invocations, and the main agent and advisor relay them as written.  Handing over the literal call is the
     simplest, most deterministic path: nothing is left for the LLM to construct.
-    The five sections appear in parallax's order; the advisor reads/runs them
-    top-to-bottom (advisor.md), reconstructing the same ordered context.
+    The five sections appear in the loop's canonical order; the advisor
+    reads/runs them top-to-bottom (advisor.md).
 
     The call is synchronous (run_in_background=false): the advisor Writes its
     advice to advice_path — a clean file channel, since its chat message may carry

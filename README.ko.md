@@ -16,8 +16,7 @@ claude plugin marketplace add clomia/claude-automata
 
 ## 플러그인들
 
-- **[Parallax](plugins/parallax/README.ko.md)** — 길고 복잡한 작업을 위한 자율 주행 시스템 _(Anthropic API 전용)_
-- **[ploop](plugins/ploop/README.ko.md)** — 깊은 nested-agent 트리로 대규모·장기 작업을 수행하는 orchestrator
+- **[ploop](plugins/ploop/README.ko.md)** — 길고 복잡한 미션을 끝까지 완수하는 자율 루프 (parallax loop)
 
 # Appendix: Plugin Management Commands
 

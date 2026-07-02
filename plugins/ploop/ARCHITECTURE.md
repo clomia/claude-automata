@@ -1,11 +1,9 @@
 # ploop — 아키텍처
 
-ploop은 **parallax 루프** — 격리된 advisor가 매 라운드 main이 고려하지 못한
-영역을 surface해 결과 신뢰도를 극한까지 끌어올리는 자율 루프 — 를 Claude Code의
-**nested subagent** 위에서 구현한 플러그인이다. parallax가 Stop 훅에서 `claude -p`를
-외부 스폰하느라 구독 요금제에서 계정 차단 위험을 안았던 자리를, advisor·narrator를
-정식 `Agent` 툴 호출로 대체해 그 위협을 **본질적으로 제거**한다. parallax의 통합
-지점(Stop 훅)과 main 역할(세션 에이전트)은 그대로 보존한다.
+ploop은 **parallax loop** — 격리된 advisor가 매 라운드 main이 고려하지 못한
+영역을 surface해 결과 신뢰도를 극한까지 끌어올리는 자율 루프([이론](theory.ko.md)) —
+를 Claude Code의 **nested subagent** 위에서 구현한 플러그인이다. 통합 지점은 Stop
+훅이고, 루프의 main 역할은 세션 에이전트 자신이다.
 
 ---
 
@@ -13,52 +11,40 @@ ploop은 **parallax 루프** — 격리된 advisor가 매 라운드 main이 고�
 
 - **parallax loop** — 훅·advisor·narrator로 매 라운드 미고려 영역을 surface해 main에
   주입하는 자율 루프. 이 플러그인(`ploop`)이 그것을 구현한다.
-- **main** — parallax main 역할을 하는 세션 에이전트(depth 0). 미션을 직접 실행하고
-  매 라운드 advisor를 호출한다. parallax의 메인 에이전트와 같은 위상이다.
+- **main** — parallax loop의 main 역할을 하는 세션 에이전트(depth 0). 미션을 직접
+  실행하고 매 라운드 advisor를 호출한다.
 - **original-mission** — main을 미션에 붙들어 매는 SSoT. 트랜스크립트 바깥 외부
   파일(`{session}_mission.md`)에 보존된다.
 
-main은 parallax 루프와 original-mission 재정박으로 미션에 **붙들어 매인다(anchor)** —
+main은 parallax loop와 original-mission 재정박으로 미션에 **붙들어 매인다(anchor)** —
 자기 확신으로 표류(drift)하지도, compaction으로 미션을 잃지도 않는다.
 
 ---
 
-## 문제 — parallax가 구식이 된 이유
+## 왜 nested subagent인가
 
-parallax는 Stop 훅 안에서 advisor·narrator를 `claude -p` 서브프로세스로 스폰한다.
-이는 `--no-session-persistence`로 **별도의 임시 세션**을 생성하는 자동화 패턴이고,
-Claude Pro/Max 구독 약관상 계정 정지 위험을 부른다(실제 차단 이력 존재). 그래서
-parallax는 Anthropic API 요금제 전용으로 묶였고, 구독 사용자는 손대지 못했다.
+이런 루프를 훅이 직접 구동하는 가장 단순한 방법은 Stop 훅 안에서 `claude -p`를
+스폰하는 것이다. 그러나 그것은 `--no-session-persistence`로 **별도의 임시 세션**을
+생성하는 자동화 패턴이고, Claude Pro/Max 구독 약관상 계정 정지 위험을 부른다(실제
+차단 이력 존재) — API 요금제 전용이 된다.
 
-parallax 개발 당시에는 nested subagent가 불가능해 이 방법뿐이었다. 그러나 `Agent` 툴
-subagent는 **모든 요금제에서 지원되는 정식 기능**이고(메인 세션과 동일 quota 공유),
-서브에이전트는 다시 서브에이전트를 spawn할 수 있다(v2.1.172+, depth 5 cap).
-ploop은 같은 루프를 이 정식 경로 위에서 재구현해 요금제 위협을 없앤다 — main이
-advisor를 `Agent` 툴로 호출하고, advisor가 narrator를 호출한다.
-
-| | parallax | ploop |
-|---|---|---|
-| advisor/narrator 실행 | 훅이 `claude -p` 스폰 | main·advisor가 **Agent 툴** 호출 |
-| 격리 | 별도 프로세스 | 별도 subagent (동일 격리) |
-| 요금제 | API 전용 · **구독 차단 위험** | **구독 정식** (nested agent) |
-| 트리거 | `parallaxthink` 키워드 | `/ploop:launch` (미션 핸드오프) |
-| parallax main 역할 | 세션 메인 에이전트 | 세션 메인 에이전트 (**동일**) |
-
-마지막 행이 핵심이다. ploop은 advisor/narrator의 실행 경로만 nested로 바꾸고,
-parallax main 역할은 parallax와 똑같이 세션 에이전트에 둔다. (초기 버전은 그 역할을
-`operator` subagent(depth 1)에 두어 트리가 한 단계 깊었으나, operator는 격리 이점을
-주지 않으면서 부채만 떠안겨 제거했다 — git history.)
+`Agent` 툴 subagent는 **모든 요금제에서 지원되는 정식 기능**이고(메인 세션과 동일
+quota 공유), 서브에이전트는 다시 서브에이전트를 spawn할 수 있다(v2.1.172+, depth 5
+cap). ploop은 루프를 이 정식 경로 위에서 돈다 — main이 advisor를 `Agent` 툴로
+호출하고, advisor가 narrator를 호출한다. (초기 버전은 main 역할을 `operator`
+subagent(depth 1)에 두어 트리가 한 단계 깊었으나, operator는 격리 이점을 주지
+않으면서 부채만 떠안겨 제거했다 — git history.)
 
 ---
 
 ## Agent Tree
 
-`main`은 사용자와 대화하는 세션(depth 0)이자 parallax 루프의 수행자다. advisor·narrator는
+`main`은 사용자와 대화하는 세션(depth 0)이자 parallax loop의 수행자다. advisor·narrator는
 그 아래 봉인된 서브에이전트 tier에서 돈다. 각 tier는 아래로 위임하고 위로는 요약만
 반환하므로, 방대한 컨텍스트가 상위로 갈수록 압축된다.
 
 ```
-main      depth 0  session     full tools    parallax main: runs the mission
+main      depth 0  session     full tools    loop main: runs the mission
    |  Agent(advisor)  <- "invoke advisor" injected by Stop hook
    v
 advisor   depth 1  Agent ro    surface region   analyzes blind spots; writes region
@@ -67,22 +53,21 @@ advisor   depth 1  Agent ro    surface region   analyzes blind spots; writes reg
 narrator  depth 2  Read Write  narrate          action records -> narration.md
 ```
 
-| Tier | 도구 (allowlist) | 모델 | effort | parallax 대응 |
-|---|---|---|---|---|
-| **main** | 전체 (세션) | `opus[1m]` 권장 | inherit | 메인 에이전트 |
-| **advisor** | 전체 − `Bash·Edit·NotebookEdit·Artifact` (`Write`는 region 출력용) | `opus[1m]` | max | Advisor (`claude -p`, max) |
-| **narrator** | `Read` · `Write` (narration 출력용) | `sonnet` | low | Narrator (`claude -p`, low) |
+| Tier | 도구 (allowlist) | 모델 | effort |
+|---|---|---|---|
+| **main** | 전체 (세션) | `opus[1m]` 권장 | inherit |
+| **advisor** | 전체 − `Bash·Edit·NotebookEdit·Artifact` (`Write`는 region 출력용) | `opus[1m]` | max |
+| **narrator** | `Read` · `Write` (narration 출력용) | `sonnet` | low |
 
 - **advisor는 `Write`로 region(또는 종료 토큰)만 파일에 쓰고, 나머지 부작용 도구는 막혀 있다(`disallowedTools: Bash, Edit, NotebookEdit, Artifact`)** —
   subagent의 최종 메시지는 커스터마이징 불가라 max-effort 추론 prose가 섞인다(하네스 한계). 그래서 region을
-  `advice.md`(비보호 시스템 temp — `CLAUDE_PLUGIN_DATA`는 보호된 `~/.claude` 하위라 auto 모드 Write가 classifier에 막힌다)에 Write해 채팅 채널의 오염과 격리한다 — hook은 그 파일을 읽는다. `Bash`를 계속 막는 것은
-  parallax(`DISALLOWED_TOOLS="Bash,Write,Edit,NotebookEdit"`)의 취지 — `Bash`면 `rm`·테스트 실행 등 임의
-  부작용이 가능 — 를 지키되, `Write`만 좁게 열어 region 출력 채널로 삼은 의식적 완화다(사용 전제는 auto/bypass
+  `advice.md`(비보호 시스템 temp — `CLAUDE_PLUGIN_DATA`는 보호된 `~/.claude` 하위라 auto 모드 Write가 classifier에 막힌다)에 Write해 채팅 채널의 오염과 격리한다 — hook은 그 파일을 읽는다. `Bash`를 막는 것은
+  임의 부작용(`rm`·테스트 실행 등) 차단 취지고, `Write`만 좁게 열어 region 출력 채널로 삼은 의식적 완화다(사용 전제는 auto/bypass
   권한 모드). 남은 read-only 도구(`Read·Glob·Grep·Web*`)로 영역을 근거 짓고 `Agent`로 narrator를 호출하며,
   region을 ledger에 기록하는 것은 여전히 hook의 몫이다.
 - **narrator는 `Read`·`Write`만 가진 leaf** — `Agent`가 없어 트리가 그 아래로 자라지 않는다. `Write`는
   advisor와 동일한 채널이다: narration을 temp `narration.md`에 쓰고, advisor가 분석 입력으로·hook이 라운드
-  로그로 같은 파일을 읽는다. 단순 변환이라 `sonnet`/`low`로 충분(parallax 그대로).
+  로그로 같은 파일을 읽는다. 단순 변환이라 `sonnet`/`low`로 충분하다.
 - depth 2에서 트리를 닫아 depth-5 cap에 3단계 여유를 남긴다.
 
 ---
@@ -114,17 +99,16 @@ main ─ Agent(advisor) ───────────> advisor (depth 1)
 main ─ work on the surfaced region (round N+1) ── stops ── (loop)
 ```
 
-종료는 parallax와 동일하게 결정된다: advisor가 `advice.md`에 아무것도 쓰지 않거나 전용 종료 토큰을 쓰면 `done`
+종료는 parallax loop의 규칙대로 결정된다: advisor가 `advice.md`에 아무것도 쓰지 않거나 전용 종료 토큰을 쓰면 `done`
 플래그가 서고 active 마커가 정리되며(`if not advice or TERMINATION_TOKEN in advice`), 그 전이라도
 `ROUND_LIMIT`(30)이 무한 루프를 막는다. region을 하나라도 surface한 턴이면 종료 정지를 한 번 더 막아
 main이 `loop.log`를 읽고 사용자에게 전체 라운드를 요약하게 한다 — 장기 미션에서 main 컨텍스트는 여러 번
 auto-compaction되므로 로그가 턴의 유일한 완전 기록이다. 그 다음 정지는 active 마커가 없어 통과한다. 고지능 모델 advisor가 빈
 출력이나 async를 내는 것은 Claude Code 보장 범위 밖이라 별도 대응(stall·미호출 감지)을 두지
-않는다 — 원본 parallax가 그랬듯 단순하게 처리한다(고지능 순응 가정).
+않는다 — 루프의 단순 규칙으로 처리한다(고지능 순응 가정).
 
 Stop 훅은 메인 세션 정지마다 발화하므로 active 마커가 게이트한다(아래 상태). advisor·narrator의
-정지는 `SubagentStop`이라 이 Stop 훅에 잡히지 않는다 — parallax의 `PARALLAX_INSIDE_RECURSION`
-재귀 가드가 구조적으로 불필요하다.
+정지는 `SubagentStop`이라 이 Stop 훅에 잡히지 않는다 — 재귀 가드가 필요 없다.
 
 ---
 
@@ -132,16 +116,15 @@ Stop 훅은 메인 세션 정지마다 발화하므로 active 마커가 게이�
 
 main의 컨텍스트에 더해지는 것은 **① 짧은 stderr 트리거 + ② main이 트리거 지시로 읽는
 `advice.md`의 조언 한 문단 + ③ 종료 시 1회의 로그 요약 턴**뿐이다. narrator 호출, region-history 누적 읽기,
-5-section 분석은 모두 **advisor(depth 1)의 컨텍스트에서** 소비되어 main에 닿지 않는다. region을 "한 문단으로만 출력"하는 parallax
+5-section 분석은 모두 **advisor(depth 1)의 컨텍스트에서** 소비되어 main에 닿지 않는다. region을 "한 문단으로만 출력"하는
 instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그 탐색 비용을 main에 전가하지
-않는다 — 원본 parallax가 narrator·advisor를 hook 코드로 실행해 메인 컨텍스트를 보호한 것과
-정확히 같은 효과다.
+않는다.
 
 ---
 
 ## 상태와 미션 보존
 
-상태는 사용자 레포 바깥에 둔다(레포 비오염, parallax 일관) — 대부분 `CLAUDE_PLUGIN_DATA`, 단
+상태는 사용자 레포 바깥에 둔다(레포 비오염) — 대부분 `CLAUDE_PLUGIN_DATA`, 단
 `advice.md`만 비보호 시스템 temp(아래 근거). 한 세션에 하나의 미션을 가정해 `session_id`로 키잉한다.
 
 | 파일 | 작성자 | 내용 |
@@ -163,12 +146,10 @@ instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그
 `advice.md`에 Write(종료 시엔 같은 파일에 종료 토큰을 Write)할 뿐 loop ledger는 건드리지 않는다. hook이 다음
 라운드 시작에 직전 advisor의 `advice.md`를 읽어 `regions`에 append하거나, 종료 토큰이면 `done`을 세운다.
 in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 이미 종료했으므로, `advice.md`가 없으면
-아무것도 안 쓴 것 = 종료다(parallax의 empty=terminate 규칙). main도 트리거 지시대로 같은 `advice.md`를
+아무것도 안 쓴 것 = 종료다(parallax loop의 empty=terminate 규칙). main도 트리거 지시대로 같은 `advice.md`를
 읽어 그 조언에 따라 작업하므로 `advice.md`는 region/종료의 유일 채널이자 main·hook 양쪽의 깨끗한 단일 소스다. `round`도 hook이 증가시키는 안전망이다.
-단일 작성자(hook)가 ledger를 소유해 race가 없고, advisor는 자기 region payload만 파일로 넘긴다 —
-parallax advisor도 region 텍스트를 냈고 hook이 ledger를 기록했으므로, 이 방향이 parallax에 충실하다. (`mission.md`·`active` 마커는 활성화
-신호라 launch 훅(UserPromptExpansion)이 만든다 — parallax도 미션·활성화는 사용자 입력/UserPromptSubmit이, loop state는
-hook이 소유했다.)
+단일 작성자(hook)가 ledger를 소유해 race가 없고, advisor는 자기 region payload만 파일로 넘긴다.
+(`mission.md`·`active` 마커는 활성화 신호라 launch 훅(UserPromptExpansion)이 만든다.)
 
 **활성화 lifecycle.** Stop 훅은 메인 세션 정지마다 발화하므로 active 마커가 루프를 게이트한다.
 
@@ -181,11 +162,10 @@ hook이 소유했다.)
    다음 미션의 라운드 0 자발 호출을 인가하지도 못한다. `mission.md`는 anchor로 보존된다.
 3. Stop 훅이 종료(done/limit) 시 `active` 마커를 지운다.
 
-이는 parallax의 `_active` 마커 + UserPromptSubmit turn-boundary cleanup 패턴을 그대로 옮긴
-것이다(operator subagent 시절에는 SubagentStop이 미션 전용 subagent에만 발화해 이 게이트가
-불필요했으나, main 승격으로 Stop이 일반 대화에도 발화하면서 parallax의 활성화 관리로 회귀한다).
+(operator subagent 시절에는 SubagentStop이 미션 전용 subagent에만 발화해 이 게이트가
+불필요했으나, main 승격으로 Stop이 일반 대화에도 발화하면서 활성화 게이트가 필요해졌다 — git history.)
 
-**미션 정박은 네 겹이며, 마지막이 parallax 메커니즘을 그대로 보존한다.**
+**미션 정박은 네 겹이다.**
 
 1. **외부 보존(메커니즘 1)** — launch 훅이 original-mission을 `mission.md`에 기록한다. 트랜스크립트와
    독립이라 main 내부가 어떻게 compaction되든 원본은 보존된다.
@@ -198,13 +178,13 @@ hook이 소유했다.)
 
 위 세 겹은 모두 *포인터*다 — "mission.md를 읽어라"라는 지시이지 미션 텍스트 자체가 아니며, agent가
 드리프트를 자각해 다시 읽기로 선택해야 작동한다. 그런데 goal drift는 점진적이라 agent가 스스로
-감지하지 못한다(theory §4.2). 그래서 네 번째 겹이 필요하다.
+감지하지 못한다([이론 §4.2](theory.ko.md)). 그래서 네 번째 겹이 필요하다.
 
 4. **메커니즘 2(PostCompact + 미션 텍스트 inline)** — `PostCompact` 훅이 `_compacted` 마커를
    touch하고, 다음 Stop이 그 마커를 소비하며 **그 라운드 트리거에 original-mission 원문 텍스트를
    recency 위치에 inline**한다(`format_advisor_trigger`의 `mission_text`). 포인터·자가감지에 의존하는
-   1–3과 달리, 이것은 **discrete한 compaction 이벤트에 미션 텍스트 자체를 무조건** 박는다 — 원본
-   parallax 메커니즘 2와 정확히 같다. 메인 세션은 `PostCompact`가 확실히 발화하므로(초기 nested
+   1–3과 달리, 이것은 **discrete한 compaction 이벤트에 미션 텍스트 자체를 무조건** 박는다([이론
+   §4.1](theory.ko.md)). 메인 세션은 `PostCompact`가 확실히 발화하므로(초기 nested
    버전의 미확정 리스크가 해소됨) 이 복원이 가능하다.
 
 ---
@@ -218,7 +198,7 @@ hook이 소유했다.)
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` 마커 set) 또는 `exit 2` deny(자발 호출 차단) |
 | **Stop** | (전체) | main이 종료 시도 | active 게이트 → **in-flight 가드** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 로그 요약 지시) 또는 `exit 0`(허용) |
 | **SubagentStop** | (전체) | subagent 종료 | `advisor` 종료면 `advisor_running` 마커 clear (in-flight 추적) |
-| **SessionStart** | `startup\|clear` | 세션 시작 | 신규 릴리스 알림 (parallax updater 이식) |
+| **SessionStart** | `startup\|clear` | 세션 시작 | 신규 릴리스 알림 |
 
 플러그인 에이전트는 `ploop:<agent>`로 scoped 등록되므로, Agent 호출의 subagent_type이
 그 scoped 이름을 쓴다. Stop 훅은 본질적으로 메인 세션 정지에만 발화하고 advisor·narrator의
@@ -226,7 +206,7 @@ hook이 소유했다.)
 `bin/ploop-hook` 셸 래퍼를 거쳐 `uv`를 호출한다 — 래퍼가 uv 가용성을 먼저 확인하므로,
 uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일원화한다.
 
-**Graceful degradation.** `uv`가 없으면 훅 spawn은 무해하게 실패한다. main은 parallax 루프를
+**Graceful degradation.** `uv`가 없으면 훅 spawn은 무해하게 실패한다. main은 parallax loop를
 모르므로(루프는 전적으로 훅이 구동) advisor 없이 미션만 수행하고 종료한다 — 루프는 돌지 않지만
 세션은 깨지지 않으며, SessionStart가 uv 설치를 안내한다.
 
@@ -234,17 +214,17 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
 
 ## 핵심 설계 결정
 
-1. **parallax main = 세션 메인 에이전트.** parallax 루프의 main 역할을 세션 에이전트(depth 0)가
-   직접 한다 — 원본 parallax와 같은 위상이고, 트리거는 Stop 훅이다. advisor·narrator만 nested
+1. **loop main = 세션 메인 에이전트.** parallax loop의 main 역할을 세션 에이전트(depth 0)가
+   직접 한다 — 트리거는 Stop 훅이다. advisor·narrator만 nested
    subagent로 격리해 구독 안전성을 얻는다. (초기 버전은 main 역할을 `operator` subagent(depth 1)에
    두어 트리가 4-tier였으나, operator는 어떤 격리 이점도 주지 않으면서 — 미션 작업은 원래 main
-   컨텍스트에서 일어나고 parallax도 격리하지 않았다 — `find_operator_transcript` 해소,
+   컨텍스트에서 일어난다 — `find_operator_transcript` 해소,
    background-nested 동기 호출, subagent `PostCompact` 불확실성을 떠안겼다. 제거가 순수 이득이다.)
 2. **훅은 코드라 툴을 호출할 수 없다 → 훅은 트리거, 실행은 Agent 툴.** Claude Code 훅은
-   stdout/stderr/exit code로만 통신하며 tool call을 발화하지 못한다. 그래서 `claude -p`를 Agent
-   툴로 *직접 치환*하는 것은 불가능하다. 대신 Stop이 `exit 2`+stderr로 main에게 advisor 호출을
-   **지시**하고, main(LLM)이 Agent 툴로 실행한다. 이 한 단계가 parallax→ploop 전환의
-   본질이다. main의 컨텍스트(launch 스킬·트리거)는 parallax 루프 메커니즘을 advisor라는 단어로
+   stdout/stderr/exit code로만 통신하며 tool call을 발화하지 못한다. 그래서 훅이 advisor를
+   직접 실행할 수 없다. 대신 Stop이 `exit 2`+stderr로 main에게 advisor 호출을
+   **지시**하고, main(LLM)이 Agent 툴로 실행한다. 이 간접 한 단계가 ploop 훅 설계의
+   본질이다. main의 컨텍스트(launch 스킬·트리거)는 루프 메커니즘을 advisor라는 단어로
    **언급하지 않는다** — 자발적으로 부르면 경로 대신 자기 의견을 advisor에 전달하거나 narrator를
    건너뛰기 때문이다. advisor의 존재는 stderr 지시가 처음 알린다.
 3. **loop 상태는 hook이 단독 소유.** advisor는 region(또는 종료 토큰)을 `advice.md`에 Write만 하고,
@@ -258,35 +238,29 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    `mission.md`·`active` 마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돌고, 종료 시
    마커를 지운다. UserPromptSubmit이 매 사용자 턴 `active`·`loop.json`을 지우되, **확장이 제출보다 먼저인
    launch 턴에선 `launching` sentinel로 `active`를 보존**한다 — 그 외 턴은 지우므로 ESC로 끊긴 미션이
-   무단 재개되지 않는다. parallax의 활성화 패턴을 그대로 옮긴 것.
-6. **미션 정박 — 메커니즘 1 + 2 (parallax 그대로).** 외부 보존(`mission.md`, 메커니즘 1)으로
+   무단 재개되지 않는다.
+6. **미션 정박 — 메커니즘 1 + 2 ([이론 §4](theory.ko.md)).** 외부 보존(`mission.md`, 메커니즘 1)으로
    미션 원문은 디스크에 영속하고, `PostCompact`가 `_compacted`를 touch하면 compacted 라운드의
    Stop이 트리거에 미션 원문 텍스트를 inline한다(메커니즘 2 — discrete compaction 이벤트에 무조건
    텍스트 주입). 메인 세션 `PostCompact`는 공식 문서로 보장된다. advisor가 매 라운드 original-mission을
    읽고 미션-grounded region을 surface하므로 main은 advisor 경유로도 간접 정박된다. launch 스킬 본문의
-   self-anchoring은 main이 mission.md를 닻으로 삼게 부트스트랩한다. parallax에 없던 "매 라운드
-   포인터"는 메커니즘 2·advisor·스킬과 중복이라 두지 않는다(irreducible).
-7. **프롬프트는 parallax 원본 충실.** advisor·narrator·instruction은 parallax의
-   `role`·`conversion`·`instruction`을 이식하며, 분석 대상을 원본과 같은 **"main agent"**로 부른다
-   (operator subagent 시절에는 "operator"로 멀어졌던 것을 원복). parallax `prompt.py`는 5-section
-   (role·original-mission·action-history·parallax-region-history·instructions)을 한 XML로 조립해
-   advisor에 넘겼다. ploop은 hook이 advisor를 직접 못 부르므로 같은 **순서**를 trigger로
-   재현한다 — role은 advisor 시스템 프롬프트, original-mission·region-history·instructions는 파일,
-   action-history는 advisor가 트리거에 inline된 narrator Agent 호출을 실행하고 narrator가 쓴
-   `narration.md`를 읽어 조립한다. **트리거는
+   self-anchoring은 main이 mission.md를 닻으로 삼게 부트스트랩한다. "매 라운드 포인터"는
+   메커니즘 2·advisor·스킬과 중복이라 두지 않는다(irreducible).
+7. **advisor 분석 입력은 5-section 순서.** parallax loop의 캐논대로 advisor는
+   role·original-mission·action-history·parallax-region-history·instructions 순서로 맥락을 쌓는다
+   (advisor.md — 분석 대상은 **"main agent"**로 부른다). hook이 advisor를 직접 못 부르므로 같은
+   **순서**를 trigger로 재현한다 — role은 advisor 시스템 프롬프트,
+   original-mission·region-history·instructions는 파일, action-history는 advisor가 트리거에 inline된
+   narrator Agent 호출을 실행하고 narrator가 쓴 `narration.md`를 읽어 조립한다. **트리거는
    advisor의 Agent 호출을 — 그 안에 narrator Agent 호출을 inline해 — 축자로 작성해 넘긴다. hook이
-   정확한 호출을 작성하고(parallax가 `subprocess.run`으로 했듯) main·advisor는 그대로 relay한다.**
-   리터럴 호출을 그대로 건네는 것이 가장 단순·결정론적이다 — LLM이 구성할 것이 없다. advisor는 네
-   경로를 위에서 아래로 읽어 parallax와 동일 순서로 맥락을 쌓는다(advisor.md). nested 구조상 두 가지가
-   어긋난다. **(a)** action narrative만
-   런타임 수집(narrating은 LLM이라 hook이 못 부른다). **(b)** 정박 미션이 parallax의 *세션 원문*에서
-   ploop의 *launch 핸드오프 텍스트*(`mission.md`)로 바뀌었고 advisor에도 전파된다 — launch 훅이
-   `/ploop:launch` 인자를 축자 캡처하므로(모델 전사 단계 없음) mission.md는 핸드오프 원문과 정확히
-   일치하나, 정박 대상이 세션 최초 프롬프트가 아닌 별도 핸드오프 텍스트라는 점은 parallax와의 의도된
-   차이다. action-history는 advisor
+   정확한 호출을 작성하고 main·advisor는 그대로 relay한다.** 리터럴 호출을 그대로 건네는 것이
+   가장 단순·결정론적이다 — LLM이 구성할 것이 없다. 두 가지 주의점: **(a)** action narrative만
+   런타임 수집이다(narrating은 LLM이라 hook이 못 부른다). **(b)** 정박 대상은 세션 최초 프롬프트가
+   아닌 `/ploop:launch` 핸드오프 텍스트(`mission.md`)다 — launch 훅이 인자를 축자 캡처하므로(모델
+   전사 단계 없음) mission.md는 핸드오프 원문과 정확히 일치한다. action-history는 advisor
    호출을 strip해 region-history와 분리를 지킨다.
 8. **단일 모델 `opus[1m]`(main·advisor).** 추론 최대화와 compaction 빈도 감소가 같은 선택으로
-   수렴. narrator만 단순 변환이라 `sonnet`/`low`로 parallax를 충실히 보존. main은 세션 모델이라
+   수렴. narrator만 단순 변환이라 `sonnet`/`low`면 충분하다. main은 세션 모델이라
    사용자가 `opus[1m]`로 실행하길 권장한다.
 9. **자발 advisor 호출 차단(PreToolUse 게이팅).** main이 hook 지시 없이 스스로 advisor를 부르면
    결정론적 사이클이 깨진다 — hook이 지정한 5-section 입력 대신 main 자기 말이 입력으로 가고, 그 호출이
@@ -301,16 +275,16 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     trigger가 advisor·narrator 호출을 모두 `run_in_background=false`로 작성해(narrator는 advisor 프롬프트에
     inline) 동기 실행을 지시하며, 고지능 모델이 이를 따른다. 동기여야 advisor가 정지 전에 `advice.md`를
     남기고(hook이 다음 Stop에 읽는다), narrator narration이 advisor의 분석 입력이 된다. 빈 출력·async처럼
-    Claude Code 보장 밖 케이스는 별도 가드 없이 parallax의 단순 규칙(빈 출력=종료)으로 처리한다.
+    Claude Code 보장 밖 케이스는 별도 가드 없이 루프의 단순 규칙(빈 출력=종료)으로 처리한다.
 11. **로깅: 완결된 라운드 단위 — 서사 + 그 라운드의 advice.** `_loop.log`의 한 엔트리는 라운드 하나의
     완결이다: 라운드 작업의 서사(advice가 도착해 읽히는 장면으로 시작해 반응 작업으로 이어진다) 뒤에 그
     advice 전문이 `/ Advice`로 붙는다(라운드 0은 미션 초기 작업이라 advice 섹션이 없다). 서사가 advice
     요약을 품고 전문이 뒤따르는 중복은 의도된 것이며, advisor도 같은 서사를 분석 입력으로 받아 자신의
     직전 advice에 main이 어떻게 반응했는지 그대로 본다. nested 구조상 라운드 N의 narration은 다음 advisor
     호출에서 생성되므로 엔트리는 한 정지 늦게 완결 기록되고, 번호는 advice ordinal이라 skip 라운드에도
-    `regions.md`와 어긋나지 않으며, 종료 토큰 같은 기계 신호는 로그에 남지 않는다. parallax의
-    production-pairing(작업→그 작업이 낳은 판정)을 response-pairing(advice→그에 대한 반응)으로 재설계한
-    것이다 — 인과 순서가 파일에서 그대로 읽힌다. 장기 미션에서 main 컨텍스트는 여러 번 auto-compaction
+    `regions.md`와 어긋나지 않으며, 종료 토큰 같은 기계 신호는 로그에 남지 않는다. 쌍은
+    production-pairing(작업→그 작업이 낳은 판정)이 아닌 response-pairing(advice→그에 대한
+    반응)이다 — 인과 순서가 파일에서 그대로 읽힌다. 장기 미션에서 main 컨텍스트는 여러 번 auto-compaction
     되므로 이 로그가 턴 전체의 유일한 완전 기록이다. launch가 미션 원문(`[[ MISSION ]]` 헤더)으로 로그를
     새로 시작해 한 미션이 로그 하나를 소유하며 종료 후에도 남고, 종료 시(단 advice를 하나라도 받은 턴)
     마지막 stderr 주입이 main에게 로그를 읽어 사용자에게 전체 라운드를 요약하게 한다 — 요약자는 미션을
@@ -325,7 +299,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
 13. **advisor in-flight 가드(background 전환 cascade 차단).** advisor 호출을 `run_in_background=false`로
     지시해도 사용자가 단축키로 실행 중인 advisor를 background로 보낼 수 있다. 그 순간 main 세션 Stop이
     발화하는데, 그대로 재주입하면 advisor가 하나 더 spawn되고 다음 정지에 또 spawn되어 **무한 증식**한다
-    (nested 전환이 낳은 신규 리스크 — parallax는 advisor를 hook 안에서 동기 실행해 이 틈이 없었다).
+    (훅 바깥에서 advisor가 도는 nested 구조 고유의 리스크다).
     PreToolUse가 advisor 인가 시 `advisor_running` 마커를 set하고 **SubagentStop이 그 마커의 유일한
     clearer**다. Stop·UserPromptSubmit은 마커가 있으면 in-flight로 보고 재주입/정리를 하지 않는다(Stop은
     `exit 0` 대기, UserPromptSubmit은 loop state 보존). background로 보낸 advisor의 region은 유실될 수
@@ -341,16 +315,16 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
 설계했다.
 
 1. **Stop block cap.** 조사상 "연속 차단 N회 후 강제 종료"(`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`).
-   parallax는 30라운드를 도는데 메인 세션 Stop의 cap이 같은지, 라운드 사이 실제 작업이 카운터를
-   리셋하는지 미확정. 30라운드가 잘리면 그때 설정한다. **parallax가 같은 Stop 훅 위에서 30라운드를
-   돌았다는 점이 강한 전례다.**
+   루프는 최대 30라운드를 도는데 메인 세션 Stop의 cap이 같은지, 라운드 사이 실제 작업이 카운터를
+   리셋하는지 미확정. 30라운드가 잘리면 그때 설정한다. **실측에서 ploop이 같은 Stop 훅 위에서
+   10라운드 이상을 완주했다 — 강한 전례다.**
 2. **트랜스크립트 형식 가정.** `parse_round_actions`가 "마지막 훅 주입 이후"를 라운드 action으로 잡아
    narrator 입력을 만든다 — 트랜스크립트 메시지·블록 형식에 의존한다. 어긋나면 action 범위가 넓어질 수
    있다(graceful, 치명적이지 않음). region 캡처는 이 의존에서 빠졌다 — advice.md 단일 채널로 전환하며
    `extract_advisor_output` 트랜스크립트 스크레이프를 제거했다(이전 리스크 해소).
 3. **main의 지시 순응도** — stderr "advisor 호출"에 main이 실제로 응하는가. round 안전망이 미응답 시에도
-   종료를 보장한다. **parallax 전체 설계가 메인 에이전트의 stderr 순응 위에 섰고 작동했고, 고지능 모델
-   가정상 순응은 전제된다 — 강한 전례.**
+   종료를 보장한다. **실측에서 main은 매 라운드 트리거에 순응했고, 고지능 모델 가정상 순응은
+   전제된다.**
 4. **PreToolUse 발동·session 일치** — 자발 호출 게이팅은 PreToolUse가 main의 Agent 호출에 발동하고 그
    session_id가 Stop과 같아야 성립한다. 미발동 시 게이팅만 무효화되고 루프는 현행대로(graceful).
 
@@ -365,8 +339,8 @@ foreground라 동기 호출이 보장된다.
 모든 프롬프트는 **단일 "한국어 기반, 영어 활용"**으로 통일한다(이중 언어 쌍 없음). 식별자·경로·도구
 이름과 `main agent` 같은 역할 명칭은 영어, 산문은 한국어, ASCII 다이어그램은 정렬을 위해 영어.
 에이전트·스킬 프롬프트와 advisor instruction은 단일 `.md`이고, 훅 주입 메시지(advisor trigger)는
-`prompt.py`가 조립한다. 프롬프트는 parallax 원본(`role`·`conversion`·`instruction`)을 충실히 이식하며,
-분석 대상을 원본과 같은 "main agent"로 부른다.
+`prompt.py`가 조립한다. 프롬프트는 한국어 원문 단일본만 관리하고, 사람이 읽는 문서(README·theory)는
+한·영 쌍으로 관리한다.
 
 ---
 
@@ -375,18 +349,19 @@ foreground라 동기 호출이 보장된다.
 ```
 ploop/
 ├── .claude-plugin/plugin.json        # manifest
+├── theory.ko.md · theory.md          # parallax loop 작동 이론 (한·영)
 ├── agents/                           # 2개 tier 정의 (frontmatter 봉인 + 프롬프트 본문)
-│   ├── advisor.md                    # parallax role 이식 + 5-section 순서 지침 (Write: region→advice.md)
-│   └── narrator.md                   # parallax conversion 이식 (Write: narration→narration.md)
-├── prompts/instruction.md            # advisor 분석·출력 지침 (parallax instruction 이식)
+│   ├── advisor.md                    # advisor 역할 + 5-section 읽기 순서 (Write: region→advice.md)
+│   └── narrator.md                   # action-history 서사 변환 (Write: narration→narration.md)
+├── prompts/instruction.md            # advisor 분석·출력 지침
 ├── skills/launch/SKILL.md            # /ploop:launch — main 직접 수행 + self-anchoring (미션 저장·활성화는 launch 훅)
 ├── hooks/hooks.json                  # UserPromptSubmit + UserPromptExpansion(launch) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
-├── bin/ploop-hook                    # uv 가용성 체크 래퍼 (parallax 상속)
+├── bin/ploop-hook                    # uv 가용성 체크 래퍼
 ├── src/                              # 훅 구현 (런타임 의존성 없음)
 │   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·user_prompt_submit·mark_compaction·launch)
 │   ├── state.py                      # Workspace(세션 파일 경로의 단일 창구) + ledger 영속화
 │   ├── transcript.py                 # action 추출(advisor 호출 strip) — narrator 입력용
 │   ├── prompt.py                     # region-history 포맷 + 5-section advisor trigger 조립
-│   └── updater.py                    # SessionStart 업데이트 알림 (parallax 이식)
+│   └── updater.py                    # SessionStart 업데이트 알림
 └── tests/                            # 구현 독립 (stdin/stdout/disk 구동)
 ```

@@ -2,35 +2,32 @@
 
 English | [한국어](README.ko.md)
 
-**An autonomous loop that drives long, complex missions to completion — the evolution of parallax.**
+**An autonomous loop that drives long, complex missions to completion.**
 
-ploop finds the regions Claude overlooked, round after round, and keeps
-working until the mission is fully covered. It reimplements
-[parallax](../parallax/)'s mechanism on top of Claude Code's nested subagents, so
-it runs **safely on subscription plans**.
+ploop implements the **parallax loop** — an autonomous loop in which an isolated
+advisor finds the regions Claude overlooked, round after round, and keeps the
+work going until the mission is fully covered — on top of Claude Code's nested
+subagents. It runs **safely on subscription plans**.
 
 - Define the mission with Claude, then hand it off with `/ploop:launch`.
   - The handoff is a deliberate gate: it writes the mission spec to disk and
     launches the parallax loop. Use it for large missions, not trivial one-off edits.
 
-### Relationship to parallax — what changed
+### Why nested subagents
 
-parallax spawns `claude -p` from a Stop hook. That is an automation pattern that
-creates a separate session, which **risked account suspension on Claude Pro/Max
-subscriptions** — so it was confined to the Anthropic API plan, and the fear kept
-everyone away.
+Spawning `claude -p` from a hook to drive such a loop is an automation pattern
+that creates a separate session, which **risks account suspension on Claude
+Pro/Max subscriptions**. ploop runs the advisor through the first-class `Agent`
+tool (nested subagents) instead — a supported feature on every plan that shares
+the main session's quota, so ploop runs **within subscription terms**.
 
-ploop reimplements the same parallax mechanism — an isolated advisor
-surfacing unconsidered regions each round — through the first-class `Agent` tool
-(nested subagents). Subagents are a supported feature on every plan and share the
-main session's quota, so ploop runs **within subscription terms**. parallax
-had no nested agents at the time, leaving `claude -p` the only option; that is no
-longer true.
+### How it works
 
-### How it works — [**Architecture (ARCHITECTURE.md)**](ARCHITECTURE.md)
-
-The three-tier agent tree (main→advisor→narrator), the parallax loop,
-compaction resistance, and the decisions behind them.
+- [**Architecture (ARCHITECTURE.md)**](ARCHITECTURE.md) — the three-tier agent
+  tree (main→advisor→narrator), the parallax loop, compaction resistance, and
+  the decisions behind them.
+- [**Theory (theory.md)**](theory.md) — the academic and industry evidence for
+  why the parallax loop works.
 
 ### Prerequisite
 

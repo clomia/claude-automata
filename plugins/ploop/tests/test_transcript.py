@@ -73,8 +73,9 @@ class TestParseRoundActions:
         assert actions[0]["content"] == "round 1 work"
 
     def test_strips_advisor_exchange(self, tmp_path):
-        """The Agent(advisor) call is parallax machinery, not the main agent's work,
-        so it is removed from action-history (parallax kept these distinct)."""
+        """The Agent(advisor) call is loop machinery, not the main agent's work,
+        so it is removed from action-history (the loop keeps action-history and
+        region-history distinct)."""
         t = tmp_path / "t.jsonl"
         write_jsonl(
             t,

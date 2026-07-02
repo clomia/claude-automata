@@ -2,32 +2,29 @@
 
 [English](README.md) | 한국어
 
-**길고 복잡한 미션을 끝까지 완수하는 자율 루프 — parallax의 진화형.**
+**길고 복잡한 미션을 끝까지 완수하는 자율 루프.**
 
-ploop은 사용자 대신 클로드가 놓친 영역을 매 라운드 찾아 제시하고, 미션이 완전히
-다뤄질 때까지 작업을 이어갑니다. [parallax](../parallax/)의 메커니즘을 Claude Code의
-nested subagent 위에서 재구현해 **구독 요금제에서 안전하게** 동작합니다.
+ploop은 **parallax loop** — 격리된 advisor가 매 라운드 클로드가 놓친 영역을 찾아
+제시하고, 미션이 완전히 다뤄질 때까지 작업을 이어가게 하는 자율 루프 — 를 Claude
+Code의 nested subagent 위에 구현합니다. **구독 요금제에서 안전하게** 동작합니다.
 
 - 클로드와 미션을 정의한 뒤 `/ploop:launch`로 핸드오프하세요.
-  - 핸드오프는 의도적 게이트입니다: 미션 명세를 디스크에 기록하고 parallax 루프를
+  - 핸드오프는 의도적 게이트입니다: 미션 명세를 디스크에 기록하고 parallax loop를
     띄웁니다. 사소한 단발 수정이 아니라 대규모 미션에 사용하세요.
 
-### parallax와의 관계 — 무엇이 바뀌었나
+### 왜 nested subagent인가
 
-parallax는 Stop 훅에서 `claude -p`를 외부 스폰합니다. 이는 별도 세션을 만드는 자동화
-패턴이라 **Claude Pro/Max 구독에서 계정 차단 위험**을 안았고, 그래서 Anthropic API
-요금제 전용으로 묶였습니다 — 무서워서 아무도 쓰지 못했습니다.
+이런 루프를 훅에서 `claude -p`로 스폰하는 자동화 패턴은 별도 세션을 만들어
+**Claude Pro/Max 구독에서 계정 차단 위험**이 있습니다. ploop은 advisor를 정식
+`Agent` 툴(nested subagent)로 실행합니다 — 모든 요금제에서 지원되는 정식 기능이고
+메인 세션과 같은 quota를 공유하므로, **구독에서 약관 위반 없이** 동작합니다.
 
-ploop은 같은 parallax 메커니즘 — 격리된 advisor가 매 라운드 미고려 영역을 surface하는
-자율 루프 — 를 정식 `Agent` 툴(nested subagent)로 재구현합니다. subagent는 모든
-요금제에서 지원되는 정식 기능이고 메인 세션과 같은 quota를 공유하므로, **구독에서 약관
-위반 없이** 동작합니다. parallax 개발 당시에는 nested agent가 없어 `claude -p`뿐이었지만,
-이제는 그렇지 않습니다.
+### 동작 원리
 
-### 동작 원리 — [**아키텍처 (ARCHITECTURE.md)**](ARCHITECTURE.md)
-
-3단계 에이전트 트리(main→advisor→narrator), parallax 루프, compaction 저항,
-그리고 그 설계 결정들을 설명합니다.
+- [**아키텍처 (ARCHITECTURE.md)**](ARCHITECTURE.md) — 3단계 에이전트
+  트리(main→advisor→narrator), parallax loop, compaction 저항, 그리고 그 설계 결정들.
+- [**이론 (theory.ko.md)**](theory.ko.md) — parallax loop가 왜 효과적인지에 대한
+  학술·산업 근거.
 
 ### 사전 요구사항
 

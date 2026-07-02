@@ -34,9 +34,9 @@ class TestFormatAdvisorTrigger:
             mission_text=mission_text,
         )
 
-    def test_lists_sections_in_parallax_order(self):
+    def test_lists_sections_in_canonical_order(self):
         """role lives in the advisor system prompt; the trigger carries the other
-        four in parallax's order, with the narrator call inlined under actions-history."""
+        four in the loop's canonical order, with the narrator call inlined under actions-history."""
         out = self.trigger()
         assert (
             out.index("original-mission:")

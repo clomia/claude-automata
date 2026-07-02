@@ -214,7 +214,7 @@ class TestStop:
 
     def test_absent_advice_terminates(self, tmp_path, monkeypatch):
         """advice.md is the sole channel: the advisor finished (no running marker)
-        and wrote nothing, so the turn ends — parallax's empty-output=terminate.
+        and wrote nothing, so the turn ends — the parallax loop's empty-output=terminate rule.
         No region was ever surfaced, so no summary turn is spent (exit 0), but the
         final work still lands in the log."""
         arrange_mission(

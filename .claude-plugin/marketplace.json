@@ -10,10 +10,6 @@
   },
   "plugins": [
     {
-      "name": "parallax",
-      "source": "./plugins/parallax"
-    },
-    {
       "name": "ploop",
       "source": "./plugins/ploop"
     }
