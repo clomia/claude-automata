@@ -102,11 +102,11 @@ main ─ work on the surfaced region (round N+1) ── stops ── (loop)
 플래그가 서고 active 마커가 정리된다(`if not advice or TERMINATION_TOKEN in advice`). **숫자 라운드 상한은 두지
 않는다** — region-history는 파일이라 컨텍스트를 잠식하지 않고 advisor는 매 라운드 stateless하게 리셋되므로,
 종료는 "더 surface할 영역이 있는가"라는 의미론적 판단(advisor 종료 토큰)에 맡긴다. 그 판단이 안 나오면
-사용자가 `/ploop:stop`으로 언제든 끝낸다(아래 Hooks). **모든 종료 경로는 main에게 종료를 알린다** — main이
-사용자에게 자연스럽게 전달하는 것이 종료 알림의 스펙이다. region을 하나라도 surface한 턴이면 종료 정지를 한 번 더 막아
-main이 `loop.log`를 읽고 사용자에게 전체 라운드를 요약하게 한다 — 장기 미션에서 main 컨텍스트는 여러 번
-auto-compaction되므로 로그가 턴의 유일한 완전 기록이다. region이 하나도 없으면(첫 advisor가 곧바로 종료) 요약할
-로그가 없으므로 간결한 종료 노티스를 대신 주입한다. 그 다음 정지는 active 마커가 없어 통과한다. 고지능 모델 advisor가 빈
+사용자가 `/ploop:stop`으로 언제든 끝낸다(아래 Hooks). **모든 종료 경로는 main에게 종료 노티스를 보낸다**
+(`format_end_notice`) — 노티스는 종료 사실과 사유를 사용자에게 명확히 보고하게 하고, region을 하나라도
+surface한 턴이면 `loop.log` recap 지시를 덧붙인다 — 장기 미션에서 main 컨텍스트는 여러 번 auto-compaction되므로
+로그가 턴의 유일한 완전 기록이다. 자연 종료는 종료 정지를 한 번 더 막아(exit 2) 노티스를 주입하고, 그 다음
+정지는 active 마커가 없어 통과한다. 고지능 모델 advisor가 빈
 출력이나 async를 내는 것은 Claude Code 보장 범위 밖이라 별도 대응(stall·미호출 감지)을 두지
 않는다 — 루프의 단순 규칙으로 처리한다(고지능 순응 가정).
 
@@ -167,16 +167,16 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
    `active`를 보존**한다 — 확장(launch)이 제출보다 먼저라 방금 만든 마커를 자기 cleanup이 지우는 것을
    막는 장치다. 그 외 턴은 `active`도 지우므로 ESC로 끊긴 미션이 조용히 재개되지 않고, stale 토큰이
    다음 미션의 라운드 0 자발 호출을 인가하지도 못한다. `mission.md`는 anchor로 보존된다.
-   이 cleanup이 실제로 살아있는 루프를 비활성화할 때는 **additionalContext**로 main에게 종료를
-   알린다 — 노티스가 사용자에게 간단히 전달하라고 지시하므로 개입 종료가 조용히 묻히지 않는다
-   (자연 종료·`/ploop:stop`은 각자의 최종 트리거로 이미 main에게 닿는다).
+   이 cleanup이 실제로 살아있는 루프를 비활성화할 때는 **additionalContext**로 main에게 종료
+   노티스를 보낸다 — 노티스가 종료 사실과 사유를 사용자에게 보고하게 하므로 개입 종료가 조용히
+   묻히지 않는다(자연 종료·`/ploop:stop`도 같은 노티스를 보낸다).
 3. Stop 훅이 종료(advisor 종료 판정) 시 `active` 마커를 지운다.
 4. `/ploop:stop`의 UserPromptExpansion 훅(`stop_command`)이 사용자 요청으로 언제든 루프를
    비활성화한다 — `active`와 라운드 상태를 지운다. background advisor in-flight 중에도 무조건 멈추도록
    `advisor_running`을 UserPromptSubmit이 읽기 전에 지운다(그래서 우연한 turn의 in-flight 보존과 달리
-   확정 종료다). 그리고 그 라운드 로그를 **additionalContext**로 main에 건네 자연 종료와 같은 요약을
-   유도한다 — 세션별 실제 로그 경로를 담을 수 있는 유일한 채널이다(정적 스킬 본문은 못 담는다). 스킬
-   본문은 사용자에게 종료를 알린다. `active`가 없으면(미실행·자연 종료 후·중복 stop) launch 가드와
+   확정 종료다). 그리고 자연 종료와 같은 종료 노티스(사유: 사용자의 stop)에 라운드 로그 recap 지시를
+   실어 **additionalContext**로 main에 건넨다 — 세션별 실제 로그 경로를 담을 수 있는 유일한
+   채널이다(정적 스킬 본문은 못 담는다). `active`가 없으면(미실행·자연 종료 후·중복 stop) launch 가드와
    같은 방식으로 확장을 차단해, 스킬 본문이 일어나지 않은 종료를 알리는 것을 막는다.
 
 (operator subagent 시절에는 SubagentStop이 미션 전용 subagent에만 발화해 이 게이트가
@@ -214,7 +214,7 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
 | **UserPromptSubmit** | (전체) | 새 사용자 턴 | `loop.json`·토큰·running·compacted·advice·narration·`active` 삭제 (turn cleanup). 단 launch 턴엔 `active` 보존(launching sentinel), background advisor in-flight 중엔 전체 보존 · 살아있는 루프를 끄면 main에게 종료 노티스(`additionalContext`) |
 | **PostCompact** | `auto` | auto-compaction 후 | `compacted` 마커 touch (Stop이 메커니즘 2로 미션 텍스트 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` 마커 set) 또는 `exit 2` deny(자발 호출 차단) |
-| **Stop** | (전체) | main이 종료 시도 | active 게이트 → **in-flight 가드** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 로그 요약 지시) 또는 `exit 0`(허용) |
+| **Stop** | (전체) | main이 종료 시도 | active 게이트 → **in-flight 가드** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 노티스+로그 recap 지시) 또는 `exit 0`(허용) |
 | **SubagentStop** | (전체) | subagent 종료 | `advisor` 종료면 `advisor_running` 마커 clear (in-flight 추적) |
 | **SessionStart** | `startup\|clear` | 세션 시작 | 신규 릴리스 알림 |
 

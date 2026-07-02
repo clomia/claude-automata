@@ -252,13 +252,13 @@ class TestStop:
         assert "build the thing" in err  # original-mission text inlined
         assert not (tmp_path / "s1_compacted").exists()  # consumed
 
-    def test_termination_token_ends_loop_and_triggers_summary(
+    def test_termination_token_ends_loop_and_triggers_recap(
         self, tmp_path, monkeypatch, capsys
     ):
         """Termination on a turn that surfaced regions: done + deactivated, the
         final round completed in the log (its narration + the advice it
         answered; the token is machinery and never logged), and one last
-        injection has the main agent summarize the round log."""
+        injection has the main agent report the end and recap the round log."""
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -279,10 +279,11 @@ class TestStop:
         assert "final round work" in log
         assert "[[ Round 1 / Advice ]]" in log
         assert TERMINATION_TOKEN not in log
-        # the summary trigger points the main agent at the log
+        # the end notice reports the cause and points the main agent at the log
         err = capsys.readouterr().err
+        assert "has ended" in err
         assert str(tmp_path / "s1_loop.log") in err
-        assert "summary" in err
+        assert "recap" in err
 
     def test_no_round_cap_arms_indefinitely(self, tmp_path, monkeypatch):
         """There is no round limit: a high round still arms the next round rather
@@ -637,7 +638,7 @@ class TestStopCommand:
         assert out["hookSpecificOutput"]["hookEventName"] == "UserPromptExpansion"
         context = out["hookSpecificOutput"]["additionalContext"]
         assert str(tmp_path / "s1_loop.log") in context
-        assert "summary" in context
+        assert "/ploop:stop" in context  # the cause reaches the user's report
 
     def test_inactive_stop_blocks_expansion(self, tmp_path, monkeypatch, capsys):
         """No armed loop (already ended / double-stop): the expansion is blocked

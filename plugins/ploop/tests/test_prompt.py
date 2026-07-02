@@ -4,8 +4,8 @@ from pathlib import Path
 
 from src.prompt import (
     format_advisor_trigger,
+    format_end_notice,
     format_region_history,
-    format_summary_trigger,
 )
 
 
@@ -103,9 +103,16 @@ class TestFormatAdvisorTrigger:
         assert "{" not in out and "}" not in out
 
 
-class TestFormatSummaryTrigger:
-    def test_directs_main_to_summarize_the_log(self):
-        out = format_summary_trigger(Path("/d/s1_loop.log"))
-        assert "/d/s1_loop.log" in out
-        assert "summary" in out
+class TestFormatEndNotice:
+    def test_directs_main_to_report_end_and_cause(self):
+        out = format_end_notice("the user ran /ploop:stop")
+        assert "has ended" in out
+        assert "the user ran /ploop:stop" in out
+        assert "report" in out.lower()
         assert "{" not in out and "}" not in out
+
+    def test_log_recap_appended_only_when_given(self):
+        assert "/d/s1_loop.log" not in format_end_notice("c")
+        with_log = format_end_notice("c", log_path=Path("/d/s1_loop.log"))
+        assert "Read /d/s1_loop.log" in with_log
+        assert "recap" in with_log

@@ -96,27 +96,19 @@ def format_advisor_trigger(
     return prefix + body
 
 
-def format_end_notice(cause: str) -> str:
-    """Build the notice that tells the main agent the loop has ended.
+def format_end_notice(cause: str, log_path: Path | None = None) -> str:
+    """Build the notice every termination path sends to the main agent.
 
-    Every termination path must reach the main agent — told explicitly, it
-    relays the end to the user in its reply.  Ends that carry a log worth
-    recapping use format_summary_trigger instead.
+    The main agent must clearly report the end and its cause to the user —
+    whatever ended the loop.  When the turn surfaced any region the notice
+    also has it recap the round log: over a long mission the main agent's
+    context may have auto-compacted early rounds away, so the log on disk is
+    the one complete record.
     """
-    return (
-        f"The parallax loop has ended ({cause}); no further advisor rounds "
-        f"will run. Mention this briefly to the user.\n"
+    notice = (
+        f"The parallax loop has ended — {cause}. "
+        f"Clearly report the end and its cause to the user."
     )
-
-
-def format_summary_trigger(log_path: Path) -> str:
-    """Build the stderr feedback for the loop's final stop.
-
-    Over a long mission the main agent's context may have auto-compacted several
-    times, so the round log on disk is the one complete record of the turn.  The
-    trigger has the main agent read it and hand the user a compact recap.
-    """
-    return (
-        f"The parallax loop has ended. "
-        f"Read {log_path} and give the user a brief summary.\n"
-    )
+    if log_path is not None:
+        notice += f" Read {log_path} and add a brief recap of the rounds."
+    return notice + "\n"

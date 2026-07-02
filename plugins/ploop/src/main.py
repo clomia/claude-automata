@@ -20,7 +20,6 @@ from src.prompt import (
     format_advisor_trigger,
     format_end_notice,
     format_region_history,
-    format_summary_trigger,
 )
 from src.state import Workspace, load_ledger, save_ledger
 from src.transcript import parse_round_actions
@@ -71,21 +70,22 @@ def write_log(
 
 
 def end_loop(ws: Workspace, current_round: int, regions: list[str]) -> None:
-    """Terminate the loop: mark it done, drop the active gate, and tell the main
-    agent — the round-log summary when the turn surfaced any region, a brief end
-    notice otherwise.  Every termination path reaches the main agent.
+    """Terminate the loop: mark it done, drop the active gate, and inject the
+    end notice — the main agent reports the end and its cause to the user, with
+    a round-log recap when the turn surfaced any region.
 
     The advisor ending the turn (termination token / empty advice) is the loop's
-    only automatic exit; there is no round cap.  Over a long mission the main
-    agent's context may have compacted the early rounds away, so the log is the
-    one complete record.  The active marker is dropped, so the next stop passes.
+    only automatic exit; there is no round cap.  The active marker is dropped,
+    so the next stop passes.
     """
     save_ledger(ws.ledger_path, round_number=current_round, regions=regions, done=True)
     ws.active_path.unlink(missing_ok=True)
-    if regions:
-        sys.stderr.write(format_summary_trigger(ws.log_path))
-    else:
-        sys.stderr.write(format_end_notice("the advisor surfaced no region"))
+    sys.stderr.write(
+        format_end_notice(
+            "the advisor found no further region worth surfacing",
+            log_path=ws.log_path if regions else None,
+        )
+    )
     sys.exit(2)
 
 
@@ -223,9 +223,8 @@ def user_prompt_submit() -> None:
     — the loop is mid-round and main has merely yielded to the user).
 
     When this turn actually deactivates a live loop, the end notice goes to the
-    main agent as additionalContext — every termination path reaches the main
-    agent, and the notice has it relay the end to the user.  (The natural end
-    and /ploop:stop already reach it via their final triggers.)
+    main agent as additionalContext — every termination path sends it, and the
+    notice has the main agent report the end and its cause to the user.
     """
     event = read_event()
     ws = Workspace.from_env(event.get("session_id", ""))
@@ -244,7 +243,7 @@ def user_prompt_submit() -> None:
                         "hookSpecificOutput": {
                             "hookEventName": "UserPromptSubmit",
                             "additionalContext": format_end_notice(
-                                "a direct user turn ended it"
+                                "a direct user turn intervened"
                             ),
                         }
                     }
@@ -329,10 +328,10 @@ def stop_command() -> None:
     so the next stop is allowed and nothing leaks into a later mission.  Unlike an
     incidental user turn (which user_prompt_submit spares while a background
     advisor is in flight), it stops unconditionally — clearing the running marker
-    before UserPromptSubmit reads it.  It hands the main agent the round log to
-    recap the turn — the same summary instruction the natural end injects, carried
-    as UserPromptExpansion additionalContext (the only channel with the session's
-    real log path; the static skill body can't hold it).
+    before UserPromptSubmit reads it.  It injects the same end notice the natural
+    end does (cause: the user's stop) with the round log to recap, carried as
+    UserPromptExpansion additionalContext — the only channel with the session's
+    real log path; the static skill body can't hold it.
     """
     event = read_event()
     if event.get("command_name", "") != "ploop:stop":
@@ -347,7 +346,9 @@ def stop_command() -> None:
             {
                 "hookSpecificOutput": {
                     "hookEventName": "UserPromptExpansion",
-                    "additionalContext": format_summary_trigger(ws.log_path),
+                    "additionalContext": format_end_notice(
+                        "the user ran /ploop:stop", log_path=ws.log_path
+                    ),
                 }
             }
         )
