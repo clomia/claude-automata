@@ -100,6 +100,14 @@ class TestStop:
             stop()
         assert exc.value.code == 0
 
+    def test_malformed_event_allows_stop(self, tmp_path, monkeypatch):
+        """A hook must never break the session: unparseable stdin degrades to
+        exit 0 instead of crashing."""
+        arrange(tmp_path, monkeypatch, "not json")
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 0
+
     def test_done_flag_allows_stop(self, tmp_path, monkeypatch):
         (tmp_path / "s1_active").touch()
         save_ledger(tmp_path / "s1_loop.json", round_number=2, regions=["r"], done=True)

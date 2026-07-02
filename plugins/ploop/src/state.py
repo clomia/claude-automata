@@ -1,212 +1,114 @@
-"""State — external inputs for a main-session Stop, assembled into one object.
+"""State — the per-session workspace layout and the round ledger.
 
-Parses the hook event, locates the per-session workspace files under
-CLAUDE_PLUGIN_DATA, and loads the persisted round/regions/done ledger.
+Workspace is the single authority for where a session's files live: the loop
+state under CLAUDE_PLUGIN_DATA, plus the two agent handoff channels (advice,
+narration) under the system temp dir — a Write TOOL call into the protected
+~/.claude routes to the auto-permission-mode classifier and can be silently
+blocked, so the agents write to unprotected temp, where it is auto-approved.
 
-The hook owns the entire ledger: it reads the advisor's returned region from
-the transcript and records round, regions, and done.  The advisor only
-analyzes and returns text — it does not write state.  The original-mission
-lives in an external file (not the transcript), so there is no
-transcript-vs-capture reconciliation.
+The ledger ({round, regions, done}) is the loop's persisted state; the hook
+owns it as single writer — advisor and narrator only hand off text files.
 """
 
 import json
 import os
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
-
-from pydantic import BaseModel, ConfigDict
 
 ROUND_LIMIT = 30
 
 
-def mission_file(data_dir: Path, session_id: str) -> Path:
-    return data_dir / f"{session_id}_mission.md"
+@dataclass(frozen=True)
+class Workspace:
+    """Every per-session file path, in one place."""
 
-
-def active_file(data_dir: Path, session_id: str) -> Path:
-    return data_dir / f"{session_id}_active"
-
-
-def advice_file(session_id: str) -> Path:
-    """The advisor's region file — a per-session path under the system temp dir.
-
-    Every other artifact lives in CLAUDE_PLUGIN_DATA (under ~/.claude, a protected
-    directory).  Hooks write those with plain Python — not permission-gated — but the
-    advisor hands off its region with the Write TOOL, and a protected-path Write in
-    auto permission mode routes to the classifier and can be silently blocked.  The
-    temp dir is unprotected, so the Write is auto-approved; the file is written once
-    per round and read immediately, so temp's volatility is irrelevant.
-    """
-    return Path(tempfile.gettempdir()) / f"ploop_{session_id}_advice.md"
-
-
-def narration_file(session_id: str) -> Path:
-    """The narrator's action-history narrative — advice_file's channel exactly:
-    an unprotected temp path so the narrator's Write is auto-approved.  Written
-    once per round; the advisor reads it as analysis input and the hook reads it
-    into the round log.
-    """
-    return Path(tempfile.gettempdir()) / f"ploop_{session_id}_narration.md"
-
-
-def log_file(data_dir: Path, session_id: str) -> Path:
-    """The mission's round log (action-history + region per round).
-
-    launch() resets it — not the turn-boundary cleanup, so the finished log
-    survives for the post-mission summary and later inspection.
-    """
-    return data_dir / f"{session_id}_loop.log"
-
-
-def advisor_running_file(data_dir: Path, session_id: str) -> Path:
-    """Marker present while an advisor call is in flight.
-
-    PreToolUse touches it when it authorizes an advisor call; SubagentStop removes
-    it when the advisor finishes.  Its presence at a Stop means an advisor is still
-    running — e.g. the user pushed it to the background — so the hook must not
-    re-trigger and spawn a cascade of advisors.
-    """
-    return data_dir / f"{session_id}_advisor_running"
-
-
-class HookInput(BaseModel):
-    """Stop hook event data from stdin."""
-
-    model_config = ConfigDict(extra="ignore")
-
-    session_id: str
-    transcript_path: str
-
-
-class State(BaseModel):
-    """All external inputs for one Stop, assembled into one object."""
-
-    session_id: str
-    transcript_path: str
     data_dir: Path
-    mission_active: bool
-    compacted: bool
-    current_round: int
-    region_history: list[str]
-    done: bool
+    session_id: str
+
+    @classmethod
+    def from_env(cls, session_id: str) -> "Workspace":
+        return cls(Path(os.environ["CLAUDE_PLUGIN_DATA"]), session_id)
+
+    def path(self, name: str) -> Path:
+        return self.data_dir / f"{self.session_id}_{name}"
 
     @property
     def mission_path(self) -> Path:
-        return mission_file(self.data_dir, self.session_id)
+        return self.path("mission.md")
 
     @property
     def active_path(self) -> Path:
-        return active_file(self.data_dir, self.session_id)
-
-    @property
-    def compacted_path(self) -> Path:
-        return self.data_dir / f"{self.session_id}_compacted"
-
-    @property
-    def state_path(self) -> Path:
-        return self.data_dir / f"{self.session_id}_loop.json"
-
-    @property
-    def action_path(self) -> Path:
-        return self.data_dir / f"{self.session_id}_action.json"
-
-    @property
-    def regions_path(self) -> Path:
-        return self.data_dir / f"{self.session_id}_regions.md"
-
-    @property
-    def advice_path(self) -> Path:
-        return advice_file(self.session_id)
-
-    @property
-    def narration_path(self) -> Path:
-        return narration_file(self.session_id)
+        return self.path("active")
 
     @property
     def launching_path(self) -> Path:
-        return self.data_dir / f"{self.session_id}_launching"
+        return self.path("launching")
+
+    @property
+    def ledger_path(self) -> Path:
+        return self.path("loop.json")
+
+    @property
+    def action_path(self) -> Path:
+        return self.path("action.json")
+
+    @property
+    def regions_path(self) -> Path:
+        return self.path("regions.md")
 
     @property
     def log_path(self) -> Path:
-        return log_file(self.data_dir, self.session_id)
+        return self.path("loop.log")
 
     @property
     def advisor_token_path(self) -> Path:
-        return advisor_token_file(self.data_dir, self.session_id)
+        return self.path("advisor_token")
 
     @property
     def advisor_running_path(self) -> Path:
-        return advisor_running_file(self.data_dir, self.session_id)
+        return self.path("advisor_running")
+
+    @property
+    def compacted_path(self) -> Path:
+        return self.path("compacted")
+
+    @property
+    def advice_path(self) -> Path:
+        return Path(tempfile.gettempdir()) / f"ploop_{self.session_id}_advice.md"
+
+    @property
+    def narration_path(self) -> Path:
+        return Path(tempfile.gettempdir()) / f"ploop_{self.session_id}_narration.md"
+
+    def clear_round_state(self) -> None:
+        """Remove the per-round loop state (mission.md and active marker kept)."""
+        for path in (
+            self.ledger_path,
+            self.advisor_token_path,
+            self.advisor_running_path,
+            self.compacted_path,
+            self.advice_path,
+            self.narration_path,
+        ):
+            path.unlink(missing_ok=True)
 
 
-def load_ledger(state_file: Path) -> dict:
+def load_ledger(ledger_file: Path) -> dict:
     """Load the {round, regions, done} ledger. Empty dict on any failure."""
-    if not state_file.exists():
+    if not ledger_file.exists():
         return {}
     try:
-        ledger = json.loads(state_file.read_text())
+        ledger = json.loads(ledger_file.read_text())
     except json.JSONDecodeError, OSError:
         return {}
     return ledger if isinstance(ledger, dict) else {}
 
 
 def save_ledger(
-    state_file: Path, *, round_number: int, regions: list[str], done: bool
+    ledger_file: Path, *, round_number: int, regions: list[str], done: bool
 ) -> None:
     """Persist the round/regions/done ledger."""
-    state_file.write_text(
+    ledger_file.write_text(
         json.dumps({"round": round_number, "regions": regions, "done": done})
-    )
-
-
-def advisor_token_file(data_dir: Path, session_id: str) -> Path:
-    """The single-use token a Stop writes to authorize one advisor call.
-
-    PreToolUse consumes (deletes) it on the advisor call, so its presence at the
-    next Stop signals the advisor was NOT called this round — the hook uses this
-    to skip stale-region extraction (no fresh verdict to record).  A call with no
-    fresh token is self-initiated and gets denied.  UserPromptSubmit clears it at
-    the turn boundary so it never leaks into the next mission.
-    """
-    return data_dir / f"{session_id}_advisor_token"
-
-
-def clear_round_state(data_dir: Path, session_id: str) -> None:
-    """Remove a mission's per-round loop state (mission.md and active marker kept)."""
-    for suffix in ("loop.json", "advisor_token", "advisor_running", "compacted"):
-        (data_dir / f"{session_id}_{suffix}").unlink(missing_ok=True)
-    advice_file(session_id).unlink(missing_ok=True)
-    narration_file(session_id).unlink(missing_ok=True)
-
-
-def build_state(stdin_raw: str) -> State:
-    """Collect all external inputs and assemble a State. No side effects.
-
-    mission_active gates the whole hook: it is True only when a
-    {session}_active marker exists.  /ploop:launch creates it at handoff,
-    UserPromptSubmit clears it on every new user turn, and stop() clears it when
-    the loop terminates.  Absent the marker the stopping session is not an
-    active ploop run.
-
-    compacted reflects a {session}_compacted marker the PostCompact hook touches;
-    on a compacted round stop() re-injects the original-mission text into the
-    trigger (parallax mechanism 2) and clears the marker.
-    """
-    hook = HookInput.model_validate_json(stdin_raw)
-    data_dir = Path(os.environ["CLAUDE_PLUGIN_DATA"])
-
-    mission_active = (data_dir / f"{hook.session_id}_active").exists()
-    compacted = (data_dir / f"{hook.session_id}_compacted").exists()
-    ledger = load_ledger(data_dir / f"{hook.session_id}_loop.json")
-
-    return State(
-        session_id=hook.session_id,
-        transcript_path=hook.transcript_path,
-        data_dir=data_dir,
-        mission_active=mission_active,
-        compacted=compacted,
-        current_round=ledger.get("round", 0),
-        region_history=ledger.get("regions", []),
-        done=ledger.get("done", False),
     )

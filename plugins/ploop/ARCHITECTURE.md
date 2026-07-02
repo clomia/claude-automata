@@ -375,9 +375,9 @@ ploop/
 ├── skills/launch/SKILL.md            # /ploop:launch — main 직접 수행 + self-anchoring (미션 저장·활성화는 launch 훅)
 ├── hooks/hooks.json                  # UserPromptSubmit + UserPromptExpansion(launch) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
 ├── bin/ploop-hook                    # uv 가용성 체크 래퍼 (parallax 상속)
-├── src/                              # 훅 구현 (런타임 의존성: pydantic)
+├── src/                              # 훅 구현 (런타임 의존성 없음)
 │   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·user_prompt_submit·mark_compaction·launch)
-│   ├── state.py                      # 상태 조립 + 영속화 (active 게이트 · round/regions/done)
+│   ├── state.py                      # Workspace(세션 파일 경로의 단일 창구) + ledger 영속화
 │   ├── transcript.py                 # action 추출(advisor 호출 strip) — narrator 입력용
 │   ├── prompt.py                     # region-history 포맷 + 5-section advisor trigger 조립
 │   └── updater.py                    # SessionStart 업데이트 알림 (parallax 이식)

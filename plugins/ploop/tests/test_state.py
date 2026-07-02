@@ -1,54 +1,8 @@
 """Tests for the state module."""
 
-import json
+from pathlib import Path
 
-from src.state import (
-    ROUND_LIMIT,
-    State,
-    HookInput,
-    advice_file,
-    build_state,
-    load_ledger,
-    narration_file,
-    save_ledger,
-)
-
-
-def make_stdin(*, session_id="s1", transcript_path="/t.jsonl", **extra):
-    return json.dumps(
-        {"session_id": session_id, "transcript_path": transcript_path, **extra}
-    )
-
-
-def make_state(tmp_path, **overrides):
-    defaults = dict(
-        session_id="s1",
-        transcript_path="/t.jsonl",
-        data_dir=tmp_path,
-        mission_active=True,
-        compacted=False,
-        current_round=0,
-        region_history=[],
-        done=False,
-    )
-    defaults.update(overrides)
-    return State(**defaults)
-
-
-# ── HookInput ──
-
-
-class TestHookInput:
-    def test_parse(self):
-        hook = HookInput.model_validate_json(make_stdin(session_id="abc"))
-        assert hook.session_id == "abc"
-
-    def test_ignores_extra_fields(self):
-        hook = HookInput.model_validate_json(
-            make_stdin(cwd="/x", stop_hook_active=True)
-        )
-        assert not hasattr(hook, "cwd")
-        assert not hasattr(hook, "stop_hook_active")
+from src.state import ROUND_LIMIT, Workspace, load_ledger, save_ledger
 
 
 # ── Ledger persistence ──
@@ -69,72 +23,57 @@ class TestLedger:
         assert load_ledger(f) == {}
 
 
-# ── State path properties ──
+# ── Workspace ──
 
 
-class TestStatePaths:
+class TestWorkspace:
     def test_per_session_paths(self, tmp_path, monkeypatch):
         monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
-        state = make_state(tmp_path)
-        assert state.mission_path == tmp_path / "s1_mission.md"
-        assert state.active_path == tmp_path / "s1_active"
-        assert state.compacted_path == tmp_path / "s1_compacted"
-        assert state.state_path == tmp_path / "s1_loop.json"
-        assert state.action_path == tmp_path / "s1_action.json"
-        assert state.regions_path == tmp_path / "s1_regions.md"
-        assert state.advice_path == tmp_path / "ploop_s1_advice.md"
-        assert state.narration_path == tmp_path / "ploop_s1_narration.md"
-        assert state.log_path == tmp_path / "s1_loop.log"
-        assert state.advisor_token_path == tmp_path / "s1_advisor_token"
-        assert state.advisor_running_path == tmp_path / "s1_advisor_running"
+        ws = Workspace(data_dir=tmp_path, session_id="s1")
+        assert ws.mission_path == tmp_path / "s1_mission.md"
+        assert ws.active_path == tmp_path / "s1_active"
+        assert ws.launching_path == tmp_path / "s1_launching"
+        assert ws.ledger_path == tmp_path / "s1_loop.json"
+        assert ws.action_path == tmp_path / "s1_action.json"
+        assert ws.regions_path == tmp_path / "s1_regions.md"
+        assert ws.log_path == tmp_path / "s1_loop.log"
+        assert ws.advisor_token_path == tmp_path / "s1_advisor_token"
+        assert ws.advisor_running_path == tmp_path / "s1_advisor_running"
+        assert ws.compacted_path == tmp_path / "s1_compacted"
+        assert ws.advice_path == tmp_path / "ploop_s1_advice.md"
+        assert ws.narration_path == tmp_path / "ploop_s1_narration.md"
 
-
-def test_temp_channels_live_outside_the_protected_claude_dir():
-    """The advisor's and narrator's Write targets must be unprotected (not under
-    ~/.claude), else an auto-mode Write is classifier-gated and silently blocked."""
-    for path in (str(advice_file("s1")), str(narration_file("s1"))):
-        assert ".claude" not in path
-        assert "s1" in path
-
-
-# ── build_state ──
-
-
-class TestBuildState:
-    def test_inactive_without_active_marker(self, tmp_path, monkeypatch):
+    def test_from_env(self, tmp_path, monkeypatch):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        state = build_state(make_stdin())
-        assert state.mission_active is False
-        assert state.compacted is False
-        assert state.current_round == 0
-        assert state.region_history == []
-        assert state.done is False
+        assert Workspace.from_env("s1") == Workspace(data_dir=tmp_path, session_id="s1")
 
-    def test_active_with_active_marker(self, tmp_path, monkeypatch):
-        (tmp_path / "s1_active").touch()
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        state = build_state(make_stdin())
-        assert state.mission_active is True
+    def test_temp_channels_live_outside_the_protected_claude_dir(self):
+        """The advisor's and narrator's Write targets must be unprotected (not
+        under ~/.claude), else an auto-mode Write is classifier-gated and can be
+        silently blocked."""
+        ws = Workspace(data_dir=Path("/home/u/.claude/plugins/data"), session_id="s1")
+        for path in (str(ws.advice_path), str(ws.narration_path)):
+            assert ".claude" not in path
+            assert "s1" in path
 
-    def test_compacted_marker_detected(self, tmp_path, monkeypatch):
-        (tmp_path / "s1_active").touch()
-        (tmp_path / "s1_compacted").touch()
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        state = build_state(make_stdin())
-        assert state.compacted is True
-
-    def test_loads_persisted_ledger(self, tmp_path, monkeypatch):
-        (tmp_path / "s1_active").touch()
-        save_ledger(
-            tmp_path / "s1_loop.json",
-            round_number=3,
-            regions=["r1", "r2", "r3"],
-            done=False,
+    def test_clear_round_state_keeps_anchor_and_log(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+        ws = Workspace(data_dir=tmp_path, session_id="s1")
+        round_state = (
+            ws.ledger_path,
+            ws.advisor_token_path,
+            ws.advisor_running_path,
+            ws.compacted_path,
+            ws.advice_path,
+            ws.narration_path,
         )
-        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        state = build_state(make_stdin())
-        assert state.current_round == 3
-        assert state.region_history == ["r1", "r2", "r3"]
+        for path in (*round_state, ws.mission_path, ws.active_path, ws.log_path):
+            path.touch()
+        ws.clear_round_state()
+        assert not any(path.exists() for path in round_state)
+        assert ws.mission_path.exists()
+        assert ws.active_path.exists()
+        assert ws.log_path.exists()
 
 
 def test_round_limit_constant():

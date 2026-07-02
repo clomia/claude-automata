@@ -136,7 +136,3 @@ def check_for_update() -> None:
             f"&& claude plugin update ploop@claude-automata"
         )
         sys.stdout.write(json.dumps({"systemMessage": message}))
-
-
-if __name__ == "__main__":
-    check_for_update()

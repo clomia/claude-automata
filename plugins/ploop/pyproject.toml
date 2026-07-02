@@ -1,8 +1,8 @@
 [project]
 name = "ploop"
-version = "0.14.0"
+version = "0.14.1"
 requires-python = ">=3.14"
-dependencies = ["pydantic>=2.12.5"]
+dependencies = []
 
 [project.scripts]
 stop = "src.main:stop"
