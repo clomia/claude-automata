@@ -502,7 +502,11 @@ class TestLaunch:
         assert (tmp_path / "s1_active").exists()
         assert (tmp_path / "s1_launching").exists()  # sentinel for user_prompt_submit
         assert not (tmp_path / "s1_loop.json").exists()  # prior ledger cleared
-        assert not (tmp_path / "s1_loop.log").exists()  # a mission owns one log
+        # a mission owns one log, opened with its own text
+        log = (tmp_path / "s1_loop.log").read_text()
+        assert log.startswith("[[ MISSION ]]\n\n")
+        assert saved in log
+        assert "prior mission log" not in log
 
     def test_ignores_non_ploop_launch_command(self, tmp_path, monkeypatch):
         """The guard matches the full scoped name, so another plugin's :launch

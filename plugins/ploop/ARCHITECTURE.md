@@ -153,7 +153,7 @@ instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그
 | `{session}_regions.md` | hook | advisor 입력의 parallax-region-history (XML) |
 | `advice.md` (temp) | advisor (`Write`) | region 또는 종료 토큰 (유일 채널) — 비보호 temp라 auto 모드 Write 승인 · main·hook이 읽음 · prose 격리 |
 | `narration.md` (temp) | narrator (`Write`) | action-history 서사 (advice와 동일 채널) — advisor가 분석 입력으로 · hook이 라운드 로그로 읽음 |
-| `{session}_loop.log` | hook | 완결 라운드 로그 (서사 + 그 라운드의 advice) — 미션 전체 흐름의 완전 기록 · launch가 리셋 · 종료 요약의 소스 |
+| `{session}_loop.log` | hook | 완결 라운드 로그 (서사 + 그 라운드의 advice) — 미션 전체 흐름의 완전 기록 · launch가 `[[ MISSION ]]` 원문으로 새로 시작 · 종료 요약의 소스 |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight 마커 (PreToolUse set · SubagentStop이 유일 clearer · Stop·UserPromptSubmit이 존재로 in-flight 판정) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 마커 (Stop이 메커니즘 2로 소비) |
@@ -311,9 +311,10 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     `regions.md`와 어긋나지 않으며, 종료 토큰 같은 기계 신호는 로그에 남지 않는다. parallax의
     production-pairing(작업→그 작업이 낳은 판정)을 response-pairing(advice→그에 대한 반응)으로 재설계한
     것이다 — 인과 순서가 파일에서 그대로 읽힌다. 장기 미션에서 main 컨텍스트는 여러 번 auto-compaction
-    되므로 이 로그가 턴 전체의 유일한 완전 기록이다. launch가 리셋해 한 미션이 로그 하나를 소유하며 종료
-    후에도 남고, 종료 시(단 advice를 하나라도 받은 턴) 마지막 stderr 주입이 main에게 로그를 읽어
-    사용자에게 전체 라운드를 요약하게 한다. narration이 advisor 컨텍스트에 갇히는 nested 문제는 narrator가
+    되므로 이 로그가 턴 전체의 유일한 완전 기록이다. launch가 미션 원문(`[[ MISSION ]]` 헤더)으로 로그를
+    새로 시작해 한 미션이 로그 하나를 소유하며 종료 후에도 남고, 종료 시(단 advice를 하나라도 받은 턴)
+    마지막 stderr 주입이 main에게 로그를 읽어 사용자에게 전체 라운드를 요약하게 한다 — 요약자는 미션을
+    먼저 읽고 라운드를 읽는다. narration이 advisor 컨텍스트에 갇히는 nested 문제는 narrator가
     `narration.md`(advice와 동일한 temp 채널)에 Write해 해소한다 — advisor는 분석 입력으로, hook은 로그로
     같은 파일을 읽는다.
 12. **플러그인 영역만, `settings.json` 불간섭.** 활성화는 `/ploop:launch` 핸드오프. 미션 없이는

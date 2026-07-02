@@ -44,8 +44,9 @@ def write_log(
     advice arriving and being read — followed by that advice verbatim under
     /Advice (round 0 is the mission's initial work, so it has none).  Numbered
     by advice ordinal, so entries stay aligned with regions.md even when a round
-    is skipped.  launch() resets the file; the finished log outlives the mission
-    so the whole turn stays reconstructable after any compaction.
+    is skipped.  launch() starts the file with the mission text; the finished log
+    outlives the mission so the whole turn stays reconstructable after any
+    compaction.
     """
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     entry = f"[[ Round {round_number} - {timestamp} ]]\n\n{narration}\n\n"
@@ -253,9 +254,9 @@ def launch() -> None:
     the launching sentinel that tells that later cleanup to spare the fresh
     active marker.  The mission rides in command_args as structured JSON, so
     multi-line text with quotes or `$` is captured verbatim.  Clears the prior
-    mission's round state and log (a mission owns one log; the finished log
-    survives ordinary turns for summary and inspection), writes the mission
-    anchor, and arms the loop.  It must never block (a blocked expansion erases
+    mission's round state, starts the round log with the mission text (a mission
+    owns one log, and its final summary reads the goal first; the finished log
+    survives ordinary turns), writes the mission anchor, and arms the loop.  It must never block (a blocked expansion erases
     the turn), so every path exits 0.
     """
     event = read_event()
@@ -266,7 +267,7 @@ def launch() -> None:
         sys.exit(0)
     ws = Workspace.from_env(event.get("session_id", ""))
     ws.clear_round_state()
-    ws.log_path.unlink(missing_ok=True)
+    ws.log_path.write_text(f"[[ MISSION ]]\n\n{mission}\n\n")
     ws.mission_path.write_text(mission)
     ws.active_path.touch()
     ws.launching_path.touch()
