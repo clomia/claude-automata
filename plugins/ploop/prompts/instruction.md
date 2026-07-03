@@ -7,13 +7,15 @@ advice format:
 ```
 {action-history 요약}
 
-# Advice
+Advice:
 
 - {미고려 영역 1}
+  {설명}
 - {미고려 영역 2}
-  - {추가 설명(Optional)}
+  {설명}
 ...
 - {미고려 영역 n}
+  {설명}
 ```
 
 # 분석하기
