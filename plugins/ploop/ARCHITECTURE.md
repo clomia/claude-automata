@@ -384,6 +384,7 @@ ploop/
 │   ├── advisor.md                    # advisor 역할 + 5-section 읽기 순서 (Write: advice→advice.md)
 │   └── narrator.md                   # action-history 서사 변환 (Write: narration→narration.md)
 ├── prompts/instruction.md            # advisor 분석·출력 지침
+├── skills/define-mission/SKILL.md    # /ploop:define-mission — Direction·Boundary 규칙으로 MISSION.md 작성 (루프와 비연결, 수동 핸드오프)
 ├── skills/launch/SKILL.md            # /ploop:launch — main 직접 수행 + self-anchoring (미션 저장·활성화는 launch 훅)
 ├── skills/stop/SKILL.md              # /ploop:stop — 루프 종료 알림 (비활성화는 stop_command 훅)
 ├── hooks/hooks.json                  # UserPromptSubmit + UserPromptExpansion(launch·stop) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart

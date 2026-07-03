@@ -9,7 +9,10 @@ advisor finds the regions Claude overlooked, round after round, and keeps the
 work going until the mission is fully covered — on top of Claude Code's nested
 subagents. It runs **safely on subscription plans**.
 
-- Define the mission with Claude, then hand it off with `/ploop:launch`.
+- Write the mission into MISSION.md with `/ploop:define-mission` — a good
+  mission provides a **direction** (the goal to head toward) and a **boundary**
+  (where the goal ends).
+- Hand the finished mission off with `/ploop:launch`.
   - The handoff is a deliberate gate: it writes the mission spec to disk and
     launches the parallax loop. Use it for large missions, not trivial one-off edits.
 

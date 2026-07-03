@@ -8,7 +8,9 @@ ploop은 **parallax loop** — 격리된 advisor가 매 라운드 클로드가 �
 제시하고, 미션이 완전히 다뤄질 때까지 작업을 이어가게 하는 자율 루프 — 를 Claude
 Code의 nested subagent 위에 구현합니다. **구독 요금제에서 안전하게** 동작합니다.
 
-- 클로드와 미션을 정의한 뒤 `/ploop:launch`로 핸드오프하세요.
+- `/ploop:define-mission`으로 미션을 MISSION.md에 작성하세요 — 좋은 미션은
+  **Direction**(향할 목표)과 **Boundary**(목표의 끝)를 제공합니다.
+- 완성된 미션을 `/ploop:launch`로 핸드오프하세요.
   - 핸드오프는 의도적 게이트입니다: 미션 명세를 디스크에 기록하고 parallax loop를
     띄웁니다. 사소한 단발 수정이 아니라 대규모 미션에 사용하세요.
 
