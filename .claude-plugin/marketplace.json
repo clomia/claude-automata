@@ -12,6 +12,10 @@
     {
       "name": "ploop",
       "source": "./plugins/ploop"
+    },
+    {
+      "name": "hermes-tweet",
+      "source": "./plugins/hermes-tweet"
     }
   ]
 }

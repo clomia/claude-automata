@@ -17,6 +17,7 @@ claude plugin marketplace add clomia/claude-automata
 ## Plugins
 
 - **[ploop](plugins/ploop/README.md)** — An autonomous loop that drives long, complex missions to completion (the parallax loop)
+- **[hermes-tweet](plugins/hermes-tweet/README.md)** - Native Hermes Agent plugin for X/Twitter research, reads, and approval-gated actions through Xquik
 
 # Appendix: Plugin Management Commands
 
