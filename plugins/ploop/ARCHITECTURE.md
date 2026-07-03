@@ -187,27 +187,23 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
 (operator subagent 시절에는 SubagentStop이 미션 전용 subagent에만 발화해 이 게이트가
 불필요했으나, main 승격으로 Stop이 일반 대화에도 발화하면서 활성화 게이트가 필요해졌다 — git history.)
 
-**미션 정박은 네 겹이다.**
+**미션 정박은 세 겹이다.** 셋 다 미션 *텍스트*의 보존·주입이다 — "흐려지면 mission.md를 다시
+읽어라"류 포인터는 어디에도 두지 않는다. 포인터는 agent가 드리프트를 자각해 읽기로 선택해야
+작동하는데, goal drift는 점진적이라 자가감지되지 않는다.
 
 1. **외부 보존(메커니즘 1)** — launch 훅이 original-mission을 `mission.md`에 기록한다. 트랜스크립트와
-   독립이라 main 내부가 어떻게 compaction되든 원본은 보존된다.
-2. **self-anchoring(launch 스킬 본문)** — launch 스킬의 본문이 "mission.md를 닻으로, 흐려지면 다시
-   읽으라"고 지시한다. 호출된 스킬 본문은 auto-compact 후에도 re-inject되어(스킬당 앞 5,000토큰·
-   합산 25,000토큰 예산) 보존되므로 이 지시는 compaction을 견딘다(메인 세션은 커스텀 시스템
+   독립이라 main 내부가 어떻게 compaction되든 원본은 보존된다. advisor가 매 라운드 이 파일을 읽고,
+   메커니즘 2가 이 파일을 재주입 소스로 쓴다.
+2. **launch 스킬 본문 re-inject** — `/ploop:launch` 스킬 본문은 루프 notice와 `<MISSION>` 원문을
+   담고, 호출된 스킬 본문은 auto-compact 후에도 re-inject되므로(스킬당 앞 5,000토큰·합산
+   25,000토큰 예산) 미션 핸드오프 텍스트가 main 컨텍스트에 남는다(메인 세션은 커스텀 시스템
    프롬프트를 못 받지만 스킬 re-inject가 그 자리를 메운다 — 초기 operator subagent 시스템 프롬프트의 역할).
-3. **라운드 경계 트리거 재정박** — 매 라운드 Stop 트리거가 recency 위치에 `mission.md` 경로 +
-   "흐려졌으면 다시 읽어라"를 박는다.
-
-위 세 겹은 모두 *포인터*다 — "mission.md를 읽어라"라는 지시이지 미션 텍스트 자체가 아니며, agent가
-드리프트를 자각해 다시 읽기로 선택해야 작동한다. 그런데 goal drift는 점진적이라 agent가 스스로
-감지하지 못한다. 그래서 네 번째 겹이 필요하다.
-
-4. **메커니즘 2(PostCompact + 미션 텍스트 inline)** — `PostCompact` 훅이 `_compacted` 마커를
+3. **메커니즘 2(PostCompact + 미션 텍스트 inline)** — `PostCompact` 훅이 `_compacted` 마커를
    touch하고, 다음 Stop이 그 마커를 소비하며 **그 라운드 트리거에 original-mission 원문 텍스트를
-   recency 위치에 inline**한다(`format_advisor_trigger`의 `mission_text`). 포인터·자가감지에 의존하는
-   1–3과 달리, 이것은 **discrete한 compaction 이벤트에 미션 텍스트 자체를 무조건** 박는다.
-   메인 세션은 `PostCompact`가 확실히 발화하므로(초기 nested
-   버전의 미확정 리스크가 해소됨) 이 복원이 가능하다.
+   recency 위치에 inline**한다(`format_advisor_trigger`의 `mission_text`). re-inject(2)는 5,000토큰
+   cap에 잘리고 oldest-first 퇴출로 유실될 수 있으며 원래 깊이에 남는 반면, 이것은 discrete한
+   compaction 이벤트마다 **미션 전문을 무조건 recency에** 박는다. 메인 세션은 `PostCompact`가
+   확실히 발화하므로(초기 nested 버전의 미확정 리스크가 해소됨) 이 복원이 가능하다.
 
 ---
 
@@ -269,8 +265,8 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    미션 원문은 디스크에 영속하고, `PostCompact`가 `_compacted`를 touch하면 compacted 라운드의
    Stop이 트리거에 미션 원문 텍스트를 inline한다(메커니즘 2 — discrete compaction 이벤트에 무조건
    텍스트 주입). 메인 세션 `PostCompact`는 공식 문서로 보장된다. advisor가 매 라운드 original-mission을
-   읽고 미션-grounded advice를 surface하므로 main은 advisor 경유로도 간접 정박된다. launch 스킬 본문의
-   self-anchoring은 main이 mission.md를 닻으로 삼게 부트스트랩한다. "매 라운드 포인터"는
+   읽고 미션-grounded advice를 surface하므로 main은 advisor 경유로도 간접 정박된다. launch 스킬 본문
+   re-inject는 미션 핸드오프 텍스트를 main 컨텍스트에 보존한다. "매 라운드 포인터"는
    메커니즘 2·advisor·스킬과 중복이라 두지 않는다(irreducible).
 7. **advisor 분석 입력은 5-section 순서.** parallax loop의 캐논대로 advisor는
    role·original-mission·action-history·advice-history·instructions 순서로 맥락을 쌓는다
@@ -385,7 +381,7 @@ ploop/
 │   └── narrator.md                   # action-history 서사 변환 (Write: narration→narration.md)
 ├── prompts/instruction.md            # advisor 분석·출력 지침
 ├── skills/define-mission/SKILL.md    # /ploop:define-mission — Direction·Boundary 규칙으로 MISSION.md 작성 (루프와 비연결, 수동 핸드오프)
-├── skills/launch/SKILL.md            # /ploop:launch — main 직접 수행 + self-anchoring (미션 저장·활성화는 launch 훅)
+├── skills/launch/SKILL.md            # /ploop:launch — 루프 notice + 미션 핸드오프 (미션 저장·활성화는 launch 훅)
 ├── skills/stop/SKILL.md              # /ploop:stop — 루프 종료 알림 (비활성화는 stop_command 훅)
 ├── hooks/hooks.json                  # UserPromptSubmit + UserPromptExpansion(launch·stop) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
 ├── bin/ploop-hook                    # uv 가용성 체크 래퍼
