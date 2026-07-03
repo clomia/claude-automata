@@ -23,8 +23,6 @@ Code의 nested subagent 위에 구현합니다. **구독 요금제에서 안전�
 
 - [**아키텍처 (ARCHITECTURE.md)**](ARCHITECTURE.md) — 3단계 에이전트
   트리(main→advisor→narrator), parallax loop, compaction 저항, 그리고 그 설계 결정들.
-- [**이론 (theory.ko.md)**](theory.ko.md) — parallax loop가 왜 효과적인지에 대한
-  학술·산업 근거.
 
 ### 사전 요구사항
 
@@ -38,9 +36,7 @@ uv가 없어도 트리는 프롬프트 기반 규율로 계속 동작합니다 �
 
 advisor는 **1M 컨텍스트의 Opus**로, narrator는 Sonnet으로 실행됩니다. `main`이 미션을
 직접 수행하고 매 라운드 advisor를 호출하며, 이는 추론 최대화를 위한 의도적 선택입니다 —
-토큰 소모가 큽니다. 일관된 결과를 위해 `main`을 `opus[1m]`로 실행하길 권장합니다.
-ploop이 미션 단위 opt-in인 이유가 이것입니다 — 사소한 요청은 `main`이 핸드오프
-없이 직접 처리합니다.
+토큰 소모가 큽니다.
 
 ### 플러그인 설치
 

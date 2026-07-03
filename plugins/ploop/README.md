@@ -26,8 +26,6 @@ the main session's quota, so ploop runs **within subscription terms**.
 - [**Architecture (ARCHITECTURE.md)**](ARCHITECTURE.md) — the three-tier agent
   tree (main→advisor→narrator), the parallax loop, compaction resistance, and
   the decisions behind them.
-- [**Theory (theory.md)**](theory.md) — the academic and industry evidence for
-  why the parallax loop works.
 
 ### Prerequisite
 
@@ -41,9 +39,7 @@ hook-enforced advisor invocation is disabled.
 
 advisor runs on **1M-context Opus**; narrator runs on Sonnet. `main` runs the
 mission directly and calls the advisor each round — a deliberate choice for
-maximum reasoning, with heavy token use. For consistent results, running `main`
-on `opus[1m]` is recommended. This is why ploop is per-mission opt-in —
-trivial requests are handled by `main` directly, without a handoff.
+maximum reasoning, with heavy token use.
 
 ### Install
 

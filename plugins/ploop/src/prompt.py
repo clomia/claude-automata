@@ -2,14 +2,14 @@
 
 The parallax loop feeds the advisor five sections in a canonical order.  ploop
 can't run the advisor from the hook, so it writes the deterministic section
-(parallax-region-history) to a file and emits a trigger that points the advisor
-at the five sections in that order:
+(advice-history) to a file and emits a trigger that points the advisor at the
+five sections in that order:
 
     role (advisor system prompt)
-    -> original-mission        (mission file)
-    -> action-history          (narrator call, run by the advisor)
-    -> parallax-region-history (regions file)
-    -> instructions            (static prompt file)
+    -> original-mission (mission file)
+    -> action-history   (narrator call, run by the advisor)
+    -> advice-history   (advice-history file)
+    -> instructions     (static prompt file)
 
 The advisor reads/runs them top-to-bottom, building the ordered context.
 """
@@ -20,13 +20,18 @@ from pathlib import Path
 INSTRUCTION_PATH = Path(__file__).resolve().parent.parent / "prompts" / "instruction.md"
 
 
-def format_region_history(region_history: list[str]) -> str:
-    """Format prior regions as <region-N> blocks (parallax-region-history)."""
-    if not region_history:
-        return "No prior regions."
+def format_advice_history(advice_history: list[str]) -> str:
+    """Format prior advices as <advice-N> blocks (advice-history).
+
+    Each block is one round's advice verbatim — its action-history recap plus
+    the uncovered regions it lists — so the history also carries regions the
+    main agent reached on its own, and covered ground is never re-surfaced.
+    """
+    if not advice_history:
+        return "No prior advice."
     return "\n\n".join(
-        f"<region-{i + 1}>\n\n{region}\n\n</region-{i + 1}>"
-        for i, region in enumerate(region_history)
+        f"<advice-{i + 1}>\n\n{advice}\n\n</advice-{i + 1}>"
+        for i, advice in enumerate(advice_history)
     )
 
 
@@ -34,7 +39,7 @@ def format_advisor_trigger(
     *,
     mission_path: Path,
     action_path: Path,
-    regions_path: Path,
+    advice_history_path: Path,
     advice_path: Path,
     narration_path: Path,
     instruction_path: Path = INSTRUCTION_PATH,
@@ -51,8 +56,8 @@ def format_advisor_trigger(
 
     The call is synchronous (run_in_background=false): the advisor Writes its
     advice to advice_path — a clean file channel, since its chat message may carry
-    reasoning prose neither the main agent nor the hook should read.  Both a region
-    and the termination token go to advice_path (the sole channel); the trigger
+    reasoning prose neither the main agent nor the hook should read.  Both the
+    advice and the termination token go to advice_path (the sole channel); the trigger
     directs the main agent to read that file, and the hook reads it too for the
     ledger.  The narrator hands off through the same kind of channel: it Writes the
     narrative to narration_path, which the advisor reads as analysis input after the
@@ -84,7 +89,7 @@ def format_advisor_trigger(
                         narration-path: {narration_path}
                     '
                 )
-                parallax-region-history: {regions_path}
+                advice-history: {advice_history_path}
                 instructions: {instruction_path}
                 advice-path: {advice_path}
             """
@@ -100,7 +105,7 @@ def format_end_notice(cause: str, log_path: Path | None = None) -> str:
     """Build the notice every termination path sends to the main agent.
 
     The main agent must clearly report the end and its cause to the user —
-    whatever ended the loop.  When the turn surfaced any region the notice
+    whatever ended the loop.  When the turn surfaced any advice the notice
     also has it recap the round log: over a long mission the main agent's
     context may have auto-compacted early rounds away, so the log on disk is
     the one complete record.

@@ -3,8 +3,8 @@
 parse_round_actions returns the main agent's own domain work since the last
 advisor injection, written to a file the advisor's narrator reads.  The
 Agent(advisor) exchange is stripped so action-history stays the main agent's
-own work — kept distinct from region-history, which the advisor now hands off
-entirely through advice.md (never scraped from the transcript).
+own work — kept distinct from advice-history, which accumulates the advisor's
+advice files (never scraped from the transcript).
 """
 
 import json
@@ -62,9 +62,9 @@ def strip_advisor_exchanges(messages: list[dict]) -> list[dict]:
 
     The advisor call is loop machinery, not the main agent's domain work.
     The parallax loop keeps action-history (the main agent's own work) distinct
-    from region-history, but here the main agent calls the advisor in-context —
+    from advice-history, but here the main agent calls the advisor in-context —
     so we strip the call and its result to keep action-history free of the
-    advisor's own region echoing back.
+    advisor's own advice echoing back.
     Other subagent calls (the main agent's own delegation) are kept.
     """
     advisor_ids = {
@@ -98,7 +98,7 @@ def parse_round_actions(transcript_path: str) -> list[dict]:
     """Return the main agent's domain work since the last round boundary.
 
     Strips the Agent(advisor) exchange so the narrator narrates only the
-    main agent's own work, keeping action-history and region-history distinct.
+    main agent's own work, keeping action-history and advice-history distinct.
     """
     messages = load_messages(transcript_path)
     last_boundary = -1

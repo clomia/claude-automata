@@ -11,8 +11,8 @@ from src.state import Workspace, load_ledger, save_ledger
 class TestLedger:
     def test_roundtrip(self, tmp_path):
         f = tmp_path / "s1_loop.json"
-        save_ledger(f, round_number=2, regions=["a", "b"], done=False)
-        assert load_ledger(f) == {"round": 2, "regions": ["a", "b"], "done": False}
+        save_ledger(f, round_number=2, advice_history=["a", "b"], done=False)
+        assert load_ledger(f) == {"round": 2, "advice_history": ["a", "b"], "done": False}
 
     def test_load_missing_returns_empty(self, tmp_path):
         assert load_ledger(tmp_path / "none.json") == {}
@@ -35,7 +35,7 @@ class TestWorkspace:
         assert ws.launching_path == tmp_path / "s1_launching"
         assert ws.ledger_path == tmp_path / "s1_loop.json"
         assert ws.action_path == tmp_path / "s1_action.json"
-        assert ws.regions_path == tmp_path / "s1_regions.md"
+        assert ws.advice_history_path == tmp_path / "s1_advice_history.md"
         assert ws.log_path == tmp_path / "s1_loop.log"
         assert ws.advisor_token_path == tmp_path / "s1_advisor_token"
         assert ws.advisor_running_path == tmp_path / "s1_advisor_running"

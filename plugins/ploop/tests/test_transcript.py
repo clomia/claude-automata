@@ -75,13 +75,13 @@ class TestParseRoundActions:
     def test_strips_advisor_exchange(self, tmp_path):
         """The Agent(advisor) call is loop machinery, not the main agent's work,
         so it is removed from action-history (the loop keeps action-history and
-        region-history distinct)."""
+        advice-history distinct)."""
         t = tmp_path / "t.jsonl"
         write_jsonl(
             t,
             [
                 {"role": "user", "content": "trigger"},
-                *agent_exchange("surface this region"),
+                *agent_exchange("provide advice"),
                 {"role": "assistant", "content": "the main agent's actual work"},
             ],
         )

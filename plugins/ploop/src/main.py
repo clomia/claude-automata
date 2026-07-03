@@ -3,8 +3,8 @@
 A hook is code and cannot call tools, so the loop is driven by feedback: stop()
 blocks the main agent's stop (exit 2) and injects the next instruction — invoke
 the advisor, or summarize the finished round log.  The active marker written at
-/ploop:launch gates everything; the loop ends when the advisor surfaces no
-further region, or when the user runs /ploop:stop — there is no round cap.  See
+/ploop:launch gates everything; the loop ends when the advisor has no further
+advice, or when the user runs /ploop:stop — there is no round cap.  See
 ARCHITECTURE.md for the loop design.
 
 Hooks must never break the session: malformed events and missing files degrade
@@ -17,16 +17,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.prompt import (
+    format_advice_history,
     format_advisor_trigger,
     format_end_notice,
-    format_region_history,
 )
 from src.state import Workspace, load_ledger, save_ledger
 from src.transcript import parse_round_actions
 
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
 # survives any surrounding prose the model emits alongside it.
-TERMINATION_TOKEN = "I_FIND_NO_FURTHER_REGION_WORTH_SURFACING_ENDING_THE_PARALLAX_TURN"
+TERMINATION_TOKEN = "I_HAVE_NO_FURTHER_ADVICE_ENDING_THE_PARALLAX_TURN"
 
 
 def read_event() -> dict:
@@ -56,8 +56,8 @@ def write_log(
     An entry is the round's narrated work — which itself opens with the round's
     advice arriving and being read — followed by that advice verbatim under
     /Advice (round 0 is the mission's initial work, so it has none).  Numbered
-    by advice ordinal, so entries stay aligned with regions.md even when a round
-    is skipped.  launch() starts the file with the mission text; the finished log
+    by advice ordinal, so entries stay aligned with advice_history.md even when
+    a round is skipped.  launch() starts the file with the mission text; the finished log
     outlives the mission so the whole turn stays reconstructable after any
     compaction.
     """
@@ -69,21 +69,26 @@ def write_log(
         f.write(entry)
 
 
-def end_loop(ws: Workspace, current_round: int, regions: list[str]) -> None:
+def end_loop(ws: Workspace, current_round: int, advice_history: list[str]) -> None:
     """Terminate the loop: mark it done, drop the active gate, and inject the
     end notice — the main agent reports the end and its cause to the user, with
-    a round-log recap when the turn surfaced any region.
+    a round-log recap when the turn surfaced any advice.
 
     The advisor ending the turn (termination token / empty advice) is the loop's
     only automatic exit; there is no round cap.  The active marker is dropped,
     so the next stop passes.
     """
-    save_ledger(ws.ledger_path, round_number=current_round, regions=regions, done=True)
+    save_ledger(
+        ws.ledger_path,
+        round_number=current_round,
+        advice_history=advice_history,
+        done=True,
+    )
     ws.active_path.unlink(missing_ok=True)
     sys.stderr.write(
         format_end_notice(
-            "the advisor found no further region worth surfacing",
-            log_path=ws.log_path if regions else None,
+            "the advisor had no further advice to provide",
+            log_path=ws.log_path if advice_history else None,
         )
     )
     sys.exit(2)
@@ -93,9 +98,10 @@ def stop() -> None:
     """Stop hook: record the advisor's verdict, then end the loop or arm the next round.
 
     Fires on every main-session stop; the active marker gates it.  advice.md is
-    the advisor's sole output channel: its text becomes the round's region, the
-    termination token (or an absent file — the advisor wrote nothing) ends the
-    turn, parallax's rule.  Arming injects the next advisor trigger via exit 2.
+    the advisor's sole output channel: its text becomes the round's
+    advice-history entry, the termination token (or an absent file — the advisor
+    wrote nothing) ends the turn, parallax's rule.  Arming injects the next
+    advisor trigger via exit 2.
     """
     event = read_event()
     ws = Workspace.from_env(event.get("session_id", ""))
@@ -107,7 +113,7 @@ def stop() -> None:
     if ledger.get("done", False):
         sys.exit(0)
     current_round = ledger.get("round", 0)
-    regions = ledger.get("regions", [])
+    advice_history = ledger.get("advice_history", [])
 
     # Consume any launching sentinel that outlived the turn boundary (possible only
     # if UserPromptSubmit didn't run before this Stop) so it can't later spare the
@@ -122,7 +128,7 @@ def stop() -> None:
 
     # The advisor ran this round iff PreToolUse consumed the token a prior Stop
     # wrote.  A leftover token means the main agent ignored the trigger and no
-    # advisor ran — skip recording so a prior round's region is not re-appended
+    # advisor ran — skip recording so a prior round's advice is not re-appended
     # as a duplicate; the trigger is re-injected below.  A main that keeps
     # re-stopping without working trips the harness Stop-block cap.
     advisor_invoked = not ws.advisor_token_path.exists()
@@ -139,20 +145,26 @@ def stop() -> None:
             ws.narration_path.read_text().strip() if ws.narration_path.exists() else ""
         ) or "(no narration)"
         write_log(
-            ws.log_path, len(regions), narration, regions[-1] if regions else None
+            ws.log_path,
+            len(advice_history),
+            narration,
+            advice_history[-1] if advice_history else None,
         )
         if not advice or TERMINATION_TOKEN in advice:
-            end_loop(ws, current_round, regions)
-        regions = [*regions, advice]
+            end_loop(ws, current_round, advice_history)
+        advice_history = [*advice_history, advice]
 
     # This round's inputs for the next advisor call: the main agent's actions
-    # (narrated by the narrator) and the accumulated parallax-region-history.
+    # (narrated by the narrator) and the accumulated advice-history.
     actions = parse_round_actions(event.get("transcript_path", ""))
     ws.action_path.write_text(json.dumps(actions, ensure_ascii=False, indent=2))
-    ws.regions_path.write_text(format_region_history(regions))
+    ws.advice_history_path.write_text(format_advice_history(advice_history))
 
     save_ledger(
-        ws.ledger_path, round_number=current_round + 1, regions=regions, done=False
+        ws.ledger_path,
+        round_number=current_round + 1,
+        advice_history=advice_history,
+        done=False,
     )
 
     # Mechanism 2: on a compacted round, re-inject the original-mission text into
@@ -168,7 +180,7 @@ def stop() -> None:
     trigger = format_advisor_trigger(
         mission_path=ws.mission_path,
         action_path=ws.action_path,
-        regions_path=ws.regions_path,
+        advice_history_path=ws.advice_history_path,
         advice_path=ws.advice_path,
         narration_path=ws.narration_path,
         mission_text=mission_text,
@@ -318,7 +330,7 @@ def launch() -> None:
 def stop_command() -> None:
     """UserPromptExpansion hook (matcher: ploop:stop): stop the loop on demand.
 
-    The loop has no round cap — it ends when the advisor finds no further region,
+    The loop has no round cap — it ends when the advisor has no further advice,
     or here, when the user runs /ploop:stop.  With no armed loop (never launched,
     already ended, or a double-stop) the expansion is blocked (block_expansion —
     pure, turn erased): the skill body never enters context, so the main agent

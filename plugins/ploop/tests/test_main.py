@@ -1,9 +1,9 @@
 """Tests for the main module — Stop, PreToolUse, UserPromptSubmit, PostCompact entry points.
 
 The hook owns the whole ledger: it records the advisor's prior-round verdict
-(the region it wrote to advice.md, or done on an absent file / the termination
+(the advice it wrote to advice.md, or done on an absent file / the termination
 token — parallax's rule), then drives the next round.  These tests drive `stop`
-with a main transcript plus the advisor's advice.md, the sole region channel.
+with a main transcript plus the advisor's advice.md, the sole advice channel.
 """
 
 import io
@@ -25,11 +25,11 @@ from src.main import (
 from src.state import load_ledger, save_ledger
 
 # A minimal round transcript: a trigger boundary + the main agent's own work.
-# The region no longer comes from here — advice.md is the sole channel — so this
+# The advice no longer comes from here — advice.md is the sole channel — so this
 # only feeds parse_round_actions (which writes the narrator's action file).
 ROUND_WORK = [
     {"role": "user", "content": "advisor trigger"},
-    {"role": "assistant", "content": "working on the region"},
+    {"role": "assistant", "content": "working on the advice"},
 ]
 
 
@@ -111,13 +111,17 @@ class TestStop:
 
     def test_done_flag_allows_stop(self, tmp_path, monkeypatch):
         (tmp_path / "s1_active").touch()
-        save_ledger(tmp_path / "s1_loop.json", round_number=2, regions=["r"], done=True)
+        save_ledger(
+            tmp_path / "s1_loop.json", round_number=2, advice_history=["r"], done=True
+        )
         arrange(tmp_path, monkeypatch, make_stdin())
         with pytest.raises(SystemExit) as exc:
             stop()
         assert exc.value.code == 0
 
-    def test_round_zero_writes_regions_and_injects(self, tmp_path, monkeypatch, capsys):
+    def test_round_zero_writes_advice_history_and_injects(
+        self, tmp_path, monkeypatch, capsys
+    ):
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -132,21 +136,21 @@ class TestStop:
         assert exc.value.code == 2
         assert not (tmp_path / "s1_launching").exists()  # consumed by stop()
         assert load_ledger(tmp_path / "s1_loop.json")["round"] == 1
-        assert "No prior regions." in (tmp_path / "s1_regions.md").read_text()
+        assert "No prior advice." in (tmp_path / "s1_advice_history.md").read_text()
         err = capsys.readouterr().err
         assert "original-mission:" in err
         assert str(tmp_path / "s1_mission.md") in err
-        assert "parallax-region-history:" in err
+        assert "advice-history:" in err
         assert "instructions:" in err
         assert "ploop:advisor" in err
         assert (tmp_path / "s1_advisor_token").exists()
 
-    def test_records_region_and_logs_completed_round_zero(self, tmp_path, monkeypatch):
+    def test_records_advice_and_logs_completed_round_zero(self, tmp_path, monkeypatch):
         arrange_mission(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
-            ledger={"round_number": 1, "regions": [], "done": False},
+            ledger={"round_number": 1, "advice_history": [], "done": False},
             advice="consider error handling",
             narration="initial work narrative",
         )
@@ -155,10 +159,10 @@ class TestStop:
         assert exc.value.code == 2
         ledger = load_ledger(tmp_path / "s1_loop.json")
         assert ledger["round"] == 2
-        assert ledger["regions"] == ["consider error handling"]
-        regions = (tmp_path / "s1_regions.md").read_text()
-        assert "<region-1>" in regions
-        assert "consider error handling" in regions
+        assert ledger["advice_history"] == ["consider error handling"]
+        advice_history = (tmp_path / "s1_advice_history.md").read_text()
+        assert "<advice-1>" in advice_history
+        assert "consider error handling" in advice_history
         # The narration narrates round 0 (mission work, no advice answered), so
         # the completed entry is "Round 0" with no Advice section; the fresh
         # advice is not logged yet — its round completes at the next stop.
@@ -175,14 +179,14 @@ class TestStop:
             tmp_path,
             monkeypatch,
             ROUND_WORK,
-            ledger={"round_number": 1, "regions": [], "done": False},
+            ledger={"round_number": 1, "advice_history": [], "done": False},
             advice="  consider concurrency  ",
             narration="did things",
         )
         with pytest.raises(SystemExit) as exc:
             stop()
         assert exc.value.code == 2
-        assert load_ledger(tmp_path / "s1_loop.json")["regions"] == [
+        assert load_ledger(tmp_path / "s1_loop.json")["advice_history"] == [
             "consider concurrency"
         ]
         assert not (tmp_path / "ploop_s1_advice.md").exists()
@@ -192,14 +196,14 @@ class TestStop:
         self, tmp_path, monkeypatch
     ):
         """The entry pairs the narrated round with the advice it responded to
-        (regions[-1]), numbered by that advice's ordinal — aligned with
-        regions.md even after a skipped round, and the fresh advice waits for
-        its own round to complete."""
+        (advice_history[-1]), numbered by that advice's ordinal — aligned with
+        advice_history.md even after a skipped round, and the fresh advice waits
+        for its own round to complete."""
         arrange_mission(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
-            ledger={"round_number": 4, "regions": ["r1", "r2"], "done": False},
+            ledger={"round_number": 4, "advice_history": ["r1", "r2"], "done": False},
             advice="r3",
             narration="worked on r2",
         )
@@ -216,14 +220,14 @@ class TestStop:
     def test_absent_advice_terminates(self, tmp_path, monkeypatch, capsys):
         """advice.md is the sole channel: the advisor finished (no running marker)
         and wrote nothing, so the turn ends — the parallax loop's empty-output=terminate rule.
-        No region was ever surfaced, so there is no log worth a summary, but the
+        No advice was ever surfaced, so there is no log worth a summary, but the
         end notice still reaches the main agent (exit 2) and the final work
         lands in the log."""
         arrange_mission(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
-            ledger={"round_number": 1, "regions": [], "done": False},
+            ledger={"round_number": 1, "advice_history": [], "done": False},
         )
         with pytest.raises(SystemExit) as exc:
             stop()
@@ -242,8 +246,8 @@ class TestStop:
             tmp_path,
             monkeypatch,
             ROUND_WORK,
-            ledger={"round_number": 1, "regions": [], "done": False},
-            advice="region",
+            ledger={"round_number": 1, "advice_history": [], "done": False},
+            advice="some advice",
         )
         (tmp_path / "s1_compacted").touch()
         with pytest.raises(SystemExit):
@@ -255,7 +259,7 @@ class TestStop:
     def test_termination_token_ends_loop_and_triggers_recap(
         self, tmp_path, monkeypatch, capsys
     ):
-        """Termination on a turn that surfaced regions: done + deactivated, the
+        """Termination on a turn that surfaced advice: done + deactivated, the
         final round completed in the log (its narration + the advice it
         answered; the token is machinery and never logged), and one last
         injection has the main agent report the end and recap the round log."""
@@ -263,7 +267,7 @@ class TestStop:
             tmp_path,
             monkeypatch,
             ROUND_WORK,
-            ledger={"round_number": 2, "regions": ["r"], "done": False},
+            ledger={"round_number": 2, "advice_history": ["r"], "done": False},
             advice=f"All paths covered. {TERMINATION_TOKEN}",
             narration="final round work",
         )
@@ -272,7 +276,7 @@ class TestStop:
         assert exc.value.code == 2
         ledger = load_ledger(tmp_path / "s1_loop.json")
         assert ledger["done"] is True
-        assert ledger["regions"] == ["r"]
+        assert ledger["advice_history"] == ["r"]
         assert not (tmp_path / "s1_active").exists()
         log = (tmp_path / "s1_loop.log").read_text()
         assert "[[ Round 1 - " in log
@@ -292,7 +296,7 @@ class TestStop:
             tmp_path,
             monkeypatch,
             ROUND_WORK,
-            ledger={"round_number": 999, "regions": ["r"] * 999, "done": False},
+            ledger={"round_number": 999, "advice_history": ["r"] * 999, "done": False},
             advice="still more",
             narration="work",
         )
@@ -312,7 +316,7 @@ class TestStop:
             tmp_path,
             monkeypatch,
             ROUND_WORK,
-            ledger={"round_number": 1, "regions": [], "done": False},
+            ledger={"round_number": 1, "advice_history": [], "done": False},
         )
         (tmp_path / "s1_advisor_running").touch()
         with pytest.raises(SystemExit) as exc:
@@ -324,20 +328,24 @@ class TestStop:
 
     def test_token_present_skips_recording(self, tmp_path, monkeypatch):
         """Advisor NOT invoked this round (token still present): don't re-append a
-        prior round's region as a duplicate, even if a stale advice file lingers."""
+        prior round's advice as a duplicate, even if a stale advice file lingers."""
         arrange_mission(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
-            ledger={"round_number": 2, "regions": ["prior region"], "done": False},
-            advice="prior region",
+            ledger={
+                "round_number": 2,
+                "advice_history": ["prior advice"],
+                "done": False,
+            },
+            advice="prior advice",
         )
         (tmp_path / "s1_advisor_token").write_text("")
         with pytest.raises(SystemExit) as exc:
             stop()
         assert exc.value.code == 2
         ledger = load_ledger(tmp_path / "s1_loop.json")
-        assert ledger["regions"] == ["prior region"]  # not duplicated
+        assert ledger["advice_history"] == ["prior advice"]  # not duplicated
         assert ledger["round"] == 3
 
 
@@ -422,7 +430,7 @@ class TestUserPromptSubmit:
             (tmp_path / name).touch()
         (tmp_path / "s1_mission.md").write_text("m")
         save_ledger(
-            tmp_path / "s1_loop.json", round_number=3, regions=["r"], done=False
+            tmp_path / "s1_loop.json", round_number=3, advice_history=["r"], done=False
         )
         arrange(
             tmp_path,
@@ -443,7 +451,10 @@ class TestUserPromptSubmit:
         (tmp_path / "s1_mission.md").write_text("fresh mission")
         (tmp_path / "s1_launching").touch()
         save_ledger(
-            tmp_path / "s1_loop.json", round_number=9, regions=["stale"], done=True
+            tmp_path / "s1_loop.json",
+            round_number=9,
+            advice_history=["stale"],
+            done=True,
         )
         (tmp_path / "s1_advisor_token").touch()
         arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
@@ -461,7 +472,7 @@ class TestUserPromptSubmit:
         for name in ("s1_active", "s1_advisor_running"):
             (tmp_path / name).touch()
         save_ledger(
-            tmp_path / "s1_loop.json", round_number=2, regions=["r"], done=False
+            tmp_path / "s1_loop.json", round_number=2, advice_history=["r"], done=False
         )
         arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
         user_prompt_submit()
@@ -478,7 +489,7 @@ class TestUserPromptSubmit:
         user channel is needed."""
         (tmp_path / "s1_active").touch()
         save_ledger(
-            tmp_path / "s1_loop.json", round_number=2, regions=["r"], done=False
+            tmp_path / "s1_loop.json", round_number=2, advice_history=["r"], done=False
         )
         arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
         user_prompt_submit()
@@ -523,7 +534,10 @@ class TestLaunch:
             ),
         )
         save_ledger(
-            tmp_path / "s1_loop.json", round_number=9, regions=["stale"], done=True
+            tmp_path / "s1_loop.json",
+            round_number=9,
+            advice_history=["stale"],
+            done=True,
         )
         (tmp_path / "s1_loop.log").write_text("prior mission log")
         launch()
@@ -614,7 +628,7 @@ class TestStopCommand:
         for name in ("s1_active", "s1_advisor_token", "s1_compacted"):
             (tmp_path / name).touch()
         save_ledger(
-            tmp_path / "s1_loop.json", round_number=5, regions=["r"], done=False
+            tmp_path / "s1_loop.json", round_number=5, advice_history=["r"], done=False
         )
         (tmp_path / "s1_mission.md").write_text("m")
         (tmp_path / "s1_loop.log").write_text("log")

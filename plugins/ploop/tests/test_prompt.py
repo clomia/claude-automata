@@ -1,25 +1,25 @@
-"""Tests for the prompt module — region-history formatting and the triggers."""
+"""Tests for the prompt module — advice-history formatting and the triggers."""
 
 from pathlib import Path
 
 from src.prompt import (
+    format_advice_history,
     format_advisor_trigger,
     format_end_notice,
-    format_region_history,
 )
 
 
-class TestFormatRegionHistory:
+class TestFormatAdviceHistory:
     def test_empty(self):
-        assert format_region_history([]) == "No prior regions."
+        assert format_advice_history([]) == "No prior advice."
 
     def test_single(self):
-        assert format_region_history(["A"]) == "<region-1>\n\nA\n\n</region-1>"
+        assert format_advice_history(["A"]) == "<advice-1>\n\nA\n\n</advice-1>"
 
     def test_multiple_are_numbered(self):
-        out = format_region_history(["A", "B"])
-        assert "<region-1>\n\nA\n\n</region-1>" in out
-        assert "<region-2>\n\nB\n\n</region-2>" in out
+        out = format_advice_history(["A", "B"])
+        assert "<advice-1>\n\nA\n\n</advice-1>" in out
+        assert "<advice-2>\n\nB\n\n</advice-2>" in out
 
 
 class TestFormatAdvisorTrigger:
@@ -27,7 +27,7 @@ class TestFormatAdvisorTrigger:
         return format_advisor_trigger(
             mission_path=Path("/d/s1_mission.md"),
             action_path=Path("/d/s1_action.json"),
-            regions_path=Path("/d/s1_regions.md"),
+            advice_history_path=Path("/d/s1_advice_history.md"),
             advice_path=Path("/d/s1_advice.md"),
             narration_path=Path("/t/s1_narration.md"),
             instruction_path=Path("/p/prompts/instruction.md"),
@@ -41,7 +41,7 @@ class TestFormatAdvisorTrigger:
         assert (
             out.index("original-mission:")
             < out.index("actions-history:")
-            < out.index("parallax-region-history:")
+            < out.index("advice-history:")
             < out.index("instructions:")
             < out.index("advice-path:")
         )
@@ -50,7 +50,7 @@ class TestFormatAdvisorTrigger:
         out = self.trigger()
         assert "/d/s1_mission.md" in out
         assert "/d/s1_action.json" in out
-        assert "/d/s1_regions.md" in out
+        assert "/d/s1_advice_history.md" in out
         assert "/d/s1_advice.md" in out
         assert "/t/s1_narration.md" in out
         assert "/p/prompts/instruction.md" in out
