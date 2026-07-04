@@ -37,7 +37,8 @@ ploop(parallax loop)은 에이전트가 미션을 오랜 시간 수행하게 만
 
 ## 문서 구조 설계하기
 
-Mandatory Section: `# Purpose`(추구할 목적), `# Constraint`(허용 범위)
-Optional Section: `# Background`(배경 설명), `# Reference`(관련 자료 링크(URL, File Path))
+> 섹션은 제시된 4가지 말고도 자유롭게 추가할 수 있습니다.
 
-Purpose, Constraint 섹션은 필수이며 나머지는 미션에 따라 자유롭게 추가하세요.
+Section Order: Background → Purpose → Constraint → Reference
+Mandatory Section: `# Purpose`(추구할 목적), `# Constraint`(허용 범위)
+Optional Section: `# Background`(목적의 배경), `# Reference`(관련 링크들(URL or File Path))

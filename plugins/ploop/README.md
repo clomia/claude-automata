@@ -1,59 +1,30 @@
-# ploop
+# Ploop - Effort Overclock Loop
 
 English | [한국어](README.ko.md)
 
-**An autonomous loop that drives long, complex missions to completion.**
+ploop is a loop built for long-running work that spans days.
 
-ploop implements the **parallax loop** — an autonomous loop in which an isolated
-advisor finds the regions Claude overlooked, round after round, and keeps the
-work going until the mission is fully covered — on top of Claude Code's nested
-subagents. It runs **safely on subscription plans**.
+- An independent advisor manages your progress on your behalf.
+  - The advisor finds what the main agent missed.
+- It never loses context across repeated auto-compactions.
+  - When a compaction occurs, the mission is re-injected.
+  - The advisor keeps the full context in files.
 
-- Write the mission into MISSION.md with `/ploop:define-mission` — a good
-  mission provides a **direction** (the goal to head toward) and a **boundary**
-  (where the goal ends).
-- Hand the finished mission off with `/ploop:launch`.
-  - The handoff is a deliberate gate: it writes the mission spec to disk and
-    launches the parallax loop. Use it for large missions, not trivial one-off edits.
+## Prerequisites
 
-### Why nested subagents
+- `uv` must be installed.
+- Auto-Compact must be set to True.
 
-Spawning `claude -p` from a hook to drive such a loop is an automation pattern
-that creates a separate session, which **risks account suspension on Claude
-Pro/Max subscriptions**. ploop runs the advisor through the first-class `Agent`
-tool (nested subagents) instead — a supported feature on every plan that shares
-the main session's quota, so ploop runs **within subscription terms**.
-
-### How it works
-
-- [**Architecture (ARCHITECTURE.md)**](ARCHITECTURE.md) — the three-tier agent
-  tree (main→advisor→narrator), the parallax loop, compaction resistance, and
-  the decisions behind them.
-
-### Prerequisite
-
-ploop's durability hook runs via **uv**. Install it from
-<https://docs.astral.sh/uv/getting-started/installation/>.
-
-Without uv the tree still runs on prompt-based discipline — only the
-hook-enforced advisor invocation is disabled.
-
-### Cost
-
-advisor runs on **1M-context Opus**; narrator runs on Sonnet. `main` runs the
-mission directly and calls the advisor each round — a deliberate choice for
-maximum reasoning, with heavy token use.
-
-### Install
+## Install
 
 ```
 claude plugin marketplace add clomia/claude-automata
 claude plugin install ploop@claude-automata
 ```
 
-### Update
+Update: `claude plugin update ploop@claude-automata`
 
-```
-claude plugin marketplace update claude-automata
-claude plugin update ploop@claude-automata
-```
+## Usage
+
+1. Write your mission. Use `/ploop:define-mission` for this.
+2. In a fresh session, run `/ploop:launch [mission]`.
