@@ -33,19 +33,3 @@ ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 루프입니다.
 
 1. 미션을 작성하세요. `/ploop:define-mission`을 활용하세요.
 2. 새로운 세션에서 `/ploop:launch [미션 내용]`을 실행하세요.
-
-# Appendix: Plugin Management Commands
-
-> 커멘드에 `--scope local` 옵션을 추가하면 로컬 스코프로 동작합니다.
-
-- 플러그인 설치: `claude plugin install {plugin}@claude-automata`
-- 플러그인 삭제: `claude plugin uninstall {plugin}@claude-automata`
-- 플러그인 활성화: `claude plugin enable {plugin}@claude-automata`
-- 플러그인 비활성화: `claude plugin disable {plugin}@claude-automata`
-
-### 플러그인을 최신 버전으로 업데이트하기
-
-```
-claude plugin marketplace update claude-automata
-claude plugin update {plugin}@claude-automata
-```

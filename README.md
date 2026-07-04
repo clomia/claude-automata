@@ -33,19 +33,3 @@ ploop is a loop built for long-running work that spans days.
 
 1. Write your mission. Use `/ploop:define-mission` for this.
 2. In a fresh session, run `/ploop:launch [mission]`.
-
-# Appendix: Plugin Management Commands
-
-> To use in local scope, add the `--scope local` option to the command.
-
-- Install plugin: `claude plugin install {plugin}@claude-automata`
-- Uninstall plugin: `claude plugin uninstall {plugin}@claude-automata`
-- Enable plugin: `claude plugin enable {plugin}@claude-automata`
-- Disable plugin: `claude plugin disable {plugin}@claude-automata`
-
-### Updating plugins to the latest version
-
-```
-claude plugin marketplace update claude-automata
-claude plugin update {plugin}@claude-automata
-```
