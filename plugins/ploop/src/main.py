@@ -315,7 +315,7 @@ def launch() -> None:
     ws = Workspace.from_env(event.get("session_id", ""))
     if ws.active_path.exists():
         block_expansion(
-            "An Effort Overclock Loop is already active. Stop it with /ploop:stop, then launch again."
+            "A parallax loop is already active. Stop it with /ploop:stop, then launch again."
         )
     mission = str(event.get("command_args", "")).strip()
     if not mission:
@@ -350,7 +350,7 @@ def stop_command() -> None:
         sys.exit(0)
     ws = Workspace.from_env(event.get("session_id", ""))
     if not ws.active_path.exists():
-        block_expansion("No active Effort Overclock Loop.")
+        block_expansion("No active parallax loop.")
     ws.clear_round_state()
     ws.active_path.unlink(missing_ok=True)
     sys.stdout.write(

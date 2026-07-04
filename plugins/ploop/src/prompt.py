@@ -111,7 +111,7 @@ def format_end_notice(cause: str, log_path: Path | None = None) -> str:
     the one complete record.
     """
     notice = (
-        f"The Effort Overclock Loop has ended — {cause}. "
+        f"The parallax loop has ended — {cause}. "
         f"Clearly report the end and its cause to the user."
     )
     if log_path is not None:

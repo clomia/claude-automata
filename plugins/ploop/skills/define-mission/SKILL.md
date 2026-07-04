@@ -7,7 +7,7 @@ disable-model-invocation: false
 
 Mission file path: $ARGUMENTS or MISSION.md
 
-ploop(Effort Overclock Loop)은 에이전트가 미션을 오랜 시간 수행하게 만듭니다.  
+ploop(parallax loop)은 에이전트가 미션을 오랜 시간 수행하게 만듭니다.  
 긴 루프 속에서 컨텍스트가 유실되어도 미션은 항상 원문 그대로 보존됩니다.  
 따라서 미션을 명확히 정의하고 체계적으로 작성하는게 가장 중요합니다.
 
