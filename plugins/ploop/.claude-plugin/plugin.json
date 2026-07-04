@@ -1,7 +1,7 @@
 {
   "name": "ploop",
-  "version": "0.23.0",
-  "description": "Surfaces regions the agent overlooks and drives complex missions to completion — the parallax loop on subscription-safe nested agents",
+  "version": "0.23.1",
+  "description": "Effort Overclock Loop — an autonomous loop for long, multi-day missions: an independent advisor surfaces what the main agent overlooked and preserves the mission across compactions, on subscription-safe nested agents",
   "author": {
     "name": "clomia",
     "email": "clomia.sig@gmail.com",

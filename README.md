@@ -16,7 +16,7 @@ claude plugin marketplace add clomia/claude-automata
 
 ## Plugins
 
-- **[ploop](plugins/ploop/README.md)** — An autonomous loop that drives long, complex missions to completion (the parallax loop)
+- **[ploop](plugins/ploop/README.md)** — An autonomous loop for long-running work that spans days (the Effort Overclock Loop)
 
 # Appendix: Plugin Management Commands
 

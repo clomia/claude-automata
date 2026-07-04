@@ -16,7 +16,7 @@ claude plugin marketplace add clomia/claude-automata
 
 ## 플러그인들
 
-- **[ploop](plugins/ploop/README.ko.md)** — 길고 복잡한 미션을 끝까지 완수하는 자율 루프 (parallax loop)
+- **[ploop](plugins/ploop/README.ko.md)** — 며칠씩 걸리는 장기 작업을 위한 자율 루프 (Effort Overclock Loop)
 
 # Appendix: Plugin Management Commands
 

@@ -232,7 +232,7 @@ class TestStop:
         with pytest.raises(SystemExit) as exc:
             stop()
         assert exc.value.code == 2
-        assert "parallax loop has ended" in capsys.readouterr().err
+        assert "Effort Overclock Loop has ended" in capsys.readouterr().err
         assert load_ledger(tmp_path / "s1_loop.json")["done"] is True
         assert not (tmp_path / "s1_active").exists()
         log = (tmp_path / "s1_loop.log").read_text()
@@ -496,7 +496,8 @@ class TestUserPromptSubmit:
         out = json.loads(capsys.readouterr().out)
         assert out["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
         assert (
-            "parallax loop has ended" in out["hookSpecificOutput"]["additionalContext"]
+            "Effort Overclock Loop has ended"
+            in out["hookSpecificOutput"]["additionalContext"]
         )
         assert not (tmp_path / "s1_active").exists()
 
