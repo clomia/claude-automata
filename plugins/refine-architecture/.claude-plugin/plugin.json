@@ -1,0 +1,22 @@
+{
+  "name": "refine-architecture",
+  "version": "0.1.0",
+  "description": "Code architecture optimization — cross-examines antipatterns into consensus, then applies only the highest-ROI refactors",
+  "author": {
+    "name": "clomia",
+    "email": "clomia.sig@gmail.com",
+    "url": "https://github.com/clomia"
+  },
+  "homepage": "https://github.com/clomia/claude-automata",
+  "repository": "https://github.com/clomia/claude-automata",
+  "license": "MIT",
+  "keywords": [
+    "refactoring",
+    "architecture",
+    "antipattern",
+    "workflow",
+    "multi-agent",
+    "code-quality",
+    "autonomy"
+  ]
+}

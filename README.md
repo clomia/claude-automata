@@ -33,3 +33,18 @@ ploop is a loop built for long-running work that spans days.
 
 1. Write your mission. Use `/ploop:define-mission` for this.
 2. In a fresh session, run `/ploop:launch [mission]`.
+
+# Refine Architecture
+
+> Install: `claude plugin install refine-architecture@claude-automata`  
+> Update: `claude plugin update refine-architecture@claude-automata`  
+
+refine-architecture is a large-scale workflow that optimizes code architecture.
+
+Usage:
+```
+/refine-architecture:refine-architecture [focus area]
+```
+
+Leave the focus area empty to target the whole codebase.  
+Watch progress with `/workflows`.

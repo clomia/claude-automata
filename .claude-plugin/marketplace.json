@@ -12,6 +12,10 @@
     {
       "name": "ploop",
       "source": "./plugins/ploop"
+    },
+    {
+      "name": "refine-architecture",
+      "source": "./plugins/refine-architecture"
     }
   ]
 }

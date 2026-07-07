@@ -33,3 +33,18 @@ ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 루프입니다.
 
 1. 미션을 작성하세요. `/ploop:define-mission`을 활용하세요.
 2. 새로운 세션에서 `/ploop:launch [미션 내용]`을 실행하세요.
+
+# Refine Architecture
+
+> Install: `claude plugin install refine-architecture@claude-automata`  
+> Update: `claude plugin update refine-architecture@claude-automata`  
+
+refine-architecture는 코드 아키텍처를 최적화하는 대규모 워크플로우입니다.
+
+사용 방법:
+```
+/refine-architecture:refine-architecture [집중 분석 영역]
+```
+
+집중 분석 영역을 비우면 코드베이스 전체가 대상입니다.  
+진행 상황은 `/workflows`에서 확인할 수 있습니다.
