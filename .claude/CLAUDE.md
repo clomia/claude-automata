@@ -7,7 +7,7 @@
 사용자는 틀릴 수 있다. 요청의 무결성을 검토하라.  
 사용자는 최적해를 모른다. 요청의 Optimality를 검토하라.
 
-## Ireducible
+## Irreducible
 
 코드와 문서를 통틀어 모든 표현은 중복과 불일치 없이 irreducible해야 한다.  
 이 지침은 귀하의 `design-principles.md`과도 align된다.
