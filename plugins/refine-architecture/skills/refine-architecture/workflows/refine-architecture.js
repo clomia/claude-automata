@@ -39,10 +39,6 @@ const PRINCIPLE = `## 리팩토링 원칙 (design-principles 해석)
 - 모든 안티패턴 제거는 불가능하다. ROI가 가장 높은 최적해를 찾아라.
 - backlog proposal 금지. ROI 낮은 계획은 과감히 폐기하라.`
 
-const CONSTRAINTS = `## Constraints
-- 외부 인프라에 영향을 주는 변경 불가(API Spec, DB Schema, 외부 저장소/서비스 등). 코드 레벨 변경만 허용.
-- 실행 가능한 코드(src/tests 등)만 대상으로 한다. 본 저장소만 수정한다.`
-
 const REGIONS_SCHEMA = {
   type: 'object',
   required: ['regions'],
@@ -296,7 +292,6 @@ for (const name of order) {
     `apply-${name}`,
     `# 임무: 리팩토링 수행 — '${name}'
 계획(${p.proposal})을 읽고 그대로 구현하라. 실행 가능한 코드를 실제로 수정한다.
-${CONSTRAINTS}
 구현 후 프로젝트의 테스트 스위트를 실행해 회귀가 없음을 확인하고, 변경 영역을 커버하는 테스트가 없으면 추가하라.
 변경 요약과 테스트 결과를 네 Agora에 기록하고 반환하라.`,
     { label: `apply:${p.label}`, phase: 'Apply', schema: APPLY_SCHEMA },
