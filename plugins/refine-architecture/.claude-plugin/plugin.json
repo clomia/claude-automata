@@ -1,6 +1,6 @@
 {
   "name": "refine-architecture",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Code architecture optimization — cross-examines antipatterns into consensus, then applies only the highest-ROI refactors",
   "author": {
     "name": "clomia",
