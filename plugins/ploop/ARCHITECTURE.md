@@ -92,8 +92,8 @@ main round N work ── stops
    |          termination token -> done + deactivate
    |            -> exit 2: "summarize {session}_loop.log" (if any advice surfaced)
    |          else append advice   (no round cap; /ploop:stop also deactivates)
-   |        then:  parse round actions (advisor calls stripped,
-   |                 compact summaries dropped) -> {session}_action.json
+   |        then:  parse round actions (advisor calls stripped, compact
+   |                 summaries dropped, queued injections lifted in) -> {session}_action.json
    |               write {session}_advice_history.md (advice-history XML)
    |               round++,  exit 2 + stderr: advisor trigger (+ mission text if compacted)
    v
@@ -270,6 +270,12 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    파싱이 플래그로 걸러낸다. 안 거르면 라운드 도중의 auto-compaction이 가짜 경계가 되어 그 라운드의
    compaction 이전 action이 narration과 라운드 로그에서 잘린다(이전 라운드들은 advice-history가
    파일이라 애초에 무손실). 걸러내면 잘렸던 원본이 파일에 그대로 있으므로 라운드 전체가 복원된다.
+   미드턴 주입 — 사용자 steering이 대표, notification도 같은 큐를 탄다 — 은 반대로 message 라인이
+   아닌 `queued_command` attachment로만 기록되며, 루프는 steering에 중단되지 않는다(실측: steering
+   이후 트리거 3회 지속). 사용자 지시는 미션보다 상위 권위인데 main만 보고 흡수하면 advisor와 main의
+   목표가 갈라지므로, 파싱이 이 attachment를 전달 위치의 list-content user 메시지로 승격한다 —
+   narrator·advisor가 main이 들은 지시를 그대로 보고, list content라 라운드 경계는 되지 않는다
+   (steering은 라운드를 리셋하지 않는다).
 5. **활성화 게이트 + 의미론적 종료(숫자 상한 없음).** `/ploop:launch`의 UserPromptExpansion 훅이
    `mission.md`·`active` 마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돈다.
    루프는 라운드 상한 없이 **의미론적으로만** 끝난다 — advisor가 종료 판정을 내면 Stop이 `active`를 지우거나,
@@ -383,7 +389,9 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    narrator 입력을 만든다 — 트랜스크립트 메시지·블록 형식에 의존한다. 어긋나면 action 범위가 넓어질 수
    있다(graceful, 치명적이지 않음). compact summary 필터는 `isCompactSummary` 플래그(실측: v2.1.195
    auto·v2.1.202 manual 동일)에 의존한다 — 플래그 형식이 어긋나면 compaction 라운드가 그 지점에서
-   잘리는 동작으로 degrade한다(graceful). advice 캡처는 이 의존에서 빠졌다 — advice.md 단일 채널로 전환하며
+   잘리는 동작으로 degrade한다(graceful). 미드턴 주입 승격도 `queued_command` attachment
+   형식(실측: v2.1.195 str·v2.1.206 블록 리스트 — 둘 다 처리)에 의존한다 — 어긋나면 주입이 다시
+   파싱에 안 보이는 동작으로 degrade한다(graceful, main은 여전히 지시를 수행한다). advice 캡처는 이 의존에서 빠졌다 — advice.md 단일 채널로 전환하며
    `extract_advisor_output` 트랜스크립트 스크레이프를 제거했다(이전 리스크 해소).
 3. **main의 지시 순응도 — 반증됨(resolved).** stderr "advisor 호출"에 main이 실제로 응하는가. 초기 실측에선
    매 라운드 순응했으나, 이후 main이 in-band 사용자 지시를 근거로 **정당하게 거부**하는 사건이 관측됐다

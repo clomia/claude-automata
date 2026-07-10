@@ -103,6 +103,50 @@ class TestParseRoundActions:
         actions = parse_round_actions(str(t))
         assert [a["content"] for a in actions] == ["work before", "work after"]
 
+    def test_queued_commands_enter_actions_without_splitting_round(self, tmp_path):
+        """Mid-turn injections (user steering above all) exist only as
+        queued_command attachments — never as message lines.  They must enter
+        the actions at their delivery position as list-content user messages:
+        visible to the narrator, never a round boundary.  Both prompt forms
+        (plain string, block list) occur in real transcripts; image blocks are
+        base64 noise and stay out."""
+        t = tmp_path / "t.jsonl"
+        t.write_text(
+            "\n".join(
+                json.dumps(line)
+                for line in [
+                    {"message": {"role": "user", "content": "trigger"}},
+                    {"message": {"role": "assistant", "content": "work before"}},
+                    {
+                        "type": "attachment",
+                        "attachment": {"type": "queued_command", "prompt": "긴급 지시"},
+                    },
+                    {
+                        "type": "attachment",
+                        "attachment": {
+                            "type": "queued_command",
+                            "prompt": [
+                                {"type": "text", "text": "블록 지시"},
+                                {"type": "image", "source": {"data": "…base64…"}},
+                            ],
+                        },
+                    },
+                    {
+                        "type": "attachment",
+                        "attachment": {"type": "task_reminder", "content": []},
+                    },
+                    {"message": {"role": "assistant", "content": "work after"}},
+                ]
+            )
+        )
+        actions = parse_round_actions(str(t))
+        assert [a["content"] for a in actions] == [
+            "work before",
+            [{"type": "text", "text": "긴급 지시"}],
+            [{"type": "text", "text": "블록 지시"}],
+            "work after",
+        ]
+
     def test_strips_advisor_exchange(self, tmp_path):
         """The Agent(advisor) call is loop machinery, not the main agent's work,
         so it is removed from action-history (the loop keeps action-history and

@@ -14,6 +14,34 @@ from pathlib import Path
 AGENT_TOOL_NAMES = ("Agent", "Task")
 
 
+def queued_user_message(obj: dict) -> dict | None:
+    """A delivered mid-turn injection as a list-content user message.
+
+    Mid-turn injections — the user's steering prompts above all, but also
+    notifications riding the same queue — reach the main agent only through
+    queued_command attachments, never as message lines.  A steering prompt
+    outranks the mission itself, so lifting these into the actions keeps the
+    narrator's account aligned with everything the main agent was told.  List
+    content keeps them off the round-boundary path (a steering does not reset
+    the round), and only text blocks are kept (an inlined image is base64
+    noise to the narrator).
+    """
+    attachment = obj.get("attachment") or {}
+    if attachment.get("type") != "queued_command":
+        return None
+    prompt = attachment.get("prompt")
+    if isinstance(prompt, str):
+        blocks = [{"type": "text", "text": prompt}]
+    elif isinstance(prompt, list):
+        blocks = [b for b in prompt if isinstance(b, dict) and b.get("type") == "text"]
+    else:
+        blocks = []
+    blocks = [b for b in blocks if str(b.get("text", "")).strip()]
+    if not blocks:
+        return None
+    return {"role": "user", "content": blocks}
+
+
 def load_messages(transcript_path: str) -> list[dict]:
     """Parse the transcript JSONL into a flat list of messages.
 
@@ -22,6 +50,10 @@ def load_messages(transcript_path: str) -> list[dict]:
     boundary's exact shape — while every pre-compaction line stays in the
     append-only file.  Filtering it keeps a mid-round auto-compaction from
     faking a boundary and truncating the round's actions.
+
+    Queued-command attachments are lifted in as messages (queued_user_message)
+    at their delivery position, so mid-turn injections stay in chronological
+    order with the work they influenced.
     """
     try:
         lines = Path(transcript_path).read_text().splitlines()
@@ -37,6 +69,8 @@ def load_messages(transcript_path: str) -> list[dict]:
             continue
         if msg := obj.get("message"):
             messages.append(msg)
+        elif queued := queued_user_message(obj):
+            messages.append(queued)
     return messages
 
 
