@@ -72,6 +72,37 @@ class TestParseRoundActions:
         assert len(actions) == 1
         assert actions[0]["content"] == "round 1 work"
 
+    def test_compact_summary_does_not_split_round(self, tmp_path):
+        """Auto-compaction appends its session summary as a string-content
+        user line — the round boundary's exact shape — while every earlier
+        line stays in the append-only file.  The parser must drop it, or a
+        mid-round compaction truncates the round's pre-compaction actions."""
+        t = tmp_path / "t.jsonl"
+        t.write_text(
+            "\n".join(
+                json.dumps(line)
+                for line in [
+                    {"message": {"role": "user", "content": "trigger"}},
+                    {"message": {"role": "assistant", "content": "work before"}},
+                    {
+                        "type": "system",
+                        "subtype": "compact_boundary",
+                        "compactMetadata": {"trigger": "auto"},
+                    },
+                    {
+                        "isCompactSummary": True,
+                        "message": {
+                            "role": "user",
+                            "content": "This session is being continued...",
+                        },
+                    },
+                    {"message": {"role": "assistant", "content": "work after"}},
+                ]
+            )
+        )
+        actions = parse_round_actions(str(t))
+        assert [a["content"] for a in actions] == ["work before", "work after"]
+
     def test_strips_advisor_exchange(self, tmp_path):
         """The Agent(advisor) call is loop machinery, not the main agent's work,
         so it is removed from action-history (the loop keeps action-history and

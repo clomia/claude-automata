@@ -15,7 +15,14 @@ AGENT_TOOL_NAMES = ("Agent", "Task")
 
 
 def load_messages(transcript_path: str) -> list[dict]:
-    """Parse the transcript JSONL into a flat list of messages."""
+    """Parse the transcript JSONL into a flat list of messages.
+
+    Compact-summary lines are dropped: a compaction appends its session
+    summary as a string-content user line (`isCompactSummary`) — the round
+    boundary's exact shape — while every pre-compaction line stays in the
+    append-only file.  Filtering it keeps a mid-round auto-compaction from
+    faking a boundary and truncating the round's actions.
+    """
     try:
         lines = Path(transcript_path).read_text().splitlines()
     except OSError:
@@ -25,6 +32,8 @@ def load_messages(transcript_path: str) -> list[dict]:
         try:
             obj = json.loads(line)
         except json.JSONDecodeError:
+            continue
+        if obj.get("isCompactSummary"):
             continue
         if msg := obj.get("message"):
             messages.append(msg)
