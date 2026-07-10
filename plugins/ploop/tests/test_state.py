@@ -9,10 +9,30 @@ from src.state import Workspace, load_ledger, save_ledger
 
 
 class TestLedger:
-    def test_roundtrip(self, tmp_path):
+    def test_roundtrip_defaults_clean_counters(self, tmp_path):
         f = tmp_path / "s1_loop.json"
         save_ledger(f, round_number=2, advice_history=["a", "b"], done=False)
-        assert load_ledger(f) == {"round": 2, "advice_history": ["a", "b"], "done": False}
+        assert load_ledger(f) == {
+            "round": 2,
+            "advice_history": ["a", "b"],
+            "done": False,
+            "advisor_failures": 0,
+            "declines": 0,
+        }
+
+    def test_roundtrip_persists_anomaly_counters(self, tmp_path):
+        f = tmp_path / "s1_loop.json"
+        save_ledger(
+            f,
+            round_number=3,
+            advice_history=["a"],
+            done=False,
+            advisor_failures=1,
+            declines=1,
+        )
+        ledger = load_ledger(f)
+        assert ledger["advisor_failures"] == 1
+        assert ledger["declines"] == 1
 
     def test_load_missing_returns_empty(self, tmp_path):
         assert load_ledger(tmp_path / "none.json") == {}

@@ -6,8 +6,11 @@ narration) under the system temp dir — a Write TOOL call into the protected
 ~/.claude routes to the auto-permission-mode classifier and can be silently
 blocked, so the agents write to unprotected temp, where it is auto-approved.
 
-The ledger ({round, advice_history, done}) is the loop's persisted state; the
-hook owns it as single writer — advisor and narrator only hand off text files.
+The ledger ({round, advice_history, done, advisor_failures, declines}) is the
+loop's persisted state; the hook owns it as single writer — advisor and
+narrator only hand off text files.  The two counters track consecutive
+anomalies (an advisor run that wrote nothing / a stop that ignored the
+trigger) and reset to 0 on any normal round.
 """
 
 import json
@@ -93,7 +96,7 @@ class Workspace:
 
 
 def load_ledger(ledger_file: Path) -> dict:
-    """Load the {round, advice_history, done} ledger. Empty dict on any failure."""
+    """Load the ledger. Empty dict on any failure."""
     if not ledger_file.exists():
         return {}
     try:
@@ -104,11 +107,23 @@ def load_ledger(ledger_file: Path) -> dict:
 
 
 def save_ledger(
-    ledger_file: Path, *, round_number: int, advice_history: list[str], done: bool
+    ledger_file: Path,
+    *,
+    round_number: int,
+    advice_history: list[str],
+    done: bool,
+    advisor_failures: int = 0,
+    declines: int = 0,
 ) -> None:
-    """Persist the round/advice_history/done ledger."""
+    """Persist the ledger; the anomaly counters default to a clean round."""
     ledger_file.write_text(
         json.dumps(
-            {"round": round_number, "advice_history": advice_history, "done": done}
+            {
+                "round": round_number,
+                "advice_history": advice_history,
+                "done": done,
+                "advisor_failures": advisor_failures,
+                "declines": declines,
+            }
         )
     )

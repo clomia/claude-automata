@@ -1,9 +1,13 @@
 """Tests for the main module — Stop, PreToolUse, UserPromptSubmit, PostCompact entry points.
 
 The hook owns the whole ledger: it records the advisor's prior-round verdict
-(the advice it wrote to advice.md, or done on an absent file / the termination
-token — parallax's rule), then drives the next round.  These tests drive `stop`
-with a main transcript plus the advisor's advice.md, the sole advice channel.
+(the advice it wrote to advice.md; only the explicit termination token ends
+the turn), then drives the next round.  Anomalies get one benefit-of-the-doubt
+repeat before their signal is accepted as real: an advisor run that wrote
+nothing is retried with the round's inputs frozen, a stop that ignored the
+trigger is re-triggered — the second in a row ends the loop with an honest
+cause.  These tests drive `stop` with a main transcript plus the advisor's
+advice.md, the sole advice channel.
 """
 
 import io
@@ -217,12 +221,15 @@ class TestStop:
         assert "r3" not in log
         assert "Round 4" not in log
 
-    def test_absent_advice_terminates(self, tmp_path, monkeypatch, capsys):
-        """advice.md is the sole channel: the advisor finished (no running marker)
-        and wrote nothing, so the turn ends — the parallax loop's empty-output=terminate rule.
-        No advice was ever surfaced, so there is no log worth a summary, but the
-        end notice still reaches the main agent (exit 2) and the final work
-        lands in the log."""
+    def test_absent_advice_retries_round_with_inputs_frozen(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """The advisor finished (no running marker) and wrote nothing — a
+        malfunction, not a verdict (the protocol demands a Write even to
+        terminate).  The round is retried: same round number, a fresh token,
+        and the round's inputs (action.json, advice_history.md) untouched so
+        the retried advisor sees what the failed one saw; nothing is logged —
+        the round completes at its eventual successful stop."""
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -232,12 +239,72 @@ class TestStop:
         with pytest.raises(SystemExit) as exc:
             stop()
         assert exc.value.code == 2
-        assert "parallax loop has ended" in capsys.readouterr().err
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["round"] == 1  # same round, not advanced
+        assert ledger["done"] is False
+        assert ledger["advisor_failures"] == 1
+        assert (tmp_path / "s1_active").exists()
+        assert (tmp_path / "s1_advisor_token").exists()
+        assert not (tmp_path / "s1_action.json").exists()  # inputs frozen
+        assert not (tmp_path / "s1_advice_history.md").exists()
+        assert not (tmp_path / "s1_loop.log").exists()  # nothing logged
+        err = capsys.readouterr().err
+        assert "malfunctioned" in err
+        assert "Invoke the advisor" in err  # the trigger follows the notice
+
+    def test_second_consecutive_advisor_failure_ends_loop(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """One retry is the benefit of the doubt; a second empty run in a row is
+        accepted as a real malfunction — the loop ends with that cause, never
+        disguised as convergence."""
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+            ledger={"round_number": 1, "advice_history": [], "done": False},
+        )
+        save_ledger(
+            tmp_path / "s1_loop.json",
+            round_number=1,
+            advice_history=[],
+            done=False,
+            advisor_failures=1,
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
         assert load_ledger(tmp_path / "s1_loop.json")["done"] is True
         assert not (tmp_path / "s1_active").exists()
-        log = (tmp_path / "s1_loop.log").read_text()
-        assert "[[ Round 0 - " in log
-        assert "(no narration)" in log
+        err = capsys.readouterr().err
+        assert "parallax loop has ended" in err
+        assert "malfunctioned" in err
+
+    def test_advice_after_failure_resets_the_counter(self, tmp_path, monkeypatch):
+        """A successful retry clears the failure streak — the caps count
+        consecutive anomalies, not lifetime ones."""
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+            ledger={"round_number": 1, "advice_history": [], "done": False},
+            advice="fresh advice",
+            narration="round work",
+        )
+        save_ledger(
+            tmp_path / "s1_loop.json",
+            round_number=1,
+            advice_history=[],
+            done=False,
+            advisor_failures=1,
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["advice_history"] == ["fresh advice"]
+        assert ledger["advisor_failures"] == 0
+        assert ledger["round"] == 2
 
     def test_compacted_round_inlines_mission_text(self, tmp_path, monkeypatch, capsys):
         """Mechanism 2: a compacted round re-injects the original-mission text into
@@ -326,9 +393,14 @@ class TestStop:
         assert load_ledger(tmp_path / "s1_loop.json")["round"] == 1
         assert (tmp_path / "s1_advisor_running").exists()
 
-    def test_token_present_skips_recording(self, tmp_path, monkeypatch):
+    def test_first_decline_redirects_to_advisor_authority(
+        self, tmp_path, monkeypatch, capsys
+    ):
         """Advisor NOT invoked this round (token still present): don't re-append a
-        prior round's advice as a duplicate, even if a stale advice file lingers."""
+        prior round's advice as a duplicate, even if a stale advice file lingers.
+        The trigger is re-injected behind the authority notice — only the advisor
+        may end the loop, and the refusal's stated reasons ride action.json to
+        its verdict; no main-side exit is advertised."""
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -347,6 +419,68 @@ class TestStop:
         ledger = load_ledger(tmp_path / "s1_loop.json")
         assert ledger["advice_history"] == ["prior advice"]  # not duplicated
         assert ledger["round"] == 3
+        assert ledger["declines"] == 1
+        # the refusal turn is re-parsed into action.json for the advisor to read
+        assert "working on the advice" in (tmp_path / "s1_action.json").read_text()
+        err = capsys.readouterr().err
+        assert "authority to end the loop belongs to the advisor" in err
+        assert "Invoke the advisor" in err  # the trigger follows the notice
+        assert "loop will end" not in err  # no main-side exit advertised
+
+    def test_second_consecutive_decline_trips_failsafe_and_ends_loop(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """A second stop in a row without invoking the advisor means the
+        consensus channel itself is broken — the failsafe ends the loop with
+        that honest cause instead of stalemating against the harness
+        stop-block cap."""
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+        )
+        save_ledger(
+            tmp_path / "s1_loop.json",
+            round_number=3,
+            advice_history=["r"],
+            done=False,
+            declines=1,
+        )
+        (tmp_path / "s1_advisor_token").write_text("")
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["done"] is True
+        assert ledger["advice_history"] == ["r"]
+        assert not (tmp_path / "s1_active").exists()
+        err = capsys.readouterr().err
+        assert "parallax loop has ended" in err
+        assert "declined" in err
+
+    def test_compliance_resets_the_decline_counter(self, tmp_path, monkeypatch):
+        """Invoking the advisor after a decline clears the streak — the caps
+        count consecutive anomalies, not lifetime ones."""
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+            advice="new advice",
+            narration="complied and worked",
+        )
+        save_ledger(
+            tmp_path / "s1_loop.json",
+            round_number=3,
+            advice_history=["r"],
+            done=False,
+            declines=1,
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["declines"] == 0
+        assert ledger["advice_history"] == ["r", "new advice"]
 
 
 # ── pre_tool_use gating ──

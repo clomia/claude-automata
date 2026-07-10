@@ -82,12 +82,17 @@ narrator  depth 2  Read Write  narrate          action records -> narration.md
 main round N work ── stops
    |
    |  <-- Stop hook
-   |        log completed round: narration + the advice it answered
+   |        leftover token (trigger ignored) -> re-arm with authority notice
+   |          (refusal reasons ride action.json to the advisor's verdict)
+   |          2nd consecutive decline -> failsafe: done + deactivate
    |        record last advisor verdict from advice.md (parallax's rule):
-   |          absent file or termination token -> done + deactivate
+   |          absent/empty file -> malfunction: re-arm same round, inputs frozen
+   |            2nd consecutive failure -> done + deactivate
+   |          advice -> log completed round (narration + the advice it answered)
+   |          termination token -> done + deactivate
    |            -> exit 2: "summarize {session}_loop.log" (if any advice surfaced)
-   |          advice -> append   (no round cap; /ploop:stop also deactivates)
-   |        else:  parse round actions (advisor calls stripped) -> {session}_action.json
+   |          else append advice   (no round cap; /ploop:stop also deactivates)
+   |        then:  parse round actions (advisor calls stripped) -> {session}_action.json
    |               write {session}_advice_history.md (advice-history XML)
    |               round++,  exit 2 + stderr: advisor trigger (+ mission text if compacted)
    v
@@ -102,17 +107,22 @@ main ─ Agent(advisor) ───────────> advisor (depth 1)
 main ─ work on the advice (round N+1) ── stops ── (loop)
 ```
 
-종료는 parallax loop의 규칙대로 결정된다: advisor가 `advice.md`에 아무것도 쓰지 않거나 전용 종료 토큰을 쓰면 `done`
-플래그가 서고 active 마커가 정리된다(`if not advice or TERMINATION_TOKEN in advice`). **숫자 라운드 상한은 두지
-않는다** — advice-history는 파일이라 컨텍스트를 잠식하지 않고 advisor는 매 라운드 stateless하게 리셋되므로,
-종료는 "더 제공할 advice가 있는가"라는 의미론적 판단(advisor 종료 토큰)에 맡긴다. 그 판단이 안 나오면
-사용자가 `/ploop:stop`으로 언제든 끝낸다(아래 Hooks). **모든 종료 경로는 main에게 종료 노티스를 보낸다**
+종료는 의미론적 판단만 인정한다: advisor가 `advice.md`에 **전용 종료 토큰을 Write할 때만** 수렴 종료다
+(`TERMINATION_TOKEN in advice` → `done` 플래그 + active 마커 정리). 파일 부재/빈 파일은 종료가 아니라
+**오작동**이다 — 규약상 정상 advisor는 종료조차 토큰 Write로 표현하므로, 안 쓴 것은 판정이 아니다. 이때
+라운드를 입력 동결 상태로(같은 round·action.json·advice_history.md) 재시도하고, **연속 2회** 실패하면
+오작동 사유로 종료한다(수렴으로 위장하지 않는다 — 핵심 설계 결정 14). main이 트리거를 무시하고 정지한
+경우(토큰 잔존)는 **권한 분할**로 처리한다: 1회는 "루프 종료 권한은 advisor에게만 있다"를 고지하며
+재주입한다 — 거부의 근거 발언은 action.json→narrator를 타고 advisor에게 닿으므로, 타당한 거부는 advisor의
+종료 토큰으로 관철된다(main-advisor 합의 경로). 연속 2회면 합의 채널 자체가 붕괴된 것으로 보고 failsafe로
+종료한다 — 노티스는 이를 광고하지 않는다(main-side 출구가 아니다). **숫자 라운드 상한은 두지 않는다** — advice-history는 파일이라 컨텍스트를 잠식하지
+않고 advisor는 매 라운드 stateless하게 리셋되므로, 종료는 "더 제공할 advice가 있는가"라는 의미론적
+판단(advisor 종료 토큰)에 맡긴다. 그 판단이 안 나오면 사용자가 `/ploop:stop`으로 언제든 끝낸다(아래 Hooks).
+**모든 종료 경로는 main에게 정직한 사유와 함께 종료 노티스를 보낸다**
 (`format_end_notice`) — 노티스는 종료 사실과 사유를 사용자에게 명확히 보고하게 하고, advice를 하나라도
 surface한 턴이면 `loop.log` recap 지시를 덧붙인다 — 장기 미션에서 main 컨텍스트는 여러 번 auto-compaction되므로
 로그가 턴의 유일한 완전 기록이다. 자연 종료는 종료 정지를 한 번 더 막아(exit 2) 노티스를 주입하고, 그 다음
-정지는 active 마커가 없어 통과한다. 고지능 모델 advisor가 빈
-출력이나 async를 내는 것은 Claude Code 보장 범위 밖이라 별도 대응(stall·미호출 감지)을 두지
-않는다 — 루프의 단순 규칙으로 처리한다(고지능 순응 가정).
+정지는 active 마커가 없어 통과한다.
 
 Stop 훅은 메인 세션 정지마다 발화하므로 active 마커가 게이트한다(아래 상태). advisor·narrator의
 정지는 `SubagentStop`이라 이 Stop 훅에 잡히지 않는다 — 재귀 가드가 필요 없다.
@@ -138,7 +148,7 @@ main의 컨텍스트에 더해지는 것은 **① 짧은 stderr 트리거 + ② 
 |---|---|---|
 | `{session}_mission.md` | launch 훅 (UserPromptExpansion) | original-mission 정의 (외부 보존 anchor) |
 | `{session}_active` | launch 훅 생성 · hook 삭제 | 활성화 마커 (Stop 게이트) |
-| `{session}_loop.json` | hook | `round` · `advice_history` · `done` |
+| `{session}_loop.json` | hook | `round` · `advice_history` · `done` · `advisor_failures`/`declines` (연속 이상 카운터, 정상 라운드에 0으로 리셋) |
 | `{session}_action.json` | hook | 이번 라운드 action 기록 (narrator가 읽음) |
 | `{session}_advice_history.md` | hook | advisor 입력의 advice-history (XML) |
 | `advice.md` (temp) | advisor (`Write`) | advice 또는 종료 토큰 (유일 채널) — 비보호 temp라 auto 모드 Write 승인 · main·hook이 읽음 · prose 격리 |
@@ -154,7 +164,8 @@ main의 컨텍스트에 더해지는 것은 **① 짧은 stderr 트리거 + ② 
 라운드 시작에 직전 advisor의 `advice.md`를 읽어 `advice_history`에 append하거나, 종료 토큰이면 `done`을 세운다 —
 advice-history의 한 블록은 한 라운드의 advice 전문이다(action-history 요약 포함, 위 용어의 history 무결성).
 in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 이미 종료했으므로, `advice.md`가 없으면
-아무것도 안 쓴 것 = 종료다(parallax loop의 empty=terminate 규칙). main도 트리거 지시대로 같은 `advice.md`를
+아무것도 안 쓴 것 = 오작동이다(규약상 종료도 토큰 Write를 요구) — 라운드를 재시도하고 연속 2회면 오작동
+사유로 종료한다(핵심 설계 결정 14). main도 트리거 지시대로 같은 `advice.md`를
 읽어 그 조언에 따라 작업하므로 `advice.md`는 advice/종료의 유일 채널이자 main·hook 양쪽의 깨끗한 단일 소스다. `round`도 hook이 증가시키는 안전망이다.
 단일 작성자(hook)가 ledger를 소유해 race가 없고, advisor는 자기 advice payload만 파일로 넘긴다.
 (`mission.md`·`active` 마커는 활성화 신호라 launch 훅(UserPromptExpansion)이 만든다.)
@@ -289,15 +300,15 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    `advice.md`를 엉뚱한 시점에 덮어써 advice 채널을 오염시킨다. Stop이 호출을 지시할 때만 1회용 토큰을
    세우고, PreToolUse(matcher `Agent`)가 advisor 호출을 토큰이 있을 때만 통과시킨다(없으면 deny).
    narrator는 read-only leaf이자 hook 사이클 밖이라 게이팅하지 않는다. UserPromptSubmit이 토큰을
-   turn-boundary에서 지워 stale 토큰이 다음 미션의 라운드 0 자발 호출을 인가하지 못하게 한다. (고지능
-   모델은 트리거에 순응해 매 라운드 advisor를 호출한다고 가정하나, 만일 미호출로 정지하면 — 토큰이
-   소비되지 않고 남는다 — Stop은 그 라운드의 advice 기록을 건너뛰어 직전 advice가 중복 기록되지 않게 한다.)
+   turn-boundary에서 지워 stale 토큰이 다음 미션의 라운드 0 자발 호출을 인가하지 못하게 한다. (미호출로
+   정지하면 — 토큰이 소비되지 않고 남는다 — Stop은 그 라운드의 advice 기록을 건너뛰어 직전 advice가
+   중복 기록되지 않게 하고, 미호출 자체는 거부 신호로 처리한다 — 아래 14.)
 10. **advisor·narrator 호출은 동기다(`run_in_background=false`).** Agent 툴은 이 빌드에서 기본 async라,
     백그라운드 호출은 advice를 남기지 않고 launch acknowledgement만 돌려준다. main은 **foreground**이고,
     trigger가 advisor·narrator 호출을 모두 `run_in_background=false`로 작성해(narrator는 advisor 프롬프트에
     inline) 동기 실행을 지시하며, 고지능 모델이 이를 따른다. 동기여야 advisor가 정지 전에 `advice.md`를
-    남기고(hook이 다음 Stop에 읽는다), narrator narration이 advisor의 분석 입력이 된다. 빈 출력·async처럼
-    Claude Code 보장 밖 케이스는 별도 가드 없이 루프의 단순 규칙(빈 출력=종료)으로 처리한다.
+    남기고(hook이 다음 Stop에 읽는다), narrator narration이 advisor의 분석 입력이 된다. 빈 출력은
+    오작동 재시도 규칙(아래 14)이, background 전환은 in-flight 가드(아래 13)가 처리한다.
 11. **로깅: 완결된 라운드 단위 — 서사 + 그 라운드의 advice.** `_loop.log`의 한 엔트리는 라운드 하나의
     완결이다: 라운드 작업의 서사(advice가 도착해 읽히는 장면으로 시작해 반응 작업으로 이어진다) 뒤에 그
     advice 전문이 `/ Advice`로 붙는다(라운드 0은 미션 초기 작업이라 advice 섹션이 없다). 서사가 advice
@@ -329,6 +340,22 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     루프가 멈출 수 있다(복구는 `/ploop:stop` — `active`가 남아 있어 launch는 차단되고, 그 차단 사유가
     stop으로 안내한다). settled 기반 self-heal은 트랜스크립트 형식 의존을
     낳아 제거했다 — advice.md 단일 채널로 전환하며 맞바꾼 단순화다.
+14. **이상 신호는 1회 교정 후, 재발 시 정직한 사유로 종료한다(consecutive-anomaly caps).** 루프의 두
+    참여자(advisor·main)는 신뢰할 수 없는 LLM이다 — 발생을 막을 수 없으니 루프가 견디게 설계한다. 이상
+    신호마다 1회의 교정 기회를 주고, 연속 2회면 지속 상태로 보고 실제 사유로 종료한다. (a) advisor가
+    advice를 안 쓰면(규약 위반 = 오작동) 라운드를 입력 동결로 재시도하고 2연속이면 오작동 사유로
+    종료(`advisor_failures`). 실측 근거(2026-07): opus 4.8 advisor가 동일 입력에서 시스템 프롬프트 suffix를
+    축자 echo하고 3.5초에 end_turn한 확률적 degenerate 출력 — 당시의 empty=terminate 규칙이 이를 수렴으로
+    위장해 미션을 조용히 끝냈다. 일회성 샘플링 이상이라 재시도 1회로 사실상 소멸한다. (b) main이
+    트리거를 무시하고 멈추면 ploop의 기저 규칙인 **권한 분할**(루프 종료 권한 = advisor, 작업 수행 권한
+    = main)을 고지하며 재주입한다(`declines`). 거부의 근거 발언은 action.json을 타고 advisor에게 닿으므로,
+    타당한 거부는 advisor의 종료 판정으로 관철된다 — main이 합리적 종료 근거를 출력하면 advisor가 읽고
+    종료하는 합의 경로는 실측됐고, in-band 사용자 종결 지시도 이 경로로 advisor에 닿는다. 실측
+    근거(2026-07): main이 in-band 사용자 지시(AskUserQuestion 답변 "작업 종결")를 근거로 호출을 정당하게
+    거부 — 당시의 무한 재주입이 하네스 stop-block cap(9회)까지 스테일메이트를 끌다 강제 종료됐고 루프는
+    armed 좀비로 남았다. 2연속 거부는 합의 채널 자체의 붕괴라 failsafe로 종료하되, 노티스는 이를
+    광고하지 않는다(main-side 출구가 아니다). 종료는 항상 실제 사유로 보고된다: 오작동을 수렴으로,
+    거부를 고장으로 위장하지 않는다.
 
 ---
 
@@ -341,17 +368,20 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    종료한다(`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, **기본 8**). 바이너리 실측 결과 이 카운터는 **생산적
    작업(tool-use) 턴마다 0으로 리셋**된다(`transition: next_turn` → count 0) — "작업 없이 연속으로 멈추려는"
    무진전 루프만 잡는다. ploop은 매 라운드 advisor 호출·advice 작업(= tool call)을 하므로 카운터가 매번
-   리셋되어 이 cap에 걸리지 않는다. 숫자 라운드 상한을 제거한 뒤 이 백스톱이 유일한 자동 안전망이다:
-   main이 트리거를 무시하고 작업 없이 계속 멈추면 8회에서 하네스가 끝낸다. 단 advisor가 종료 토큰을 안 내고
+   리셋되어 이 cap에 걸리지 않는다. main이 트리거를 무시하는 무진전 정지는 ploop 자신의 decline
+   failsafe(핵심 설계 결정 14)가 2회에서 무결하게 끝내므로 이 cap에 앞서 처리된다 — cap은 백스톱으로만 남는다(cap
+   강제 종료는 턴만 끊고 루프를 armed 좀비로 남기는 것이 실측됐다). 단 advisor가 종료 토큰을 안 내고
    main이 무한히 **일하는** "생산적 무한 루프"는 이 cap도 못 막으므로(작업이 리셋), 그 경우엔 `/ploop:stop`이
    종료 수단이다 — `/goal`도 동일 트레이드오프를 수용한다.
 2. **트랜스크립트 형식 가정.** `parse_round_actions`가 "마지막 훅 주입 이후"를 라운드 action으로 잡아
    narrator 입력을 만든다 — 트랜스크립트 메시지·블록 형식에 의존한다. 어긋나면 action 범위가 넓어질 수
    있다(graceful, 치명적이지 않음). advice 캡처는 이 의존에서 빠졌다 — advice.md 단일 채널로 전환하며
    `extract_advisor_output` 트랜스크립트 스크레이프를 제거했다(이전 리스크 해소).
-3. **main의 지시 순응도** — stderr "advisor 호출"에 main이 실제로 응하는가. round 안전망이 미응답 시에도
-   종료를 보장한다. **실측에서 main은 매 라운드 트리거에 순응했고, 고지능 모델 가정상 순응은
-   전제된다.**
+3. **main의 지시 순응도 — 반증됨(resolved).** stderr "advisor 호출"에 main이 실제로 응하는가. 초기 실측에선
+   매 라운드 순응했으나, 이후 main이 in-band 사용자 지시를 근거로 **정당하게 거부**하는 사건이 관측됐다
+   (2026-07). 순응은 더 이상 전제가 아니라 리스크로 취급된다 — 미호출 1회는 권한 고지로 합의 채널에
+   재유도되고(타당한 거부는 advisor 판정으로 관철), 2연속이면 failsafe가 루프를 무결하게 닫는다(핵심
+   설계 결정 14).
 4. **PreToolUse 발동·session 일치** — 자발 호출 게이팅은 PreToolUse가 main의 Agent 호출에 발동하고 그
    session_id가 Stop과 같아야 성립한다. 미발동 시 게이팅만 무효화되고 루프는 현행대로(graceful).
 

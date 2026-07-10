@@ -3,8 +3,13 @@
 A hook is code and cannot call tools, so the loop is driven by feedback: stop()
 blocks the main agent's stop (exit 2) and injects the next instruction — invoke
 the advisor, or summarize the finished round log.  The active marker written at
-/ploop:launch gates everything; the loop ends when the advisor has no further
-advice, or when the user runs /ploop:stop — there is no round cap.  See
+/ploop:launch gates everything; the loop ends when the advisor writes the
+termination token, when the main agent twice declines the trigger (a failsafe
+— a sound refusal is meant to end the loop through the advisor's verdict), or
+when the user runs /ploop:stop — there is no round cap.  Both loop
+participants are unreliable LLMs, so each anomaly gets one corrective repeat
+before it ends the loop: an advisor run that wrote nothing is retried, a stop
+that ignored the trigger is redirected to the advisor's authority.  See
 ARCHITECTURE.md for the loop design.
 
 Hooks must never break the session: malformed events and missing files degrade
@@ -27,6 +32,34 @@ from src.transcript import parse_round_actions
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
 # survives any surrounding prose the model emits alongside it.
 TERMINATION_TOKEN = "I_HAVE_NO_FURTHER_ADVICE_ENDING_THE_PARALLAX_TURN"
+
+# Consecutive-anomaly caps: the first occurrence gets one corrective repeat,
+# the second ends the loop with an honest cause.  A degenerate advisor
+# generation (system-prompt echo, no tool calls) is a stochastic one-off, so
+# one retry all but eliminates it; a main agent that refuses the trigger is
+# redirected into the consensus channel once, and a second refusal means that
+# channel itself is broken — ending cleanly beats stalemating until the
+# harness stop-block cap force-ends the turn and leaves the loop armed as a
+# zombie.  Neither cap is advertised to the agents.
+MAX_ADVISOR_FAILURES = 2
+MAX_DECLINES = 2
+
+# Prefixes for anomalous re-arms.  The retry notice tells the main agent the
+# advisor's empty run was a malfunction, not a verdict.  The decline notice
+# upholds ploop's authority split — the main agent performs the mission, only
+# the advisor ends the loop: a refusal's stated reasons reach the advisor
+# through the action history, so a sound refusal is honored by the advisor's
+# own termination verdict, never by a main-side exit.
+RETRY_NOTICE = (
+    "The previous advisor run malfunctioned: it ended without writing its "
+    "advice file, so it rendered no verdict. That run is void. Invoke the "
+    "advisor again.\n\n"
+)
+DECLINE_NOTICE = (
+    "The authority to end the loop belongs to the advisor. Invoke the "
+    "advisor: it will read your statements and judge whether to end the "
+    "loop.\n\n"
+)
 
 
 def read_event() -> dict:
@@ -69,13 +102,16 @@ def write_log(
         f.write(entry)
 
 
-def end_loop(ws: Workspace, current_round: int, advice_history: list[str]) -> None:
+def end_loop(
+    ws: Workspace, current_round: int, advice_history: list[str], cause: str
+) -> None:
     """Terminate the loop: mark it done, drop the active gate, and inject the
     end notice — the main agent reports the end and its cause to the user, with
     a round-log recap when the turn surfaced any advice.
 
-    The advisor ending the turn (termination token / empty advice) is the loop's
-    only automatic exit; there is no round cap.  The active marker is dropped,
+    Every automatic exit lands here with an honest cause — the advisor's
+    termination verdict, the decline failsafe, or a repeated advisor
+    malfunction; there is no round cap.  The active marker is dropped,
     so the next stop passes.
     """
     save_ledger(
@@ -86,11 +122,40 @@ def end_loop(ws: Workspace, current_round: int, advice_history: list[str]) -> No
     )
     ws.active_path.unlink(missing_ok=True)
     sys.stderr.write(
-        format_end_notice(
-            "the advisor had no further advice to provide",
-            log_path=ws.log_path if advice_history else None,
-        )
+        format_end_notice(cause, log_path=ws.log_path if advice_history else None)
     )
+    sys.exit(2)
+
+
+def arm_advisor(ws: Workspace, notice: str = "") -> None:
+    """Arm one advisor invocation and end the hook (exit 2).
+
+    Consumes any compaction marker (mechanism 2: the trigger inlines the
+    original-mission text), clears both handoff channels so an absent file at
+    the next stop unambiguously means its agent wrote nothing, sets the
+    single-use token, and injects the trigger — prefixed by `notice` on an
+    anomalous re-arm.
+    """
+    mission_text = None
+    if ws.compacted_path.exists():
+        try:
+            mission_text = ws.mission_path.read_text()
+        except OSError:
+            mission_text = None
+        ws.compacted_path.unlink(missing_ok=True)
+
+    trigger = format_advisor_trigger(
+        mission_path=ws.mission_path,
+        action_path=ws.action_path,
+        advice_history_path=ws.advice_history_path,
+        advice_path=ws.advice_path,
+        narration_path=ws.narration_path,
+        mission_text=mission_text,
+    )
+    ws.advice_path.unlink(missing_ok=True)
+    ws.narration_path.unlink(missing_ok=True)
+    ws.advisor_token_path.write_text("")
+    sys.stderr.write(notice + trigger)
     sys.exit(2)
 
 
@@ -99,9 +164,13 @@ def stop() -> None:
 
     Fires on every main-session stop; the active marker gates it.  advice.md is
     the advisor's sole output channel: its text becomes the round's
-    advice-history entry, the termination token (or an absent file — the advisor
-    wrote nothing) ends the turn, parallax's rule.  Arming injects the next
-    advisor trigger via exit 2.
+    advice-history entry, and only the explicit termination token ends the turn
+    — an absent file is a malfunctioned run (the protocol demands a Write even
+    to terminate), retried with the round's inputs frozen.  A stop that ignored
+    the trigger is re-triggered once behind the authority notice (only the
+    advisor ends the loop, and it reads the main agent's stated reasons); a
+    second in a row means the consensus channel is broken and ends the loop as
+    a failsafe.  Arming injects the next advisor trigger via exit 2.
     """
     event = read_event()
     ws = Workspace.from_env(event.get("session_id", ""))
@@ -129,18 +198,52 @@ def stop() -> None:
     # The advisor ran this round iff PreToolUse consumed the token a prior Stop
     # wrote.  A leftover token means the main agent ignored the trigger and no
     # advisor ran — skip recording so a prior round's advice is not re-appended
-    # as a duplicate; the trigger is re-injected below.  A main that keeps
-    # re-stopping without working trips the harness Stop-block cap.
+    # as a duplicate.  The re-parse below carries the refusal's stated reasons
+    # into action.json, so the re-injected trigger (behind the authority
+    # notice) routes them to the advisor for the termination verdict.  A second
+    # consecutive decline means the consensus channel itself is broken — end
+    # cleanly instead of stalemating until the harness stop-block cap
+    # force-ends the turn and leaves the loop armed as a zombie.
     advisor_invoked = not ws.advisor_token_path.exists()
+    declines = 0 if advisor_invoked else ledger.get("declines", 0) + 1
+    if declines >= MAX_DECLINES:
+        end_loop(
+            ws,
+            current_round,
+            advice_history,
+            "the main agent declined to invoke the advisor",
+        )
 
     # Record last round's verdict (none in round 0, before any call).  Past the
-    # in-flight guard the advisor has finished, so an absent advice file means it
-    # wrote nothing.  The narration narrates the round just completed: it opens
-    # with the prior advice arriving and shows how the main agent responded, so
-    # the log entry pairs it with that advice — true cause -> effect order.  The
-    # termination token is machinery and never enters the log.
+    # in-flight guard the advisor has finished, so an absent advice file means
+    # it wrote nothing — a malfunction, not a verdict, since the protocol
+    # demands a Write even to terminate (the token).  Retry the round with its
+    # inputs frozen (action.json and advice_history.md still describe the round
+    # being advised); give up after a second consecutive failure.  On advice,
+    # the narration narrates the round just completed: it opens with the prior
+    # advice arriving and shows how the main agent responded, so the log entry
+    # pairs it with that advice — true cause -> effect order.  The termination
+    # token is machinery and never enters the log.
     if current_round >= 1 and advisor_invoked:
         advice = ws.advice_path.read_text().strip() if ws.advice_path.exists() else ""
+        if not advice:
+            failures = ledger.get("advisor_failures", 0) + 1
+            if failures >= MAX_ADVISOR_FAILURES:
+                end_loop(
+                    ws,
+                    current_round,
+                    advice_history,
+                    "the advisor malfunctioned twice in a row"
+                    " (it finished without writing advice)",
+                )
+            save_ledger(
+                ws.ledger_path,
+                round_number=current_round,
+                advice_history=advice_history,
+                done=False,
+                advisor_failures=failures,
+            )
+            arm_advisor(ws, notice=RETRY_NOTICE)
         narration = (
             ws.narration_path.read_text().strip() if ws.narration_path.exists() else ""
         ) or "(no narration)"
@@ -150,8 +253,13 @@ def stop() -> None:
             narration,
             advice_history[-1] if advice_history else None,
         )
-        if not advice or TERMINATION_TOKEN in advice:
-            end_loop(ws, current_round, advice_history)
+        if TERMINATION_TOKEN in advice:
+            end_loop(
+                ws,
+                current_round,
+                advice_history,
+                "the advisor had no further advice to provide",
+            )
         advice_history = [*advice_history, advice]
 
     # This round's inputs for the next advisor call: the main agent's actions
@@ -165,34 +273,9 @@ def stop() -> None:
         round_number=current_round + 1,
         advice_history=advice_history,
         done=False,
+        declines=declines,
     )
-
-    # Mechanism 2: on a compacted round, re-inject the original-mission text into
-    # the trigger (recency position).  Consume the marker so it fires once.
-    mission_text = None
-    if ws.compacted_path.exists():
-        try:
-            mission_text = ws.mission_path.read_text()
-        except OSError:
-            mission_text = None
-        ws.compacted_path.unlink(missing_ok=True)
-
-    trigger = format_advisor_trigger(
-        mission_path=ws.mission_path,
-        action_path=ws.action_path,
-        advice_history_path=ws.advice_history_path,
-        advice_path=ws.advice_path,
-        narration_path=ws.narration_path,
-        mission_text=mission_text,
-    )
-
-    # Clear both handoff channels as we arm the next round: an absent file next
-    # round then unambiguously means its agent wrote nothing.
-    ws.advice_path.unlink(missing_ok=True)
-    ws.narration_path.unlink(missing_ok=True)
-    ws.advisor_token_path.write_text("")
-    sys.stderr.write(trigger)
-    sys.exit(2)
+    arm_advisor(ws, notice=DECLINE_NOTICE if declines else "")
 
 
 def pre_tool_use() -> None:
