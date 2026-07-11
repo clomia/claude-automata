@@ -6,7 +6,7 @@
 # Every ploop hook is routed through this script.  If uv is not
 # installed we cannot execute any Python code, so the wrapper exits 0 without
 # error.  SessionStart additionally emits a systemMessage so the user learns
-# that installing uv is required to activate the plugin's durability hook.
+# that installing uv is required to run the parallax loop.
 # Other hooks stay silent to avoid flooding the session with duplicate notices.
 
 set -e
@@ -19,7 +19,7 @@ fi
 
 if ! command -v uv >/dev/null 2>&1; then
     if [ "$entry" = "update-check" ]; then
-        printf '%s' '{"systemMessage":"ploop requires uv (Python package manager). Install it from https://docs.astral.sh/uv/getting-started/installation/ — without uv, the ploop durability hook will not run."}'
+        printf '%s' '{"systemMessage":"ploop requires uv (Python package manager). Install it from https://docs.astral.sh/uv/getting-started/installation/ — without uv, the parallax loop will not run."}'
     fi
     exit 0
 fi

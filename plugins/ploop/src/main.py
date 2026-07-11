@@ -5,8 +5,8 @@ blocks the main agent's stop (exit 2) and injects the next instruction — invok
 the advisor, or summarize the finished round log.  The active marker written at
 /ploop:launch gates everything; the loop ends through exactly two paths — the
 advisor writes the termination token, or the user runs /ploop:stop — plus the
-anomaly failsafes: the main agent twice declines the trigger (a sound refusal
-is meant to end the loop through the advisor's verdict), or the advisor
+anomaly failsafes: the trigger goes unanswered twice (a sound refusal is
+meant to end the loop through the advisor's verdict), or the advisor
 malfunctions twice.  There is no round cap.  Prompt submission is a non-event
 for ploop — no hook fires on it, so typed user turns, task notifications, and
 scheduled wakeups all pass through an armed loop untouched.  An ESC only cuts
@@ -14,8 +14,8 @@ the turn (no hook fires on an interrupt either): the loop stays armed and
 resumes at the next stop, so the way to halt a running mission is ESC, then
 /ploop:stop.  Both loop participants are unreliable LLMs, so each anomaly gets
 one corrective repeat before it ends the loop: an advisor run that wrote
-nothing is retried, a stop that ignored the trigger is redirected to the
-advisor's authority.  See ARCHITECTURE.md for the loop design.
+nothing is retried, a stop that left the trigger unanswered is redirected to
+the advisor's authority.  See ARCHITECTURE.md for the loop design.
 
 Hooks must never break the session: malformed events and missing files degrade
 to exit 0 (allow the action).
@@ -41,11 +41,11 @@ TERMINATION_TOKEN = "I_HAVE_NO_FURTHER_ADVICE_ENDING_THE_PARALLAX_TURN"
 # Consecutive-anomaly caps: the first occurrence gets one corrective repeat,
 # the second ends the loop with an honest cause.  A degenerate advisor
 # generation (system-prompt echo, no tool calls) is a stochastic one-off, so
-# one retry all but eliminates it; a main agent that refuses the trigger is
-# redirected into the consensus channel once, and a second refusal means that
-# channel itself is broken — ending cleanly beats stalemating until the
-# harness stop-block cap force-ends the turn and leaves the loop armed as a
-# zombie.  Neither cap is advertised to the agents.
+# one retry all but eliminates it; an unanswered trigger is redirected into
+# the consensus channel once, and a second in a row means that channel itself
+# is broken — ending cleanly beats stalemating until the harness stop-block
+# cap force-ends the turn and leaves the loop armed as a zombie.  Neither cap
+# is advertised to the agents.
 MAX_ADVISOR_FAILURES = 2
 MAX_DECLINES = 2
 
@@ -54,7 +54,9 @@ MAX_DECLINES = 2
 # upholds ploop's authority split — the main agent performs the mission, only
 # the advisor ends the loop: a refusal's stated reasons reach the advisor
 # through the action history, so a sound refusal is honored by the advisor's
-# own termination verdict, never by a main-side exit.
+# own termination verdict, never by a main-side exit.  An unconsumed token
+# also arises when the user cuts a turn short (ESC), so the notice — like the
+# failsafe's end cause — names no actor.
 RETRY_NOTICE = (
     "The previous advisor run malfunctioned: it ended without writing its "
     "advice file, so it rendered no verdict. That run is void. Invoke the "
@@ -62,8 +64,8 @@ RETRY_NOTICE = (
 )
 DECLINE_NOTICE = (
     "The authority to end the loop belongs to the advisor. Invoke the "
-    "advisor: it will read your statements and judge whether to end the "
-    "loop.\n\n"
+    "advisor: it will read what was said this round and judge whether to "
+    "end the loop.\n\n"
 )
 
 
@@ -171,11 +173,12 @@ def stop() -> None:
     the advisor's sole output channel: its text becomes the round's
     advice-history entry, and only the explicit termination token ends the turn
     — an absent file is a malfunctioned run (the protocol demands a Write even
-    to terminate), retried with the round's inputs frozen.  A stop that ignored
-    the trigger is re-triggered once behind the authority notice (only the
-    advisor ends the loop, and it reads the main agent's stated reasons); a
-    second in a row means the consensus channel is broken and ends the loop as
-    a failsafe.  Arming injects the next advisor trigger via exit 2.
+    to terminate), retried with the round's inputs frozen.  A stop that left
+    the trigger unanswered — a decline, or a turn the user cut short — is
+    re-triggered once behind the authority notice (only the advisor ends the
+    loop, and it reads whatever the round said); a second in a row means the
+    consensus channel is broken and ends the loop as a failsafe.  Arming
+    injects the next advisor trigger via exit 2.
     """
     event = read_event()
     ws = Workspace.from_env(event.get("session_id", ""))
@@ -196,13 +199,13 @@ def stop() -> None:
         sys.exit(0)
 
     # The advisor ran this round iff PreToolUse consumed the token a prior Stop
-    # wrote.  A leftover token means the main agent ignored the trigger and no
-    # advisor ran — skip recording so a prior round's advice is not re-appended
-    # as a duplicate.  The re-parse below carries the refusal's stated reasons
-    # into action.json, so the re-injected trigger (behind the authority
-    # notice) routes them to the advisor for the termination verdict.  A second
-    # consecutive decline means the consensus channel itself is broken — end
-    # cleanly instead of stalemating until the harness stop-block cap
+    # wrote.  A leftover token means the trigger went unanswered (a decline, or
+    # a turn cut short) and no advisor ran — skip recording so a prior round's
+    # advice is not re-appended as a duplicate.  The re-parse below carries any
+    # stated reasons into action.json, so the re-injected trigger (behind the
+    # authority notice) routes them to the advisor for the termination verdict.
+    # A second consecutive decline means the consensus channel itself is broken
+    # — end cleanly instead of stalemating until the harness stop-block cap
     # force-ends the turn and leaves the loop armed as a zombie.
     advisor_invoked = not ws.advisor_token_path.exists()
     declines = 0 if advisor_invoked else ledger.get("declines", 0) + 1
@@ -211,7 +214,7 @@ def stop() -> None:
             ws,
             current_round,
             advice_history,
-            "the main agent declined to invoke the advisor",
+            "the advisor went uninvoked for two consecutive rounds",
         )
 
     # Record last round's verdict (none in round 0, before any call).  Past the

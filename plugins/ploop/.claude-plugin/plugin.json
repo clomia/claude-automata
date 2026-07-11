@@ -1,6 +1,6 @@
 {
   "name": "ploop",
-  "version": "0.27.0",
+  "version": "0.27.1",
   "description": "Overclock Loop — an autonomous loop for long, multi-day missions: an independent advisor surfaces what the main agent overlooked and preserves the mission across compactions, on subscription-safe nested agents",
   "author": {
     "name": "clomia",

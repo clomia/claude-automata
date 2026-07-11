@@ -430,7 +430,8 @@ class TestStop:
         """A second stop in a row without invoking the advisor means the
         consensus channel itself is broken — the failsafe ends the loop with
         that honest cause instead of stalemating against the harness
-        stop-block cap."""
+        stop-block cap.  The cause names no actor: an unconsumed token may
+        equally come from a refusal or from turns the user cut short."""
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -453,7 +454,7 @@ class TestStop:
         assert not (tmp_path / "s1_active").exists()
         err = capsys.readouterr().err
         assert "parallax loop has ended" in err
-        assert "declined" in err
+        assert "uninvoked" in err
 
     def test_compliance_resets_the_decline_counter(self, tmp_path, monkeypatch):
         """Invoking the advisor after a decline clears the streak — the caps
