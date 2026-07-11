@@ -14,7 +14,7 @@ effort: high
 
 # 루프
 
-1. wait-command를 **포그라운드 `Bash`**(`timeout: 600000`)로 그대로 실행하세요. `run_in_background`·`Monitor`·`ScheduleWakeup`은 포그라운드를 비우므로 절대 쓰지 마세요.
+1. wait-command를 `Bash`로 실행하되 **`run_in_background=false`를 명시**하세요 — 기본값에 기대지 말 것(`timeout: 600000`). `run_in_background=true`는 명령을 백그라운드로 보내 포그라운드를 비우므로 쓰지 마세요(`Monitor`·`ScheduleWakeup`도 같은 이유로 금지).
 2. `WAIT-EVENT` → 멈추고 반환. / `WAIT-TIMEOUT`·"timed out"·일시 오류 → 즉시 다시 실행(장시간 작업이면 여러 번 반복). / 둘 다 아닌 깨진 출력 → 무한 반복 말고 그 출력을 담아 반환.
 3. 애매하면 다시 실행하세요. 확실한 `WAIT-EVENT` 없이 반환하는 것만이 위험합니다(조기 심사).
 
