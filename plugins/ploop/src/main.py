@@ -340,7 +340,9 @@ def launch() -> None:
 
     Fires when /ploop:launch <mission> expands.  The mission rides in
     command_args as structured JSON, so multi-line text with quotes or `$` is
-    captured verbatim.
+    captured verbatim.  Observed as a single string; the reference schema says
+    an array of arguments — both shapes are accepted so a harness update
+    cannot corrupt the mission anchor.
 
     Two guards block the expansion (block_expansion — pure, turn erased): an
     armed loop (active marker), because relaunching over it would overwrite the
@@ -361,7 +363,10 @@ def launch() -> None:
         block_expansion(
             "A parallax loop is already active. Stop it with /ploop:stop, then launch again."
         )
-    mission = str(event.get("command_args", "")).strip()
+    args = event.get("command_args", "")
+    if isinstance(args, list):
+        args = " ".join(str(a) for a in args)
+    mission = str(args).strip()
     if not mission:
         block_expansion("The mission is empty. Run it as /ploop:launch <mission>.")
     ws.clear_round_state()

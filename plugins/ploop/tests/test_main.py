@@ -594,6 +594,24 @@ class TestLaunch:
         assert saved in log
         assert "prior mission log" not in log
 
+    def test_array_command_args_join_verbatim(self, tmp_path, monkeypatch):
+        """The reference schema types command_args as an array while observed
+        events carry a string — both shapes must yield the mission verbatim,
+        or a harness update corrupts the anchor."""
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr(
+            "sys.stdin",
+            self.make_stdin(
+                command_name="ploop:launch",
+                command_args=["multi\nline mission", "with args"],
+                session_id="s1",
+            ),
+        )
+        launch()
+        saved = (tmp_path / "s1_mission.md").read_text()
+        assert saved == "multi\nline mission with args"
+        assert (tmp_path / "s1_active").exists()
+
     def test_ignores_non_ploop_launch_command(self, tmp_path, monkeypatch):
         """The guard matches the full scoped name, so another plugin's :launch
         cannot hijack ploop's launch."""
