@@ -37,14 +37,16 @@ from src.state import Workspace, load_ledger, save_ledger
 # survives any surrounding prose the model emits alongside it.
 TERMINATION_TOKEN = "I_HAVE_NO_FURTHER_ADVICE_ENDING_THE_PARALLAX_TURN"
 
-# Consecutive-anomaly caps: the first occurrence gets one corrective repeat,
-# the second ends the loop with an honest cause.  A degenerate advisor
-# generation (system-prompt echo, no tool calls) is a stochastic one-off, so
-# one retry all but eliminates it; an unanswered trigger is redirected into
-# the consensus channel once, and a second in a row means that channel itself
-# is broken — ending cleanly beats stalemating until the harness stop-block
-# cap force-ends the turn and leaves the loop armed as a zombie.  Neither cap
-# is advertised to the agents.
+# Anomaly caps: the first occurrence gets one corrective repeat, the second
+# ends the loop with an honest cause.  A degenerate advisor generation
+# (system-prompt echo, no tool calls) is a stochastic one-off, so one retry all
+# but eliminates it; an unanswered trigger is redirected into the consensus
+# channel once, and a second means that channel itself is broken — ending
+# cleanly beats stalemating until the harness stop-block cap force-ends the
+# turn and leaves the loop armed as a zombie.  Each counter counts its anomaly
+# since the last clean round (advice written), not merely back-to-back: only a
+# clean round resets them, so alternating malfunction/decline still hits a cap
+# instead of dodging both forever.  Neither cap is advertised to the agents.
 MAX_ADVISOR_FAILURES = 2
 MAX_DECLINES = 2
 
@@ -280,6 +282,9 @@ def stop() -> None:
                 advice_history=advice_history,
                 done=False,
                 advisor_failures=failures,
+                declines=ledger.get(
+                    "declines", 0
+                ),  # preserve — a malfunction is not a clean round
                 round_start_line=round_start,
             )
             arm_advisor(
@@ -310,15 +315,19 @@ def stop() -> None:
     # [round_start .. end] into round_path for the narrator — a contiguous slice
     # no interjection can truncate.  The next round starts just past the current
     # transcript end (this round's trigger has not been injected yet), so record
-    # that as its start line.
+    # that as its start line — but only when the transcript actually read (else
+    # freeze it, or an empty read would reset the offset to 1 and make the next
+    # round slice the whole session).  A decline preserves advisor_failures (it
+    # is not a clean round); a clean round leaves declines=0, resetting both.
     ws.advice_history_path.write_text(format_advice_history(advice_history))
     save_ledger(
         ws.ledger_path,
         round_number=current_round + 1,
         advice_history=advice_history,
         done=False,
+        advisor_failures=ledger.get("advisor_failures", 0) if declines else 0,
         declines=declines,
-        round_start_line=len(lines) + 1,
+        round_start_line=len(lines) + 1 if lines else round_start,
     )
     arm_advisor(
         ws,

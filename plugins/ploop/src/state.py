@@ -86,6 +86,7 @@ class Workspace:
         for path in (
             self.ledger_path,
             self.round_path,
+            self.advice_history_path,
             self.advisor_token_path,
             self.advisor_running_path,
             self.compacted_path,

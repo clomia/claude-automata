@@ -314,6 +314,79 @@ class TestStop:
         assert ledger["advisor_failures"] == 0
         assert ledger["round"] == 2
 
+    def test_malfunction_preserves_the_decline_streak(self, tmp_path, monkeypatch):
+        """Only a clean round resets the anomaly counters — a malfunction (retry)
+        is not a clean round, so a pending decline streak survives it.  Else
+        alternating malfunction/decline would reset each other and dodge both
+        caps forever (a zombie loop the caps exist to prevent)."""
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+            ledger={"round_number": 1, "advice_history": [], "done": False},
+        )
+        save_ledger(
+            tmp_path / "s1_loop.json",
+            round_number=1,
+            advice_history=[],
+            done=False,
+            declines=1,
+        )  # advice absent -> malfunction retry
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["advisor_failures"] == 1
+        assert ledger["declines"] == 1  # preserved, not reset by the malfunction
+
+    def test_decline_preserves_the_advisor_failure_streak(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """The mirror: a decline is not a clean round either, so a pending
+        advisor-failure streak survives it."""
+        arrange_mission(tmp_path, monkeypatch, ROUND_WORK)
+        save_ledger(
+            tmp_path / "s1_loop.json",
+            round_number=2,
+            advice_history=["r"],
+            done=False,
+            advisor_failures=1,
+        )
+        (tmp_path / "s1_advisor_token").write_text("")  # not consumed -> decline
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["declines"] == 1
+        assert ledger["advisor_failures"] == 1  # preserved, not reset by the decline
+
+    def test_read_failure_freezes_round_start_line(self, tmp_path, monkeypatch):
+        """An unreadable transcript at a stop must not reset round_start_line to
+        1 — that would make the next round slice the whole session.  Freeze it
+        instead (the round's own slice degrades to empty; wider never happens)."""
+        arrange_mission(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+            ledger={
+                "round_number": 3,
+                "advice_history": ["r"],
+                "done": False,
+                "round_start_line": 200,
+            },
+            advice="more",  # advice present -> reaches the bottom save
+            narration="w",
+        )
+        arrange(  # override the transcript path with a nonexistent file
+            tmp_path,
+            monkeypatch,
+            make_stdin(transcript_path=str(tmp_path / "gone.jsonl")),
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        assert load_ledger(tmp_path / "s1_loop.json")["round_start_line"] == 200
+
     def test_compacted_round_inlines_mission_text(self, tmp_path, monkeypatch, capsys):
         """Mechanism 2: a compacted round re-injects the original-mission text into
         the trigger and consumes the marker."""

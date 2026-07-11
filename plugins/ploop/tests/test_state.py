@@ -89,6 +89,7 @@ class TestWorkspace:
         round_state = (
             ws.ledger_path,
             ws.round_path,
+            ws.advice_history_path,
             ws.advisor_token_path,
             ws.advisor_running_path,
             ws.compacted_path,
