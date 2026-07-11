@@ -32,7 +32,6 @@ from src.prompt import (
     format_end_notice,
 )
 from src.state import Workspace, load_ledger, save_ledger
-from src.transcript import parse_round_actions
 
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
 # survives any surrounding prose the model emits alongside it.
@@ -134,14 +133,36 @@ def end_loop(
     sys.exit(2)
 
 
-def arm_advisor(ws: Workspace, notice: str = "") -> None:
+def count_lines(transcript_path: str) -> int:
+    """Line count of the transcript — the round's end offset.
+
+    Append-only, so a line number stays valid once written.  Unreadable → 0,
+    which the trigger turns into "read through the end of the file" (wider, not
+    truncated).
+    """
+    try:
+        with open(transcript_path, "rb") as f:
+            return sum(1 for _ in f)
+    except OSError:
+        return 0
+
+
+def arm_advisor(
+    ws: Workspace,
+    *,
+    transcript_path: str,
+    round_start: int,
+    round_end: int,
+    notice: str = "",
+) -> None:
     """Arm one advisor invocation and end the hook (exit 2).
 
     Consumes any compaction marker (mechanism 2: the trigger inlines the
     original-mission text), clears both handoff channels so an absent file at
     the next stop unambiguously means its agent wrote nothing, sets the
-    single-use token, and injects the trigger — prefixed by `notice` on an
-    anomalous re-arm.
+    single-use token, and injects the trigger — the narrator call inside it
+    points at transcript lines round_start..round_end (this round's slice) —
+    prefixed by `notice` on an anomalous re-arm.
     """
     mission_text = None
     if ws.compacted_path.exists():
@@ -153,7 +174,9 @@ def arm_advisor(ws: Workspace, notice: str = "") -> None:
 
     trigger = format_advisor_trigger(
         mission_path=ws.mission_path,
-        action_path=ws.action_path,
+        transcript_path=transcript_path,
+        round_start=round_start,
+        round_end=round_end,
         advice_history_path=ws.advice_history_path,
         advice_path=ws.advice_path,
         narration_path=ws.narration_path,
@@ -191,6 +214,10 @@ def stop() -> None:
         sys.exit(0)
     current_round = ledger.get("round", 0)
     advice_history = ledger.get("advice_history", [])
+    transcript_path = event.get("transcript_path", "")
+    # Start line of the round being completed now — the narrator's slice begins
+    # here.  Defaults to line 1 for round 0 (whole session so far is the round).
+    round_start = ledger.get("round_start_line", 1)
 
     # An advisor is still in flight (PreToolUse set the marker; SubagentStop, its
     # sole clearer, hasn't fired): re-triggering would cascade a second advisor,
@@ -201,12 +228,13 @@ def stop() -> None:
     # The advisor ran this round iff PreToolUse consumed the token a prior Stop
     # wrote.  A leftover token means the trigger went unanswered (a decline, or
     # a turn cut short) and no advisor ran — skip recording so a prior round's
-    # advice is not re-appended as a duplicate.  The re-parse below carries any
-    # stated reasons into action.json, so the re-injected trigger (behind the
-    # authority notice) routes them to the advisor for the termination verdict.
-    # A second consecutive decline means the consensus channel itself is broken
-    # — end cleanly instead of stalemating until the harness stop-block cap
-    # force-ends the turn and leaves the loop armed as a zombie.
+    # advice is not re-appended as a duplicate.  The refusal turn is in the
+    # round's transcript slice, so the re-injected trigger (behind the authority
+    # notice) routes the narrator over those stated reasons to the advisor for
+    # the termination verdict.  A second consecutive decline means the consensus
+    # channel itself is broken — end cleanly instead of stalemating until the
+    # harness stop-block cap force-ends the turn and leaves the loop armed as a
+    # zombie.
     advisor_invoked = not ws.advisor_token_path.exists()
     declines = 0 if advisor_invoked else ledger.get("declines", 0) + 1
     if declines >= MAX_DECLINES:
@@ -221,12 +249,12 @@ def stop() -> None:
     # in-flight guard the advisor has finished, so an absent advice file means
     # it wrote nothing — a malfunction, not a verdict, since the protocol
     # demands a Write even to terminate (the token).  Retry the round with its
-    # inputs frozen (action.json and advice_history.md still describe the round
-    # being advised); give up after a second consecutive failure.  On advice,
-    # the narration narrates the round just completed: it opens with the prior
-    # advice arriving and shows how the main agent responded, so the log entry
-    # pairs it with that advice — true cause -> effect order.  The termination
-    # token is machinery and never enters the log.
+    # inputs frozen (round_start unchanged, advice_history.md still describes the
+    # round being advised); give up after a second consecutive failure.  On
+    # advice, the narration narrates the round just completed: it opens with the
+    # prior advice arriving and shows how the main agent responded, so the log
+    # entry pairs it with that advice — true cause -> effect order.  The
+    # termination token is machinery and never enters the log.
     if current_round >= 1 and advisor_invoked:
         advice = ws.advice_path.read_text().strip() if ws.advice_path.exists() else ""
         if not advice:
@@ -245,8 +273,15 @@ def stop() -> None:
                 advice_history=advice_history,
                 done=False,
                 advisor_failures=failures,
+                round_start_line=round_start,
             )
-            arm_advisor(ws, notice=RETRY_NOTICE)
+            arm_advisor(
+                ws,
+                transcript_path=transcript_path,
+                round_start=round_start,
+                round_end=count_lines(transcript_path),
+                notice=RETRY_NOTICE,
+            )
         narration = (
             ws.narration_path.read_text().strip() if ws.narration_path.exists() else ""
         ) or "(no narration)"
@@ -265,20 +300,27 @@ def stop() -> None:
             )
         advice_history = [*advice_history, advice]
 
-    # This round's inputs for the next advisor call: the main agent's actions
-    # (narrated by the narrator) and the accumulated advice-history.
-    actions = parse_round_actions(event.get("transcript_path", ""))
-    ws.action_path.write_text(json.dumps(actions, ensure_ascii=False, indent=2))
+    # Arm the next round.  The narrator's slice for the round just completed is
+    # transcript lines round_start..round_end (round_end = current EOF, since
+    # this round's trigger has not been injected yet) — a contiguous span no
+    # interjection can truncate.  The next round starts at round_end + 1.
     ws.advice_history_path.write_text(format_advice_history(advice_history))
-
+    round_end = count_lines(transcript_path)
     save_ledger(
         ws.ledger_path,
         round_number=current_round + 1,
         advice_history=advice_history,
         done=False,
         declines=declines,
+        round_start_line=round_end + 1,
     )
-    arm_advisor(ws, notice=DECLINE_NOTICE if declines else "")
+    arm_advisor(
+        ws,
+        transcript_path=transcript_path,
+        round_start=round_start,
+        round_end=round_end,
+        notice=DECLINE_NOTICE if declines else "",
+    )
 
 
 def pre_tool_use() -> None:

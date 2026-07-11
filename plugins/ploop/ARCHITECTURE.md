@@ -54,7 +54,7 @@ main      depth 0  session     full tools    loop main: runs the mission
 advisor   depth 1  Agent ro    advise           analyzes blind spots; writes advice
    |  Agent(narrator)  Grep Glob Web*
    v
-narrator  depth 2  Read Write  narrate          action records -> narration.md
+narrator  depth 2  Read Write  narrate          transcript slice -> narration.md
 ```
 
 | Tier | 도구 (allowlist) | 모델 | effort |
@@ -69,9 +69,10 @@ narrator  depth 2  Read Write  narrate          action records -> narration.md
   임의 부작용(`rm`·테스트 실행 등) 차단 취지고, `Write`만 좁게 열어 advice 출력 채널로 삼은 의식적 완화다(사용 전제는 auto/bypass
   권한 모드). 남은 read-only 도구(`Read·Glob·Grep·Web*`)로 영역을 근거 짓고 `Agent`로 narrator를 호출하며,
   advice를 ledger에 기록하는 것은 여전히 hook의 몫이다.
-- **narrator는 `Read`·`Write`만 가진 leaf** — `Agent`가 없어 트리가 그 아래로 자라지 않는다. `Write`는
-  advisor와 동일한 채널이다: narration을 temp `narration.md`에 쓰고, advisor가 분석 입력으로·hook이 라운드
-  로그로 같은 파일을 읽는다. 단순 변환이라 `sonnet[1m]`/`low`로 충분하다.
+- **narrator는 `Read`·`Write`만 가진 leaf** — `Agent`가 없어 트리가 그 아래로 자라지 않는다. `Read`로
+  트리거가 지정한 라운드 트랜스크립트 슬라이스(`round-lines`)를 직접 읽어 해석한다(hook 측 파싱 없음).
+  `Write`는 advisor와 동일한 채널이다: narration을 temp `narration.md`에 쓰고, advisor가 분석 입력으로·hook이
+  라운드 로그로 같은 파일을 읽는다. 단순 변환이라 `sonnet[1m]`/`low`로 충분하다.
 - depth 2에서 트리를 닫아 depth-5 cap에 3단계 여유를 남긴다.
 
 ---
@@ -83,7 +84,7 @@ main round N work ── stops
    |
    |  <-- Stop hook
    |        leftover token (trigger unanswered) -> re-arm with authority notice
-   |          (refusal reasons ride action.json to the advisor's verdict)
+   |          (refusal reasons ride the round's transcript slice to the verdict)
    |          2nd consecutive decline -> failsafe: done + deactivate
    |        record last advisor verdict from advice.md (parallax's rule):
    |          absent/empty file -> malfunction: re-arm same round, inputs frozen
@@ -92,14 +93,14 @@ main round N work ── stops
    |          termination token -> done + deactivate
    |            -> exit 2: "summarize {session}_loop.log" (if any advice surfaced)
    |          else append advice   (no round cap; /ploop:stop also deactivates)
-   |        then:  parse round actions (advisor calls stripped, compact
-   |                 summaries dropped, queued injections lifted in) -> {session}_action.json
+   |        then:  round_end = transcript line count; next round starts at +1
    |               write {session}_advice_history.md (advice-history XML)
-   |               round++,  exit 2 + stderr: advisor trigger (+ mission text if compacted)
+   |               round++,  exit 2 + stderr: advisor trigger — narrator reads
+   |                 transcript lines [round_start..round_end] (+ mission text if compacted)
    v
 main ─ Agent(advisor) ───────────> advisor (depth 1)
    |                                  ├ read original-mission   ({session}_mission.md)
-   |                                  ├ Agent(narrator) -> narration.md -> read it
+   |                                  ├ Agent(narrator) -> reads transcript slice -> narration.md -> read it
    |                                  ├ read advice-history ({session}_advice_history.md)
    |                                  ├ read instructions, then analyze
    |                                  └ Write advice / termination token to advice.md
@@ -111,10 +112,10 @@ main ─ work on the advice (round N+1) ── stops ── (loop)
 종료는 의미론적 판단만 인정한다: advisor가 `advice.md`에 **전용 종료 토큰을 Write할 때만** 수렴 종료다
 (`TERMINATION_TOKEN in advice` → `done` 플래그 + active 마커 정리). 파일 부재/빈 파일은 종료가 아니라
 **오작동**이다 — 규약상 정상 advisor는 종료조차 토큰 Write로 표현하므로, 안 쓴 것은 판정이 아니다. 이때
-라운드를 입력 동결 상태로(같은 round·action.json·advice_history.md) 재시도하고, **연속 2회** 실패하면
+라운드를 입력 동결 상태로(같은 round·round_start_line·advice_history.md) 재시도하고, **연속 2회** 실패하면
 오작동 사유로 종료한다(수렴으로 위장하지 않는다 — 핵심 설계 결정 14). 트리거가 응답되지 않은
 정지(토큰 잔존 — main의 거부, 또는 사용자가 끊은 턴)는 **권한 분할**로 처리한다: 1회는 "루프 종료
-권한은 advisor에게만 있다"를 고지하며 재주입한다 — 거부의 근거 발언은 action.json→narrator를 타고
+권한은 advisor에게만 있다"를 고지하며 재주입한다 — 거부의 근거 발언은 라운드 트랜스크립트 슬라이스→narrator를 타고
 advisor에게 닿으므로, 타당한 거부는 advisor의
 종료 토큰으로 관철된다(main-advisor 합의 경로). 연속 2회면 합의 채널 자체가 붕괴된 것으로 보고 failsafe로
 종료한다 — 노티스는 이를 광고하지 않는다(main-side 출구가 아니다). **숫자 라운드 상한은 두지 않는다** — advice-history는 파일이라 컨텍스트를 잠식하지
@@ -136,8 +137,10 @@ Stop 훅은 메인 세션 정지마다 발화하므로 active 마커가 게이�
 ## 컨텍스트 경제 — nested가 `claude -p`보다 우월한 지점
 
 main의 컨텍스트에 더해지는 것은 **① 짧은 stderr 트리거 + ② main이 트리거 지시로 읽는
-`advice.md`의 advice + ③ 종료 시 1회의 로그 요약 턴**뿐이다. narrator 호출, advice-history 누적 읽기,
-5-section 분석은 모두 **advisor(depth 1)의 컨텍스트에서** 소비되어 main에 닿지 않는다. 영역을 "짧고 명확하게
+`advice.md`의 advice + ③ 종료 시 1회의 로그 요약 턴**뿐이다. narrator 호출, 라운드 트랜스크립트 슬라이스
+읽기, advice-history 누적 읽기, 5-section 분석은 모두 **advisor·narrator(depth 1·2)의 컨텍스트에서**
+소비되어 main에 닿지 않는다. 라운드 슬라이스가 커도(대량 작업 라운드) 그 읽기 비용은 depth-2 narrator에
+격리되며 — main은 그 슬라이스를 보지 않는다 — 요약된 narration만 위로 흐른다. 영역을 "짧고 명확하게
 정의(irreducible)"하게 하는 instruction이 이 경계를 지킨다. advisor가 main의 사각을 보되, 그 탐색 비용을 main에 전가하지
 않는다.
 
@@ -152,11 +155,10 @@ main의 컨텍스트에 더해지는 것은 **① 짧은 stderr 트리거 + ② 
 |---|---|---|
 | `{session}_mission.md` | launch 훅 (UserPromptExpansion) | original-mission 정의 (외부 보존 anchor) |
 | `{session}_active` | launch 훅 생성 · hook 삭제 | 활성화 마커 (Stop 게이트) |
-| `{session}_loop.json` | hook | `round` · `advice_history` · `done` · `advisor_failures`/`declines` (연속 이상 카운터, 정상 라운드에 0으로 리셋) |
-| `{session}_action.json` | hook | 이번 라운드 action 기록 (narrator가 읽음) |
+| `{session}_loop.json` | hook | `round` · `advice_history` · `done` · `advisor_failures`/`declines` (연속 이상 카운터, 정상 라운드에 0으로 리셋) · `round_start_line` (이번 라운드가 시작되는 트랜스크립트 라인 — narrator 슬라이스의 시작 오프셋) |
 | `{session}_advice_history.md` | hook | advisor 입력의 advice-history (XML) |
 | `advice.md` (temp) | advisor (`Write`) | advice 또는 종료 토큰 (유일 채널) — 비보호 temp라 auto 모드 Write 승인 · main·hook이 읽음 · prose 격리 |
-| `narration.md` (temp) | narrator (`Write`) | action-history 서사 (advice와 동일 채널) — advisor가 분석 입력으로 · hook이 라운드 로그로 읽음 |
+| `narration.md` (temp) | narrator (`Write`) | action-history 서사 (advice와 동일 채널) — narrator가 라운드 트랜스크립트 슬라이스를 읽어 작성 · advisor가 분석 입력으로 · hook이 라운드 로그로 읽음 |
 | `{session}_loop.log` | hook | 완결 라운드 로그 (서사 + 그 라운드의 advice) — 미션 전체 흐름의 완전 기록 · launch가 `[[ MISSION ]]` 원문으로 새로 시작 · 종료 요약의 소스 |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight 마커 (PreToolUse set · 루프 사이클 내 clearer는 SubagentStop뿐 — launch 리셋·`/ploop:stop`의 teardown은 예외 · Stop이 존재로 in-flight 판정) |
@@ -262,20 +264,23 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    hook이 그 파일을 읽어 round·advice_history·done을 모두 기록한다. `advice.md`가 advice/종료의 **유일 채널**이라
    트랜스크립트를 스크레이프하지 않는다 — 단일 작성자라 동시성 문제가 없고, advisor 프롬프트가 순수 분석으로
    남으며, Agent tool_result 형식(메타 엔벨로프·prose)에 대한 의존이 통째로 사라진다.
-4. **작업 transcript = 메인 transcript.** Stop 훅은 메인 세션 transcript를 직접 건넨다. main이
-   미션을 직접 수행하므로 action과 advisor 호출(tool_use/tool_result)이 모두 거기 있다 — operator의
-   별도 transcript를 `subagents/meta.json`으로 해소하던 단계가 통째로 사라진다. transcript 파일은
-   compaction에도 append-only다: 기존 라인은 지워지지 않고 세션 요약이 문자열 content의 user
-   라인(`isCompactSummary` 플래그)으로 덧붙을 뿐이다 — 라운드 경계(훅 주입)와 정확히 같은 형태라
-   파싱이 플래그로 걸러낸다. 안 거르면 라운드 도중의 auto-compaction이 가짜 경계가 되어 그 라운드의
-   compaction 이전 action이 narration과 라운드 로그에서 잘린다(이전 라운드들은 advice-history가
-   파일이라 애초에 무손실). 걸러내면 잘렸던 원본이 파일에 그대로 있으므로 라운드 전체가 복원된다.
-   미드턴 주입 — 사용자 steering이 대표, notification도 같은 큐를 탄다 — 은 반대로 message 라인이
-   아닌 `queued_command` attachment로만 기록되며, 루프는 steering에 중단되지 않는다(실측: steering
-   이후 트리거 3회 지속). 사용자 지시는 미션보다 상위 권위인데 main만 보고 흡수하면 advisor와 main의
-   목표가 갈라지므로, 파싱이 이 attachment를 전달 위치의 list-content user 메시지로 승격한다 —
-   narrator·advisor가 main이 들은 지시를 그대로 보고, list content라 라운드 경계는 되지 않는다
-   (steering은 라운드를 리셋하지 않는다).
+4. **작업 transcript = 메인 transcript, action-history는 narrator에게 위임(hook 측 파싱 없음).** Stop
+   훅은 메인 세션 transcript를 직접 건넨다. main이 미션을 직접 수행하므로 action과 advisor
+   호출(tool_use/tool_result)이 모두 거기 있다 — operator의 별도 transcript를 `subagents/meta.json`으로
+   해소하던 단계가 통째로 사라진다. **hook은 트랜스크립트를 파싱하지 않는다.** 대신 라운드가 시작되는
+   트랜스크립트 **라인 오프셋**(`round_start_line`, ledger 소유)을 기록하고, arm 시점의 라인 수를
+   라운드 끝으로 삼아 narrator에게 "이 트랜스크립트의 라인 [start..end]를 읽어 main의 작업을
+   서술하라"를 지시한다. narrator(지능 에이전트)가 원본 JSONL 레코드를 스스로 해석해 루프 기계
+   장치(advisor Agent 호출·결과, 트리거 주입 메시지)를 걸러내고 서술한다. **이 위임이 트랜스크립트
+   내부 메시지 형식에 대한 hook의 의존을 통째로 없앤다** — `isCompactSummary` 필터·`queued_command`
+   승격·라운드 경계 휴리스틱·advisor-strip 코드가 전부 사라졌다(이들은 형식 표류에 취약했다;
+   harness-deps 감사). 슬라이스는 라운드 트리거부터 다음 정지까지의 **연속 구간**이라, 라운드 도중의
+   auto-compaction 요약이나 사용자 steering·notification이 그 안에 그대로 담긴다 — 코드 경계가 없으니
+   가짜 경계로 인한 잘림이 구조적으로 불가능하다(구 `parse_round_actions`는 string-content 사용자 턴을
+   경계로 오인해 라운드를 잘랐다 — 실측: 라이브 미션에서 574개 중 388개 소실, harness-deps 감사가
+   포착). 사용자 지시는 미션보다 상위 권위인데 main만 보고 흡수하면 advisor와 main의 목표가
+   갈라지므로, 슬라이스에 담긴 steering을 narrator가 그대로 서술해 advisor에 전달한다 — steering은
+   라운드를 리셋하지 않는다(연속 슬라이스라 자연히 성립).
 5. **활성화 게이트 + 의미론적 종료(숫자 상한 없음).** `/ploop:launch`의 UserPromptExpansion 훅이
    `mission.md`·`active` 마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돈다.
    루프는 라운드 상한 없이 **의미론적으로만** 끝난다 — advisor가 종료 판정을 내면 Stop이 `active`를 지우거나,
@@ -295,17 +300,19 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    (advisor.md — 분석 대상은 **"main agent"**로 부른다). hook이 advisor를 직접 못 부르므로 같은
    **순서**를 trigger로 재현한다 — role은 advisor 시스템 프롬프트,
    original-mission·advice-history·instructions는 파일, action-history는 advisor가 트리거에 inline된
-   narrator Agent 호출을 실행하고 narrator가 쓴 `narration.md`를 읽어 조립한다. **트리거는
-   advisor의 Agent 호출을 — 그 안에 narrator Agent 호출을 inline해 — 축자로 작성해 넘긴다. hook이
-   정확한 호출을 작성하고 main·advisor는 그대로 relay한다.** 리터럴 호출을 그대로 건네는 것이
-   가장 단순·결정론적이다 — LLM이 구성할 것이 없다. 두 가지 주의점: **(a)** action narrative만
-   런타임 수집이다(narrating은 LLM이라 hook이 못 부른다). **(b)** 정박 대상은 세션 최초 프롬프트가
-   아닌 `/ploop:launch` 핸드오프 텍스트(`mission.md`)다 — launch 훅이 인자를 축자 캡처하므로(모델
-   전사 단계 없음) mission.md는 핸드오프 원문과 정확히 일치한다. action-history는 advisor
-   호출을 strip해 advice-history와 분리를 지킨다.
+   narrator Agent 호출을 실행하고 narrator가 쓴 `narration.md`를 읽어 조립한다. narrator 호출에는
+   트랜스크립트 경로와 라운드 라인 범위(`round-lines: start-end`)를 넘겨, narrator가 그 슬라이스를
+   Read해 서술한다. **트리거는 advisor의 Agent 호출을 — 그 안에 narrator Agent 호출을 inline해 —
+   축자로 작성해 넘긴다. hook이 정확한 호출을 작성하고 main·advisor는 그대로 relay한다.** 리터럴
+   호출을 그대로 건네는 것이 가장 단순·결정론적이다 — LLM이 구성할 것이 없다. 두 가지 주의점:
+   **(a)** action narrative만 런타임 수집이다(narrating은 LLM이라 hook이 못 부른다). **(b)** 정박
+   대상은 세션 최초 프롬프트가 아닌 `/ploop:launch` 핸드오프 텍스트(`mission.md`)다 — launch 훅이
+   인자를 축자 캡처하므로(모델 전사 단계 없음) mission.md는 핸드오프 원문과 정확히 일치한다.
+   action-history와 advice-history의 분리는 narrator가 advisor 호출·결과를 서술에서 제외하는 지시로
+   지킨다(구 hook 측 코드 strip을 대체).
 8. **단일 모델 `opus[1m]`(main·advisor).** 추론 최대화와 compaction 빈도 감소가 같은 선택으로
-   수렴. narrator만 단순 변환이라 `sonnet[1m]`/`low`면 충분하다(`[1m]`은 대형 라운드의
-   action.json 수용). main은 세션 모델이라 사용자가 `opus[1m]`로 실행하길 권장한다.
+   수렴. narrator만 단순 변환이라 `sonnet[1m]`/`low`면 충분하다(`[1m]`은 대형 라운드의 트랜스크립트
+   슬라이스 수용). main은 세션 모델이라 사용자가 `opus[1m]`로 실행하길 권장한다.
 9. **자발 advisor 호출 차단(PreToolUse 게이팅).** main이 hook 지시 없이 스스로 advisor를 부르면
    결정론적 사이클이 깨진다 — hook이 지정한 5-section 입력 대신 main 자기 말이 입력으로 가고, 그 호출이
    `advice.md`를 엉뚱한 시점에 덮어써 advice 채널을 오염시킨다. Stop이 호출을 지시할 때만 1회용 토큰을
@@ -362,7 +369,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     축자 echo하고 3.5초에 end_turn한 확률적 degenerate 출력 — 당시의 empty=terminate 규칙이 이를 수렴으로
     위장해 미션을 조용히 끝냈다. 일회성 샘플링 이상이라 재시도 1회로 사실상 소멸한다. (b) 트리거가
     응답되지 않은 채 멈추면(main의 거부, 또는 사용자가 끊은 턴) ploop의 기저 규칙인 **권한 분할**(루프
-    종료 권한 = advisor, 작업 수행 권한 = main)을 고지하며 재주입한다(`declines`). 거부의 근거 발언은 action.json을 타고 advisor에게 닿으므로,
+    종료 권한 = advisor, 작업 수행 권한 = main)을 고지하며 재주입한다(`declines`). 거부의 근거 발언은 라운드 트랜스크립트 슬라이스→narrator를 타고 advisor에게 닿으므로,
     타당한 거부는 advisor의 종료 판정으로 관철된다 — main이 합리적 종료 근거를 출력하면 advisor가 읽고
     종료하는 합의 경로는 실측됐고, in-band 사용자 종결 지시도 이 경로로 advisor에 닿는다. 실측
     근거(2026-07): main이 in-band 사용자 지시(AskUserQuestion 답변 "작업 종결")를 근거로 호출을 정당하게
@@ -418,14 +425,17 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    강제 종료는 턴만 끊고 루프를 armed 좀비로 남기는 것이 실측됐다). 단 advisor가 종료 토큰을 안 내고
    main이 무한히 **일하는** "생산적 무한 루프"는 이 cap도 못 막으므로(작업이 리셋), 그 경우엔 `/ploop:stop`이
    종료 수단이다 — `/goal`도 동일 트레이드오프를 수용한다.
-2. **트랜스크립트 형식 가정.** `parse_round_actions`가 "마지막 훅 주입 이후"를 라운드 action으로 잡아
-   narrator 입력을 만든다 — 트랜스크립트 메시지·블록 형식에 의존한다. 어긋나면 action 범위가 넓어질 수
-   있다(graceful, 치명적이지 않음). compact summary 필터는 `isCompactSummary` 플래그(실측: v2.1.195
-   auto·v2.1.202 manual 동일)에 의존한다 — 플래그 형식이 어긋나면 compaction 라운드가 그 지점에서
-   잘리는 동작으로 degrade한다(graceful). 미드턴 주입 승격도 `queued_command` attachment
-   형식(실측: v2.1.195 str·v2.1.206 블록 리스트 — 둘 다 처리)에 의존한다 — 어긋나면 주입이 다시
-   파싱에 안 보이는 동작으로 degrade한다(graceful, main은 여전히 지시를 수행한다). advice 캡처는 이 의존에서 빠졌다 — advice.md 단일 채널로 전환하며
-   `extract_advisor_output` 트랜스크립트 스크레이프를 제거했다(이전 리스크 해소).
+2. **트랜스크립트 형식 가정 — 대부분 해소됨(resolved).** hook은 더 이상 트랜스크립트를 파싱하지
+   않는다. 라운드 경계·`isCompactSummary` 필터·`queued_command` 승격·advisor-strip을 하던
+   `parse_round_actions`(구 `transcript.py`)를 제거하고, narrator에게 라인 오프셋만 넘겨 raw
+   슬라이스를 스스로 해석하게 했다(핵심 설계 결정 4) — 형식 표류에 브리틀 코드가 아닌 지능이
+   대응하므로 표류가 곧 고장이 되지 않는다. 남은 의존은 두 가지로 축소됐고 둘 다 형식 필드가 아니다:
+   **(a)** 트랜스크립트가 라인 단위 append-only라 라인 번호가 안정적이라는 가정(compaction도 append —
+   결정 4). 어긋나면 슬라이스 범위가 어긋나지만 방향은 "넓게"(wider)로 graceful하다. **(b)** narrator가
+   Read로 슬라이스를 읽을 수 있다는 것(공식 Read 툴 계약). advice 캡처도 이 의존 밖이다 — advice.md
+   단일 채널이라 스크레이프하지 않는다. (구 리스크: `parse_round_actions`가 string-content 사용자 턴을
+   경계로 오인해 라운드 narration을 잘랐다 — harness-deps 감사가 라이브 미션에서 실측 포착, 이 리팩터로
+   소멸.)
 3. **main의 지시 순응도 — 반증됨(resolved).** stderr "advisor 호출"에 main이 실제로 응하는가. 초기 실측에선
    매 라운드 순응했으나, 이후 main이 in-band 사용자 지시를 근거로 **정당하게 거부**하는 사건이 관측됐다
    (2026-07). 순응은 더 이상 전제가 아니라 리스크로 취급된다 — 미호출 1회는 권한 고지로 합의 채널에
@@ -457,7 +467,7 @@ ploop/
 ├── .claude-plugin/plugin.json        # manifest
 ├── agents/                           # 2개 tier 정의 (frontmatter 봉인 + 프롬프트 본문)
 │   ├── advisor.md                    # advisor 역할 + 5-section 읽기 순서 (Write: advice→advice.md)
-│   └── narrator.md                   # action-history 서사 변환 (Write: narration→narration.md)
+│   └── narrator.md                   # 라운드 트랜스크립트 슬라이스 → action-history 서사 (Read: transcript · Write: narration→narration.md)
 ├── prompts/instruction.md            # advisor 분석·출력 지침
 ├── skills/define-mission/SKILL.md    # /ploop:define-mission — Direction·Boundary 규칙으로 MISSION.md 작성 (루프와 비연결, 수동 핸드오프)
 ├── skills/launch/SKILL.md            # /ploop:launch — 루프 notice + 대기 규약 + 미션 핸드오프 (미션 저장·활성화는 launch 훅)
@@ -466,9 +476,8 @@ ploop/
 ├── bin/ploop-hook                    # uv 가용성 체크 래퍼
 ├── src/                              # 훅 구현 (런타임 의존성 없음)
 │   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·mark_compaction·launch·stop_command)
-│   ├── state.py                      # Workspace(세션 파일 경로의 단일 창구) + ledger 영속화
-│   ├── transcript.py                 # action 추출(advisor 호출 strip) — narrator 입력용
-│   ├── prompt.py                     # advice-history 포맷 + 5-section advisor trigger 조립
+│   ├── state.py                      # Workspace(세션 파일 경로의 단일 창구) + ledger 영속화(round_start_line 포함)
+│   ├── prompt.py                     # advice-history 포맷 + 5-section advisor trigger 조립(narrator 슬라이스 라인 범위 포함)
 │   └── updater.py                    # SessionStart 업데이트 알림
 └── tests/                            # 구현 독립 (stdin/stdout/disk 구동)
 ```

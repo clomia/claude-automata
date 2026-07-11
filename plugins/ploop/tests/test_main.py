@@ -28,8 +28,8 @@ from src.main import (
 from src.state import load_ledger, save_ledger
 
 # A minimal round transcript: a trigger boundary + the main agent's own work.
-# The advice no longer comes from here — advice.md is the sole channel — so this
-# only feeds parse_round_actions (which writes the narrator's action file).
+# The advice comes from advice.md (the sole channel); this transcript only sets
+# the line count (the round's end offset the hook records for the narrator).
 ROUND_WORK = [
     {"role": "user", "content": "advisor trigger"},
     {"role": "assistant", "content": "working on the advice"},
@@ -144,7 +144,10 @@ class TestStop:
         assert "advice-history:" in err
         assert "instructions:" in err
         assert "ploop:advisor" in err
+        assert "round-lines:" in err  # narrator reads the round's transcript slice
         assert (tmp_path / "s1_advisor_token").exists()
+        # round 1 starts after round 0's last transcript line (2-line ROUND_WORK)
+        assert load_ledger(tmp_path / "s1_loop.json")["round_start_line"] == 3
 
     def test_records_advice_and_logs_completed_round_zero(self, tmp_path, monkeypatch):
         arrange_mission(
@@ -224,14 +227,19 @@ class TestStop:
         """The advisor finished (no running marker) and wrote nothing — a
         malfunction, not a verdict (the protocol demands a Write even to
         terminate).  The round is retried: same round number, a fresh token,
-        and the round's inputs (action.json, advice_history.md) untouched so
+        and the round's inputs (round_start_line, advice_history.md) untouched so
         the retried advisor sees what the failed one saw; nothing is logged —
         the round completes at its eventual successful stop."""
         arrange_mission(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
-            ledger={"round_number": 1, "advice_history": [], "done": False},
+            ledger={
+                "round_number": 1,
+                "advice_history": [],
+                "done": False,
+                "round_start_line": 5,
+            },
         )
         with pytest.raises(SystemExit) as exc:
             stop()
@@ -240,9 +248,9 @@ class TestStop:
         assert ledger["round"] == 1  # same round, not advanced
         assert ledger["done"] is False
         assert ledger["advisor_failures"] == 1
+        assert ledger["round_start_line"] == 5  # frozen — same slice re-narrated
         assert (tmp_path / "s1_active").exists()
         assert (tmp_path / "s1_advisor_token").exists()
-        assert not (tmp_path / "s1_action.json").exists()  # inputs frozen
         assert not (tmp_path / "s1_advice_history.md").exists()
         assert not (tmp_path / "s1_loop.log").exists()  # nothing logged
         err = capsys.readouterr().err
@@ -396,8 +404,9 @@ class TestStop:
         """Advisor NOT invoked this round (token still present): don't re-append a
         prior round's advice as a duplicate, even if a stale advice file lingers.
         The trigger is re-injected behind the authority notice — only the advisor
-        may end the loop, and the refusal's stated reasons ride action.json to
-        its verdict; no main-side exit is advertised."""
+        may end the loop, and the refusal turn is in the round's transcript slice,
+        so the narrator routes its stated reasons to the advisor's verdict; no
+        main-side exit is advertised."""
         arrange_mission(
             tmp_path,
             monkeypatch,
@@ -417,9 +426,9 @@ class TestStop:
         assert ledger["advice_history"] == ["prior advice"]  # not duplicated
         assert ledger["round"] == 3
         assert ledger["declines"] == 1
-        # the refusal turn is re-parsed into action.json for the advisor to read
-        assert "working on the advice" in (tmp_path / "s1_action.json").read_text()
         err = capsys.readouterr().err
+        # the re-injected trigger points the narrator at the refusal round's slice
+        assert "round-lines:" in err
         assert "authority to end the loop belongs to the advisor" in err
         assert "Invoke the advisor" in err  # the trigger follows the notice
         assert "loop will end" not in err  # no main-side exit advertised

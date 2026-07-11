@@ -6,11 +6,14 @@ narration) under the system temp dir — a Write TOOL call into the protected
 ~/.claude routes to the auto-permission-mode classifier and can be silently
 blocked, so the agents write to unprotected temp, where it is auto-approved.
 
-The ledger ({round, advice_history, done, advisor_failures, declines}) is the
-loop's persisted state; the hook owns it as single writer — advisor and
-narrator only hand off text files.  The two counters track consecutive
-anomalies (an advisor run that wrote nothing / a stop that ignored the
-trigger) and reset to 0 on any normal round.
+The ledger ({round, advice_history, done, advisor_failures, declines,
+round_start_line}) is the loop's persisted state; the hook owns it as single
+writer — advisor and narrator only hand off text files.  The two counters track
+consecutive anomalies (an advisor run that wrote nothing / a stop that ignored
+the trigger) and reset to 0 on any normal round.  round_start_line is the
+transcript line where the current round's work begins — a file offset, not a
+message-format field — so the narrator reads that round's slice directly
+instead of the hook reconstructing it.
 """
 
 import json
@@ -45,10 +48,6 @@ class Workspace:
     @property
     def ledger_path(self) -> Path:
         return self.path("loop.json")
-
-    @property
-    def action_path(self) -> Path:
-        return self.path("action.json")
 
     @property
     def advice_history_path(self) -> Path:
@@ -110,6 +109,7 @@ def save_ledger(
     done: bool,
     advisor_failures: int = 0,
     declines: int = 0,
+    round_start_line: int = 1,
 ) -> None:
     """Persist the ledger; the anomaly counters default to a clean round."""
     ledger_file.write_text(
@@ -120,6 +120,7 @@ def save_ledger(
                 "done": done,
                 "advisor_failures": advisor_failures,
                 "declines": declines,
+                "round_start_line": round_start_line,
             }
         )
     )

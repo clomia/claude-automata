@@ -1,6 +1,6 @@
 [project]
 name = "ploop"
-version = "0.28.1"
+version = "0.29.0"
 requires-python = ">=3.14"
 dependencies = []
 

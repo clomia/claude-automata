@@ -6,6 +6,7 @@ from src.prompt import (
     format_advice_history,
     format_advisor_trigger,
     format_end_notice,
+    format_round_lines,
 )
 
 
@@ -22,11 +23,26 @@ class TestFormatAdviceHistory:
         assert "<advice-2>\n\nB\n\n</advice-2>" in out
 
 
+class TestFormatRoundLines:
+    def test_normal_range(self):
+        assert format_round_lines(10, 42) == "10-42"
+
+    def test_single_line_round(self):
+        assert format_round_lines(7, 7) == "7-7"
+
+    def test_unreadable_end_falls_back_to_eof(self):
+        """round_end < round_start (line count unavailable) → read to EOF: wider,
+        not truncated."""
+        assert format_round_lines(5, 0) == "5 through the end of the file"
+
+
 class TestFormatAdvisorTrigger:
-    def trigger(self, mission_text=None):
+    def trigger(self, mission_text=None, round_start=100, round_end=250):
         return format_advisor_trigger(
             mission_path=Path("/d/s1_mission.md"),
-            action_path=Path("/d/s1_action.json"),
+            transcript_path="/proj/s1.jsonl",
+            round_start=round_start,
+            round_end=round_end,
             advice_history_path=Path("/d/s1_advice_history.md"),
             advice_path=Path("/d/s1_advice.md"),
             narration_path=Path("/t/s1_narration.md"),
@@ -49,16 +65,18 @@ class TestFormatAdvisorTrigger:
     def test_carries_all_paths(self):
         out = self.trigger()
         assert "/d/s1_mission.md" in out
-        assert "/d/s1_action.json" in out
+        assert "/proj/s1.jsonl" in out
         assert "/d/s1_advice_history.md" in out
         assert "/d/s1_advice.md" in out
         assert "/t/s1_narration.md" in out
         assert "/p/prompts/instruction.md" in out
 
-    def test_narrator_prompt_labels_match_narrator_contract(self):
-        """narrator.md contracts on the `actions` / `narration-path` labels."""
-        out = self.trigger()
-        assert "actions: /d/s1_action.json" in out
+    def test_narrator_reads_the_rounds_transcript_slice(self):
+        """narrator.md contracts on the `transcript` / `round-lines` / `narration-path`
+        labels — it reads the round's own slice, no hook-side parsing."""
+        out = self.trigger(round_start=100, round_end=250)
+        assert "transcript: /proj/s1.jsonl" in out
+        assert "round-lines: 100-250" in out
         assert "narration-path: /t/s1_narration.md" in out
 
     def test_directs_main_to_read_advice(self):

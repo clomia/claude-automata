@@ -18,7 +18,15 @@ class TestLedger:
             "done": False,
             "advisor_failures": 0,
             "declines": 0,
+            "round_start_line": 1,
         }
+
+    def test_roundtrip_persists_round_start_line(self, tmp_path):
+        f = tmp_path / "s1_loop.json"
+        save_ledger(
+            f, round_number=3, advice_history=["a"], done=False, round_start_line=842
+        )
+        assert load_ledger(f)["round_start_line"] == 842
 
     def test_roundtrip_persists_anomaly_counters(self, tmp_path):
         f = tmp_path / "s1_loop.json"
@@ -53,7 +61,6 @@ class TestWorkspace:
         assert ws.mission_path == tmp_path / "s1_mission.md"
         assert ws.active_path == tmp_path / "s1_active"
         assert ws.ledger_path == tmp_path / "s1_loop.json"
-        assert ws.action_path == tmp_path / "s1_action.json"
         assert ws.advice_history_path == tmp_path / "s1_advice_history.md"
         assert ws.log_path == tmp_path / "s1_loop.log"
         assert ws.advisor_token_path == tmp_path / "s1_advisor_token"
