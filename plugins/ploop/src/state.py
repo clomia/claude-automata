@@ -50,6 +50,10 @@ class Workspace:
         return self.path("loop.json")
 
     @property
+    def round_path(self) -> Path:
+        return self.path("round.jsonl")
+
+    @property
     def advice_history_path(self) -> Path:
         return self.path("advice_history.md")
 
@@ -81,6 +85,7 @@ class Workspace:
         """Remove the per-round loop state (mission.md and active marker kept)."""
         for path in (
             self.ledger_path,
+            self.round_path,
             self.advisor_token_path,
             self.advisor_running_path,
             self.compacted_path,

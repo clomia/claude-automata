@@ -133,36 +133,44 @@ def end_loop(
     sys.exit(2)
 
 
-def count_lines(transcript_path: str) -> int:
-    """Line count of the transcript — the next round's start offset (this + 1).
+def read_transcript_lines(transcript_path: str) -> list[str]:
+    """The transcript's lines (append-only, so line numbers stay valid).
 
-    Append-only, so a line number stays valid once written.  Unreadable → 0, so
-    the next round starts at line 1 (the whole transcript — wider, not
-    truncated).
+    Unreadable → empty, so the round slice is empty and the narrator reports no
+    actions — graceful, never a crash.
     """
     try:
-        with open(transcript_path, "rb") as f:
-            return sum(1 for _ in f)
+        with open(transcript_path) as f:
+            return f.readlines()
     except OSError:
-        return 0
+        return []
+
+
+def write_round_slice(lines: list[str], round_start: int, out_path: Path) -> None:
+    """Cut this round's own lines [round_start .. end] into out_path for the narrator.
+
+    A pure line range, no message parsing: round_start is where the round began
+    and the transcript end is this stop (the next handoff has not been appended
+    yet), so the slice is exactly the round.  The narrator analyzes the whole
+    file — no offsets, no boundary-finding.
+    """
+    out_path.write_text("".join(lines[round_start - 1 :]))
 
 
 def arm_advisor(
     ws: Workspace,
     *,
-    transcript_path: str,
+    lines: list[str],
     round_start: int,
     notice: str = "",
 ) -> None:
     """Arm one advisor invocation and end the hook (exit 2).
 
     Consumes any compaction marker (mechanism 2: the trigger inlines the
-    original-mission text), clears both handoff channels so an absent file at
-    the next stop unambiguously means its agent wrote nothing, sets the
-    single-use token, and injects the trigger — the narrator call inside it
-    points at the transcript from round_start onward (the narrator self-bounds
-    the round's end by skipping loop machinery) — prefixed by `notice` on an
-    anomalous re-arm.
+    original-mission text), cuts this round's transcript slice into round_path
+    for the narrator, clears both handoff channels so an absent file at the next
+    stop unambiguously means its agent wrote nothing, sets the single-use token,
+    and injects the trigger — prefixed by `notice` on an anomalous re-arm.
     """
     mission_text = None
     if ws.compacted_path.exists():
@@ -172,10 +180,10 @@ def arm_advisor(
             mission_text = None
         ws.compacted_path.unlink(missing_ok=True)
 
+    write_round_slice(lines, round_start, ws.round_path)
     trigger = format_advisor_trigger(
         mission_path=ws.mission_path,
-        transcript_path=transcript_path,
-        round_start=round_start,
+        round_path=ws.round_path,
         advice_history_path=ws.advice_history_path,
         advice_path=ws.advice_path,
         narration_path=ws.narration_path,
@@ -213,7 +221,7 @@ def stop() -> None:
         sys.exit(0)
     current_round = ledger.get("round", 0)
     advice_history = ledger.get("advice_history", [])
-    transcript_path = event.get("transcript_path", "")
+    lines = read_transcript_lines(event.get("transcript_path", ""))
     # Start line of the round being completed now — the narrator's slice begins
     # here.  Defaults to line 1 for round 0 (whole session so far is the round).
     round_start = ledger.get("round_start_line", 1)
@@ -276,7 +284,7 @@ def stop() -> None:
             )
             arm_advisor(
                 ws,
-                transcript_path=transcript_path,
+                lines=lines,
                 round_start=round_start,
                 notice=RETRY_NOTICE,
             )
@@ -298,11 +306,11 @@ def stop() -> None:
             )
         advice_history = [*advice_history, advice]
 
-    # Arm the next round.  The narrator reads the just-completed round from
-    # round_start onward and self-bounds its end at the advisor hand-off — so
-    # no interjection, and no line-count-at-stop, can truncate it.  The next
-    # round starts just past the current transcript end (this round's trigger
-    # has not been injected yet), so record that as its start line.
+    # Arm the next round.  arm_advisor cuts the just-completed round
+    # [round_start .. end] into round_path for the narrator — a contiguous slice
+    # no interjection can truncate.  The next round starts just past the current
+    # transcript end (this round's trigger has not been injected yet), so record
+    # that as its start line.
     ws.advice_history_path.write_text(format_advice_history(advice_history))
     save_ledger(
         ws.ledger_path,
@@ -310,11 +318,11 @@ def stop() -> None:
         advice_history=advice_history,
         done=False,
         declines=declines,
-        round_start_line=count_lines(transcript_path) + 1,
+        round_start_line=len(lines) + 1,
     )
     arm_advisor(
         ws,
-        transcript_path=transcript_path,
+        lines=lines,
         round_start=round_start,
         notice=DECLINE_NOTICE if declines else "",
     )

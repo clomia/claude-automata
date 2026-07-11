@@ -61,6 +61,7 @@ class TestWorkspace:
         assert ws.mission_path == tmp_path / "s1_mission.md"
         assert ws.active_path == tmp_path / "s1_active"
         assert ws.ledger_path == tmp_path / "s1_loop.json"
+        assert ws.round_path == tmp_path / "s1_round.jsonl"
         assert ws.advice_history_path == tmp_path / "s1_advice_history.md"
         assert ws.log_path == tmp_path / "s1_loop.log"
         assert ws.advisor_token_path == tmp_path / "s1_advisor_token"
@@ -87,6 +88,7 @@ class TestWorkspace:
         ws = Workspace(data_dir=tmp_path, session_id="s1")
         round_state = (
             ws.ledger_path,
+            ws.round_path,
             ws.advisor_token_path,
             ws.advisor_running_path,
             ws.compacted_path,

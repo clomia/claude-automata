@@ -23,11 +23,10 @@ class TestFormatAdviceHistory:
 
 
 class TestFormatAdvisorTrigger:
-    def trigger(self, mission_text=None, round_start=100):
+    def trigger(self, mission_text=None):
         return format_advisor_trigger(
             mission_path=Path("/d/s1_mission.md"),
-            transcript_path="/proj/s1.jsonl",
-            round_start=round_start,
+            round_path=Path("/d/s1_round.jsonl"),
             advice_history_path=Path("/d/s1_advice_history.md"),
             advice_path=Path("/d/s1_advice.md"),
             narration_path=Path("/t/s1_narration.md"),
@@ -50,19 +49,17 @@ class TestFormatAdvisorTrigger:
     def test_carries_all_paths(self):
         out = self.trigger()
         assert "/d/s1_mission.md" in out
-        assert "/proj/s1.jsonl" in out
+        assert "/d/s1_round.jsonl" in out
         assert "/d/s1_advice_history.md" in out
         assert "/d/s1_advice.md" in out
         assert "/t/s1_narration.md" in out
         assert "/p/prompts/instruction.md" in out
 
-    def test_narrator_reads_from_the_rounds_start_line(self):
-        """narrator.md contracts on the `transcript` / `round-start-line` /
-        `narration-path` labels — it reads from the start and self-bounds the
-        round's end, no hook-side parsing and no end offset."""
-        out = self.trigger(round_start=100)
-        assert "transcript: /proj/s1.jsonl" in out
-        assert "round-start-line: 100" in out
+    def test_narrator_gets_the_round_slice_file(self):
+        """narrator.md contracts on the `round` / `narration-path` labels — it
+        analyzes the whole pre-cut slice file, no offsets, no boundary-finding."""
+        out = self.trigger()
+        assert "round: /d/s1_round.jsonl" in out
         assert "narration-path: /t/s1_narration.md" in out
 
     def test_directs_main_to_read_advice(self):

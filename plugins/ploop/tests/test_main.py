@@ -24,6 +24,7 @@ from src.main import (
     stop_command,
     subagent_stop,
     write_log,
+    write_round_slice,
 )
 from src.state import load_ledger, save_ledger
 
@@ -144,9 +145,11 @@ class TestStop:
         assert "advice-history:" in err
         assert "instructions:" in err
         assert "ploop:advisor" in err
-        assert "round-start-line:" in err  # narrator reads from the round start
+        assert "round:" in err  # narrator gets the round slice file
+        assert str(tmp_path / "s1_round.jsonl") in err
         assert (tmp_path / "s1_advisor_token").exists()
-        # round 1 starts after round 0's last transcript line (2-line ROUND_WORK)
+        # round 0's slice is the whole transcript (from line 1); round 1 starts after it
+        assert "initial work" in (tmp_path / "s1_round.jsonl").read_text()
         assert load_ledger(tmp_path / "s1_loop.json")["round_start_line"] == 3
 
     def test_records_advice_and_logs_completed_round_zero(self, tmp_path, monkeypatch):
@@ -427,8 +430,9 @@ class TestStop:
         assert ledger["round"] == 3
         assert ledger["declines"] == 1
         err = capsys.readouterr().err
-        # the re-injected trigger points the narrator at the refusal round start
-        assert "round-start-line:" in err
+        # the re-injected trigger points the narrator at the refusal round slice
+        assert "round:" in err
+        assert "working on the advice" in (tmp_path / "s1_round.jsonl").read_text()
         assert "authority to end the loop belongs to the advisor" in err
         assert "Invoke the advisor" in err  # the trigger follows the notice
         assert "loop will end" not in err  # no main-side exit advertised
@@ -754,6 +758,31 @@ class TestStopCommand:
         with pytest.raises(SystemExit):
             stop_command()
         assert (tmp_path / "s1_active").exists()  # untouched
+
+
+# ── write_round_slice ──
+
+
+class TestWriteRoundSlice:
+    def test_slice_starts_at_round_start_excluding_prior_rounds(self, tmp_path):
+        """The slice is a pure line range [round_start .. end]: prior rounds'
+        lines (before round_start) are excluded, and the whole rest is kept —
+        no message parsing, so a mid-round interjection can't truncate it."""
+        lines = [f"line {i}\n" for i in range(1, 6)]  # 5 transcript lines
+        out = tmp_path / "round.jsonl"
+        write_round_slice(lines, round_start=3, out_path=out)
+        assert out.read_text() == "line 3\nline 4\nline 5\n"
+
+    def test_round_zero_slice_is_the_whole_transcript(self, tmp_path):
+        lines = ["a\n", "b\n"]
+        out = tmp_path / "round.jsonl"
+        write_round_slice(lines, round_start=1, out_path=out)
+        assert out.read_text() == "a\nb\n"
+
+    def test_empty_transcript_yields_empty_slice(self, tmp_path):
+        out = tmp_path / "round.jsonl"
+        write_round_slice([], round_start=1, out_path=out)
+        assert out.read_text() == ""
 
 
 # ── write_log ──
