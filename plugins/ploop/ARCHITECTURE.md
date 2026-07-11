@@ -420,6 +420,20 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     포맷 의존을 하나도 추가하지 않는다. 실측 근거(2026-07): background GPU Job이 도는 미션에서
     같은 지시를 사용자 조향으로 주입해 검증 — 조기 심사가 멈추고 라운드가 작업 완결 단위로
     정렬됐다.
+17. **재발행 루프는 waiter 서브에이전트가 흡수한다 — main 컨텍스트 경제.** 결정 16의 포그라운드
+    대기는 하네스의 10분 Bash 상한 때문에 재발행을 반복하는데(실측: 3시간 작업 ≈ 18회), 그 기록이
+    main의 영속 컨텍스트에 쌓여 compaction을 앞당긴다. `ploop:waiter`가 그 재발행 루프를 일회용
+    서브에이전트 컨텍스트에서 소각하고, main에는 "가장 먼저 끝난 작업"당 `Agent` 1쌍만 남긴다 —
+    advisor·narrator의 nesting 컨텍스트 경제와 같은 패턴. 동기 호출(`run_in_background=false`)이라
+    main 포그라운드를 붙잡는다(실측: advisor 동기 호출이 20분 블록). 계약: main이 self-bound하며
+    `WAIT-EVENT`/`WAIT-TIMEOUT`을 내는 wait-command(이 세션의 `fg-wait.sh`가 검증된 원형)를 넘기고,
+    waiter는 그것을 3분기 재발행 루프로만 실행한다(EVENT→반환 / TIMEOUT·hang→재실행 / 깨진 출력→
+    반환). waiter는 **루프 기계장치 밖**의 main 미션-측 헬퍼다 — advisor 게이트들이 "advisor"
+    부분문자열로 자연히 배제하므로(PreToolUse·SubagentStop·strip) 마커도 전용 훅도 필요 없다.
+    backgrounding cascade 위험도 없다: waiter를 백그라운드로 보내도 Stop은 advisor를 재주입할 뿐
+    또 다른 waiter를 낳지 않아 최악이 조기 라운드 1회(결정 16의 degrade)다 — advisor의 파국적
+    cascade(결정 13)와 달라 in-flight 가드가 불필요하다. 실패는 항상 조기 심사로 degrade하지
+    정지하지 않는다.
 
 ---
 
@@ -476,9 +490,10 @@ foreground라 동기 호출이 보장된다.
 ```
 ploop/
 ├── .claude-plugin/plugin.json        # manifest
-├── agents/                           # 2개 tier 정의 (frontmatter 봉인 + 프롬프트 본문)
+├── agents/                           # 루프 tier(advisor·narrator) + waiter(main-side 대기 헬퍼)
 │   ├── advisor.md                    # advisor 역할 + 5-section 읽기 순서 (Write: advice→advice.md)
-│   └── narrator.md                   # 라운드 슬라이스 파일 → action-history 서사 (Read: round.jsonl · Write: narration→narration.md)
+│   ├── narrator.md                   # 라운드 슬라이스 파일 → action-history 서사 (Read: round.jsonl · Write: narration→narration.md)
+│   └── waiter.md                     # 포그라운드 대기 위임 — wait-command 재발행 루프 (Bash · 루프 밖 leaf)
 ├── prompts/instruction.md            # advisor 분석·출력 지침
 ├── skills/define-mission/SKILL.md    # /ploop:define-mission — Direction·Boundary 규칙으로 MISSION.md 작성 (루프와 비연결, 수동 핸드오프)
 ├── skills/launch/SKILL.md            # /ploop:launch — 루프 notice + 대기 규약 + 미션 핸드오프 (미션 저장·활성화는 launch 훅)
