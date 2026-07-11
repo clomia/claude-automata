@@ -74,6 +74,8 @@ narrator  depth 2  Read Write  narrate          round slice file -> narration.md
   `Write`는 advisor와 동일한 채널이다: narration을 temp `narration.md`에 쓰고, advisor가 분석 입력으로·hook이
   라운드 로그로 같은 파일을 읽는다. 원본 슬라이스를 스스로 해석해야 하므로 `sonnet[1m]`/`medium`이다.
 - depth 2에서 트리를 닫아 depth-5 cap에 3단계 여유를 남긴다.
+- **waiter는 이 loop 트리 밖의 main-side leaf**(`Bash`만·`sonnet`/`high`) — main이 background 대기를 위임하는
+  별개 서브에이전트라 위 트리·표엔 없다(main→waiter, depth 1; 결정 17).
 
 ---
 
@@ -414,7 +416,8 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     기각했다: 완료 알림 형식이 표류하면 pending이 영원히 안 빠져 루프가 소리 없이 기아한다 — 실패
     방향이 degrade가 아니라 정지다. 대신 그 지식을 원래 가진 주체에게 규약을 부여한다: launch
     스킬이 main에게 "백그라운드 작업이 남아 있는 동안 턴을 끝내지 말고, 가장 먼저 끝나는 작업이
-    돌아오는 포그라운드 대기를 반복하라"를 지시한다(스킬 본문은 auto-compaction 후에도
+    돌아오는 포그라운드 대기를 반복하라"를 지시한다 — 그 반복 대기 루프는 결정 17에서 waiter가
+    흡수한다(스킬 본문은 auto-compaction 후에도
     re-inject된다 — 미션 정박 2와 같은 채널). main과 advisor는 협력 관계고 ploop은 둘을 적절히
     신뢰한다 — 규약 위반의 대가는 미완 라운드의 조기 심사(기능 저하)이지 고장이 아니며, 하네스
     포맷 의존을 하나도 추가하지 않는다. 실측 근거(2026-07): background GPU Job이 도는 미션에서
@@ -425,7 +428,7 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     main의 영속 컨텍스트에 쌓여 compaction을 앞당긴다. `ploop:waiter`가 그 재발행 루프를 일회용
     서브에이전트 컨텍스트에서 소각하고, main에는 "가장 먼저 끝난 작업"당 `Agent` 1쌍만 남긴다 —
     advisor·narrator의 nesting 컨텍스트 경제와 같은 패턴. 동기 호출(`run_in_background=false`)이라
-    main 포그라운드를 붙잡는다(실측: advisor 동기 호출이 20분 블록). 계약: main이 self-bound하며
+    main 포그라운드를 붙잡는다(실측: advisor 동기 호출 최장 ~28분; 시간 단위 블록 가능 여부는 미확인 — 기술 리스크 5). 계약: main이 self-bound하며
     `WAIT-EVENT`/`WAIT-TIMEOUT`을 내는 wait-command(이 세션의 `fg-wait.sh`가 검증된 원형)를 넘기고,
     waiter는 그것을 3분기 재발행 루프로만 실행한다(EVENT→반환 / TIMEOUT·hang→재실행 / 깨진 출력→
     반환). waiter는 **루프 기계장치 밖**의 main 미션-측 헬퍼다 — advisor 게이트들이 "advisor"
@@ -468,6 +471,13 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    설계 결정 14).
 4. **PreToolUse 발동·session 일치** — 자발 호출 게이팅은 PreToolUse가 main의 Agent 호출에 발동하고 그
    session_id가 Stop과 같아야 성립한다. 미발동 시 게이팅만 무효화되고 루프는 현행대로(graceful).
+5. **waiter의 동기 Agent 블록 시간 — 부분 확인(partial).** waiter는 main을 동기 `Agent` 호출로
+   붙잡는다(결정 17). 그 호출이 얼마나 오래 블록 가능한지가 상한인데, 실측 상한은 **~28분**(이 머신
+   전체에서 동기 Agent 호출 79건, 최장 27.9분, 타임아웃 kill 0건)이고 Agent 툴엔 `timeout` 파라미터도
+   없다. 그러나 수 시간짜리 대기를 단일 호출로 커버 가능한지, 유휴(`sleep`) 대기가 advisor 같은 능동
+   작업과 다르게 죽는지는 **미확인**이다. 죽어도 safe-degrade한다: waiter 반환 → main이 launch 스킬의
+   [CRITICAL] "foreground 비우지 마라" 불변식대로 재호출 → 최악이 결정 16의 조기 심사(정지·오종료
+   아님). 호출당 ≥28분을 붙잡아 Bash 직접 대기(10분 상한)보다 여전히 순이득이다.
 
 초기 nested(operator) 버전의 리스크였던 **subagent 내부 `PostCompact` 발화 여부**와 **background-operator의
 nested 동기 호출 honor**는 main 승격으로 **소멸**했다 — 메인 세션은 `PostCompact`가 확실히 발화하고,
