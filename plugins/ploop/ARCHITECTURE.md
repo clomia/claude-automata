@@ -388,6 +388,19 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     후 `/ploop:stop`이다 — 명시적 단일 kill switch가 형식 휴리스틱보다 견고하다. 이 정책으로
     UserPromptSubmit 훅이 통째로 사라졌고, 그 훅의 cleanup에서 launch 턴의 `active`를 보호하던
     launching sentinel도 함께 사라졌다 — 프롬프트 경로는 ploop과 완전히 분리된다.
+16. **advisor는 완전 종결 시점에 소집된다 — 코드가 아닌 스킬 규약으로.** Stop 훅은 포그라운드
+    종언만 알 뿐, 백그라운드(shell·agent·workflow·monitor)의 상태를 조회할 공식 수단이
+    없다(전용 훅·Stop 입력 필드·CLI 모두 부재 — 2026-07 공식 문서 조사; `TaskCreated`/
+    `TaskCompleted` 훅은 TODO 태스크 전용). 훅이 트랜스크립트에서 launch−완료를 재구성하는 안은
+    기각했다: 완료 알림 형식이 표류하면 pending이 영원히 안 빠져 루프가 소리 없이 기아한다 — 실패
+    방향이 degrade가 아니라 정지다. 대신 그 지식을 원래 가진 주체에게 규약을 부여한다: launch
+    스킬이 main에게 "백그라운드 작업이 남아 있는 동안 턴을 끝내지 말고, 가장 먼저 끝나는 작업이
+    돌아오는 포그라운드 대기를 반복하라"를 지시한다(스킬 본문은 auto-compaction 후에도
+    re-inject된다 — 미션 정박 2와 같은 채널). main과 advisor는 협력 관계고 ploop은 둘을 적절히
+    신뢰한다 — 규약 위반의 대가는 미완 라운드의 조기 심사(기능 저하)이지 고장이 아니며, 하네스
+    포맷 의존을 하나도 추가하지 않는다. 실측 근거(2026-07): background GPU Job이 도는 미션에서
+    같은 지시를 사용자 조향으로 주입해 검증 — 조기 심사가 멈추고 라운드가 작업 완결 단위로
+    정렬됐다.
 
 ---
 
@@ -447,7 +460,7 @@ ploop/
 │   └── narrator.md                   # action-history 서사 변환 (Write: narration→narration.md)
 ├── prompts/instruction.md            # advisor 분석·출력 지침
 ├── skills/define-mission/SKILL.md    # /ploop:define-mission — Direction·Boundary 규칙으로 MISSION.md 작성 (루프와 비연결, 수동 핸드오프)
-├── skills/launch/SKILL.md            # /ploop:launch — 루프 notice + 미션 핸드오프 (미션 저장·활성화는 launch 훅)
+├── skills/launch/SKILL.md            # /ploop:launch — 루프 notice + 대기 규약 + 미션 핸드오프 (미션 저장·활성화는 launch 훅)
 ├── skills/stop/SKILL.md              # /ploop:stop — 루프 종료 알림 (비활성화는 stop_command 훅)
 ├── hooks/hooks.json                  # UserPromptExpansion(launch·stop) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
 ├── bin/ploop-hook                    # uv 가용성 체크 래퍼
