@@ -1,7 +1,6 @@
 ---
 name: audit-harness-deps
 description: 비공식 의존 로직의 무결성 검사 및 업데이트 — 클로드 코드의 공식 레퍼런스가 없는 관측 기반 의존을 전수 식별하고, 이 머신의 최신 실측 기록과 대조해 표류를 찾아, 발견 시 수정·배포까지 수행하는 full cycle
-disable-model-invocation: true
 ---
 
 이 코드베이스의 훅·플러그인들은 일부 지점에서 클로드 코드의 **공식 레퍼런스가 없는 관측 기반
