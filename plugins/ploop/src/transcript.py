@@ -1,14 +1,10 @@
-"""Transcript — read the main session's transcript for the hooks.
+"""Transcript — read the main session's transcript for the Stop hook.
 
-parse_round_actions (Stop) returns the main agent's own domain work since the
-last advisor injection, written to a file the advisor's narrator reads.  The
+parse_round_actions returns the main agent's own domain work since the last
+advisor injection, written to a file the advisor's narrator reads.  The
 Agent(advisor) exchange is stripped so action-history stays the main agent's
 own work — kept distinct from advice-history, which accumulates the advisor's
 advice files (never scraped from the transcript).
-
-was_interrupted (UserPromptSubmit) reads the transcript for the one signal
-that has no hook event of its own: the user's interrupt (ESC), whose only
-trace is the sentinel record it leaves.
 """
 
 import json
@@ -16,15 +12,6 @@ from pathlib import Path
 
 # The Agent tool was renamed from Task in Claude Code 2.1.63; both resolve.
 AGENT_TOOL_NAMES = ("Agent", "Task")
-
-# The user record an ESC leaves in the transcript (observed: a single text
-# block; the string form is the defensive spelling of the same record).
-INTERRUPT_SENTINELS = frozenset(
-    {
-        "[Request interrupted by user]",
-        "[Request interrupted by user for tool use]",
-    }
-)
 
 
 def queued_user_message(obj: dict) -> dict | None:
@@ -148,40 +135,6 @@ def strip_advisor_exchanges(messages: list[dict]) -> list[dict]:
         if kept:
             cleaned.append({**msg, "content": kept})
     return cleaned
-
-
-def is_interrupt(msg: dict) -> bool:
-    """True for the user record an ESC interrupt leaves in the transcript."""
-    if msg.get("role") != "user":
-        return False
-    content = msg.get("content")
-    if isinstance(content, str):
-        return content.strip() in INTERRUPT_SENTINELS
-    return any(
-        isinstance(block, dict)
-        and block.get("type") == "text"
-        and str(block.get("text", "")).strip() in INTERRUPT_SENTINELS
-        for block in content_blocks(msg)
-    )
-
-
-def was_interrupted(transcript_path: str) -> bool:
-    """True when the session's latest completed act is a user interrupt (ESC).
-
-    An interrupt fires no hook of its own; it is read here, at the next
-    prompt, from the record it left.  Walking backwards, an assistant message
-    means the last turn ended normally; everything else — the prompt being
-    submitted, tool results, queued injections — is passed over, so the
-    verdict is about how the last turn ended, not about the prompt riding
-    this one.  An unreadable transcript reads as not interrupted: when in
-    doubt the loop survives (/ploop:stop always works).
-    """
-    for msg in reversed(load_messages(transcript_path)):
-        if msg.get("role") == "assistant":
-            return False
-        if is_interrupt(msg):
-            return True
-    return False
 
 
 def parse_round_actions(transcript_path: str) -> list[dict]:

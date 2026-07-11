@@ -52,7 +52,6 @@ class TestWorkspace:
         ws = Workspace(data_dir=tmp_path, session_id="s1")
         assert ws.mission_path == tmp_path / "s1_mission.md"
         assert ws.active_path == tmp_path / "s1_active"
-        assert ws.launching_path == tmp_path / "s1_launching"
         assert ws.ledger_path == tmp_path / "s1_loop.json"
         assert ws.action_path == tmp_path / "s1_action.json"
         assert ws.advice_history_path == tmp_path / "s1_advice_history.md"

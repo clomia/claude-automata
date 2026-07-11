@@ -43,10 +43,6 @@ class Workspace:
         return self.path("active")
 
     @property
-    def launching_path(self) -> Path:
-        return self.path("launching")
-
-    @property
     def ledger_path(self) -> Path:
         return self.path("loop.json")
 

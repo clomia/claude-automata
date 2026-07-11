@@ -1,15 +1,5 @@
 {
   "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook user-prompt-submit"
-          }
-        ]
-      }
-    ],
     "UserPromptExpansion": [
       {
         "matcher": "ploop:launch",

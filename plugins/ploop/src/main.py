@@ -3,17 +3,19 @@
 A hook is code and cannot call tools, so the loop is driven by feedback: stop()
 blocks the main agent's stop (exit 2) and injects the next instruction — invoke
 the advisor, or summarize the finished round log.  The active marker written at
-/ploop:launch gates everything; the loop ends through exactly three paths — the
-advisor writes the termination token, the user interrupts (ESC), or the user
-runs /ploop:stop — plus the anomaly failsafes: the main agent twice declines
-the trigger (a sound refusal is meant to end the loop through the advisor's
-verdict), or the advisor malfunctions twice.  There is no round cap, and no
-prompt reaching the session — a typed user turn, a task notification, a
-scheduled wakeup — ends the loop by itself.  Both loop participants are
-unreliable LLMs, so each anomaly gets one corrective repeat before it ends the
-loop: an advisor run that wrote nothing is retried, a stop that ignored the
-trigger is redirected to the advisor's authority.  See ARCHITECTURE.md for the
-loop design.
+/ploop:launch gates everything; the loop ends through exactly two paths — the
+advisor writes the termination token, or the user runs /ploop:stop — plus the
+anomaly failsafes: the main agent twice declines the trigger (a sound refusal
+is meant to end the loop through the advisor's verdict), or the advisor
+malfunctions twice.  There is no round cap.  Prompt submission is a non-event
+for ploop — no hook fires on it, so typed user turns, task notifications, and
+scheduled wakeups all pass through an armed loop untouched.  An ESC only cuts
+the turn (no hook fires on an interrupt either): the loop stays armed and
+resumes at the next stop, so the way to halt a running mission is ESC, then
+/ploop:stop.  Both loop participants are unreliable LLMs, so each anomaly gets
+one corrective repeat before it ends the loop: an advisor run that wrote
+nothing is retried, a stop that ignored the trigger is redirected to the
+advisor's authority.  See ARCHITECTURE.md for the loop design.
 
 Hooks must never break the session: malformed events and missing files degrade
 to exit 0 (allow the action).
@@ -30,7 +32,7 @@ from src.prompt import (
     format_end_notice,
 )
 from src.state import Workspace, load_ledger, save_ledger
-from src.transcript import parse_round_actions, was_interrupted
+from src.transcript import parse_round_actions
 
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
 # survives any surrounding prose the model emits alongside it.
@@ -187,11 +189,6 @@ def stop() -> None:
     current_round = ledger.get("round", 0)
     advice_history = ledger.get("advice_history", [])
 
-    # Consume any launching sentinel that outlived the turn boundary (possible only
-    # if UserPromptSubmit didn't run before this Stop) so it can't later spare the
-    # active marker on an intervention turn.
-    ws.launching_path.unlink(missing_ok=True)
-
     # An advisor is still in flight (PreToolUse set the marker; SubagentStop, its
     # sole clearer, hasn't fired): re-triggering would cascade a second advisor,
     # so wait — the loop resumes when the advisor stops.
@@ -309,57 +306,12 @@ def pre_tool_use() -> None:
     sys.exit(2)
 
 
-def user_prompt_submit() -> None:
-    """UserPromptSubmit hook: deactivate on user interrupt (ESC), spare all else.
-
-    The prompt path carries more than typed user turns: task notifications,
-    scheduled wakeups and other system prompts arrive the same way, and a live
-    mission works through them all — no prompt is an intervention.  The loop
-    ends only through its three paths: the advisor's termination verdict,
-    /ploop:stop, and the user's interrupt (ESC).  An ESC fires no hook of its
-    own; it surfaces here, at the next prompt, as the sentinel record closing
-    the transcript — only then is the loop deactivated: round state and the
-    active marker cleared unconditionally (like /ploop:stop, even mid-advisor),
-    the mission file kept as the durable anchor, and the end notice sent as
-    additionalContext so the main agent reports the end and its cause.
-
-    A /ploop:launch turn consumes its launching sentinel and keeps the fresh
-    loop (UserPromptExpansion runs before this hook — even an ESC right before
-    the launch must not undo it).  Outside an active loop, per-round state is
-    cleared so nothing stale leaks into a later mission.
-    """
-    event = read_event()
-    ws = Workspace.from_env(event.get("session_id", ""))
-    if ws.launching_path.exists():
-        ws.launching_path.unlink()
-        return
-    if not ws.active_path.exists():
-        ws.clear_round_state()
-        return
-    if not was_interrupted(event.get("transcript_path", "")):
-        return
-    ws.clear_round_state()
-    ws.active_path.unlink(missing_ok=True)
-    sys.stdout.write(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "UserPromptSubmit",
-                    "additionalContext": format_end_notice(
-                        "the user interrupted the mission"
-                    ),
-                }
-            }
-        )
-    )
-
-
 def mark_compaction() -> None:
     """PostCompact hook: mark the compaction.
 
     The next stop() re-injects the original-mission text into its trigger
     (parallax mechanism 2) and consumes the marker; a marker left by a
-    non-mission compaction is cleared at the next turn boundary.
+    non-mission compaction is cleared when the next mission launches.
     """
     event = read_event()
     Workspace.from_env(event.get("session_id", "")).compacted_path.touch()
@@ -368,9 +320,8 @@ def mark_compaction() -> None:
 def subagent_stop() -> None:
     """SubagentStop hook: the sole clearer of the advisor-running marker.
 
-    Paired with PreToolUse setting it, the marker tells stop() and
-    user_prompt_submit() an advisor is still in flight; narrator and other
-    subagent stops are ignored.
+    Paired with PreToolUse setting it, the marker tells stop() an advisor is
+    still in flight; narrator and other subagent stops are ignored.
     """
     event = read_event()
     agent_type = str(event.get("agent_type") or event.get("subagent_type") or "")
@@ -384,10 +335,9 @@ def subagent_stop() -> None:
 def launch() -> None:
     """UserPromptExpansion hook (matcher: ploop:launch): the whole launch prep.
 
-    Fires when /ploop:launch <mission> expands — before UserPromptSubmit, hence
-    the launching sentinel that tells that later cleanup to spare the fresh
-    active marker.  The mission rides in command_args as structured JSON, so
-    multi-line text with quotes or `$` is captured verbatim.
+    Fires when /ploop:launch <mission> expands.  The mission rides in
+    command_args as structured JSON, so multi-line text with quotes or `$` is
+    captured verbatim.
 
     Two guards block the expansion (block_expansion — pure, turn erased): an
     armed loop (active marker), because relaunching over it would overwrite the
@@ -415,7 +365,6 @@ def launch() -> None:
     ws.log_path.write_text(f"[[ MISSION ]]\n\n{mission}\n\n")
     ws.mission_path.write_text(mission)
     ws.active_path.touch()
-    ws.launching_path.touch()
 
 
 def stop_command() -> None:
@@ -427,14 +376,13 @@ def stop_command() -> None:
     pure, turn erased): the skill body never enters context, so the main agent
     can't announce a termination that didn't happen.
 
-    An armed loop is deactivated: the active gate and per-round state are cleared,
-    so the next stop is allowed and nothing leaks into a later mission.  Unlike an
-    incidental user turn (which user_prompt_submit spares while a background
-    advisor is in flight), it stops unconditionally — clearing the running marker
-    before UserPromptSubmit reads it.  It injects the same end notice the natural
-    end does (cause: the user's stop) with the round log to recap, carried as
-    UserPromptExpansion additionalContext — the only channel with the session's
-    real log path; the static skill body can't hold it.
+    An armed loop is deactivated: the active gate and per-round state are cleared
+    (the running marker too — the stop is unconditional, even with a background
+    advisor in flight), so the next stop is allowed and nothing leaks into a
+    later mission.  It injects the same end notice the natural end does (cause:
+    the user's stop) with the round log to recap, carried as UserPromptExpansion
+    additionalContext — the only channel with the session's real log path; the
+    static skill body can't hold it.
     """
     event = read_event()
     if event.get("command_name", "") != "ploop:stop":

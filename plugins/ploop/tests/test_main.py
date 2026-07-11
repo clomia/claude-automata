@@ -1,4 +1,4 @@
-"""Tests for the main module — Stop, PreToolUse, UserPromptSubmit, PostCompact entry points.
+"""Tests for the main module — Stop, PreToolUse, SubagentStop, PostCompact entry points.
 
 The hook owns the whole ledger: it records the advisor's prior-round verdict
 (the advice it wrote to advice.md; only the explicit termination token ends
@@ -23,7 +23,6 @@ from src.main import (
     stop,
     stop_command,
     subagent_stop,
-    user_prompt_submit,
     write_log,
 )
 from src.state import load_ledger, save_ledger
@@ -134,11 +133,9 @@ class TestStop:
                 {"role": "assistant", "content": "initial work"},
             ],
         )
-        (tmp_path / "s1_launching").touch()  # a leaked sentinel must be consumed
         with pytest.raises(SystemExit) as exc:
             stop()
         assert exc.value.code == 2
-        assert not (tmp_path / "s1_launching").exists()  # consumed by stop()
         assert load_ledger(tmp_path / "s1_loop.json")["round"] == 1
         assert "No prior advice." in (tmp_path / "s1_advice_history.md").read_text()
         err = capsys.readouterr().err
@@ -552,181 +549,6 @@ class TestSubagentStop:
         assert (tmp_path / "s1_advisor_running").exists()
 
 
-# ── user_prompt_submit — deactivate on ESC only ──
-
-INTERRUPT_RECORD = {
-    "role": "user",
-    "content": [{"type": "text", "text": "[Request interrupted by user]"}],
-}
-
-
-class TestUserPromptSubmit:
-    def arm_loop(self, tmp_path):
-        """A mid-mission loop as the incident left it: armed round, token set."""
-        for name in ("s1_active", "s1_advisor_token", "s1_compacted"):
-            (tmp_path / name).touch()
-        (tmp_path / "s1_mission.md").write_text("m")
-        save_ledger(
-            tmp_path / "s1_loop.json", round_number=3, advice_history=["r"], done=False
-        )
-
-    def assert_loop_preserved(self, tmp_path, capsys):
-        assert (tmp_path / "s1_active").exists()
-        assert load_ledger(tmp_path / "s1_loop.json")["advice_history"] == ["r"]
-        assert (tmp_path / "s1_advisor_token").exists()
-        assert (tmp_path / "s1_compacted").exists()  # mechanism 2 survives the wake
-        assert capsys.readouterr().out == ""  # loop not ended → no notice
-
-    def test_task_notification_preserves_loop(self, tmp_path, monkeypatch, capsys):
-        """The incident (2026-07): the main agent yielded its turn to wait on
-        background agents, and one's completion notification arrived through the
-        prompt path (promptSource: system).  System prompts are not
-        interventions — the armed loop must survive untouched."""
-        self.arm_loop(tmp_path)
-        transcript = tmp_path / "s1.jsonl"
-        transcript.write_text(
-            "\n".join(
-                json.dumps(line)
-                for line in [
-                    {"message": {"role": "user", "content": "mission handoff"}},
-                    {
-                        "message": {
-                            "role": "assistant",
-                            "content": [
-                                {
-                                    "type": "tool_use",
-                                    "id": "w1",
-                                    "name": "ScheduleWakeup",
-                                    "input": {"delaySeconds": 1800},
-                                }
-                            ],
-                        }
-                    },
-                    {
-                        "message": {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "tool_result",
-                                    "tool_use_id": "w1",
-                                    "content": "Next wakeup scheduled",
-                                }
-                            ],
-                        }
-                    },
-                    {"type": "system", "subtype": "turn_duration"},
-                    {"type": "queue-operation", "operation": "enqueue"},
-                    {
-                        "message": {
-                            "role": "user",
-                            "content": "<task-notification>\n<status>completed</status>",
-                        }
-                    },
-                ]
-            )
-        )
-        arrange(
-            tmp_path,
-            monkeypatch,
-            make_stdin(transcript_path=str(transcript)),
-        )
-        user_prompt_submit()
-        self.assert_loop_preserved(tmp_path, capsys)
-
-    def test_direct_user_turn_preserves_loop(self, tmp_path, monkeypatch, capsys):
-        """A typed user turn is not an intervention either — the user steers,
-        answers, or adds instructions mid-mission and the loop keeps going.
-        Only ESC, /ploop:stop, or the advisor's verdict ends it."""
-        self.arm_loop(tmp_path)
-        transcript = tmp_path / "s1.jsonl"
-        write_jsonl(
-            transcript,
-            [
-                {"role": "user", "content": "mission handoff"},
-                {"role": "assistant", "content": "worked, then yielded"},
-            ],
-        )
-        arrange(tmp_path, monkeypatch, make_stdin(transcript_path=str(transcript)))
-        user_prompt_submit()
-        self.assert_loop_preserved(tmp_path, capsys)
-
-    def test_unreadable_transcript_preserves_loop(self, tmp_path, monkeypatch, capsys):
-        """No transcript to read means no interrupt verdict: fail open and keep
-        the loop — killing a mission is the dangerous direction, and
-        /ploop:stop always works."""
-        self.arm_loop(tmp_path)
-        arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
-        user_prompt_submit()
-        self.assert_loop_preserved(tmp_path, capsys)
-
-    def test_interrupt_deactivates_and_notifies(self, tmp_path, monkeypatch, capsys):
-        """The transcript closes on the ESC sentinel (the submitted prompt may
-        already sit after it): the user interrupted the mission — the one
-        prompt-path stop.  Like /ploop:stop it is unconditional (a background
-        advisor in flight does not spare it), round state is cleared, the
-        mission anchor stays, and the end notice reaches the main agent."""
-        self.arm_loop(tmp_path)
-        (tmp_path / "s1_advisor_running").touch()
-        transcript = tmp_path / "s1.jsonl"
-        write_jsonl(
-            transcript,
-            [
-                {"role": "user", "content": "mission handoff"},
-                {"role": "assistant", "content": "interrupted work"},
-                INTERRUPT_RECORD,
-                {"role": "user", "content": "the freshly submitted prompt"},
-            ],
-        )
-        arrange(tmp_path, monkeypatch, make_stdin(transcript_path=str(transcript)))
-        user_prompt_submit()
-        assert not (tmp_path / "s1_active").exists()
-        assert not (tmp_path / "s1_loop.json").exists()
-        assert not (tmp_path / "s1_advisor_token").exists()
-        assert not (tmp_path / "s1_advisor_running").exists()
-        assert (tmp_path / "s1_mission.md").exists()  # anchor kept
-        out = json.loads(capsys.readouterr().out)
-        assert out["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
-        context = out["hookSpecificOutput"]["additionalContext"]
-        assert "parallax loop has ended" in context
-        assert "interrupted" in context
-
-    def test_launch_turn_keeps_active_via_sentinel(self, tmp_path, monkeypatch, capsys):
-        """On a /ploop:launch turn the launching sentinel is present: the fresh
-        loop survives and the sentinel is consumed — even when an ESC closed
-        the previous turn (the user interrupted the past, then launched)."""
-        (tmp_path / "s1_active").touch()
-        (tmp_path / "s1_mission.md").write_text("fresh mission")
-        (tmp_path / "s1_launching").touch()
-        transcript = tmp_path / "s1.jsonl"
-        write_jsonl(transcript, [INTERRUPT_RECORD])
-        arrange(tmp_path, monkeypatch, make_stdin(transcript_path=str(transcript)))
-        user_prompt_submit()
-        assert (tmp_path / "s1_active").exists()  # spared
-        assert not (tmp_path / "s1_launching").exists()  # consumed
-        assert (tmp_path / "s1_mission.md").exists()
-        assert capsys.readouterr().out == ""  # loop not ended → no notice
-
-    def test_inactive_turn_clears_stale_round_state(
-        self, tmp_path, monkeypatch, capsys
-    ):
-        """Outside an active loop the turn boundary is hygiene: stale per-round
-        state (a token a failsafe end left behind, a non-mission compaction
-        marker) is cleared silently; the mission anchor stays."""
-        for name in ("s1_advisor_token", "s1_compacted"):
-            (tmp_path / name).touch()
-        (tmp_path / "s1_mission.md").write_text("m")
-        save_ledger(
-            tmp_path / "s1_loop.json", round_number=3, advice_history=["r"], done=True
-        )
-        arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
-        user_prompt_submit()
-        assert not (tmp_path / "s1_loop.json").exists()
-        assert not (tmp_path / "s1_advisor_token").exists()
-        assert not (tmp_path / "s1_compacted").exists()
-        assert (tmp_path / "s1_mission.md").exists()
-        assert capsys.readouterr().out == ""
-
-
 # ── mark_compaction ──
 
 
@@ -764,7 +586,6 @@ class TestLaunch:
         saved = (tmp_path / "s1_mission.md").read_text()
         assert saved == 'do the thing\nwith "quotes" and $vars'
         assert (tmp_path / "s1_active").exists()
-        assert (tmp_path / "s1_launching").exists()  # sentinel for user_prompt_submit
         assert not (tmp_path / "s1_loop.json").exists()  # prior ledger cleared
         # a mission owns one log, opened with its own text
         log = (tmp_path / "s1_loop.log").read_text()
@@ -827,7 +648,6 @@ class TestLaunch:
         assert (tmp_path / "s1_mission.md").read_text() == "old mission"
         assert (tmp_path / "s1_loop.log").read_text() == "old log"
         assert (tmp_path / "s1_advisor_running").exists()
-        assert not (tmp_path / "s1_launching").exists()
 
 
 # ── /ploop:stop UserPromptExpansion hook ──
@@ -889,9 +709,8 @@ class TestStopCommand:
         assert (tmp_path / "s1_mission.md").exists()
 
     def test_stops_even_while_advisor_in_flight(self, tmp_path, monkeypatch):
-        """Like the ESC path, /ploop:stop is unconditional: it clears the
-        running marker and the active gate even with a background advisor in
-        flight."""
+        """/ploop:stop is unconditional: it clears the running marker and the
+        active gate even with a background advisor in flight."""
         for name in ("s1_active", "s1_advisor_running"):
             (tmp_path / name).touch()
         self.arrange(tmp_path, monkeypatch)

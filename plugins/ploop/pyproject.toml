@@ -1,13 +1,12 @@
 [project]
 name = "ploop"
-version = "0.26.0"
+version = "0.27.0"
 requires-python = ">=3.14"
 dependencies = []
 
 [project.scripts]
 stop = "src.main:stop"
 pre-tool-use = "src.main:pre_tool_use"
-user-prompt-submit = "src.main:user_prompt_submit"
 subagent-stop = "src.main:subagent_stop"
 mark-compaction = "src.main:mark_compaction"
 update-check = "src.updater:check_for_update"
