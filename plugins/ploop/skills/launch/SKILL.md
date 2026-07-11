@@ -22,17 +22,19 @@ disable-model-invocation: true
   - 탐색 영역별로 백그라운드 `Agent`를 전개.
   - 방대한 자료 조사에는 `deep-research` 스킬 사용.
   - 필요에 따라 `Workflow`를 직접 구성해서 실행.
-- [IMPORTANT] background 작업(shell·agent·workflow 등)이 도는 동안 foreground를 비우지 마세요(비면 미완 라운드가 조기 심사됨). 대기는 `ploop:waiter`에 위임하세요:
-  - **wait-command**를 준비하세요 — background 작업이 남기는 종결 신호(예: 로그의 `=== DONE`/`=== FAIL`)를 감지해, foreground에서 ~9분 self-bound하며 새 종결이 있으면 `WAIT-EVENT`(+증거)를, 없으면 `WAIT-TIMEOUT`을 출력. 예시(`$1`=현재 종결 개수):
+- [CRITICAL] waiter를 사용해서 background(shell·agent·workflow 등)만 있는 상태로 foreground가 비어버리는 상황을 막으세요.
+  - ploop 안에서는 미션이 종료되기 전까지 절대 foreground를 비우면 안됩니다!
+  - waiter는 항상 foreground로 실행하세요: `Agent(..., subagent_type="ploop:waiter", run_in_background=false)`
+  - background의 종결 신호를 감지해 반환하는 wait-command를 구성해서 waiter에게 전달하세요.
+  - wait-command는 background 작업 중 하나라도 끝나면 `WAIT-EVENT`를 출력하고 아니라면 `WAIT-TIMEOUT`를 출력하도록 구성하세요.
     ```
-    LOG=<로그 경로>; D=$((SECONDS+540))
+    LOG=<로그 경로>; BASE=<종결개수>; D=$((SECONDS+540))  # BASE: 매 호출마다 재계산
     while [ $SECONDS -lt $D ]; do
       N=$(grep -cE '=== (DONE|FAIL)' "$LOG"); N=${N:-0}
-      [ "$N" -gt "$1" ] && { echo WAIT-EVENT; tail -4 "$LOG"; exit 0; }
+      [ "$N" -gt "$BASE" ] && { echo WAIT-EVENT; tail -4 "$LOG"; exit 0; }
       sleep 15
     done; echo WAIT-TIMEOUT
     ```
-  - 이 wait-command를 담아 `ploop:waiter`를 **foreground로** 호출하세요: `Agent(subagent_type="ploop:waiter", run_in_background=false)`(Agent 기본값이 background라 명시 필수). `WAIT-EVENT` 반환 시 처리하고, 남은 작업이 있으면 다시 호출.
 - **당신이 미션의 Owner**입니다. Ownership을 가지고 자율적으로 진행하세요.
   - 미션은 대규모 장기 작업입니다. 전략적으로 접근하세요.
   - 당신에게는 미션을 위한 모든 권한과 책임이 있습니다.
