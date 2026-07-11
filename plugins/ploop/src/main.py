@@ -134,10 +134,10 @@ def end_loop(
 
 
 def count_lines(transcript_path: str) -> int:
-    """Line count of the transcript — the round's end offset.
+    """Line count of the transcript — the next round's start offset (this + 1).
 
-    Append-only, so a line number stays valid once written.  Unreadable → 0,
-    which the trigger turns into "read through the end of the file" (wider, not
+    Append-only, so a line number stays valid once written.  Unreadable → 0, so
+    the next round starts at line 1 (the whole transcript — wider, not
     truncated).
     """
     try:
@@ -152,7 +152,6 @@ def arm_advisor(
     *,
     transcript_path: str,
     round_start: int,
-    round_end: int,
     notice: str = "",
 ) -> None:
     """Arm one advisor invocation and end the hook (exit 2).
@@ -161,8 +160,9 @@ def arm_advisor(
     original-mission text), clears both handoff channels so an absent file at
     the next stop unambiguously means its agent wrote nothing, sets the
     single-use token, and injects the trigger — the narrator call inside it
-    points at transcript lines round_start..round_end (this round's slice) —
-    prefixed by `notice` on an anomalous re-arm.
+    points at the transcript from round_start onward (the narrator self-bounds
+    the round's end by skipping loop machinery) — prefixed by `notice` on an
+    anomalous re-arm.
     """
     mission_text = None
     if ws.compacted_path.exists():
@@ -176,7 +176,6 @@ def arm_advisor(
         mission_path=ws.mission_path,
         transcript_path=transcript_path,
         round_start=round_start,
-        round_end=round_end,
         advice_history_path=ws.advice_history_path,
         advice_path=ws.advice_path,
         narration_path=ws.narration_path,
@@ -279,7 +278,6 @@ def stop() -> None:
                 ws,
                 transcript_path=transcript_path,
                 round_start=round_start,
-                round_end=count_lines(transcript_path),
                 notice=RETRY_NOTICE,
             )
         narration = (
@@ -300,25 +298,24 @@ def stop() -> None:
             )
         advice_history = [*advice_history, advice]
 
-    # Arm the next round.  The narrator's slice for the round just completed is
-    # transcript lines round_start..round_end (round_end = current EOF, since
-    # this round's trigger has not been injected yet) — a contiguous span no
-    # interjection can truncate.  The next round starts at round_end + 1.
+    # Arm the next round.  The narrator reads the just-completed round from
+    # round_start onward and self-bounds its end at the advisor hand-off — so
+    # no interjection, and no line-count-at-stop, can truncate it.  The next
+    # round starts just past the current transcript end (this round's trigger
+    # has not been injected yet), so record that as its start line.
     ws.advice_history_path.write_text(format_advice_history(advice_history))
-    round_end = count_lines(transcript_path)
     save_ledger(
         ws.ledger_path,
         round_number=current_round + 1,
         advice_history=advice_history,
         done=False,
         declines=declines,
-        round_start_line=round_end + 1,
+        round_start_line=count_lines(transcript_path) + 1,
     )
     arm_advisor(
         ws,
         transcript_path=transcript_path,
         round_start=round_start,
-        round_end=round_end,
         notice=DECLINE_NOTICE if declines else "",
     )
 

@@ -70,7 +70,7 @@ narrator  depth 2  Read Write  narrate          transcript slice -> narration.md
   권한 모드). 남은 read-only 도구(`Read·Glob·Grep·Web*`)로 영역을 근거 짓고 `Agent`로 narrator를 호출하며,
   advice를 ledger에 기록하는 것은 여전히 hook의 몫이다.
 - **narrator는 `Read`·`Write`만 가진 leaf** — `Agent`가 없어 트리가 그 아래로 자라지 않는다. `Read`로
-  트리거가 지정한 라운드 트랜스크립트 슬라이스(`round-lines`)를 직접 읽어 해석한다(hook 측 파싱 없음).
+  트리거가 지정한 시작 라인(`round-start-line`)부터 트랜스크립트를 직접 읽어 해석한다(hook 측 파싱 없음).
   `Write`는 advisor와 동일한 채널이다: narration을 temp `narration.md`에 쓰고, advisor가 분석 입력으로·hook이
   라운드 로그로 같은 파일을 읽는다. 단순 변환이라 `sonnet[1m]`/`low`로 충분하다.
 - depth 2에서 트리를 닫아 depth-5 cap에 3단계 여유를 남긴다.
@@ -93,10 +93,11 @@ main round N work ── stops
    |          termination token -> done + deactivate
    |            -> exit 2: "summarize {session}_loop.log" (if any advice surfaced)
    |          else append advice   (no round cap; /ploop:stop also deactivates)
-   |        then:  round_end = transcript line count; next round starts at +1
+   |        then:  next round_start = transcript line count + 1
    |               write {session}_advice_history.md (advice-history XML)
    |               round++,  exit 2 + stderr: advisor trigger — narrator reads
-   |                 transcript lines [round_start..round_end] (+ mission text if compacted)
+   |                 transcript from round_start on, self-bounds at the advisor
+   |                 hand-off (+ mission text if compacted)
    v
 main ─ Agent(advisor) ───────────> advisor (depth 1)
    |                                  ├ read original-mission   ({session}_mission.md)
@@ -268,19 +269,21 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    훅은 메인 세션 transcript를 직접 건넨다. main이 미션을 직접 수행하므로 action과 advisor
    호출(tool_use/tool_result)이 모두 거기 있다 — operator의 별도 transcript를 `subagents/meta.json`으로
    해소하던 단계가 통째로 사라진다. **hook은 트랜스크립트를 파싱하지 않는다.** 대신 라운드가 시작되는
-   트랜스크립트 **라인 오프셋**(`round_start_line`, ledger 소유)을 기록하고, arm 시점의 라인 수를
-   라운드 끝으로 삼아 narrator에게 "이 트랜스크립트의 라인 [start..end]를 읽어 main의 작업을
-   서술하라"를 지시한다. narrator(지능 에이전트)가 원본 JSONL 레코드를 스스로 해석해 루프 기계
-   장치(advisor Agent 호출·결과, 트리거 주입 메시지)를 걸러내고 서술한다. **이 위임이 트랜스크립트
-   내부 메시지 형식에 대한 hook의 의존을 통째로 없앤다** — `isCompactSummary` 필터·`queued_command`
-   승격·라운드 경계 휴리스틱·advisor-strip 코드가 전부 사라졌다(이들은 형식 표류에 취약했다;
-   harness-deps 감사). 슬라이스는 라운드 트리거부터 다음 정지까지의 **연속 구간**이라, 라운드 도중의
-   auto-compaction 요약이나 사용자 steering·notification이 그 안에 그대로 담긴다 — 코드 경계가 없으니
-   가짜 경계로 인한 잘림이 구조적으로 불가능하다(구 `parse_round_actions`는 string-content 사용자 턴을
-   경계로 오인해 라운드를 잘랐다 — 실측: 라이브 미션에서 574개 중 388개 소실, harness-deps 감사가
-   포착). 사용자 지시는 미션보다 상위 권위인데 main만 보고 흡수하면 advisor와 main의 목표가
-   갈라지므로, 슬라이스에 담긴 steering을 narrator가 그대로 서술해 advisor에 전달한다 — steering은
-   라운드를 리셋하지 않는다(연속 슬라이스라 자연히 성립).
+   트랜스크립트 **라인 오프셋**(`round_start_line`, ledger 소유)만 기록하고, narrator에게 "이 트랜스크립트를
+   그 라인부터 읽어 main의 작업을 서술하라"를 지시한다. **끝 오프셋은 주지 않는다** — narrator가
+   실행되는 시점(다음 라운드의 advisor 호출 안)에서 트랜스크립트는 그 호출까지만 있으므로, narrator는
+   "자신을 부른 advisor 핸드오프 전까지"로 스스로 라운드 끝을 잡는다. narrator(지능 에이전트)가 원본
+   JSONL 레코드를 스스로 해석하고, 독자가 advisor임을 알기에 advice 원문·트리거 지시문을 복사하지 않고
+   main의 사고·행동(루프 관여 포함)을 서술한다. **이 위임이 트랜스크립트 내부 메시지 형식에 대한
+   hook의 의존을 통째로 없앤다** — `isCompactSummary` 필터·`queued_command` 승격·라운드 경계
+   휴리스틱·advisor-strip 코드가 전부 사라졌다(이들은 형식 표류에 취약했다; harness-deps 감사). 시작만
+   주고 narrator가 끝을 self-bound하므로, 라운드 도중의 auto-compaction 요약이나 사용자
+   steering·notification이 그 안에 그대로 담기고 — 코드 경계가 없으니 가짜 경계로 인한 잘림이 구조적으로
+   불가능하며, 정지 시점 라인 수를 끝으로 박지 않으니 flush 타이밍으로 인한 잘림도 없다(둘 다 실패
+   방향은 "넓게"). 구 `parse_round_actions`는 string-content 사용자 턴을 경계로 오인해 라운드를 잘랐다 —
+   실측: 라이브 미션에서 574개 중 388개 소실, harness-deps 감사가 포착. 사용자 지시는 미션보다 상위
+   권위인데 main만 보고 흡수하면 advisor와 main의 목표가 갈라지므로, 슬라이스에 담긴 steering을 narrator가
+   그대로 서술해 advisor에 전달한다 — steering은 라운드를 리셋하지 않는다.
 5. **활성화 게이트 + 의미론적 종료(숫자 상한 없음).** `/ploop:launch`의 UserPromptExpansion 훅이
    `mission.md`·`active` 마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돈다.
    루프는 라운드 상한 없이 **의미론적으로만** 끝난다 — advisor가 종료 판정을 내면 Stop이 `active`를 지우거나,
@@ -301,15 +304,16 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    **순서**를 trigger로 재현한다 — role은 advisor 시스템 프롬프트,
    original-mission·advice-history·instructions는 파일, action-history는 advisor가 트리거에 inline된
    narrator Agent 호출을 실행하고 narrator가 쓴 `narration.md`를 읽어 조립한다. narrator 호출에는
-   트랜스크립트 경로와 라운드 라인 범위(`round-lines: start-end`)를 넘겨, narrator가 그 슬라이스를
-   Read해 서술한다. **트리거는 advisor의 Agent 호출을 — 그 안에 narrator Agent 호출을 inline해 —
+   트랜스크립트 경로와 시작 라인(`round-start-line`)을 넘겨, narrator가 거기서부터 Read해 서술한다. **트리거는 advisor의 Agent 호출을 — 그 안에 narrator Agent 호출을 inline해 —
    축자로 작성해 넘긴다. hook이 정확한 호출을 작성하고 main·advisor는 그대로 relay한다.** 리터럴
    호출을 그대로 건네는 것이 가장 단순·결정론적이다 — LLM이 구성할 것이 없다. 두 가지 주의점:
    **(a)** action narrative만 런타임 수집이다(narrating은 LLM이라 hook이 못 부른다). **(b)** 정박
    대상은 세션 최초 프롬프트가 아닌 `/ploop:launch` 핸드오프 텍스트(`mission.md`)다 — launch 훅이
    인자를 축자 캡처하므로(모델 전사 단계 없음) mission.md는 핸드오프 원문과 정확히 일치한다.
-   action-history와 advice-history의 분리는 narrator가 advisor 호출·결과를 서술에서 제외하는 지시로
-   지킨다(구 hook 측 코드 strip을 대체).
+   action-history와 advice-history의 분리는 narrator에게 "독자가 advisor다 — 미션·advice-history를 이미
+   가졌으니 advice 원문을 복사하지 말고 main의 사고·행동을 서술하라"를 지시해 지킨다. main의 루프
+   관여를 숨기는 게 아니라(main·advisor 모두 ploop을 인지·활용한다), 이미 가진 것을 중복하지 않는
+   것이다(구 hook 측 코드 strip을 대체).
 8. **단일 모델 `opus[1m]`(main·advisor).** 추론 최대화와 compaction 빈도 감소가 같은 선택으로
    수렴. narrator만 단순 변환이라 `sonnet[1m]`/`low`면 충분하다(`[1m]`은 대형 라운드의 트랜스크립트
    슬라이스 수용). main은 세션 모델이라 사용자가 `opus[1m]`로 실행하길 권장한다.
@@ -477,7 +481,7 @@ ploop/
 ├── src/                              # 훅 구현 (런타임 의존성 없음)
 │   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·mark_compaction·launch·stop_command)
 │   ├── state.py                      # Workspace(세션 파일 경로의 단일 창구) + ledger 영속화(round_start_line 포함)
-│   ├── prompt.py                     # advice-history 포맷 + 5-section advisor trigger 조립(narrator 슬라이스 라인 범위 포함)
+│   ├── prompt.py                     # advice-history 포맷 + 5-section advisor trigger 조립(narrator 시작 라인 포함)
 │   └── updater.py                    # SessionStart 업데이트 알림
 └── tests/                            # 구현 독립 (stdin/stdout/disk 구동)
 ```

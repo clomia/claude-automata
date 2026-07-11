@@ -144,7 +144,7 @@ class TestStop:
         assert "advice-history:" in err
         assert "instructions:" in err
         assert "ploop:advisor" in err
-        assert "round-lines:" in err  # narrator reads the round's transcript slice
+        assert "round-start-line:" in err  # narrator reads from the round start
         assert (tmp_path / "s1_advisor_token").exists()
         # round 1 starts after round 0's last transcript line (2-line ROUND_WORK)
         assert load_ledger(tmp_path / "s1_loop.json")["round_start_line"] == 3
@@ -427,8 +427,8 @@ class TestStop:
         assert ledger["round"] == 3
         assert ledger["declines"] == 1
         err = capsys.readouterr().err
-        # the re-injected trigger points the narrator at the refusal round's slice
-        assert "round-lines:" in err
+        # the re-injected trigger points the narrator at the refusal round start
+        assert "round-start-line:" in err
         assert "authority to end the loop belongs to the advisor" in err
         assert "Invoke the advisor" in err  # the trigger follows the notice
         assert "loop will end" not in err  # no main-side exit advertised

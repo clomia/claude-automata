@@ -14,11 +14,12 @@ five sections in that order:
 The advisor reads/runs them top-to-bottom, building the ordered context.
 
 action-history is the one runtime-collected section: the narrator reads the
-round's own slice of the main transcript — the hook hands it the transcript
-path and the round's line range (a file offset the hook recorded, not a
-message-format field) — and narrates the main agent's work.  No hook-side
-transcript parsing: an intelligent narrator interprets the raw records, so the
-loop carries no dependency on the transcript's internal message shapes.
+main transcript from the round's start line onward — the hook hands it the
+transcript path and that start offset (a file offset the hook recorded, not a
+message-format field), and the narrator self-bounds the round's end by skipping
+loop machinery — then narrates the main agent's work.  No hook-side transcript
+parsing: an intelligent narrator interprets the raw records, so the loop carries
+no dependency on the transcript's internal message shapes.
 """
 
 import textwrap
@@ -42,24 +43,11 @@ def format_advice_history(advice_history: list[str]) -> str:
     )
 
 
-def format_round_lines(round_start: int, round_end: int) -> str:
-    """The narrator's line range for the round.
-
-    round_end < round_start means the line count was unavailable (unreadable
-    transcript): fall back to reading through the end of the file — wider, not
-    truncated, so a failure degrades gracefully.
-    """
-    if round_end >= round_start:
-        return f"{round_start}-{round_end}"
-    return f"{round_start} through the end of the file"
-
-
 def format_advisor_trigger(
     *,
     mission_path: Path,
     transcript_path: str,
     round_start: int,
-    round_end: int,
     advice_history_path: Path,
     advice_path: Path,
     narration_path: Path,
@@ -80,12 +68,14 @@ def format_advisor_trigger(
     reasoning prose neither the main agent nor the hook should read.  Both the
     advice and the termination token go to advice_path (the sole channel); the trigger
     directs the main agent to read that file, and the hook reads it too for the
-    ledger.  The narrator reads the round's own slice of the main transcript
-    (transcript_path, lines round_start..round_end — a contiguous span from this
-    round's trigger to its stop, so no interjection can truncate it) and hands off
-    through the same kind of channel: it Writes the narrative to narration_path,
-    which the advisor reads as analysis input after the inlined call blocks — and the
-    hook reads into the round log.
+    ledger.  The narrator reads the main transcript from round_start to the end
+    (the hook gives only the start; the narrator self-bounds by skipping loop
+    machinery, and at narrator-run-time the transcript ends before any next-round
+    work, so what remains is this round's work — no interjection can truncate it,
+    no line-count-at-stop can either) and hands off through the same kind of
+    channel: it Writes the narrative to narration_path, which the advisor reads as
+    analysis input after the inlined call blocks — and the hook reads into the round
+    log.
 
     On a compacted round, mission_text is the original-mission's full text,
     re-injected at this recency position (parallax mechanism 2) — the discrete
@@ -110,7 +100,7 @@ def format_advisor_trigger(
                     run_in_background=false,
                     prompt='
                         transcript: {transcript_path}
-                        round-lines: {format_round_lines(round_start, round_end)}
+                        round-start-line: {round_start}
                         narration-path: {narration_path}
                     '
                 )
