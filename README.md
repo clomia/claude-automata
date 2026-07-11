@@ -33,6 +33,9 @@ ploop is a loop built for long-running work that spans days.
 
 1. Write your mission. Use `/ploop:define-mission` for this.
 2. In a fresh session, run `/ploop:launch [mission]`.
+3. The loop ends when the advisor judges there is nothing left to advise.
+   You can end it yourself anytime with `/ploop:stop` or an interrupt (ESC).
+   Nothing else — mid-mission instructions, answered questions, background-task notifications — stops the loop.
 
 # Refine Architecture
 

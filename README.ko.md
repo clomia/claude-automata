@@ -33,6 +33,9 @@ ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 루프입니다.
 
 1. 미션을 작성하세요. `/ploop:define-mission`을 활용하세요.
 2. 새로운 세션에서 `/ploop:launch [미션 내용]`을 실행하세요.
+3. 루프는 advisor가 더 이상 조언할 것이 없다고 판단하면 끝납니다.
+   `/ploop:stop` 또는 interrupt(ESC)로 언제든 직접 끝낼 수 있습니다.
+   그 밖의 어떤 것도 — 중간 지시, 질문 응답, 백그라운드 작업 알림 — 루프를 멈추지 않습니다.
 
 # Refine Architecture
 

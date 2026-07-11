@@ -2,9 +2,12 @@
 
 import json
 
+import pytest
+
 from src.transcript import (
     is_round_boundary,
     parse_round_actions,
+    was_interrupted,
 )
 
 
@@ -190,3 +193,98 @@ class TestParseRoundActions:
             + full[:15]
         )
         assert parse_round_actions(str(t)) == []
+
+
+# ── was_interrupted ──
+
+
+class TestWasInterrupted:
+    """ESC fires no hook; its sentinel record closing the transcript is the
+    one trace UserPromptSubmit can read the interrupt from."""
+
+    @pytest.mark.parametrize(
+        "content",
+        [
+            [{"type": "text", "text": "[Request interrupted by user]"}],
+            [{"type": "text", "text": "[Request interrupted by user for tool use]"}],
+            "[Request interrupted by user]",
+        ],
+    )
+    def test_detects_sentinel_past_the_submitted_prompt(self, tmp_path, content):
+        """Both sentinel spellings and content forms count, and the freshly
+        submitted prompt already appended after the sentinel is passed over —
+        the verdict is about how the last turn ended."""
+        t = tmp_path / "t.jsonl"
+        write_jsonl(
+            t,
+            [
+                {"role": "assistant", "content": "interrupted work"},
+                {"role": "user", "content": content},
+                {"role": "user", "content": "the freshly submitted prompt"},
+            ],
+        )
+        assert was_interrupted(str(t)) is True
+
+    def test_completed_turn_since_the_interrupt_reads_normal(self, tmp_path):
+        """An assistant message after the sentinel means a turn completed since
+        the ESC — the interrupt is history, not the latest act."""
+        t = tmp_path / "t.jsonl"
+        write_jsonl(
+            t,
+            [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "[Request interrupted by user]"}
+                    ],
+                },
+                {"role": "user", "content": "next prompt"},
+                {"role": "assistant", "content": "answered it"},
+            ],
+        )
+        assert was_interrupted(str(t)) is False
+
+    def test_idle_yield_tail_reads_normal(self, tmp_path):
+        """The incident tail: the turn yielded on a tool result and a system
+        prompt was delivered — tool results, bookkeeping lines, and the
+        delivered prompt are all passed over down to the assistant record."""
+        t = tmp_path / "t.jsonl"
+        t.write_text(
+            "\n".join(
+                json.dumps(line)
+                for line in [
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "content": [
+                                {
+                                    "type": "tool_use",
+                                    "id": "w1",
+                                    "name": "ScheduleWakeup",
+                                }
+                            ],
+                        }
+                    },
+                    {
+                        "message": {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "tool_result",
+                                    "tool_use_id": "w1",
+                                    "content": "scheduled",
+                                }
+                            ],
+                        }
+                    },
+                    {"type": "system", "subtype": "turn_duration"},
+                    {"message": {"role": "user", "content": "<task-notification>…"}},
+                ]
+            )
+        )
+        assert was_interrupted(str(t)) is False
+
+    def test_missing_file_reads_normal(self):
+        """Unreadable transcript → no interrupt verdict: the caller fails open
+        and the loop survives."""
+        assert was_interrupted("/nonexistent.jsonl") is False

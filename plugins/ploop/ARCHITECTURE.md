@@ -118,7 +118,8 @@ main ─ work on the advice (round N+1) ── stops ── (loop)
 종료 토큰으로 관철된다(main-advisor 합의 경로). 연속 2회면 합의 채널 자체가 붕괴된 것으로 보고 failsafe로
 종료한다 — 노티스는 이를 광고하지 않는다(main-side 출구가 아니다). **숫자 라운드 상한은 두지 않는다** — advice-history는 파일이라 컨텍스트를 잠식하지
 않고 advisor는 매 라운드 stateless하게 리셋되므로, 종료는 "더 제공할 advice가 있는가"라는 의미론적
-판단(advisor 종료 토큰)에 맡긴다. 그 판단이 안 나오면 사용자가 `/ploop:stop`으로 언제든 끝낸다(아래 Hooks).
+판단(advisor 종료 토큰)에 맡긴다. 그 판단이 안 나오면 사용자가 `/ploop:stop` 또는 interrupt(ESC)로
+언제든 끝낸다(아래 Hooks) — 이 셋이 종료 경로의 전부다(결정 15).
 **모든 종료 경로는 main에게 정직한 사유와 함께 종료 노티스를 보낸다**
 (`format_end_notice`) — 노티스는 종료 사실과 사유를 사용자에게 명확히 보고하게 하고, advice를 하나라도
 surface한 턴이면 `loop.log` recap 지시를 덧붙인다 — 장기 미션에서 main 컨텍스트는 여러 번 auto-compaction되므로
@@ -179,14 +180,18 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
    만든다) 미션이 비어 있으면(스킬 본문이 arm되지 않은 활성화를 알리는 유령 루프) 확장을
    **차단**한다(`decision: block`) — 턴이 지워져 스킬 본문이 컨텍스트에 들어가지 않고, 사유는
    사용자에게만 보이며, 차단 경로는 상태를 건드리지 않아 돌던 루프가 무사하다.
-2. `UserPromptSubmit`이 매 새 사용자 턴마다 `loop.json`·`advisor_token`·`compacted`·`advice.md`·
-   `narration.md`를 지운다(turn-boundary cleanup). `active`도 지우되 **launch 턴에선 `launching` sentinel을 소비하며
-   `active`를 보존**한다 — 확장(launch)이 제출보다 먼저라 방금 만든 마커를 자기 cleanup이 지우는 것을
-   막는 장치다. 그 외 턴은 `active`도 지우므로 ESC로 끊긴 미션이 조용히 재개되지 않고, stale 토큰이
-   다음 미션의 라운드 0 자발 호출을 인가하지도 못한다. `mission.md`는 anchor로 보존된다.
-   이 cleanup이 실제로 살아있는 루프를 비활성화할 때는 **additionalContext**로 main에게 종료
-   노티스를 보낸다 — 노티스가 종료 사실과 사유를 사용자에게 보고하게 하므로 개입 종료가 조용히
-   묻히지 않는다(자연 종료·`/ploop:stop`도 같은 노티스를 보낸다).
+2. `UserPromptSubmit`은 프롬프트를 개입으로 취급하지 않는다 — 이 경로는 타이핑된 사용자 턴만이
+   아니라 task-notification·scheduled wakeup 같은 시스템 프롬프트(`promptSource: system`)도 타므로,
+   살아있는 루프는 어떤 프롬프트든 통과시키고 상태를 건드리지 않는다(결정 15). 유일한 프롬프트 경로
+   종료는 **사용자 interrupt(ESC)**다: ESC는 자체 훅 이벤트가 없어 트랜스크립트에 남는 sentinel
+   레코드가 유일한 흔적이고, 다음 프롬프트의 이 훅이 그것을 역방향 판독해(`was_interrupted` —
+   assistant 레코드를 먼저 만나면 정상 종결한 턴, sentinel을 먼저 만나면 interrupt; 판독 불가는
+   보존으로 fail-open) 루프를 비활성화한다 — `/ploop:stop`과 같은 무조건 종료(in-flight advisor
+   무관)로 라운드 상태와 `active`를 지우고, **additionalContext**로 main에게 종료 노티스를
+   보낸다(노티스가 종료 사실과 사유를 사용자에게 보고하게 하므로 개입 종료가 조용히 묻히지 않는다).
+   launch 턴에선 `launching` sentinel을 소비하며 모든 상태를 보존한다 — 확장(launch)이 제출보다
+   먼저라, 직전 턴을 ESC로 끊고 곧장 launch한 경우에도 방금 arm된 루프가 살아남는다. 비활성 세션의
+   턴은 stale 라운드 상태를 지우는 위생 경계로 남는다. `mission.md`는 anchor로 보존된다.
 3. Stop 훅이 종료(advisor 종료 판정) 시 `active` 마커를 지운다.
 4. `/ploop:stop`의 UserPromptExpansion 훅(`stop_command`)이 사용자 요청으로 언제든 루프를
    비활성화한다 — `active`와 라운드 상태를 지운다. background advisor in-flight 중에도 무조건 멈추도록
@@ -224,7 +229,7 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
 | **UserPromptExpansion** | `ploop:launch` · `ploop:stop` | 슬래시 커맨드 확장(제출 전) | launch: 미션·`active`·`launching` 기록(활성화) — `active` 존재·빈 미션이면 차단 · stop: `active`+라운드 상태 삭제(비활성화, in-flight 무관) — 비활성이면 차단 |
-| **UserPromptSubmit** | (전체) | 새 사용자 턴 | `loop.json`·토큰·running·compacted·advice·narration·`active` 삭제 (turn cleanup). 단 launch 턴엔 `active` 보존(launching sentinel), background advisor in-flight 중엔 전체 보존 · 살아있는 루프를 끄면 main에게 종료 노티스(`additionalContext`) |
+| **UserPromptSubmit** | (전체) | 새 프롬프트 (사용자 턴·시스템 프롬프트) | 살아있는 루프는 모든 프롬프트를 통과시켜 보존. 트랜스크립트가 interrupt(ESC) sentinel로 끝날 때만 무조건 비활성화(라운드 상태+`active` 삭제)하고 main에게 종료 노티스(`additionalContext`) · launch 턴은 sentinel 소비 후 보존 · 비활성 세션은 stale 라운드 상태 삭제 |
 | **PostCompact** | `auto` | auto-compaction 후 | `compacted` 마커 touch (Stop이 메커니즘 2로 미션 텍스트 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` 마커 set) 또는 `exit 2` deny(자발 호출 차단) |
 | **Stop** | (전체) | main이 종료 시도 | active 게이트 → **in-flight 가드** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 노티스+로그 recap 지시) 또는 `exit 0`(허용) |
@@ -279,11 +284,11 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
 5. **활성화 게이트 + 의미론적 종료(숫자 상한 없음).** `/ploop:launch`의 UserPromptExpansion 훅이
    `mission.md`·`active` 마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돈다.
    루프는 라운드 상한 없이 **의미론적으로만** 끝난다 — advisor가 종료 판정을 내면 Stop이 `active`를 지우거나,
-   사용자가 `/ploop:stop`(UserPromptExpansion `stop_command`)으로 언제든 비활성화한다(advice-history가 파일이라
-   컨텍스트를 안 잠식하므로 숫자 캡이 불필요 — `/goal`도 동일 설계). 더해 UserPromptSubmit이 매 사용자 턴
-   `active`·`loop.json`을 지우되, **확장이 제출보다 먼저인 launch 턴에선 `launching` sentinel로 `active`를
-   보존**한다 — 그 외 턴은 지우므로 ESC로 끊긴 미션이 무단 재개되지 않는다. (`/ploop:stop`은 그 암묵적
-   정리와 달리 background advisor in-flight 중에도 확정 종료한다.)
+   사용자가 `/ploop:stop`(UserPromptExpansion `stop_command`) 또는 interrupt(ESC)로 언제든
+   비활성화한다(advice-history가 파일이라 컨텍스트를 안 잠식하므로 숫자 캡이 불필요 — `/goal`도 동일 설계).
+   ESC 비활성화는 UserPromptSubmit이 수행한다 — 다음 프롬프트에서 트랜스크립트 tail의 interrupt sentinel을
+   판독해 `/ploop:stop`과 같은 무조건 종료를 실행하므로, ESC로 끊긴 미션이 무단 재개되지 않는다(프롬프트
+   경로 정책의 전모는 결정 15).
 6. **미션 정박 — 메커니즘 1 + 2.** 외부 보존(`mission.md`, 메커니즘 1)으로
    미션 원문은 디스크에 영속하고, `PostCompact`가 `_compacted`를 touch하면 compacted 라운드의
    Stop이 트리거에 미션 원문 텍스트를 inline한다(메커니즘 2 — discrete compaction 이벤트에 무조건
@@ -311,8 +316,10 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    결정론적 사이클이 깨진다 — hook이 지정한 5-section 입력 대신 main 자기 말이 입력으로 가고, 그 호출이
    `advice.md`를 엉뚱한 시점에 덮어써 advice 채널을 오염시킨다. Stop이 호출을 지시할 때만 1회용 토큰을
    세우고, PreToolUse(matcher `Agent`)가 advisor 호출을 토큰이 있을 때만 통과시킨다(없으면 deny).
-   narrator는 read-only leaf이자 hook 사이클 밖이라 게이팅하지 않는다. UserPromptSubmit이 토큰을
-   turn-boundary에서 지워 stale 토큰이 다음 미션의 라운드 0 자발 호출을 인가하지 못하게 한다. (미호출로
+   narrator는 read-only leaf이자 hook 사이클 밖이라 게이팅하지 않는다. stale 토큰이 다음 미션의
+   라운드 0 자발 호출을 인가하지 못하는 것은 세 겹이다: launch가 라운드 상태를 리셋하고,
+   UserPromptSubmit이 비활성 세션의 턴과 ESC 비활성화에서 토큰을 지운다(살아있는 루프의 토큰은
+   프롬프트를 넘어 보존된다 — armed 라운드는 프롬프트에 죽지 않는다, 결정 15). (미호출로
    정지하면 — 토큰이 소비되지 않고 남는다 — Stop은 그 라운드의 advice 기록을 건너뛰어 직전 advice가
    중복 기록되지 않게 하고, 미호출 자체는 거부 신호로 처리한다 — 아래 14.)
 10. **advisor·narrator 호출은 동기다(`run_in_background=false`).** Agent 툴은 이 빌드에서 기본 async라,
@@ -346,9 +353,9 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     발화하는데, 그대로 재주입하면 advisor가 하나 더 spawn되고 다음 정지에 또 spawn되어 **무한 증식**한다
     (훅 바깥에서 advisor가 도는 nested 구조 고유의 리스크다).
     PreToolUse가 advisor 인가 시 `advisor_running` 마커를 set하고 **SubagentStop이 그 마커의 유일한
-    clearer**다. Stop·UserPromptSubmit은 마커가 있으면 in-flight로 보고 재주입/정리를 하지 않는다(Stop은
-    `exit 0` 대기, UserPromptSubmit은 loop state 보존). background로 보낸 advisor의 advice는 유실될 수
-    있으나 cascade는 확실히 차단된다. **수용한 트레이드오프**: SubagentStop이 누락되면 마커가 leak해
+    clearer**다. Stop은 마커가 있으면 in-flight로 보고 재주입하지 않는다(`exit 0` 대기 —
+    UserPromptSubmit은 어차피 프롬프트에 상태를 보존하므로 마커를 볼 필요가 없다, 결정 15).
+    background로 보낸 advisor의 advice는 유실될 수 있으나 cascade는 확실히 차단된다. **수용한 트레이드오프**: SubagentStop이 누락되면 마커가 leak해
     루프가 멈출 수 있다(복구는 `/ploop:stop` — `active`가 남아 있어 launch는 차단되고, 그 차단 사유가
     stop으로 안내한다). settled 기반 self-heal은 트랜스크립트 형식 의존을
     낳아 제거했다 — advice.md 단일 채널로 전환하며 맞바꾼 단순화다.
@@ -368,6 +375,21 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     armed 좀비로 남았다. 2연속 거부는 합의 채널 자체의 붕괴라 failsafe로 종료하되, 노티스는 이를
     광고하지 않는다(main-side 출구가 아니다). 종료는 항상 실제 사유로 보고된다: 오작동을 수렴으로,
     거부를 고장으로 위장하지 않는다.
+15. **종료는 명시적 신호만 — 프롬프트 경로는 종료 트리거가 아니다.** 루프는 정확히 세 경로로만
+    끝난다: advisor의 종료 토큰, `/ploop:stop`, 사용자 interrupt(ESC) — 여기에 결정 14의 이상 신호
+    failsafe가 더해진다. UserPromptSubmit 경로는 타이핑된 사용자 턴 외에 task-notification·scheduled
+    wakeup 같은 시스템 프롬프트(`promptSource: system`)도 타고, launch 스킬 스스로 background Agent
+    전개를 권장하므로 자율 미션일수록 이 경로가 반드시 발화한다 — 프롬프트를 개입으로 취급하면
+    루프가 자기가 권장한 패턴에 죽는다. 실측 근거(2026-07): main이 background 에이전트들을 기다리며
+    턴을 yield하자(하네스는 yield 턴에서 Stop의 exit 2 재주입을 무시한다 — armed 토큰은 남고, 루프
+    생존 시 decline 경로가 다음 정지에서 자연 회복하므로 Stop 측 대응은 불필요) 6분 뒤 도착한
+    background 에이전트 완료 notification이 당시의 "직접 사용자 턴 개입 = 종료" 규칙에 걸려 진행
+    중인 미션을 죽였다. 타이핑된 사용자 턴도 개입이 아니다 — 사용자는 AskUserQuestion 응답·미드턴
+    지시로 미션에 *참여*하며, in-band 종결 지시는 결정 14의 합의 경로로 advisor에 닿는다. ESC만이
+    프롬프트 경로의 종료다: ESC는 자체 훅 이벤트가 없으므로 다음 프롬프트의 UserPromptSubmit이
+    트랜스크립트 tail의 sentinel 레코드를 역방향 판독해(`was_interrupted`) `/ploop:stop`과 동일한
+    무조건 종료를 실행한다. 판독 불가는 보존으로 fail-open한다 — 미션을 죽이는 쪽이 위험한 방향이고,
+    `/ploop:stop`은 항상 동작한다.
 
 ---
 
@@ -391,7 +413,10 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    auto·v2.1.202 manual 동일)에 의존한다 — 플래그 형식이 어긋나면 compaction 라운드가 그 지점에서
    잘리는 동작으로 degrade한다(graceful). 미드턴 주입 승격도 `queued_command` attachment
    형식(실측: v2.1.195 str·v2.1.206 블록 리스트 — 둘 다 처리)에 의존한다 — 어긋나면 주입이 다시
-   파싱에 안 보이는 동작으로 degrade한다(graceful, main은 여전히 지시를 수행한다). advice 캡처는 이 의존에서 빠졌다 — advice.md 단일 채널로 전환하며
+   파싱에 안 보이는 동작으로 degrade한다(graceful, main은 여전히 지시를 수행한다). interrupt 감지
+   (`was_interrupted`)는 ESC가 남기는 sentinel 레코드 텍스트(실측: `[Request interrupted by user]`·
+   `[Request interrupted by user for tool use]`)에 의존한다 — 형식이 어긋나면 ESC가 감지되지 않아
+   루프가 살아남는 동작으로 degrade한다(graceful — `/ploop:stop`이 항상 동작한다). advice 캡처는 이 의존에서 빠졌다 — advice.md 단일 채널로 전환하며
    `extract_advisor_output` 트랜스크립트 스크레이프를 제거했다(이전 리스크 해소).
 3. **main의 지시 순응도 — 반증됨(resolved).** stderr "advisor 호출"에 main이 실제로 응하는가. 초기 실측에선
    매 라운드 순응했으나, 이후 main이 in-band 사용자 지시를 근거로 **정당하게 거부**하는 사건이 관측됐다
@@ -434,7 +459,7 @@ ploop/
 ├── src/                              # 훅 구현 (런타임 의존성 없음)
 │   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·user_prompt_submit·mark_compaction·launch·stop_command)
 │   ├── state.py                      # Workspace(세션 파일 경로의 단일 창구) + ledger 영속화
-│   ├── transcript.py                 # action 추출(advisor 호출 strip) — narrator 입력용
+│   ├── transcript.py                 # action 추출(advisor 호출 strip) + interrupt(ESC) 판독
 │   ├── prompt.py                     # advice-history 포맷 + 5-section advisor trigger 조립
 │   └── updater.py                    # SessionStart 업데이트 알림
 └── tests/                            # 구현 독립 (stdin/stdout/disk 구동)

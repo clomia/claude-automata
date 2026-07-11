@@ -3,14 +3,17 @@
 A hook is code and cannot call tools, so the loop is driven by feedback: stop()
 blocks the main agent's stop (exit 2) and injects the next instruction — invoke
 the advisor, or summarize the finished round log.  The active marker written at
-/ploop:launch gates everything; the loop ends when the advisor writes the
-termination token, when the main agent twice declines the trigger (a failsafe
-— a sound refusal is meant to end the loop through the advisor's verdict), or
-when the user runs /ploop:stop — there is no round cap.  Both loop
-participants are unreliable LLMs, so each anomaly gets one corrective repeat
-before it ends the loop: an advisor run that wrote nothing is retried, a stop
-that ignored the trigger is redirected to the advisor's authority.  See
-ARCHITECTURE.md for the loop design.
+/ploop:launch gates everything; the loop ends through exactly three paths — the
+advisor writes the termination token, the user interrupts (ESC), or the user
+runs /ploop:stop — plus the anomaly failsafes: the main agent twice declines
+the trigger (a sound refusal is meant to end the loop through the advisor's
+verdict), or the advisor malfunctions twice.  There is no round cap, and no
+prompt reaching the session — a typed user turn, a task notification, a
+scheduled wakeup — ends the loop by itself.  Both loop participants are
+unreliable LLMs, so each anomaly gets one corrective repeat before it ends the
+loop: an advisor run that wrote nothing is retried, a stop that ignored the
+trigger is redirected to the advisor's authority.  See ARCHITECTURE.md for the
+loop design.
 
 Hooks must never break the session: malformed events and missing files degrade
 to exit 0 (allow the action).
@@ -27,7 +30,7 @@ from src.prompt import (
     format_end_notice,
 )
 from src.state import Workspace, load_ledger, save_ledger
-from src.transcript import parse_round_actions
+from src.transcript import parse_round_actions, was_interrupted
 
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
 # survives any surrounding prose the model emits alongside it.
@@ -307,43 +310,48 @@ def pre_tool_use() -> None:
 
 
 def user_prompt_submit() -> None:
-    """UserPromptSubmit hook: turn-boundary cleanup.
+    """UserPromptSubmit hook: deactivate on user interrupt (ESC), spare all else.
 
-    A direct user turn is an intervention that turns the loop off — round state
-    and the active marker are cleared, so an ESC-interrupted mission never
-    silently resumes (the mission file stays as the durable anchor).  Two
-    exceptions keep a live loop intact: a /ploop:launch turn (the launching
-    sentinel, set because UserPromptExpansion runs before this hook, spares the
-    fresh active marker) and a background advisor in flight (the running marker
-    — the loop is mid-round and main has merely yielded to the user).
+    The prompt path carries more than typed user turns: task notifications,
+    scheduled wakeups and other system prompts arrive the same way, and a live
+    mission works through them all — no prompt is an intervention.  The loop
+    ends only through its three paths: the advisor's termination verdict,
+    /ploop:stop, and the user's interrupt (ESC).  An ESC fires no hook of its
+    own; it surfaces here, at the next prompt, as the sentinel record closing
+    the transcript — only then is the loop deactivated: round state and the
+    active marker cleared unconditionally (like /ploop:stop, even mid-advisor),
+    the mission file kept as the durable anchor, and the end notice sent as
+    additionalContext so the main agent reports the end and its cause.
 
-    When this turn actually deactivates a live loop, the end notice goes to the
-    main agent as additionalContext — every termination path sends it, and the
-    notice has the main agent report the end and its cause to the user.
+    A /ploop:launch turn consumes its launching sentinel and keeps the fresh
+    loop (UserPromptExpansion runs before this hook — even an ESC right before
+    the launch must not undo it).  Outside an active loop, per-round state is
+    cleared so nothing stale leaks into a later mission.
     """
     event = read_event()
     ws = Workspace.from_env(event.get("session_id", ""))
-    if ws.advisor_running_path.exists():
+    if ws.launching_path.exists():
+        ws.launching_path.unlink()
         return
-    keep_active = ws.launching_path.exists()
-    ws.launching_path.unlink(missing_ok=True)
+    if not ws.active_path.exists():
+        ws.clear_round_state()
+        return
+    if not was_interrupted(event.get("transcript_path", "")):
+        return
     ws.clear_round_state()
-    if not keep_active:
-        ended = ws.active_path.exists()
-        ws.active_path.unlink(missing_ok=True)
-        if ended:
-            sys.stdout.write(
-                json.dumps(
-                    {
-                        "hookSpecificOutput": {
-                            "hookEventName": "UserPromptSubmit",
-                            "additionalContext": format_end_notice(
-                                "a direct user turn intervened"
-                            ),
-                        }
-                    }
-                )
-            )
+    ws.active_path.unlink(missing_ok=True)
+    sys.stdout.write(
+        json.dumps(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptSubmit",
+                    "additionalContext": format_end_notice(
+                        "the user interrupted the mission"
+                    ),
+                }
+            }
+        )
+    )
 
 
 def mark_compaction() -> None:
