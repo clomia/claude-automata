@@ -25,19 +25,18 @@ disable-model-invocation: true
 - [CAUTION] 사용자의 도움이 필요한 질문이나 요청이 발생하면 멈추지 말고 `AskUserQuestion`를 사용하세요.
   - `AskUserQuestion`은 루프 안에서 사용자와 소통할 수 있는 유일한 도구입니다. 창의적으로 활용하세요.
   - 반드시 사용자의 도움이 꼭 필요할때만 사용하고 가급적 스스로 판단하세요.
-- [CRITICAL!] waiter를 사용해서 background(shell·agent·workflow 등)만 있는 상태로 foreground가 비어버리는 상황을 막으세요.
-  - ploop 안에서는 미션이 종료되기 전까지 절대 foreground를 비우면 안됩니다!
-  - waiter는 항상 foreground로 실행하세요: `Agent(..., subagent_type="ploop:waiter", run_in_background=false)`
-  - background의 종결 신호를 감지해 반환하는 wait-command를 구성해서 waiter에게 전달하세요.
-  - wait-command는 background 작업 중 하나라도 끝나면 `WAIT-EVENT`를 출력하고 아니라면 `WAIT-TIMEOUT`를 출력하도록 구성하세요.
+- [CRITICAL!] ploop 안에서는 미션이 종료되기 전까지 절대 foreground를 비우면 안됩니다! waiter를 사용해서 background(shell·agent·workflow 등)만 있는 상태로 foreground가 비어버리는 상황을 막으세요.
+  - waiter는 반드시 foreground로 실행: `Agent(..., subagent_type="ploop:waiter", run_in_background=false)`
+  - background 작업 중 하나라도 끝나면 `WAIT-DONE`을 출력하며 종료되는 wait-command를 작성해서 waiter에게 전달하세요.
     ```
-    LOG=<로그 경로>; BASE=<종결개수>; D=$((SECONDS+540))  # BASE: 매 호출마다 재계산
-    while [ $SECONDS -lt $D ]; do
+    LOG=<로그 경로>; BASE=<종결개수>  # BASE: snapshot the count right before invoking the waiter
+    while :; do
       N=$(grep -cE '=== (DONE|FAIL)' "$LOG"); N=${N:-0}
-      [ "$N" -gt "$BASE" ] && { echo WAIT-EVENT; tail -4 "$LOG"; exit 0; }
+      [ "$N" -gt "$BASE" ] && { echo WAIT-DONE; tail -4 "$LOG"; exit 0; }
       sleep 15
-    done; echo WAIT-TIMEOUT
+    done
     ```
+  - waiter는 WAIT-DONE이 나올 때까지 foreground를 잡아주는 전문 에이전트입니다. waiter에게는 **오직 wait-command만 전달**하세요.
 
 </rules>
 
