@@ -26,6 +26,7 @@ ploop is a loop built for long-running work that spans days.
 - It never loses context across repeated auto-compactions.
   - When a compaction occurs, the mission is re-injected.
   - The advisor keeps the full context in files.
+- It creates no separate sessions and uses only the official subagent path — safe on subscription plans.
 
 ### Usage
 
@@ -33,6 +34,7 @@ ploop is a loop built for long-running work that spans days.
 
 1. Write your mission. Use `/ploop:define-mission` for this.
 2. In a fresh session, run `/ploop:launch [mission]`.
+   The loop rides the Stop hook's error behavior — whenever the agent stops, the hook blocks the stop and directs it to invoke the advisor.
 3. The loop ends when the advisor judges there is nothing left to advise.
    To end it yourself, run `/ploop:stop` — the only manual stop (interrupt with ESC first if a turn is running).
    Nothing else — mid-mission instructions, answered questions, background-task notifications, ESC itself — stops the loop.
