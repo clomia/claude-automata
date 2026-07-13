@@ -16,6 +16,10 @@
     {
       "name": "refine-architecture",
       "source": "./plugins/refine-architecture"
+    },
+    {
+      "name": "txgit",
+      "source": "./plugins/txgit"
     }
   ]
 }

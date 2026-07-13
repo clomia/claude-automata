@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+# txgit-hook — wraps plugin entry points with a uv availability check.
+#
+# Usage: txgit-hook <entry-point>
+#
+# Every txgit hook is routed through this script.  If uv is not installed we
+# cannot execute any Python code, so the wrapper exits 0 without error — the
+# session is never broken by a missing prerequisite.  SessionStart
+# (branch-state-warn) additionally emits a systemMessage so the user learns that
+# installing uv is required for the transaction guards to run.  Other hooks stay
+# silent to avoid flooding the session with duplicate notices.
+
+set -e
+
+entry="$1"
+
+if [ -z "$entry" ]; then
+    exit 0
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+    if [ "$entry" = "branch-state-warn" ]; then
+        printf '%s' '{"systemMessage":"txgit requires uv (Python package manager). Install it from https://docs.astral.sh/uv/getting-started/installation/ — without uv, the transaction guard hooks will not run."}'
+    fi
+    exit 0
+fi
+
+exec uv run --project "${CLAUDE_PLUGIN_ROOT}" "$entry"

@@ -55,3 +55,27 @@ Usage:
 
 Leave the focus area empty to target the whole codebase.  
 Watch progress with `/workflows`.
+
+# txgit - Git Transaction Workflow
+
+> Install: `claude plugin install txgit@claude-automata`  
+> Update: `claude plugin update txgit@claude-automata`  
+
+txgit is a Git workflow that manages change as transactions.
+
+- A transaction is not a unit of work — it is an **integrity boundary**. Everything from tx-open to tx-close is bound into one.
+- `/txgit:tx-open` cuts a `tx-*` branch off your base branch and plans the change with [OpenSpec](https://github.com/Fission-AI/OpenSpec).
+- `/txgit:tx-close` archives the OpenSpec change and squash-merges to the base branch once CI passes.
+- Three guard hooks keep edits off protected branches, flag stale transactions, and stop out-of-sync branches.
+
+Prerequisites: uv, [OpenSpec](https://github.com/Fission-AI/OpenSpec) (installed and `openspec init`-ed), GitHub CLI (`gh`).
+
+### Usage
+
+```
+/txgit:tx-open  [change description]   # cut a tx-* branch off base, plan with OpenSpec
+...work...                             # implement (e.g. /opsx:apply)
+/txgit:tx-close                        # archive the change, squash-merge to base
+```
+
+For the full details — the transaction model, guard hooks, base-branch config, pausing sync — see the [plugin README](plugins/txgit/README.md).

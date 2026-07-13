@@ -55,3 +55,27 @@ refine-architecture는 코드 아키텍처를 최적화하는 대규모 워크�
 
 집중 분석 영역을 비우면 코드베이스 전체가 대상입니다.  
 진행 상황은 `/workflows`에서 확인할 수 있습니다.
+
+# txgit - Git Transaction Workflow
+
+> Install: `claude plugin install txgit@claude-automata`  
+> Update: `claude plugin update txgit@claude-automata`  
+
+txgit은 변경을 트랜잭션 단위로 관리하는 Git 워크플로우입니다.
+
+- 트랜잭션은 작업 단위가 아니라 **무결성 경계**입니다. tx-open부터 tx-close까지가 하나로 묶입니다.
+- `/txgit:tx-open`으로 base 브랜치에서 `tx-*` 분기를 열고 [OpenSpec](https://github.com/Fission-AI/OpenSpec)으로 변경을 계획합니다.
+- `/txgit:tx-close`로 OpenSpec 변경을 아카이브하고 CI 통과 후 base 브랜치로 squash merge합니다.
+- 세 개의 가드 훅이 보호 브랜치 편집·오래 열린 트랜잭션·동기화 이탈을 막습니다.
+
+사전 요구: uv, [OpenSpec](https://github.com/Fission-AI/OpenSpec) (설치 후 `openspec init` 완료), GitHub CLI(`gh`).
+
+### 사용 방법
+
+```
+/txgit:tx-open  [변경 설명]   # base에서 tx-* 분기 생성 + OpenSpec 계획
+...작업...                    # 구현 (예: /opsx:apply)
+/txgit:tx-close               # 변경 아카이브 후 base로 squash merge
+```
+
+트랜잭션 정의·가드 훅·base 브랜치 설정·sync 일시정지 등 자세한 내용은 [플러그인 README](plugins/txgit/README.md)를 참고하세요.
