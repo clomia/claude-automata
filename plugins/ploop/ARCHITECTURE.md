@@ -74,8 +74,6 @@ narrator  depth 2  Read Write  narrate          round slice file -> narration.md
   `Write`는 advisor와 동일한 채널이다: narration을 temp `narration.md`에 쓰고, advisor가 분석 입력으로·hook이
   라운드 로그로 같은 파일을 읽는다. 원본 슬라이스를 스스로 해석해야 하므로 `sonnet[1m]`/`medium`이다.
 - depth 2에서 트리를 닫아 depth-5 cap에 3단계 여유를 남긴다.
-- **waiter는 이 loop 트리 밖의 main-side leaf**(`Bash`만·`sonnet`/`high`) — main이 background 대기를 위임하는
-  별개 서브에이전트라 위 트리·표엔 없다(main→waiter, depth 1; 결정 17).
 
 ---
 
@@ -399,8 +397,9 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     프롬프트(`promptSource: system`)도 타고, launch 스킬 스스로 background Agent 전개를 권장하므로
     자율 미션일수록 이 경로가 반드시 발화한다 — 프롬프트를 개입으로 취급하면 루프가 자기가 권장한
     패턴에 죽는다. 실측 근거(2026-07): main이 background 에이전트들을 기다리며 턴을 yield하자
-    (하네스는 yield 턴에서 Stop의 exit 2 재주입을 무시한다 — armed 토큰은 남고, decline 경로가 다음
-    정지에서 자연 회복하므로 Stop 측 대응은 불필요) 6분 뒤 도착한 완료 notification이 당시의 "직접
+    (하네스는 background가 살아있는 한 Stop 발화를 보류하고 — `Waiting for N background agents` — 완료
+    시 재개하므로 yield 턴엔 Stop이 아예 안 뜬다; armed 토큰은 남아 재개된 정지의 decline 경로에서
+    자연 회복하므로 Stop 측 대응은 불필요) 6분 뒤 도착한 완료 notification이 당시의 "직접
     사용자 턴 개입 = 종료" 규칙에 걸려 진행 중인 미션을 죽였다. 타이핑된 사용자 턴도 개입이 아니다 —
     사용자는 AskUserQuestion 응답·미드턴 지시로 미션에 *참여*하며, in-band 종결 지시는 결정 14의
     합의 경로로 advisor에 닿는다. ESC 감지도 두지 않는다: interrupt는 훅 이벤트가 없어 트랜스크립트
@@ -409,46 +408,22 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     후 `/ploop:stop`이다 — 명시적 단일 kill switch가 형식 휴리스틱보다 견고하다. 이 정책으로
     UserPromptSubmit 훅이 통째로 사라졌고, 그 훅의 cleanup에서 launch 턴의 `active`를 보호하던
     launching sentinel도 함께 사라졌다 — 프롬프트 경로는 ploop과 완전히 분리된다.
-16. **advisor는 완전 종결 시점에 소집된다 — 코드가 아닌 스킬 규약으로.** Stop 훅은 포그라운드
-    종언만 알 뿐, 백그라운드(shell·agent·workflow·monitor)의 상태를 조회할 공식 수단이
-    없다(전용 훅·Stop 입력 필드·CLI 모두 부재 — 2026-07 공식 문서 조사; `TaskCreated`/
-    `TaskCompleted` 훅은 TODO 태스크 전용). 훅이 트랜스크립트에서 launch−완료를 재구성하는 안은
-    기각했다: 완료 알림 형식이 표류하면 pending이 영원히 안 빠져 루프가 소리 없이 기아한다 — 실패
-    방향이 degrade가 아니라 정지다. 대신 그 지식을 원래 가진 주체에게 규약을 부여한다: launch
-    스킬이 main에게 "미션이 종료되기 전까지 background만 남은 채 foreground를 비우지 마라"를
-    지시한다 — 그 foreground 대기는 결정 17에서 waiter가 흡수한다(스킬 본문은 auto-compaction
-    후에도 re-inject된다 — 미션 정박 2와 같은 채널). main과 advisor는 협력 관계고 ploop은 둘을 적절히
-    신뢰한다 — 규약 위반의 대가는 미완 라운드의 조기 심사(기능 저하)이지 고장이 아니며, 하네스
-    포맷 의존을 하나도 추가하지 않는다. 실측 근거(2026-07): background GPU Job이 도는 미션에서
-    같은 지시를 사용자 조향으로 주입해 검증 — 조기 심사가 멈추고 라운드가 작업 완결 단위로
-    정렬됐다.
-17. **재발행 루프는 waiter 서브에이전트가 흡수한다 — main 컨텍스트 경제.** 결정 16의 포그라운드
-    대기는 하네스의 10분 Bash 상한 때문에 재발행을 반복하는데(실측: 3시간 작업 ≈ 18회), 그 기록이
-    main의 영속 컨텍스트에 쌓여 compaction을 앞당긴다. `ploop:waiter`가 그 재발행 루프를 일회용
-    서브에이전트 컨텍스트에서 소각하고, main에는 "가장 먼저 끝난 작업"당 `Agent` 1쌍만 남긴다 —
-    advisor·narrator의 nesting 컨텍스트 경제와 같은 패턴. 동기 호출(`run_in_background=false`)이라
-    main 포그라운드를 붙잡는다(동기 블록을 끊는 하네스 상한은 미발견 — 기술 리스크 5). 계약은 **시간
-    소유의 분리**다. main의 wait-command는 하네스를 모른 채 조건만 담는다: 원하는 상태까지 무한 블록,
-    도달 시 `WAIT-DONE`+근거를 출력하며 종료. 모든 시간 상한은 waiter가 소유한다: 매 실행에 Bash
-    `timeout` 파라미터를 최대로 주고, 시간 상한 kill을 "아직 WAIT-DONE 전"으로 읽어 재실행한다
-    (DONE→반환 / 시간 상한 kill→재실행 / 그 외 종료→출력 원본과 함께 보고 반환 — 잘못 구성된
-    wait-command는 main에게 교정 신호로 돌아간다). kill 인식은 코드가 아닌 waiter(지능)의 의미
-    판독이라 메시지 형식 표류에 강하고(결정 4와 같은 원리), 실측에서도 waiter들은 지시 없이 kill을
-    3/3회 재실행으로 처리했다(자연 prior와 계약의 일치). main은 waiter에게 **wait-command만** 넘긴다 —
-    반환 시점·실행 방식 지시는 유일 반환 조건(DONE)을 오염시킨다. 수용한 한계: WAIT-DONE 미도래와 probe
-    자체의 hang이 같은 kill로 보여 구분되지 않는다 — 정체 감지가 필요하면 main이 그것을 WAIT-DONE
-    조건에 넣는다(조건 논리는 main 소유). 실측 근거(2026-07, 첫 라이브 미션): 초기의 유한 probe 계약(main이 조각
-    데드라인 ≤540s와 하트비트 토큰을 소유)에서 관측된 실패 전부가 main·waiter에 분산된 시간 소유에서
-    나왔다 — (a) 조각 토큰(`WAIT-TIMEOUT`)의 종결 함의 오독(깨끗한 조각 종료에서 waiter가 반환),
-    (b) main의 시간예산 표류(반환 지시 "~9분 뒤"→조각 확장 D=1500→무한 블록형), (c) waiter의 상한
-    회피 backgrounding("완료 알림을 기다린다"며 즉시 반환 — 서브에이전트는 반환 즉시 소멸해 알림을
-    받을 수 없다). 시간을 waiter로 응집한 이 계약이 세 실패의 뿌리를 제거한다.
-    waiter는 **루프 기계장치 밖**의 main 미션-측 헬퍼다 — advisor 게이트들이 "advisor"
-    부분문자열로 자연히 배제하므로(PreToolUse·SubagentStop·strip) 마커도 전용 훅도 필요 없다.
-    backgrounding cascade 위험도 없다: waiter를 백그라운드로 보내도 Stop은 advisor를 재주입할 뿐
-    또 다른 waiter를 낳지 않아 최악이 조기 라운드 1회(결정 16의 degrade)다 — advisor의 파국적
-    cascade(결정 13)와 달라 in-flight 가드가 불필요하다. 실패는 항상 조기 심사로 degrade하지
-    정지하지 않는다.
+16. **advisor는 background 완료 후 소집된다 — 하네스 게이팅 + Agent 위임.** advisor 판정은 main이
+    라운드 작업을 완료한 뒤라야 유효하다. Stop 훅(코드)은 background 상태를 조회할 수단이 없지만
+    (Stop 입력·전용 훅·CLI 모두 부재 — 2026-07 재확인), **하네스가 대신 게이팅한다**: pending
+    background agent·workflow가 있으면(`pendingBackgroundAgentCount`·`pendingWorkflowCount`) Stop 발화
+    자체를 보류하고 `Waiting for N background agents`를 띄운다 — main이 완료할 때까지 advisor 지시가 안
+    들어가는 것이 hook 밖 하네스 레벨에서 보장된다. 그래서 **완료를 기다려야 하는 background는 게이팅
+    유형으로 위임한다 — 5분 이상 걸리는 Bash는 `Agent(run_in_background)`에 위임한다.** advisor는 항상
+    완료 후 소집된다. bash·monitor는 게이팅되지 않으므로 완료 대기에 쓰지 않는다: bash 완료 대기는 조기
+    심사로 degrade하고, monitor는 배경 알림 스트림이라 완료 대기 축이 아니다(monitor만 남은 정지는
+    정당한 라운드 종료). 개입(ctrl+b·ESC)은 정상 end_turn이 아니라 Stop이 안 뜬다(결정 15). 실측
+    근거(2026-07): 초기엔 이 대기를 `waiter` 서브에이전트가 foreground 점유로 흡수했으나 — background
+    서브에이전트를 transcript grep으로 대기하다 그 완료 신호(`type:result`)가 subagent transcript에
+    원천부재(전수 0건)라 9h43m·4409회 무한 폴링에 빠졌다(foreground 점유가 mailbox notification까지
+    막았다). 서브에이전트는 하네스가 게이팅하므로 애초에 waiter 대상이 아니었다 — Agent 위임이 완료
+    대기를 하네스 게이팅으로 옮겨 waiter를 제거했다(advisor 타이밍·컨텍스트 경제·조기 심사 방지가
+    모두 하네스 몫, foreground 점유 없어 mailbox도 안 막힘).
 
 ---
 
@@ -483,15 +458,6 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    설계 결정 14).
 4. **PreToolUse 발동·session 일치** — 자발 호출 게이팅은 PreToolUse가 main의 Agent 호출에 발동하고 그
    session_id가 Stop과 같아야 성립한다. 미발동 시 게이팅만 무효화되고 루프는 현행대로(graceful).
-5. **waiter의 동기 Agent 블록 시간 — 상한 미발견(no cap found).** waiter는 main을 동기 `Agent` 호출로
-   붙잡는다(결정 17). 2026-07 3중 조사 결과 그 호출을 끊는 메커니즘이 확인되지 않는다: 공식 문서에
-   동기 호출의 wall-clock 제한도 `timeout` 파라미터도 없고(서브에이전트 정의엔 `maxTurns`뿐), 유일한
-   시간 장치 `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS`(기본 10분)는 background 전용 stall 타임아웃이다
-   (진행 이벤트마다 리셋). 바이너리(v2.1.207) 식별자 전수 grep에도 동기 에이전트용 타이머가 없다.
-   실측은 동기 호출 86건 · 최장 27.9분 · 타임아웃 kill 0건(waiter 유휴 대기 25.6분 포함), background
-   스팬 최장 95.6분 — **~28분은 상한이 아니라 관측 최댓값**이다. 수 시간 단일 블록의 직접 관측만
-   남았고, 끊겨도 safe-degrade한다: waiter 반환 → main이 launch 스킬의 [CRITICAL] "foreground 비우지
-   마라" 불변식대로 재호출 → 최악이 결정 16의 조기 심사(정지·오종료 아님).
 
 초기 nested(operator) 버전의 리스크였던 **subagent 내부 `PostCompact` 발화 여부**와 **background-operator의
 nested 동기 호출 honor**는 main 승격으로 **소멸**했다 — 메인 세션은 `PostCompact`가 확실히 발화하고,
@@ -514,10 +480,9 @@ foreground라 동기 호출이 보장된다.
 ```
 ploop/
 ├── .claude-plugin/plugin.json        # manifest
-├── agents/                           # 루프 tier(advisor·narrator) + waiter(main-side 대기 헬퍼)
+├── agents/                           # 루프 tier(advisor·narrator)
 │   ├── advisor.md                    # advisor 역할 + 5-section 읽기 순서 (Write: advice→advice.md)
-│   ├── narrator.md                   # 라운드 슬라이스 파일 → action-history 서사 (Read: round.jsonl · Write: narration→narration.md)
-│   └── waiter.md                     # 포그라운드 대기 위임 — wait-command 재발행 루프 (Bash · 루프 밖 leaf)
+│   └── narrator.md                   # 라운드 슬라이스 파일 → action-history 서사 (Read: round.jsonl · Write: narration→narration.md)
 ├── prompts/instruction.md            # advisor 분석·출력 지침
 ├── skills/define-mission/SKILL.md    # /ploop:define-mission — Direction·Boundary 규칙으로 MISSION.md 작성 (루프와 비연결, 수동 핸드오프)
 ├── skills/launch/SKILL.md            # /ploop:launch — 루프 notice + 대기 규약 + 미션 핸드오프 (미션 저장·활성화는 launch 훅)
