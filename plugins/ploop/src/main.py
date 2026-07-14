@@ -3,19 +3,27 @@
 A hook is code and cannot call tools, so the loop is driven by feedback: stop()
 blocks the main agent's stop (exit 2) and injects the next instruction — invoke
 the advisor, or summarize the finished round log.  The active marker written at
-/ploop:launch gates everything; the loop ends through exactly two paths — the
-advisor writes the termination token, or the user runs /ploop:stop — plus the
-anomaly failsafes: the trigger goes unanswered twice (a sound refusal is
-meant to end the loop through the advisor's verdict), or the advisor
-malfunctions twice.  There is no round cap.  Prompt submission is a non-event
-for ploop — no hook fires on it, so typed user turns, task notifications, and
-scheduled wakeups all pass through an armed loop untouched.  An ESC only cuts
-the turn (no hook fires on an interrupt either): the loop stays armed and
-resumes at the next stop, so the way to halt a running mission is ESC, then
-/ploop:stop.  Both loop participants are unreliable LLMs, so each anomaly gets
-one corrective repeat before it ends the loop: an advisor run that wrote
-nothing is retried, a stop that left the trigger unanswered is redirected to
-the advisor's authority.  See ARCHITECTURE.md for the loop design.
+/ploop:launch gates everything.
+
+The loop ENDS through auto-termination — the advisor writes the termination
+token (phase -> converged), or two consecutive anomalies trip the cap (an
+unanswered trigger or an empty advisor run) — and every such end has the main
+agent recap the round log (format_end_notice); that exposed end behavior is left
+untouched.
+The user PAUSES and RESUMES the loop with /ploop:off and /ploop:on: off drops
+the active gate quietly so the next stop passes (exit 0, the round state
+preserved for resume), on re-arms it so the next stop presents an advisor round
+(exit 2).  off is the quiet counterpart to auto-termination — no end recap.
+
+Prompt submission is otherwise a non-event for ploop — no hook fires on a typed
+user turn, task notification, or scheduled wakeup, so they all pass through an
+armed loop untouched.  An ESC only cuts the turn (no hook fires on an interrupt
+either): the loop stays armed and resumes at the next stop, so the way to pause
+a running mission is ESC, then /ploop:off.  Both loop participants are unreliable
+LLMs, so the first anomaly gets a corrective repeat (an advisor run that wrote
+nothing is retried, a stop that left the trigger unanswered is redirected to the
+advisor's authority) and a second consecutive anomaly ends the loop.  See
+ARCHITECTURE.md for the loop design.
 
 Hooks must never break the session: malformed events and missing files degrade
 to exit 0 (allow the action).
@@ -31,24 +39,28 @@ from src.prompt import (
     format_advisor_trigger,
     format_end_notice,
 )
-from src.state import Workspace, load_ledger, save_ledger
+from src.state import (
+    ADVISING,
+    CONVERGED,
+    FRESH,
+    Workspace,
+    load_ledger,
+    save_ledger,
+)
 
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
 # survives any surrounding prose the model emits alongside it.
 TERMINATION_TOKEN = "I_HAVE_NO_FURTHER_ADVICE_ENDING_THE_PARALLAX_TURN"
 
-# Anomaly caps: the first occurrence gets one corrective repeat, the second
-# ends the loop with an honest cause.  A degenerate advisor generation
-# (system-prompt echo, no tool calls) is a stochastic one-off, so one retry all
-# but eliminates it; an unanswered trigger is redirected into the consensus
-# channel once, and a second means that channel itself is broken — ending
-# cleanly beats stalemating until the harness stop-block cap force-ends the
-# turn and leaves the loop armed as a zombie.  Each counter counts its anomaly
-# since the last clean round (advice written), not merely back-to-back: only a
-# clean round resets them, so alternating malfunction/decline still hits a cap
-# instead of dodging both forever.  Neither cap is advertised to the agents.
-MAX_ADVISOR_FAILURES = 2
-MAX_DECLINES = 2
+# Anomaly cap: the first anomaly gets one corrective repeat (an empty advisor run
+# is retried, an unanswered trigger is redirected to the advisor's authority); a
+# second CONSECUTIVE anomaly of any kind ends the loop with an honest cause,
+# beating a stalemate against the harness stop-block cap.  One counter resets to 0
+# on any clean round, so it can't be dodged by alternating anomaly types (no
+# cross-reset bookkeeping needed) — and since the loop now ends resumable
+# (/ploop:on), ending one anomaly sooner costs nothing.  Not advertised to the
+# agents.
+MAX_ANOMALIES = 2
 
 # Prefixes for anomalous re-arms.  The retry notice tells the main agent the
 # advisor's empty run was a malfunction, not a verdict.  The decline notice
@@ -71,10 +83,11 @@ DECLINE_NOTICE = (
 
 
 def read_event() -> dict:
-    """Parse the hook event from stdin; malformed input allows the action."""
+    """Parse the hook event from stdin; malformed input or a read error allows
+    the action (exit 0), so a hook never breaks the session."""
     try:
         return json.loads(sys.stdin.read())
-    except json.JSONDecodeError:
+    except json.JSONDecodeError, OSError:
         sys.exit(0)
 
 
@@ -110,27 +123,28 @@ def write_log(
         f.write(entry)
 
 
-def end_loop(
-    ws: Workspace, current_round: int, advice_history: list[str], cause: str
-) -> None:
-    """Terminate the loop: mark it done, drop the active gate, and inject the
-    end notice — the main agent reports the end and its cause to the user, with
-    a round-log recap when the turn surfaced any advice.
+def end_loop(ws: Workspace, ledger: dict, cause: str, *, converged: bool) -> None:
+    """Terminate the loop: drop the active gate and inject the end notice — the
+    main agent reports the end and its cause to the user, with a round-log recap
+    when the turn surfaced any advice.
 
     Every automatic exit lands here with an honest cause — the advisor's
-    termination verdict, the decline failsafe, or a repeated advisor
-    malfunction; there is no round cap.  The active marker is dropped,
-    so the next stop passes.
+    termination verdict, or a second consecutive anomaly; there is no round cap.
+    converged sets the phase: CONVERGED marks the mission FINISHED (the advisor's
+    deliberate end — /ploop:on refuses it), while an anomaly end stays ADVISING
+    (an unfinished mission /ploop:on can resume).  Everything else in the ledger
+    is preserved by the merge — round_start_line included, so a resumed anomaly
+    end keeps the real slice offset instead of re-slicing the whole transcript.
+    The active marker is dropped, so the next stop passes.
     """
     save_ledger(
-        ws.ledger_path,
-        round_number=current_round,
-        advice_history=advice_history,
-        done=True,
+        ws.ledger_path, {**ledger, "phase": CONVERGED if converged else ADVISING}
     )
     ws.active_path.unlink(missing_ok=True)
     sys.stderr.write(
-        format_end_notice(cause, log_path=ws.log_path if advice_history else None)
+        format_end_notice(
+            cause, log_path=ws.log_path if ledger["advice_history"] else None
+        )
     )
     sys.exit(2)
 
@@ -201,16 +215,19 @@ def arm_advisor(
 def stop() -> None:
     """Stop hook: record the advisor's verdict, then end the loop or arm the next round.
 
-    Fires on every main-session stop; the active marker gates it.  advice.md is
-    the advisor's sole output channel: its text becomes the round's
+    Fires on every main-session stop; the active marker gates it (a converged or
+    paused loop has no active marker, so it just passes — no done check needed).
+    The phase gates recording: only an "advising" round has a verdict, so the
+    first stop after a launch or resume ("fresh") arms without recording.
+    advice.md is the advisor's sole output channel: its text becomes the round's
     advice-history entry, and only the explicit termination token ends the turn
-    — an absent file is a malfunctioned run (the protocol demands a Write even
-    to terminate), retried with the round's inputs frozen.  A stop that left
-    the trigger unanswered — a decline, or a turn the user cut short — is
-    re-triggered once behind the authority notice (only the advisor ends the
-    loop, and it reads whatever the round said); a second in a row means the
-    consensus channel is broken and ends the loop as a failsafe.  Arming
-    injects the next advisor trigger via exit 2.
+    (phase -> converged) — an absent file is a malfunctioned run (the protocol
+    demands a Write even to terminate), retried with the round's inputs frozen.
+    A stop that left the trigger unanswered — a decline, or a turn the user cut
+    short — is re-triggered once behind the authority notice (only the advisor
+    ends the loop, and it reads whatever the round said); a second consecutive
+    anomaly of any kind ends the loop as a failsafe.  Arming injects the next
+    advisor trigger via exit 2.
     """
     event = read_event()
     ws = Workspace.from_env(event.get("session_id", ""))
@@ -219,14 +236,13 @@ def stop() -> None:
         sys.exit(0)
 
     ledger = load_ledger(ws.ledger_path)
-    if ledger.get("done", False):
-        sys.exit(0)
-    current_round = ledger.get("round", 0)
-    advice_history = ledger.get("advice_history", [])
-    lines = read_transcript_lines(event.get("transcript_path", ""))
+    phase = ledger["phase"]
+    advice_history = ledger["advice_history"]
+    anomalies = ledger["anomalies"]
     # Start line of the round being completed now — the narrator's slice begins
-    # here.  Defaults to line 1 for round 0 (whole session so far is the round).
-    round_start = ledger.get("round_start_line", 1)
+    # here.  A "fresh" launch/resume round covers the work so far (defaults to 1).
+    round_start = ledger["round_start_line"]
+    lines = read_transcript_lines(event.get("transcript_path", ""))
 
     # An advisor is still in flight (PreToolUse set the marker; SubagentStop, its
     # sole clearer, hasn't fired): re-triggering would cascade a second advisor,
@@ -235,64 +251,48 @@ def stop() -> None:
         sys.exit(0)
 
     # The advisor ran this round iff PreToolUse consumed the token a prior Stop
-    # wrote.  A leftover token means the trigger went unanswered (a decline, or
-    # a turn cut short) and no advisor ran — skip recording so a prior round's
-    # advice is not re-appended as a duplicate.  The refusal turn is in the
-    # round's transcript slice, so the re-injected trigger (behind the authority
-    # notice) routes the narrator over those stated reasons to the advisor for
-    # the termination verdict.  A second consecutive decline means the consensus
-    # channel itself is broken — end cleanly instead of stalemating until the
-    # harness stop-block cap force-ends the turn and leaves the loop armed as a
-    # zombie.
+    # wrote.  A leftover token means the trigger went unanswered (a decline, or a
+    # turn cut short) and no advisor ran.  The refusal turn rides the round's
+    # transcript slice, so the re-injected trigger (behind the authority notice)
+    # routes the narrator over those stated reasons to the advisor for the
+    # termination verdict.  A second consecutive anomaly means the consensus
+    # channel is broken — end cleanly instead of stalemating against the harness
+    # stop-block cap.
     advisor_invoked = not ws.advisor_token_path.exists()
-    declines = 0 if advisor_invoked else ledger.get("declines", 0) + 1
-    if declines >= MAX_DECLINES:
-        end_loop(
-            ws,
-            current_round,
-            advice_history,
-            "the advisor went uninvoked for two consecutive rounds",
-        )
 
-    # Record last round's verdict (none in round 0, before any call).  Past the
-    # in-flight guard the advisor has finished, so an absent advice file means
-    # it wrote nothing — a malfunction, not a verdict, since the protocol
-    # demands a Write even to terminate (the token).  Retry the round with its
-    # inputs frozen (round_start unchanged, advice_history.md still describes the
-    # round being advised); give up after a second consecutive failure.  On
-    # advice, the narration narrates the round just completed: it opens with the
-    # prior advice arriving and shows how the main agent responded, so the log
-    # entry pairs it with that advice — true cause -> effect order.  The
-    # termination token is machinery and never enters the log.
-    if current_round >= 1 and advisor_invoked:
+    if not advisor_invoked:  # a decline: the token went unconsumed
+        anomalies += 1
+        if anomalies >= MAX_ANOMALIES:
+            end_loop(
+                ws,
+                ledger,
+                "the advisor went uninvoked for two consecutive rounds",
+                converged=False,
+            )
+
+    # Record last round's verdict — only an "advising" round has one (a "fresh"
+    # launch/resume round arms without recording; a decline had no advisor).  Past
+    # the in-flight guard the advisor has finished, so an absent advice file means
+    # it wrote nothing — a malfunction, not a verdict (the protocol demands a Write
+    # even to terminate).  Retry the round with its inputs frozen — the merge
+    # preserves round_start and advice_history — and give up after a second
+    # consecutive anomaly.  On advice, the narration narrates the round just
+    # completed, so the log pairs it with the advice it answered (cause -> effect);
+    # the termination token is machinery and never enters the log.
+    elif phase == ADVISING:
         advice = ws.advice_path.read_text().strip() if ws.advice_path.exists() else ""
-        if not advice:
-            failures = ledger.get("advisor_failures", 0) + 1
-            if failures >= MAX_ADVISOR_FAILURES:
+        if not advice:  # a malfunction
+            anomalies += 1
+            if anomalies >= MAX_ANOMALIES:
                 end_loop(
                     ws,
-                    current_round,
-                    advice_history,
+                    ledger,
                     "the advisor malfunctioned twice in a row"
                     " (it finished without writing advice)",
+                    converged=False,
                 )
-            save_ledger(
-                ws.ledger_path,
-                round_number=current_round,
-                advice_history=advice_history,
-                done=False,
-                advisor_failures=failures,
-                declines=ledger.get(
-                    "declines", 0
-                ),  # preserve — a malfunction is not a clean round
-                round_start_line=round_start,
-            )
-            arm_advisor(
-                ws,
-                lines=lines,
-                round_start=round_start,
-                notice=RETRY_NOTICE,
-            )
+            save_ledger(ws.ledger_path, {**ledger, "anomalies": anomalies})
+            arm_advisor(ws, lines=lines, round_start=round_start, notice=RETRY_NOTICE)
         narration = (
             ws.narration_path.read_text().strip() if ws.narration_path.exists() else ""
         ) or "(no narration)"
@@ -305,35 +305,37 @@ def stop() -> None:
         if TERMINATION_TOKEN in advice:
             end_loop(
                 ws,
-                current_round,
-                advice_history,
+                ledger,
                 "the advisor had no further advice to provide",
+                converged=True,
             )
         advice_history = [*advice_history, advice]
+        anomalies = 0  # a clean round resets the streak
 
     # Arm the next round.  arm_advisor cuts the just-completed round
     # [round_start .. end] into round_path for the narrator — a contiguous slice
     # no interjection can truncate.  The next round starts just past the current
     # transcript end (this round's trigger has not been injected yet), so record
     # that as its start line — but only when the transcript actually read (else
-    # freeze it, or an empty read would reset the offset to 1 and make the next
-    # round slice the whole session).  A decline preserves advisor_failures (it
-    # is not a clean round); a clean round leaves declines=0, resetting both.
+    # freeze it, or an empty read would reset the offset to 1 and slice the whole
+    # session).  The phase advances to advising; a clean round already zeroed the
+    # anomaly streak.
     ws.advice_history_path.write_text(format_advice_history(advice_history))
     save_ledger(
         ws.ledger_path,
-        round_number=current_round + 1,
-        advice_history=advice_history,
-        done=False,
-        advisor_failures=ledger.get("advisor_failures", 0) if declines else 0,
-        declines=declines,
-        round_start_line=len(lines) + 1 if lines else round_start,
+        {
+            **ledger,
+            "phase": ADVISING,
+            "advice_history": advice_history,
+            "anomalies": anomalies,
+            "round_start_line": len(lines) + 1 if lines else round_start,
+        },
     )
     arm_advisor(
         ws,
         lines=lines,
         round_start=round_start,
-        notice=DECLINE_NOTICE if declines else "",
+        notice=DECLINE_NOTICE if not advisor_invoked else "",
     )
 
 
@@ -402,8 +404,8 @@ def launch() -> None:
 
     Two guards block the expansion (block_expansion — pure, turn erased): an
     armed loop (active marker), because relaunching over it would overwrite the
-    mission and log mid-flight and orphan an in-flight advisor — /ploop:stop
-    ends it first; and a blank mission, because the skill body would otherwise
+    mission and log mid-flight and orphan an in-flight advisor — /ploop:off
+    pauses it first; and a blank mission, because the skill body would otherwise
     announce an activation this hook never armed (a ghost loop).
 
     A real launch clears the prior mission's round state, starts the round log
@@ -417,7 +419,7 @@ def launch() -> None:
     ws = Workspace.from_env(event.get("session_id", ""))
     if ws.active_path.exists():
         block_expansion(
-            "A parallax loop is already active. Stop it with /ploop:stop, then launch again."
+            "A parallax loop is already active. Pause it with /ploop:off, then launch again."
         )
     args = event.get("command_args", "")
     if isinstance(args, list):
@@ -431,40 +433,78 @@ def launch() -> None:
     ws.active_path.touch()
 
 
-def stop_command() -> None:
-    """UserPromptExpansion hook (matcher: ploop:stop): stop the loop on demand.
+def off_command() -> None:
+    """UserPromptExpansion hook (matcher: ploop:off): pause the loop on demand.
 
-    The loop has no round cap — it ends when the advisor has no further advice,
-    or here, when the user runs /ploop:stop.  With no armed loop (never launched,
-    already ended, or a double-stop) the expansion is blocked (block_expansion —
-    pure, turn erased): the skill body never enters context, so the main agent
-    can't announce a termination that didn't happen.
+    off is the quiet pause half of the manual pause/resume pair (/ploop:on
+    resumes).  Unlike auto-termination — the advisor's verdict or an anomaly
+    failsafe, which END the loop and have the main agent recap the log, an
+    exposed behavior this leaves untouched — off just drops the active gate so
+    the next stop passes (exit 0) and no advisor round is presented, while the
+    round state (ledger, advice-history, round_start_line) is preserved for
+    /ploop:on to resume from.
 
-    An armed loop is deactivated: the active gate and per-round state are cleared
-    (the running marker too — the stop is unconditional, even with a background
-    advisor in flight), so the next stop is allowed and nothing leaks into a
-    later mission.  It injects the same end notice the natural end does (cause:
-    the user's stop) with the round log to recap, carried as UserPromptExpansion
-    additionalContext — the only channel with the session's real log path; the
-    static skill body can't hold it.
+    With no active loop (never launched, already off, or already ended) the
+    expansion is blocked (block_expansion — pure, turn erased) so the skill body
+    never announces a pause that didn't happen.  An active loop is paused: the
+    active gate is dropped (the running marker too — the pause is unconditional,
+    even with a background advisor in flight).  No end notice — the skill body
+    carries the quiet, non-imperative notice; whether the main agent mentions it
+    to the user is left to the main agent.
     """
     event = read_event()
-    if event.get("command_name", "") != "ploop:stop":
+    if event.get("command_name", "") != "ploop:off":
         sys.exit(0)
     ws = Workspace.from_env(event.get("session_id", ""))
     if not ws.active_path.exists():
-        block_expansion("No active parallax loop.")
-    ws.clear_round_state()
+        block_expansion("No active parallax loop to turn off.")
     ws.active_path.unlink(missing_ok=True)
-    sys.stdout.write(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "UserPromptExpansion",
-                    "additionalContext": format_end_notice(
-                        "the user ran /ploop:stop", log_path=ws.log_path
-                    ),
-                }
-            }
+    ws.advisor_running_path.unlink(missing_ok=True)
+
+
+def on_command() -> None:
+    """UserPromptExpansion hook (matcher: ploop:on): resume the loop.
+
+    on is the universal wake/resume button.  It re-arms the loop so the next stop
+    presents an advisor round (exit 2), and it resumes the loop from ANY stalled
+    state — paused by /ploop:off, ended by an anomaly failsafe, or stuck mid-round
+    by an exception (an accidental ESC, an API error, a subscription session
+    limit; most of these fire no hook, so they leave the loop active and touch no
+    state) — so it is the one way to wake a long-running loop, even one still
+    marked active.  The sole exception is a FINISHED mission (done): the advisor
+    deliberately converged, a genuine completion rather than a stall, so on
+    refuses it and the user launches a fresh mission.
+
+    A resume requires the anchors on disk (mission and log; else there is no loop
+    to resume) and refuses a converged mission (phase == converged); either
+    failure blocks the expansion (block_expansion — pure, turn erased) so the
+    skill body never announces a resume that didn't happen, and the user gets a
+    clear reason.
+
+    The resume normalizes the round state to a clean arming point regardless of
+    how the loop stalled: the stale handoff/gate transients (token, running
+    marker, advice, narration) are cleared so the first resumed stop arms cleanly,
+    and the ledger's phase is reset to fresh (so the next stop skips recording a
+    round no advisor ran) with the anomaly streak cleared, while advice-history
+    and round_start_line are preserved by the merge (the resumed round's slice
+    covers everything since the stall).  The skill body confirms the resume.
+    """
+    event = read_event()
+    if event.get("command_name", "") != "ploop:on":
+        sys.exit(0)
+    ws = Workspace.from_env(event.get("session_id", ""))
+    if not ws.mission_path.exists() or not ws.log_path.exists():
+        block_expansion(
+            "No parallax loop to resume. Launch one with /ploop:launch <mission>."
         )
-    )
+    ledger = load_ledger(ws.ledger_path)
+    if ledger["phase"] == CONVERGED:
+        block_expansion(
+            "The advisor concluded this mission. Launch a new one with /ploop:launch <mission>."
+        )
+    ws.advisor_token_path.unlink(missing_ok=True)
+    ws.advisor_running_path.unlink(missing_ok=True)
+    ws.advice_path.unlink(missing_ok=True)
+    ws.narration_path.unlink(missing_ok=True)
+    save_ledger(ws.ledger_path, {**ledger, "phase": FRESH, "anomalies": 0})
+    ws.active_path.touch()

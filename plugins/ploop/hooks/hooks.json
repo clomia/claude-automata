@@ -11,11 +11,20 @@
         ]
       },
       {
-        "matcher": "ploop:stop",
+        "matcher": "ploop:off",
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook stop-command"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook off-command"
+          }
+        ]
+      },
+      {
+        "matcher": "ploop:on",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook on-command"
           }
         ]
       }

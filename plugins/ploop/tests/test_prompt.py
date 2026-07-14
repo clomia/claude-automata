@@ -106,9 +106,11 @@ class TestFormatAdvisorTrigger:
 
 class TestFormatEndNotice:
     def test_directs_main_to_report_end_and_cause(self):
-        out = format_end_notice("the user ran /ploop:stop")
+        """Every auto-termination lands here — the advisor's verdict or an anomaly
+        failsafe — and the notice reports that cause to the user."""
+        out = format_end_notice("the advisor had no further advice to provide")
         assert "has ended" in out
-        assert "the user ran /ploop:stop" in out
+        assert "the advisor had no further advice to provide" in out
         assert "report" in out.lower()
         assert "{" not in out and "}" not in out
 

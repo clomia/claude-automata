@@ -2,53 +2,64 @@
 
 from pathlib import Path
 
-from src.state import Workspace, load_ledger, save_ledger
+from src.state import CONVERGED, Workspace, load_ledger, save_ledger
+
+DEFAULTS = {
+    "advice_history": [],
+    "round_start_line": 1,
+    "anomalies": 0,
+    "phase": "fresh",
+}
 
 
 # ── Ledger persistence ──
 
 
 class TestLedger:
-    def test_roundtrip_defaults_clean_counters(self, tmp_path):
+    def test_roundtrip(self, tmp_path):
         f = tmp_path / "s1_loop.json"
-        save_ledger(f, round_number=2, advice_history=["a", "b"], done=False)
-        assert load_ledger(f) == {
-            "round": 2,
+        ledger = {
             "advice_history": ["a", "b"],
-            "done": False,
-            "advisor_failures": 0,
-            "declines": 0,
-            "round_start_line": 1,
+            "round_start_line": 842,
+            "anomalies": 1,
+            "phase": "advising",
         }
+        save_ledger(f, ledger)
+        assert load_ledger(f) == ledger
 
-    def test_roundtrip_persists_round_start_line(self, tmp_path):
+    def test_load_fills_defaults(self, tmp_path):
+        """load returns every key, so a partial save reads back whole — callers
+        index directly and update by merge, never re-defaulting an omitted key."""
         f = tmp_path / "s1_loop.json"
-        save_ledger(
-            f, round_number=3, advice_history=["a"], done=False, round_start_line=842
-        )
-        assert load_ledger(f)["round_start_line"] == 842
+        save_ledger(f, {"advice_history": ["a"]})
+        assert load_ledger(f) == {**DEFAULTS, "advice_history": ["a"]}
 
-    def test_roundtrip_persists_anomaly_counters(self, tmp_path):
+    def test_load_missing_returns_defaults(self, tmp_path):
+        assert load_ledger(tmp_path / "none.json") == DEFAULTS
+
+    def test_load_corrupt_returns_defaults(self, tmp_path):
+        f = tmp_path / "s1.json"
+        f.write_text("{broken")
+        assert load_ledger(f) == DEFAULTS
+
+    def test_merge_preserves_untouched_fields(self, tmp_path):
+        """The update idiom save({**ledger, change}) preserves everything else, so
+        a terminating write can't clobber round_start_line (the P1 fix, structural)."""
         f = tmp_path / "s1_loop.json"
         save_ledger(
             f,
-            round_number=3,
-            advice_history=["a"],
-            done=False,
-            advisor_failures=1,
-            declines=1,
+            {
+                "advice_history": ["a"],
+                "round_start_line": 500,
+                "anomalies": 2,
+                "phase": "advising",
+            },
         )
-        ledger = load_ledger(f)
-        assert ledger["advisor_failures"] == 1
-        assert ledger["declines"] == 1
-
-    def test_load_missing_returns_empty(self, tmp_path):
-        assert load_ledger(tmp_path / "none.json") == {}
-
-    def test_load_corrupt_returns_empty(self, tmp_path):
-        f = tmp_path / "s1.json"
-        f.write_text("{broken")
-        assert load_ledger(f) == {}
+        save_ledger(f, {**load_ledger(f), "phase": CONVERGED})  # end: only phase moves
+        after = load_ledger(f)
+        assert after["phase"] == CONVERGED
+        assert after["round_start_line"] == 500  # preserved
+        assert after["advice_history"] == ["a"]
 
 
 # ── Workspace ──

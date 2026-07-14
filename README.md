@@ -35,8 +35,10 @@ ploop is a loop built for long-running work that spans days.
 1. Write your mission. Use `/ploop:define-mission` for this.
 2. In a fresh session, run `/ploop:launch [mission]`.
    The loop rides the Stop hook's error behavior — whenever the agent stops, the hook blocks the stop and directs it to invoke the advisor.
-3. The loop ends when the advisor judges there is nothing left to advise.
-   To end it yourself, run `/ploop:stop` — the only manual stop (interrupt with ESC first if a turn is running).
+3. The loop ends on its own when the advisor judges there is nothing left to advise — at which point the agent reads the log and recaps every round.
+   To pause it, run `/ploop:off`; to pick it back up from where it stopped, run `/ploop:on` (interrupt with ESC first if a turn is running).
+   `off` halts the loop quietly and preserves its state; `on` resumes the loop from that state.
+   `on` is also the one way to revive a long-running loop stalled by a mishap — an accidental ESC, an API error, a subscription session limit: it always resumes cleanly, except when the advisor ended the loop itself.
    Nothing else — mid-mission instructions, answered questions, background-task notifications, ESC itself — stops the loop.
 
 # Refine Architecture

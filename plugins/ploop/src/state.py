@@ -6,14 +6,30 @@ narration) under the system temp dir — a Write TOOL call into the protected
 ~/.claude routes to the auto-permission-mode classifier and can be silently
 blocked, so the agents write to unprotected temp, where it is auto-approved.
 
-The ledger ({round, advice_history, done, advisor_failures, declines,
-round_start_line}) is the loop's persisted state; the hook owns it as single
-writer — advisor and narrator only hand off text files.  The two counters track
-consecutive anomalies (an advisor run that wrote nothing / a stop that ignored
-the trigger) and reset to 0 on any normal round.  round_start_line is the
-transcript line where the current round's work begins — a file offset, not a
-message-format field — so the narrator reads that round's slice directly
-instead of the hook reconstructing it.
+The ledger ({advice_history, round_start_line, anomalies, phase}) is the loop's
+persisted state; the hook owns it as single writer — advisor and narrator only
+hand off text files.  Four fields, each one fact:
+
+- advice_history: the round record; its length is the round ordinal (the log
+  numbers by it).
+- round_start_line: the transcript line where the current round's work begins —
+  a file offset, not a message-format field — so the narrator reads that round's
+  slice directly instead of the hook reconstructing it.
+- anomalies: consecutive anomaly count (an advisor run that wrote nothing, or a
+  stop that ignored the trigger), reset to 0 on any clean round; the cap ends the
+  loop before it can stalemate.
+- phase: the round-cycle position — "fresh" (just launched/resumed, no verdict to
+  record yet), "advising" (rounds running), "converged" (the advisor deliberately
+  finished the mission).  It subsumes the old skip-gate and the finished flag:
+  record iff phase == "advising"; /ploop:on resumes any phase except "converged".
+
+load_ledger always returns every key, so callers index directly and update by
+merge ({**ledger, "phase": ...}): an omitted key is preserved, never
+re-defaulted — a resumable anomaly end can't clobber round_start_line.
+
+Most exceptional stalls (an ESC, an API error, a session limit) fire no hook at
+all, so they touch no state — the loop just stays active, and /ploop:on re-arms
+it.
 """
 
 import json
@@ -21,6 +37,11 @@ import os
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+
+# The round-cycle position (ledger `phase`).
+FRESH = "fresh"  # just launched/resumed — the next stop arms without recording
+ADVISING = "advising"  # rounds running — the next stop records then arms
+CONVERGED = "converged"  # the advisor finished the mission — /ploop:on refuses
 
 
 @dataclass(frozen=True)
@@ -97,36 +118,30 @@ class Workspace:
 
 
 def load_ledger(ledger_file: Path) -> dict:
-    """Load the ledger. Empty dict on any failure."""
+    """Load the ledger filled with defaults; defaults on any failure.
+
+    Always returns every key, so callers index directly and update by merge
+    ({**ledger, "phase": ...}) — an omitted key is preserved, not re-defaulted.
+    """
+    defaults = {
+        "advice_history": [],
+        "round_start_line": 1,
+        "anomalies": 0,
+        "phase": FRESH,
+    }
     if not ledger_file.exists():
-        return {}
+        return defaults
     try:
-        ledger = json.loads(ledger_file.read_text())
+        loaded = json.loads(ledger_file.read_text())
     except json.JSONDecodeError, OSError:
-        return {}
-    return ledger if isinstance(ledger, dict) else {}
+        return defaults
+    return {**defaults, **loaded} if isinstance(loaded, dict) else defaults
 
 
-def save_ledger(
-    ledger_file: Path,
-    *,
-    round_number: int,
-    advice_history: list[str],
-    done: bool,
-    advisor_failures: int = 0,
-    declines: int = 0,
-    round_start_line: int = 1,
-) -> None:
-    """Persist the ledger; the anomaly counters default to a clean round."""
-    ledger_file.write_text(
-        json.dumps(
-            {
-                "round": round_number,
-                "advice_history": advice_history,
-                "done": done,
-                "advisor_failures": advisor_failures,
-                "declines": declines,
-                "round_start_line": round_start_line,
-            }
-        )
-    )
+def save_ledger(ledger_file: Path, ledger: dict) -> None:
+    """Persist the ledger dict as-is.
+
+    Callers build the next ledger by merge ({**ledger, ...}), so preservation is
+    the default and only the changed fields are named at each transition.
+    """
+    ledger_file.write_text(json.dumps(ledger))

@@ -94,7 +94,7 @@ main round N work ── stops
    |          advice -> log completed round (narration + the advice it answered)
    |          termination token -> done + deactivate
    |            -> exit 2: "summarize {session}_loop.log" (if any advice surfaced)
-   |          else append advice   (no round cap; /ploop:stop also deactivates)
+   |          else append advice   (no round cap; /ploop:off pauses, /ploop:on resumes)
    |        then:  cut transcript [round_start..end] -> {session}_round.jsonl
    |               next round_start = transcript line count + 1
    |               write {session}_advice_history.md (advice-history XML)
@@ -113,9 +113,9 @@ main ─ work on the advice (round N+1) ── stops ── (loop)
 ```
 
 종료는 의미론적 판단만 인정한다: advisor가 `advice.md`에 **전용 종료 토큰을 Write할 때만** 수렴 종료다
-(`TERMINATION_TOKEN in advice` → `done` 플래그 + active 마커 정리). 파일 부재/빈 파일은 종료가 아니라
+(`TERMINATION_TOKEN in advice` → `phase`를 `converged`로 + active 마커 정리). 파일 부재/빈 파일은 종료가 아니라
 **오작동**이다 — 규약상 정상 advisor는 종료조차 토큰 Write로 표현하므로, 안 쓴 것은 판정이 아니다. 이때
-라운드를 입력 동결 상태로(같은 round·round_start_line·advice_history.md) 재시도하고, **연속 2회** 실패하면
+라운드를 입력 동결 상태로(phase advising 유지 · round_start_line·advice_history.md는 병합이 보존) 재시도하고, **연속 2회** 실패하면
 오작동 사유로 종료한다(수렴으로 위장하지 않는다 — 핵심 설계 결정 14). 트리거가 응답되지 않은
 정지(토큰 잔존 — main의 거부, 또는 사용자가 끊은 턴)는 **권한 분할**로 처리한다: 1회는 "루프 종료
 권한은 advisor에게만 있다"를 고지하며 재주입한다 — 거부의 근거 발언은 라운드 트랜스크립트 슬라이스→narrator를 타고
@@ -123,14 +123,26 @@ advisor에게 닿으므로, 타당한 거부는 advisor의
 종료 토큰으로 관철된다(main-advisor 합의 경로). 연속 2회면 합의 채널 자체가 붕괴된 것으로 보고 failsafe로
 종료한다 — 노티스는 이를 광고하지 않는다(main-side 출구가 아니다). **숫자 라운드 상한은 두지 않는다** — advice-history는 파일이라 컨텍스트를 잠식하지
 않고 advisor는 매 라운드 stateless하게 리셋되므로, 종료는 "더 제공할 advice가 있는가"라는 의미론적
-판단(advisor 종료 토큰)에 맡긴다. 그 판단이 안 나오면 사용자가 `/ploop:stop`으로 언제든 끝낸다(아래
-Hooks) — 이 둘이 종료 신호의 전부다. ESC는 턴만 끊을 뿐 armed 루프는 다음 정지에서 재개되므로,
-실행 중인 미션의 중단 절차는 ESC 후 `/ploop:stop`이다(결정 15).
-**모든 종료 경로는 main에게 정직한 사유와 함께 종료 노티스를 보낸다**
+판단(advisor 종료 토큰)에 맡긴다. 이 자동 종료 — advisor 종료 토큰과 두 anomaly failsafe(malfunction·decline) —
+가 루프를 **끝내는** 신호의 전부다. **모든 자동 종료 경로는 main에게 정직한 사유와 함께 종료 노티스를 보낸다**
 (`format_end_notice`) — 노티스는 종료 사실과 사유를 사용자에게 명확히 보고하게 하고, advice를 하나라도
 surface한 턴이면 `loop.log` recap 지시를 덧붙인다 — 장기 미션에서 main 컨텍스트는 여러 번 auto-compaction되므로
 로그가 턴의 유일한 완전 기록이다. 자연 종료는 종료 정지를 한 번 더 막아(exit 2) 노티스를 주입하고, 그 다음
-정지는 active 마커가 없어 통과한다.
+정지는 active 마커가 없어 통과한다. **이 자동 종료 동작은 노출 계약이라 불변이다.**
+
+**끝내기(자동 종료)와 별개로 사용자는 루프를 일시정지·재개한다** — `/ploop:off`는 active 마커만 조용히
+지워(라운드 상태는 보존) 다음 정지를 통과시키고(exit 0), `/ploop:on`은 그 보존된 상태에서 루프를 재무장한다
+(다음 정지가 advisor 라운드를 제시, exit 2 — 아래 활성화 lifecycle). off는 종료가 아니므로 `format_end_notice`를
+보내지 않는다 — 조용한 고지는 스킬 본문이 싣고, 사용자 언급 여부는 main 소관이다. `/ploop:on`은 사실상
+**범용 wake 버튼**이다: off로 일시정지된 루프뿐 아니라 anomaly failsafe로 멈춘 루프, 그리고 예외(실수 ESC·API
+에러·구독 세션 리밋)로 라운드 중간에 멈춰 여전히 active인 루프까지 — **`phase`가 `converged`인 경우만 빼고**
+무엇이든 정규화해(phase→`fresh`) 재개한다. `converged`는 advisor가 수렴 종료(토큰 Write)로 미션을 **끝냈을 때만**
+설정된다 — anomaly failsafe로 멈춘 것과 off는 `advising`으로 남아 on이 깨우고, 수렴만이 진짜 완료라 재개 불가다
+(그땐 새 미션을 launch). 즉 `phase` 하나(3-state)가 skip-gate(`fresh`)와 완료(`converged`)를 함께 표현하므로
+**별도 마커가 없다** — 게다가 대부분의 예외 종료는 아예 아무 훅도 발화시키지 않아(마커를 남길 자리조차 없다)
+루프가 active인 채 남고, on이 그대로 re-arm한다. ESC는 턴만 끊을 뿐
+armed 루프는 다음 정지에서 재개되므로, 실행 중인 미션의 일시정지 절차는 ESC 후 `/ploop:off`이고 재개는
+`/ploop:on`이다(결정 15).
 
 Stop 훅은 메인 세션 정지마다 발화하므로 active 마커가 게이트한다(아래 상태). advisor·narrator의
 정지는 `SubagentStop`이라 이 Stop 훅에 잡히지 않는다 — 재귀 가드가 필요 없다.
@@ -158,24 +170,24 @@ main의 컨텍스트에 더해지는 것은 **① 짧은 stderr 트리거 + ② 
 |---|---|---|
 | `{session}_mission.md` | launch 훅 (UserPromptExpansion) | original-mission 정의 (외부 보존 anchor) |
 | `{session}_active` | launch 훅 생성 · hook 삭제 | 활성화 마커 (Stop 게이트) |
-| `{session}_loop.json` | hook | `round` · `advice_history` · `done` · `advisor_failures`/`declines` (연속 이상 카운터, 정상 라운드에 0으로 리셋) · `round_start_line` (이번 라운드가 시작되는 트랜스크립트 라인 — 슬라이스 컷의 시작 오프셋) |
+| `{session}_loop.json` | hook | 4필드 — `advice_history` (라운드 기록, 길이가 라운드 ordinal) · `round_start_line` (이번 라운드 시작 트랜스크립트 라인 = 슬라이스 컷 오프셋) · `anomalies` (연속 이상 카운터, clean 라운드에 0 리셋) · `phase` (라운드-사이클 위치: `fresh` 갓 launch/resume·record 스킵 → `advising` 라운드 진행·record → `converged` advisor 수렴 완료·`/ploop:on` 거부). 갱신은 `{**ledger, ...}` 병합이라 언급 안 한 필드는 보존(preserve-by-default) |
 | `{session}_round.jsonl` | hook | 이번 라운드의 트랜스크립트 슬라이스 `[round_start..end]` (narrator가 통째로 분석) — 라인 컷이라 메시지 파싱 없음 |
 | `{session}_advice_history.md` | hook | advisor 입력의 advice-history (XML) |
 | `advice.md` (temp) | advisor (`Write`) | advice 또는 종료 토큰 (유일 채널) — 비보호 temp라 auto 모드 Write 승인 · main·hook이 읽음 · prose 격리 |
 | `narration.md` (temp) | narrator (`Write`) | action-history 서사 (advice와 동일 채널) — narrator가 라운드 트랜스크립트 슬라이스를 읽어 작성 · advisor가 분석 입력으로 · hook이 라운드 로그로 읽음 |
 | `{session}_loop.log` | hook | 완결 라운드 로그 (서사 + 그 라운드의 advice) — 미션 전체 흐름의 완전 기록 · launch가 `[[ MISSION ]]` 원문으로 새로 시작 · 종료 요약의 소스 |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (Stop set · PreToolUse 소비) |
-| `{session}_advisor_running` | hook | advisor in-flight 마커 (PreToolUse set · 루프 사이클 내 clearer는 SubagentStop뿐 — launch 리셋·`/ploop:stop`의 teardown은 예외 · Stop이 존재로 in-flight 판정) |
+| `{session}_advisor_running` | hook | advisor in-flight 마커 (PreToolUse set · 루프 사이클 내 clearer는 SubagentStop뿐 — launch 리셋·`/ploop:off`의 pause·`/ploop:on`의 정규화는 예외 · Stop이 존재로 in-flight 판정) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 마커 (Stop이 메커니즘 2로 소비) |
 
-**loop 상태(round·advice_history·done)는 hook이 단독 소유한다.** advisor는 분석 후 advice를
+**loop 상태(advice_history·phase·anomalies·round_start_line)는 hook이 단독 소유한다.** advisor는 분석 후 advice를
 `advice.md`에 Write(종료 시엔 같은 파일에 종료 토큰을 Write)할 뿐 loop ledger는 건드리지 않는다. hook이 다음
-라운드 시작에 직전 advisor의 `advice.md`를 읽어 `advice_history`에 append하거나, 종료 토큰이면 `done`을 세운다 —
-advice-history의 한 블록은 한 라운드의 advice 전문이다(action-history 요약 포함, 위 용어의 history 무결성).
-in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 이미 종료했으므로, `advice.md`가 없으면
-아무것도 안 쓴 것 = 오작동이다(규약상 종료도 토큰 Write를 요구) — 라운드를 재시도하고 연속 2회면 오작동
-사유로 종료한다(핵심 설계 결정 14). main도 트리거 지시대로 같은 `advice.md`를
-읽어 그 조언에 따라 작업하므로 `advice.md`는 advice/종료의 유일 채널이자 main·hook 양쪽의 깨끗한 단일 소스다. `round`도 hook이 증가시키는 안전망이다.
+라운드 시작에 직전 advisor의 `advice.md`를 읽어 `advice_history`에 append하거나, 종료 토큰이면 `phase`를
+`converged`로 옮긴다 — advice-history의 한 블록은 한 라운드의 advice 전문이다(action-history 요약 포함, 위 용어의
+history 무결성). in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 이미 종료했으므로, `advice.md`가
+없으면 아무것도 안 쓴 것 = 오작동이다(규약상 종료도 토큰 Write를 요구) — 라운드를 재시도하고 연속 2회면
+오작동 사유로 종료한다(핵심 설계 결정 14). main도 트리거 지시대로 같은 `advice.md`를 읽어 그 조언에 따라
+작업하므로 `advice.md`는 advice/종료의 유일 채널이자 main·hook 양쪽의 깨끗한 단일 소스다.
 단일 작성자(hook)가 ledger를 소유해 race가 없고, advisor는 자기 advice payload만 파일로 넘긴다.
 (`mission.md`·`active` 마커는 활성화 신호라 launch 훅(UserPromptExpansion)이 만든다.)
 
@@ -191,15 +203,23 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
    턴·AskUserQuestion 응답·task-notification·scheduled wakeup 어느 것도 루프 상태를 건드리지 않고,
    ESC도 턴만 끊는다(interrupt에는 어떤 훅도 발화하지 않는다). armed 루프는 다음 정지의 Stop
    훅에서 재개된다 — 끊긴 라운드의 미소비 토큰은 decline 경로(결정 14)가 한 정지 안에 자연
-   회복시킨다. 실행 중인 미션의 공식 중단 절차는 (턴이 돌고 있으면 ESC로 끊고) `/ploop:stop`이다.
-3. Stop 훅이 종료(advisor 종료 판정) 시 `active` 마커를 지운다.
-4. `/ploop:stop`의 UserPromptExpansion 훅(`stop_command`)이 사용자 요청으로 언제든 루프를
-   비활성화한다 — `active`와 라운드 상태를 지운다. background advisor in-flight 중에도 무조건
-   멈추도록 `advisor_running`도 함께 지운다(확정 종료). 그리고 자연 종료와 같은 종료 노티스(사유:
-   사용자의 stop)에 라운드 로그 recap 지시를 실어 **additionalContext**로 main에 건넨다 — 세션별
-   실제 로그 경로를 담을 수 있는 유일한 채널이다(정적 스킬 본문은 못 담는다). `active`가
-   없으면(미실행·자연 종료 후·중복 stop) launch 가드와 같은 방식으로 확장을 차단해, 스킬 본문이
-   일어나지 않은 종료를 알리는 것을 막는다.
+   회복시킨다. 실행 중인 미션의 공식 일시정지 절차는 (턴이 돌고 있으면 ESC로 끊고) `/ploop:off`,
+   재개는 `/ploop:on`이다.
+3. Stop 훅이 자동 종료(advisor 종료 판정·anomaly failsafe) 시 `active` 마커를 지운다.
+4. `/ploop:off`의 UserPromptExpansion 훅(`off_command`)이 사용자 요청으로 루프를 **일시정지**한다 —
+   `active`만 지우고 **라운드 상태(ledger·advice-history·round_start_line)는 보존**해 `/ploop:on`이 이어받게
+   한다. background advisor in-flight 중에도 무조건 멈추도록 `advisor_running`도 함께 지운다. 자연 종료와
+   달리 종료 노티스를 보내지 않는다(off는 종료가 아니다) — 조용한 고지는 스킬 본문이 싣고 언급 여부는
+   main 소관이다. `active`가 없으면(미실행·이미 off) 확장을 **차단**해, 스킬 본문이 일어나지 않은
+   일시정지를 알리는 것을 막는다.
+5. `/ploop:on`의 UserPromptExpansion 훅(`on_command`)이 루프를 **재개**한다 — 사실상 범용 wake 버튼이다.
+   stale handoff/gate transient(token·running·advice·narration)를 지우고 ledger의 `phase`를 `fresh`로 정규화(다음
+   정지가 advisor 미실행 라운드를 record하지 않도록)하며 이상 카운터도 리셋하되 advice-history·round_start_line은
+   병합이 보존한 뒤 `active`를 다시 쓴다. off로 멈춘 루프뿐 아니라 anomaly failsafe로 종료된 루프, 예외(ESC·API
+   에러·세션 리밋)로 멈춰 여전히 active인 stuck 루프까지 무엇이든 이 정규화로 깨운다 — active여도 차단하지 않는다.
+   재개 불가는 딱 둘: `mission.md`/`loop.log` 부재(재개할 루프 자체가 없음)와 미션 완료(`phase == converged` —
+   advisor 수렴 종료라 진짜 완료; 새 미션 launch가 옳다). 이때만 확장을 **차단**해 스킬 본문이 일어나지 않은 재개를
+   알리는 것을 막고, 사용자는 명확한 사유를 받는다(재개 확신).
 
 (operator subagent 시절에는 SubagentStop이 미션 전용 subagent에만 발화해 이 게이트가
 불필요했으나, main 승격으로 Stop이 일반 대화에도 발화하면서 활성화 게이트가 필요해졌다 — git history.)
@@ -228,7 +248,7 @@ in-flight 가드(`advisor_running` 마커)를 통과한 시점이라 advisor는 
 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
-| **UserPromptExpansion** | `ploop:launch` · `ploop:stop` | 슬래시 커맨드 확장(제출 전) | launch: 라운드 상태 리셋 + 미션·`active` 기록(활성화) — `active` 존재·빈 미션이면 차단 · stop: `active`+라운드 상태 삭제(비활성화, in-flight 무관) — 비활성이면 차단 |
+| **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | 슬래시 커맨드 확장(제출 전) | launch: 라운드 상태 리셋 + 미션·`active` 기록(활성화) — `active` 존재·빈 미션이면 차단 · off: `active` 삭제(일시정지, 라운드 상태 보존, in-flight 무관) — 비활성이면 차단 · on: 라운드 상태 정규화(phase→`fresh`·카운터 리셋, history 보존) + `active` 기록(재개, stuck·active 루프도 wake) — mission/log 부재·`phase==converged`면 차단 |
 | **PostCompact** | `auto` | auto-compaction 후 | `compacted` 마커 touch (Stop이 메커니즘 2로 미션 텍스트 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` 마커 set) 또는 `exit 2` deny(자발 호출 차단) |
 | **Stop** | (전체) | main이 종료 시도 | active 게이트 → **in-flight 가드** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 노티스+로그 recap 지시) 또는 `exit 0`(허용) |
@@ -265,7 +285,8 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    PreToolUse 토큰 게이팅(결정 9)이 이를 결정론적으로 강제한다. (초기엔 main 컨텍스트에서
    advisor라는 단어 자체를 숨겼으나, 규칙 고지 + 게이팅이 대체했다 — git history.)
 3. **loop 상태는 hook이 단독 소유.** advisor는 advice(또는 종료 토큰)를 `advice.md`에 Write만 하고,
-   hook이 그 파일을 읽어 round·advice_history·done을 모두 기록한다. `advice.md`가 advice/종료의 **유일 채널**이라
+   hook이 그 파일을 읽어 advice_history·phase 등 4필드 ledger를 모두 기록한다(`{**ledger, ...}` 병합으로
+   갱신 — 언급 안 한 필드는 보존). `advice.md`가 advice/종료의 **유일 채널**이라
    트랜스크립트를 스크레이프하지 않는다 — 단일 작성자라 동시성 문제가 없고, advisor 프롬프트가 순수 분석으로
    남으며, Agent tool_result 형식(메타 엔벨로프·prose)에 대한 의존이 통째로 사라진다.
 4. **작업 transcript = 메인 transcript, action-history는 narrator에게 위임(hook 측 메시지 파싱 없음).**
@@ -287,13 +308,16 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    오인해 라운드를 잘랐다 — 실측: 라이브 미션에서 574개 중 388개 소실, harness-deps 감사가 포착. 사용자
    지시는 미션보다 상위 권위인데 main만 보고 흡수하면 advisor와 main의 목표가 갈라지므로, 슬라이스에 담긴
    steering을 narrator가 그대로 서술해 advisor에 전달한다 — steering은 라운드를 리셋하지 않는다.
-5. **활성화 게이트 + 의미론적 종료(숫자 상한 없음).** `/ploop:launch`의 UserPromptExpansion 훅이
-   `mission.md`·`active` 마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은 `active`가 있을 때만 루프를 돈다.
-   루프는 라운드 상한 없이 **의미론적으로만** 끝난다 — advisor가 종료 판정을 내면 Stop이 `active`를 지우거나,
-   사용자가 `/ploop:stop`(UserPromptExpansion `stop_command`)으로 언제든
-   비활성화한다(advice-history가 파일이라 컨텍스트를 안 잠식하므로 숫자 캡이 불필요 — `/goal`도 동일 설계).
-   ESC는 종료가 아니다 — 턴만 끊고 armed 루프는 다음 정지에서 재개되므로, 사용자 측 종료는
-   `/ploop:stop` 하나다(결정 15).
+5. **활성화 게이트 + 의미론적 종료(숫자 상한 없음) + 수동 pause/resume.** `/ploop:launch`의
+   UserPromptExpansion 훅이 `mission.md`·`active` 마커를 쓰고 main을 미션 모드로 진입시킨다. Stop은
+   `active`가 있을 때만 루프를 돈다. 루프는 라운드 상한 없이 **의미론적으로만** 끝난다 — advisor가 종료
+   판정을 내거나 anomaly failsafe가 걸리면 Stop이 `active`를 지운다(advice-history가 파일이라 컨텍스트를
+   안 잠식하므로 숫자 캡이 불필요 — `/goal`도 동일 설계). 이 자동 종료와 **별개로**, 사용자는
+   `/ploop:off`(UserPromptExpansion `off_command`)로 루프를 **일시정지**하고 `/ploop:on`(`on_command`)으로
+   **재개**한다 — off는 `active`만 지워 라운드 상태를 보존하고, on은 그것을 정규화해(phase→`fresh`·카운터 리셋,
+   history 보존) 재무장한다. **on은 범용 wake 버튼**이라 off 일시정지·anomaly 종료·예외로 멈춘 stuck 루프까지
+   전부 깨우고, **`phase == converged`(advisor 수렴 종료)만** 재개 불가다. ESC는 종료도 일시정지도 아니다 —
+   턴만 끊고 armed 루프는 다음 정지에서 재개되므로, 사용자 측 일시정지는 `/ploop:off`이다(결정 15).
 6. **미션 정박 — 메커니즘 1 + 2.** 외부 보존(`mission.md`, 메커니즘 1)으로
    미션 원문은 디스크에 영속하고, `PostCompact`가 `_compacted`를 touch하면 compacted 라운드의
    Stop이 트리거에 미션 원문 텍스트를 inline한다(메커니즘 2 — discrete compaction 이벤트에 무조건
@@ -325,8 +349,9 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    `advice.md`를 엉뚱한 시점에 덮어써 advice 채널을 오염시킨다. Stop이 호출을 지시할 때만 1회용 토큰을
    세우고, PreToolUse(matcher `Agent`)가 advisor 호출을 토큰이 있을 때만 통과시킨다(없으면 deny).
    narrator는 read-only leaf이자 hook 사이클 밖이라 게이팅하지 않는다. stale 토큰이 다음 미션의
-   라운드 0 자발 호출을 인가하지 못하는 것은 launch의 라운드 상태 리셋이 보장하고, `/ploop:stop`도
-   같은 리셋으로 지운다 — 살아있는 루프의 토큰은 그 밖의 무엇도 건드리지 않는다(armed 라운드는
+   라운드 0 자발 호출을 인가하지 못하는 것은 launch의 라운드 상태 리셋이 보장하고, `/ploop:on`도
+   재개 정규화에서 같은 토큰을 지운다(`/ploop:off`로 dormant인 동안엔 active 부재로 게이트가 꺼져 남은
+   토큰이 무해하다) — 살아있는 루프의 토큰은 그 밖의 무엇도 건드리지 않는다(armed 라운드는
    프롬프트에 죽지 않는다, 결정 15). (미호출로
    정지하면 — 토큰이 소비되지 않고 남는다 — Stop은 그 라운드의 advice 기록을 건너뛰어 직전 advice가
    중복 기록되지 않게 하고, 미호출 자체는 거부 신호로 처리한다 — 아래 14.)
@@ -361,25 +386,27 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     발화하는데, 그대로 재주입하면 advisor가 하나 더 spawn되고 다음 정지에 또 spawn되어 **무한 증식**한다
     (훅 바깥에서 advisor가 도는 nested 구조 고유의 리스크다).
     PreToolUse가 advisor 인가 시 `advisor_running` 마커를 set하고, 루프 사이클 안에서는
-    **SubagentStop이 그 마커의 유일한 clearer**다 — launch의 라운드 상태 리셋과 `/ploop:stop`의
-    teardown만이 사이클 밖에서 지운다. Stop은 마커가 있으면 in-flight로 보고 재주입하지 않고
+    **SubagentStop이 그 마커의 유일한 clearer**다 — launch의 라운드 상태 리셋과 `/ploop:off`의 pause·
+    `/ploop:on`의 정규화만이 사이클 밖에서 지운다. Stop은 마커가 있으면 in-flight로 보고 재주입하지 않고
     `exit 0`으로 대기한다.
     background로 보낸 advisor의 advice는 유실될 수 있으나 cascade는 확실히 차단된다. **수용한 트레이드오프**: SubagentStop이 누락되면 마커가 leak해
-    루프가 멈출 수 있다(복구는 `/ploop:stop` — `active`가 남아 있어 launch는 차단되고, 그 차단 사유가
-    stop으로 안내한다). settled 기반 self-heal은 트랜스크립트 형식 의존을
+    루프가 멈출 수 있다(stuck-active 상태). 복구는 `/ploop:on` — 범용 wake가 running 마커를 정리하고 정규화해
+    그 stuck 루프를 그대로 깨운다(active여도 차단하지 않으므로 on 단독이 직접 복구다). settled 기반 self-heal은 트랜스크립트 형식 의존을
     낳아 제거했다 — advice.md 단일 채널로 전환하며 맞바꾼 단순화다.
-14. **이상 신호는 1회 교정 후, 재발 시 정직한 사유로 종료한다(anomaly caps).** 루프의 두
-    참여자(advisor·main)는 신뢰할 수 없는 LLM이다 — 발생을 막을 수 없으니 루프가 견디게 설계한다. 이상
-    신호마다 1회의 교정 기회를 주고, 2회면 지속 상태로 보고 실제 사유로 종료한다. 각 카운터는 **clean
-    라운드(advice가 쓰인 라운드)로만 리셋**되고 상대 이상 신호로는 리셋되지 않는다 — 그래서
-    malfunction과 decline이 교대해도 어느 한쪽이 2에 닿아 종료한다(둘이 서로를 리셋해 영영 캡을 피하는
-    좀비 루프를 막는다; 실측: 교대 3회째에 종료). (a) advisor가
-    advice를 안 쓰면(규약 위반 = 오작동) 라운드를 입력 동결로 재시도하고 2회면 오작동 사유로
-    종료(`advisor_failures`). 실측 근거(2026-07): opus 4.8 advisor가 동일 입력에서 시스템 프롬프트 suffix를
+14. **이상 신호는 1회 교정 후, 재발 시 정직한 사유로 종료한다(anomaly cap).** 루프의 두
+    참여자(advisor·main)는 신뢰할 수 없는 LLM이다 — 발생을 막을 수 없으니 루프가 견디게 설계한다. 첫 이상
+    신호엔 1회의 교정 기회를 주고, **연속 2회면**(종류 무관) 지속 상태로 보고 실제 사유로 종료한다. **단일
+    `anomalies` 카운터**가 어떤 이상 신호든 증가시키고 clean 라운드(advice가 쓰인 라운드)에 0으로 리셋된다 —
+    종류별 카운터가 아니라 하나라서 malfunction·decline이 교대해도 그냥 누적돼 캡에 닿는다(2-카운터 시절의
+    '상호 리셋 금지' 부기가 통째로 소멸). 게다가 이제 종료는 `/ploop:on`으로 재개 가능하므로 한 anomaly 이르게
+    끝내도 손실이 없어 관대함(교대 3회 허용)을 버렸다. 두 이상 신호는 **종류에 맞는 교정 메시지**(retry vs 권한
+    고지)를 받되 카운터는 공유한다. (a) advisor가
+    advice를 안 쓰면(규약 위반 = 오작동) 라운드를 입력 동결로 재시도하고(RETRY 노티스) 연속 2회면 오작동
+    사유로 종료. 실측 근거(2026-07): opus 4.8 advisor가 동일 입력에서 시스템 프롬프트 suffix를
     축자 echo하고 3.5초에 end_turn한 확률적 degenerate 출력 — 당시의 empty=terminate 규칙이 이를 수렴으로
     위장해 미션을 조용히 끝냈다. 일회성 샘플링 이상이라 재시도 1회로 사실상 소멸한다. (b) 트리거가
     응답되지 않은 채 멈추면(main의 거부, 또는 사용자가 끊은 턴) ploop의 기저 규칙인 **권한 분할**(루프
-    종료 권한 = advisor, 작업 수행 권한 = main)을 고지하며 재주입한다(`declines`). 거부의 근거 발언은 라운드 트랜스크립트 슬라이스→narrator를 타고 advisor에게 닿으므로,
+    종료 권한 = advisor, 작업 수행 권한 = main)을 고지하며 재주입한다(DECLINE 노티스). 거부의 근거 발언은 라운드 트랜스크립트 슬라이스→narrator를 타고 advisor에게 닿으므로,
     타당한 거부는 advisor의 종료 판정으로 관철된다 — main이 합리적 종료 근거를 출력하면 advisor가 읽고
     종료하는 합의 경로는 실측됐고, in-band 사용자 종결 지시도 이 경로로 advisor에 닿는다. 실측
     근거(2026-07): main이 in-band 사용자 지시(AskUserQuestion 답변 "작업 종결")를 근거로 호출을 정당하게
@@ -393,8 +420,15 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     (advisor는 대신 거부를 본다 — decline의 우선순위는 거부를 종료 판정으로 라우팅하는 것이므로 의도에
     부합). 라운드당 1건의 로그 항목이 어긋날 뿐 advice-history(파일)는 무손실이고, 이는 anomaly 경로에
     국한된다.
-15. **종료는 명시적 신호만 — 프롬프트 경로에는 훅 자체가 없다.** 루프는 정확히 두 신호로만 끝난다:
-    advisor의 종료 토큰과 `/ploop:stop` — 여기에 결정 14의 이상 신호 failsafe가 더해진다.
+15. **종료·일시정지는 명시적 신호만 — 프롬프트 경로에는 훅 자체가 없다.** 루프를 **끝내는** 신호는
+    advisor의 종료 토큰과 결정 14의 anomaly failsafe뿐이다(자동 종료). 사용자는 이와 별개로 `/ploop:off`로
+    루프를 **일시정지**하고 `/ploop:on`으로 **재개**한다 — 끝내기가 아니라 pause/resume이라 상태를 보존한다.
+    `/ploop:on`은 **범용 wake 버튼**으로 설계했다: 장기 미션은 실수 ESC·API 에러·구독 세션 리밋 등 온갖 예외로
+    라운드 중간에 멈출 수 있는데 — 이런 예외는 **대부분 아무 훅도 발화시키지 않아**(상태 마커를 남길 자리조차
+    없다) 루프가 그냥 active인 채 stuck으로 남고, anomaly failsafe로 멈춘 경우만 훅을 타 미완료(phase `advising`)로
+    남는다. on은 이 둘 다를 정규화해 깨우는 유일 수단이다 — 오직 `phase == converged`(advisor 수렴 종료)만 진짜
+    끝으로 보아 재개를 거부한다. 재개 가능/불가를 가르는 건 `phase` 하나(3-state가 skip-gate와 완료를 겸함)면
+    충분해 **별도 완료 마커를 두지 않았고**, on은 active 여부도 가리지 않는다.
     UserPromptSubmit 경로는 타이핑된 사용자 턴 외에 task-notification·scheduled wakeup 같은 시스템
     프롬프트(`promptSource: system`)도 타고, launch 스킬 스스로 background Agent 전개를 권장하므로
     자율 미션일수록 이 경로가 반드시 발화한다 — 프롬프트를 개입으로 취급하면 루프가 자기가 권장한
@@ -405,8 +439,8 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
     사용자는 AskUserQuestion 응답·미드턴 지시로 미션에 *참여*하며, in-band 종결 지시는 결정 14의
     합의 경로로 advisor에 닿는다. ESC 감지도 두지 않는다: interrupt는 훅 이벤트가 없어 트랜스크립트
     sentinel 판독이 필요한데, 그것은 하네스 내부 형식 의존을 하나 더 심는 것이다(한 차례 구현 후
-    제거 — git history). ESC는 턴만 끊고 armed 루프는 다음 정지에서 재개되며, 공식 중단 절차는 ESC
-    후 `/ploop:stop`이다 — 명시적 단일 kill switch가 형식 휴리스틱보다 견고하다. 이 정책으로
+    제거 — git history). ESC는 턴만 끊고 armed 루프는 다음 정지에서 재개되며, 공식 일시정지 절차는 ESC
+    후 `/ploop:off`이다(재개는 `/ploop:on`) — 명시적 커맨드가 형식 휴리스틱보다 견고하다. 이 정책으로
     UserPromptSubmit 훅이 통째로 사라졌고, 그 훅의 cleanup에서 launch 턴의 `active`를 보호하던
     launching sentinel도 함께 사라졌다 — 프롬프트 경로는 ploop과 완전히 분리된다.
 16. **advisor는 완전 종결 시점에 소집된다 — 코드가 아닌 스킬 규약으로.** Stop 훅은 포그라운드
@@ -464,8 +498,8 @@ uv 미설치 시 graceful degrade와 SessionStart 안내를 한 지점에서 일
    리셋되어 이 cap에 걸리지 않는다. main이 트리거를 무시하는 무진전 정지는 ploop 자신의 decline
    failsafe(핵심 설계 결정 14)가 2회에서 무결하게 끝내므로 이 cap에 앞서 처리된다 — cap은 백스톱으로만 남는다(cap
    강제 종료는 턴만 끊고 루프를 armed 좀비로 남기는 것이 실측됐다). 단 advisor가 종료 토큰을 안 내고
-   main이 무한히 **일하는** "생산적 무한 루프"는 이 cap도 못 막으므로(작업이 리셋), 그 경우엔 `/ploop:stop`이
-   종료 수단이다 — `/goal`도 동일 트레이드오프를 수용한다.
+   main이 무한히 **일하는** "생산적 무한 루프"는 이 cap도 못 막으므로(작업이 리셋), 그 경우엔 `/ploop:off`가
+   루프를 멈추는 수단이다 — `/goal`도 동일 트레이드오프를 수용한다.
 2. **트랜스크립트 형식 가정 — 대부분 해소됨(resolved).** hook은 더 이상 트랜스크립트를 파싱하지
    않는다. 라운드 경계·`isCompactSummary` 필터·`queued_command` 승격·advisor-strip을 하던
    `parse_round_actions`(구 `transcript.py`)를 제거하고, hook은 라운드 라인 구간만 잘라 파일에 저장하며
@@ -521,12 +555,13 @@ ploop/
 ├── prompts/instruction.md            # advisor 분석·출력 지침
 ├── skills/define-mission/SKILL.md    # /ploop:define-mission — Direction·Boundary 규칙으로 MISSION.md 작성 (루프와 비연결, 수동 핸드오프)
 ├── skills/launch/SKILL.md            # /ploop:launch — 루프 notice + 대기 규약 + 미션 핸드오프 (미션 저장·활성화는 launch 훅)
-├── skills/stop/SKILL.md              # /ploop:stop — 루프 종료 알림 (비활성화는 stop_command 훅)
-├── hooks/hooks.json                  # UserPromptExpansion(launch·stop) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
+├── skills/off/SKILL.md               # /ploop:off — 일시정지 조용한 고지 (일시정지는 off_command 훅)
+├── skills/on/SKILL.md                # /ploop:on — 재개 확인 고지 (재개·정규화는 on_command 훅)
+├── hooks/hooks.json                  # UserPromptExpansion(launch·off·on) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
 ├── bin/ploop-hook                    # uv 가용성 체크 래퍼
 ├── src/                              # 훅 구현 (런타임 의존성 없음)
-│   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·mark_compaction·launch·stop_command)
-│   ├── state.py                      # Workspace(세션 파일 경로의 단일 창구) + ledger 영속화(round_start_line 포함)
+│   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·mark_compaction·launch·off_command·on_command)
+│   ├── state.py                      # Workspace(세션 파일 경로의 단일 창구) + 4필드 ledger(advice_history·round_start_line·anomalies·phase) + phase 상수 · preserve-by-default 로드/저장
 │   ├── prompt.py                     # advice-history 포맷 + 5-section advisor trigger 조립(narrator 슬라이스 파일 경로 포함)
 │   └── updater.py                    # SessionStart 업데이트 알림
 └── tests/                            # 구현 독립 (stdin/stdout/disk 구동)
