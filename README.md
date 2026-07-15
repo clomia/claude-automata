@@ -46,41 +46,44 @@ The **anchor** is the file the loop is anchored to. It comes in two kinds.
    `on` is also the one way to revive a long-running loop stalled by a mishap — an accidental ESC, an API error, a subscription session limit: it always resumes cleanly, except when the advisor ended the loop itself.
    Nothing else — mid-run instructions, answered questions, background-task notifications, ESC itself — stops the loop.
 
-# Refine Architecture
+# Refine
 
-> Install: `claude plugin install refine-architecture@claude-automata`  
-> Update: `claude plugin update refine-architecture@claude-automata`  
+> Install: `claude plugin install refine@claude-automata`  
+> Update: `claude plugin update refine@claude-automata`  
+> Had the old refine-architecture installed? Remove it: `claude plugin uninstall refine-architecture@claude-automata`
 
-refine-architecture is a large-scale workflow that optimizes code architecture.
+refine is a family of large-scale workflows that eliminate the debt a repository accumulates.
 
-Usage:
-```
-/refine-architecture:refine-architecture [focus area]
-```
+All three skills work the same way — split into regions for parallel analysis, settle findings through a cross-examination assembly, and execute only the highest-ROI plans. Each run is a heavyweight workflow taking hours (3–12h).
 
-Leave the focus area empty to target the whole codebase.  
-Watch progress with `/workflows`.
+- `/refine:architecture [focus]` — code architecture optimization. Filters antipatterns through consensus and applies only the highest-ROI refactors.
+- `/refine:docs [focus]` — documentation-to-code alignment. Every claim in every non-executable text (markdown, doc systems like openspec, comments and docstrings) is checked against the code and set right.
+- `/refine:integrity [focus]` — logical-integrity hardening. Hunts the states where code can fail, digs in from **"should this be defined as an error?"**, hardens integrity, and pins every defined behavior with tests.
 
-# txgit - Git Transaction Workflow
+Leave the focus empty to target the whole codebase. Watch progress with `/workflows`.
 
-> Install: `claude plugin install txgit@claude-automata`  
-> Update: `claude plugin update txgit@claude-automata`  
+# tx - Git Transaction Workflow
 
-txgit is a Git workflow that manages change as transactions.
+> Install: `claude plugin install tx@claude-automata`  
+> Update: `claude plugin update tx@claude-automata`  
+> Had the old txgit installed? Remove it: `claude plugin uninstall txgit@claude-automata`
 
-- A transaction is not a unit of work — it is an **integrity boundary**. Everything from tx-open to tx-close is bound into one.
-- `/txgit:tx-open` cuts a `tx-*` branch off your base branch and plans the change with [OpenSpec](https://github.com/Fission-AI/OpenSpec).
-- `/txgit:tx-close` archives the OpenSpec change and squash-merges to the base branch once CI passes.
+tx is a Git workflow that manages change as transactions.
+
+- A transaction is not a unit of work — it is an **integrity boundary**. Everything from open to close is bound into one.
+- The base branch is **the repository's GitHub default branch**. There is nothing to configure — it is read automatically from `origin/HEAD`.
+- `/tx:open` cuts a `tx-*` branch off base and plans the change with [OpenSpec](https://github.com/Fission-AI/OpenSpec).
+- `/tx:close` archives the OpenSpec change and squash-merges to base once CI passes.
 - Three guard hooks keep edits off protected branches, flag stale transactions, and stop out-of-sync branches.
 
-Prerequisites: uv, [OpenSpec](https://github.com/Fission-AI/OpenSpec) (installed and `openspec init`-ed), GitHub CLI (`gh`).
+Prerequisites: uv, [OpenSpec](https://github.com/Fission-AI/OpenSpec) (**must be installed skills-only** — see the plugin README for the steps), GitHub CLI (`gh`).
 
 ### Usage
 
 ```
-/txgit:tx-open  [change description]   # cut a tx-* branch off base, plan with OpenSpec
-...work...                             # implement (e.g. /opsx:apply)
-/txgit:tx-close                        # archive the change, squash-merge to base
+/tx:open  [change description]   # cut a tx-* branch off base, plan with OpenSpec
+...work...                       # implement (e.g. the openspec-apply-change skill)
+/tx:close                        # archive the change, squash-merge to base
 ```
 
-For the full details — the transaction model, guard hooks, base-branch config, pausing sync — see the [plugin README](plugins/txgit/README.md).
+For the full details — the transaction model, guard hooks, base-branch resolution, pausing sync — see the [plugin README](plugins/tx/README.md).

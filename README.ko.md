@@ -46,41 +46,44 @@ ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 advisor loop입�
    `on`은 실수로 누른 ESC·API 에러·구독 세션 리밋 등으로 멈춘 장기 루프까지 되살리는 유일한 수단입니다 — advisor가 스스로 루프를 종료한 경우만 빼고 언제나 정상 재개합니다.
    그 밖의 어떤 것도 — 중간 지시, 질문 응답, 백그라운드 작업 알림, ESC 자체 — 루프를 멈추지 않습니다.
 
-# Refine Architecture
+# Refine
 
-> Install: `claude plugin install refine-architecture@claude-automata`  
-> Update: `claude plugin update refine-architecture@claude-automata`  
+> Install: `claude plugin install refine@claude-automata`  
+> Update: `claude plugin update refine@claude-automata`  
+> 구 refine-architecture 설치본은 제거하세요: `claude plugin uninstall refine-architecture@claude-automata`
 
-refine-architecture는 코드 아키텍처를 최적화하는 대규모 워크플로우입니다.
+refine은 레포지토리에 쌓이는 부채를 없애는 대규모 워크플로우 모음입니다.
 
-사용 방법:
-```
-/refine-architecture:refine-architecture [집중 분석 영역]
-```
+세 스킬은 같은 방식으로 동작합니다 — 영역을 나눠 병렬 분석하고, 발견을 교차검증 회의로 합의시키고, ROI가 높은 계획만 실행합니다. 한 번의 실행이 수 시간(3–12시간) 걸리는 heavyweight 워크플로우입니다.
 
-집중 분석 영역을 비우면 코드베이스 전체가 대상입니다.  
-진행 상황은 `/workflows`에서 확인할 수 있습니다.
+- `/refine:architecture [영역]` — 코드 아키텍처 최적화. 안티패턴을 합의로 걸러내고 최고 ROI 리팩토링만 적용합니다.
+- `/refine:docs [영역]` — 문서를 코드와 정합. 실행시킬 수 없는 텍스트(마크다운, openspec 같은 문서 시스템, 주석·docstring)의 모든 주장을 코드와 대조해 바로잡습니다.
+- `/refine:integrity [영역]` — 논리적 무결성 강화. 에러가 발생할 수 있는 지점을 찾아 **"이걸 에러로 정의할 것인가?"** 부터 파고들어 무결성을 강화하고, 정의된 behavior를 테스트로 고정합니다.
 
-# txgit - Git Transaction Workflow
+영역을 비우면 코드베이스 전체가 대상입니다. 진행 상황은 `/workflows`에서 확인할 수 있습니다.
 
-> Install: `claude plugin install txgit@claude-automata`  
-> Update: `claude plugin update txgit@claude-automata`  
+# tx - Git Transaction Workflow
 
-txgit은 변경을 트랜잭션 단위로 관리하는 Git 워크플로우입니다.
+> Install: `claude plugin install tx@claude-automata`  
+> Update: `claude plugin update tx@claude-automata`  
+> 구 txgit 설치본은 제거하세요: `claude plugin uninstall txgit@claude-automata`
 
-- 트랜잭션은 작업 단위가 아니라 **무결성 경계**입니다. tx-open부터 tx-close까지가 하나로 묶입니다.
-- `/txgit:tx-open`으로 base 브랜치에서 `tx-*` 분기를 열고 [OpenSpec](https://github.com/Fission-AI/OpenSpec)으로 변경을 계획합니다.
-- `/txgit:tx-close`로 OpenSpec 변경을 아카이브하고 CI 통과 후 base 브랜치로 squash merge합니다.
+tx는 변경을 트랜잭션 단위로 관리하는 Git 워크플로우입니다.
+
+- 트랜잭션은 작업 단위가 아니라 **무결성 경계**입니다. open부터 close까지가 하나로 묶입니다.
+- base 브랜치는 **레포지토리의 GitHub 기본 브랜치**입니다. 설정할 것이 없습니다 — `origin/HEAD`에서 자동으로 읽습니다.
+- `/tx:open`으로 base에서 `tx-*` 분기를 열고 [OpenSpec](https://github.com/Fission-AI/OpenSpec)으로 변경을 계획합니다.
+- `/tx:close`로 OpenSpec 변경을 아카이브하고 CI 통과 후 base로 squash merge합니다.
 - 세 개의 가드 훅이 보호 브랜치 편집·오래 열린 트랜잭션·동기화 이탈을 막습니다.
 
-사전 요구: uv, [OpenSpec](https://github.com/Fission-AI/OpenSpec) (설치 후 `openspec init` 완료), GitHub CLI(`gh`).
+사전 요구: uv, [OpenSpec](https://github.com/Fission-AI/OpenSpec) (**skills-only로 설치**해야 합니다 — 절차는 플러그인 README), GitHub CLI(`gh`).
 
 ### 사용 방법
 
 ```
-/txgit:tx-open  [변경 설명]   # base에서 tx-* 분기 생성 + OpenSpec 계획
-...작업...                    # 구현 (예: /opsx:apply)
-/txgit:tx-close               # 변경 아카이브 후 base로 squash merge
+/tx:open  [변경 설명]   # base에서 tx-* 분기 생성 + OpenSpec 계획
+...작업...              # 구현 (예: openspec-apply-change 스킬)
+/tx:close               # 변경 아카이브 후 base로 squash merge
 ```
 
-트랜잭션 정의·가드 훅·base 브랜치 설정·sync 일시정지 등 자세한 내용은 [플러그인 README](plugins/txgit/README.md)를 참고하세요.
+트랜잭션 정의·가드 훅·base 브랜치 해석·sync 일시정지 등 자세한 내용은 [플러그인 README](plugins/tx/README.md)를 참고하세요.

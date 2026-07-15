@@ -14,12 +14,12 @@
       "source": "./plugins/ploop"
     },
     {
-      "name": "refine-architecture",
-      "source": "./plugins/refine-architecture"
+      "name": "refine",
+      "source": "./plugins/refine"
     },
     {
-      "name": "txgit",
-      "source": "./plugins/txgit"
+      "name": "tx",
+      "source": "./plugins/tx"
     }
   ]
 }
