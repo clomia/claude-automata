@@ -13,7 +13,7 @@ effort: max
 base 브랜치는 **레포지토리의 GitHub 기본 브랜치**다. open과 같은 코드로 해석하고, 실패하면 stderr의 지시를 전하고 거부한다:
 
 ```bash
-BASE=$(uv run --project "${CLAUDE_SKILL_DIR}/../.." base)
+BASE=$(uv run --project "${CLAUDE_PLUGIN_ROOT}" base)
 ```
 
 ## 요구사항

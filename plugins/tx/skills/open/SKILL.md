@@ -13,7 +13,7 @@ effort: high
 base 브랜치는 **레포지토리의 GitHub 기본 브랜치**다. 훅과 같은 코드로 해석한다:
 
 ```bash
-BASE=$(uv run --project "${CLAUDE_SKILL_DIR}/../.." base)
+BASE=$(uv run --project "${CLAUDE_PLUGIN_ROOT}" base)
 ```
 
 실패하면 stderr의 지시를 전하고 거부한다 — tx는 GitHub 레포지토리를 전제한다 (close가 gh PR·CI를 요구).
