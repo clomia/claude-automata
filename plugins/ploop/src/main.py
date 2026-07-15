@@ -252,14 +252,14 @@ def stop() -> None:
 
     # The advisor convenes only when foreground AND background are both empty.
     # Foreground-empty is this very Stop; background-empty is read from the
-    # official `background_tasks` input.  Gate exactly the types whose
-    # completion is guaranteed to wake the session (their specs promise a
-    # notification/re-invoke on completion): subagent and workflow wait
-    # silently; a shell gets one redirect notice — an ambient process must
-    # leave the shell lane (Monitor, the never-completing session-lifetime
-    # lane, is never gated) — and the same shell set then waits silently.
-    # Every other type, and an absent field, degrades to no gating: stalling
-    # the loop is worse than an early advisor.
+    # official `background_tasks` input (present whenever the task registry is
+    # reachable).  Gate exactly the types whose completion is guaranteed to wake
+    # the session (their specs promise a notification/re-invoke on completion):
+    # subagent and workflow wait silently; a shell gets one redirect notice — an
+    # ambient process must leave the shell lane (Monitor, the never-completing
+    # session-lifetime lane, is never gated) — and the same shell set then waits
+    # silently.  Every other type, and an unreachable registry (no field),
+    # passes: stalling the loop is worse than an early advisor.
     tasks = [t for t in event.get("background_tasks") or [] if isinstance(t, dict)]
     if any(t.get("type") in ("subagent", "workflow") for t in tasks):
         sys.exit(0)
