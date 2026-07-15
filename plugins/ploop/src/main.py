@@ -235,6 +235,19 @@ def stop() -> None:
     if not ws.active_path.exists():
         sys.exit(0)
 
+    # The harness stops the session even while delegated background work is in
+    # flight (its completion notification wakes the session back up), reporting
+    # the in-flight work in `background_tasks`.  The round is complete only when
+    # that work is done, so wait — the same verdict as an in-flight advisor.
+    # Only delegated round work gates (subagent, workflow): a stop with just a
+    # shell command or monitor left is a legitimate round end, and an absent
+    # field degrades to no gating.
+    if any(
+        isinstance(task, dict) and task.get("type") in ("subagent", "workflow")
+        for task in event.get("background_tasks") or []
+    ):
+        sys.exit(0)
+
     ledger = load_ledger(ws.ledger_path)
     phase = ledger["phase"]
     advice_history = ledger["advice_history"]

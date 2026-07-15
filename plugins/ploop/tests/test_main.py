@@ -37,8 +37,11 @@ ROUND_WORK = [
 ]
 
 
-def make_stdin(*, session_id="s1", transcript_path="/t.jsonl"):
-    return json.dumps({"session_id": session_id, "transcript_path": transcript_path})
+def make_stdin(*, session_id="s1", transcript_path="/t.jsonl", background_tasks=None):
+    event = {"session_id": session_id, "transcript_path": transcript_path}
+    if background_tasks is not None:
+        event["background_tasks"] = background_tasks
+    return json.dumps(event)
 
 
 def make_pretooluse_stdin(*, session_id="s1", subagent_type="ploop:advisor"):
@@ -441,6 +444,57 @@ class TestStop:
         # ledger untouched, marker left in place — the loop just waits
         assert load_ledger(tmp_path / "s1_loop.json")["phase"] == ADVISING
         assert (tmp_path / "s1_advisor_running").exists()
+
+    def test_inflight_background_subagent_waits(self, tmp_path, monkeypatch):
+        """The harness stops the session with delegated background work still in
+        flight, reporting it in background_tasks: a subagent or workflow entry
+        means the round is not done — allow the stop, don't trigger the advisor."""
+        arrange_anchor(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+            ledger={"phase": ADVISING, "advice_history": []},
+        )
+        arrange(
+            tmp_path,
+            monkeypatch,
+            make_stdin(
+                transcript_path=str(tmp_path / "s1.jsonl"),
+                background_tasks=[
+                    {"id": "t1", "type": "subagent", "status": "running"}
+                ],
+            ),
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 0
+        # ledger untouched, no advisor armed — the loop just waits for the wake-up
+        assert load_ledger(tmp_path / "s1_loop.json")["phase"] == ADVISING
+        assert not (tmp_path / "s1_advisor_token").exists()
+
+    def test_shell_or_monitor_background_does_not_gate(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Only delegated round work (subagent, workflow) gates: a stop with just
+        a shell command or monitor left is a legitimate round end and arms the
+        advisor as usual."""
+        arrange_anchor(tmp_path, monkeypatch, ROUND_WORK, ledger={"phase": FRESH})
+        arrange(
+            tmp_path,
+            monkeypatch,
+            make_stdin(
+                transcript_path=str(tmp_path / "s1.jsonl"),
+                background_tasks=[
+                    {"id": "t1", "type": "shell", "status": "running"},
+                    {"id": "t2", "type": "monitor", "status": "running"},
+                ],
+            ),
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        assert (tmp_path / "s1_advisor_token").exists()
+        assert "ploop:advisor" in capsys.readouterr().err
 
     def test_first_decline_redirects_to_advisor_authority(
         self, tmp_path, monkeypatch, capsys
