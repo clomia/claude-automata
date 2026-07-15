@@ -35,6 +35,26 @@
           }
         ]
       }
+    ],
+    "UserPromptExpansion": [
+      {
+        "matcher": "txgit:git-sync-off",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/txgit-hook git-sync-off"
+          }
+        ]
+      },
+      {
+        "matcher": "txgit:git-sync-on",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/txgit-hook git-sync-on"
+          }
+        ]
+      }
     ]
   }
 }

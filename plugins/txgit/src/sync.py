@@ -5,10 +5,11 @@ ancestor of HEAD.  When it pulls ahead (ahead > 0) the main agent's Stop is
 blocked to compel a sync — no permanent snooze; it re-announces until the
 invariant is restored.
 
-Exception: the `<git-dir>/txgit-pause` marker disables this entirely.  A
-mid-flight rebase invalidates long-running analysis (large refactors, spec
-sync), so such work pauses via the marker and restores it on finish.  (If it
-lingers, SessionStart re-warns.)
+Exception: the `<git-dir>/txgit-pause` marker disables this entirely —
+/txgit:git-sync-off sets it, /txgit:git-sync-on clears it.  A mid-flight
+rebase invalidates long-running analysis (large refactors, spec sync), so such
+work turns the sync off and back on around itself.  (If the pause lingers,
+SessionStart re-warns.)
 
 Multi-session safety:
 - flock(LOCK_EX): atomic read-modify-write of the state file

@@ -12,7 +12,7 @@ from src.repo import (
     fetch_base,
     git,
     is_tx_branch,
-    pause_marker,
+    sync_paused,
 )
 
 TX_AGE_LIMIT = timedelta(hours=24)
@@ -86,11 +86,10 @@ def main() -> None:
     if not branch:
         return
 
-    marker = pause_marker()
-    if marker and marker.exists():
+    if sync_paused():
         emit(
-            f"[branch-state-warn] txgit sync is paused by the {marker} marker "
-            f"(protecting long-running analysis). If the analysis is done, remove it: rm -f {marker}"
+            "[branch-state-warn] txgit git-sync is off (protecting long-running "
+            "analysis). If that work is done, turn it back on: /txgit:git-sync-on"
         )
         return
 

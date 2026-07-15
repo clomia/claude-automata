@@ -79,9 +79,7 @@ no-op outside a git repository or when uv is missing.
   `main`/`master`/`dev` that exists → `main`. Set `TXGIT_BASE_BRANCH` to pin it
   (e.g. a GitFlow `dev`).
 - **Pause the sync nagging.** A mid-flight rebase invalidates long-running
-  analysis (large refactors, spec sync). Pause the `git-sync` and ahead warnings
-  with a marker, and remove it when done:
-  ```bash
-  touch "$(git rev-parse --absolute-git-dir)/txgit-pause"   # pause
-  rm -f "$(git rev-parse --absolute-git-dir)/txgit-pause"   # resume
-  ```
+  analysis (large refactors, spec sync). `/txgit:git-sync-off` pauses the
+  `git-sync` guard and the ahead warnings, `/txgit:git-sync-on` resumes them;
+  both are idempotent. The pause is scoped per-worktree and survives sessions —
+  while it lingers, every session start re-surfaces it.

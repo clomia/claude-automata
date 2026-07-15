@@ -66,9 +66,9 @@ def git_dir() -> Path | None:
 def pause_marker() -> Path | None:
     """`<git-dir>/txgit-pause` — its presence silences the sync guards.
 
-    A mid-flight rebase invalidates long-running analysis (large refactors, spec
-    sync), so such work touches this marker to pause the nagging and removes it
-    when done.  It lives in the git dir: never committed, scoped per-worktree.
+    /txgit:git-sync-off touches it, /txgit:git-sync-on removes it (pause.py),
+    shielding long-running analysis that a mid-flight rebase would invalidate.
+    It lives in the git dir: never committed, scoped per-worktree.
     """
     gd = git_dir()
     return gd / "txgit-pause" if gd else None
