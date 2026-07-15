@@ -1,10 +1,11 @@
 [project]
-name = "txgit"
-version = "0.2.0"
+name = "tx"
+version = "0.3.0"
 requires-python = ">=3.14"
 dependencies = []
 
 [project.scripts]
+base = "src.repo:print_base"
 branch-protect-block = "src.protect:main"
 branch-state-warn = "src.state:main"
 git-sync = "src.sync:main"

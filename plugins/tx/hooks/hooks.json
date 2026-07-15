@@ -2,11 +2,11 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear",
+        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/txgit-hook branch-state-warn",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook branch-state-warn",
             "timeout": 30
           }
         ]
@@ -18,8 +18,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/txgit-hook branch-protect-block",
-            "statusMessage": "txgit: guarding branch"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook branch-protect-block",
+            "statusMessage": "tx: guarding branch"
           }
         ]
       }
@@ -29,29 +29,29 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/txgit-hook git-sync",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook git-sync",
             "timeout": 60,
-            "statusMessage": "txgit: sync check"
+            "statusMessage": "tx: sync check"
           }
         ]
       }
     ],
     "UserPromptExpansion": [
       {
-        "matcher": "txgit:git-sync-off",
+        "matcher": "tx:git-sync-off",
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/txgit-hook git-sync-off"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook git-sync-off"
           }
         ]
       },
       {
-        "matcher": "txgit:git-sync-on",
+        "matcher": "tx:git-sync-on",
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/txgit-hook git-sync-on"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook git-sync-on"
           }
         ]
       }

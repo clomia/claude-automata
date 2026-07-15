@@ -5,5 +5,5 @@ disable-model-invocation: true
 ---
 
 <notice>
-txgit git-sync is now on.
+tx git-sync is now on.
 </notice>

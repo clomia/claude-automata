@@ -23,7 +23,7 @@ def make_origin_ahead(repo: Path, base: str, commits: int) -> None:
     run(repo, "reset", "-q", "--hard", head)
 
 
-def set_origin_head(repo: Path, base: str) -> None:
+def mirror_origin_head(repo: Path, base: str) -> None:
     """Set refs/remotes/origin/HEAD -> origin/<base>, creating the tracking ref."""
     run(
         repo,
@@ -36,7 +36,8 @@ def set_origin_head(repo: Path, base: str) -> None:
 
 @pytest.fixture
 def gitrepo(tmp_path, monkeypatch):
-    """A git repo on `main` with one tracked file, checked out as the CWD."""
+    """A git repo on `main` — mirrored as the GitHub default branch via
+    origin/HEAD — with one tracked file, checked out as the CWD."""
     root = tmp_path / "repo"
     root.mkdir()
     run(root, "init", "-q", "-b", "main")
@@ -46,6 +47,6 @@ def gitrepo(tmp_path, monkeypatch):
     (root / "tracked.txt").write_text("x")
     run(root, "add", "tracked.txt")
     run(root, "commit", "-q", "-m", "add tracked")
+    mirror_origin_head(root, "main")
     monkeypatch.chdir(root)
-    monkeypatch.delenv("TXGIT_BASE_BRANCH", raising=False)
     return root

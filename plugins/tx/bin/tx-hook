@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+# tx-hook — wraps plugin entry points with a uv availability check.
+#
+# Usage: tx-hook <entry-point>
+#
+# Every tx hook is routed through this script.  If uv is not installed we
+# cannot execute any Python code, so the wrapper exits 0 without error — the
+# session is never broken by a missing prerequisite.  SessionStart
+# (branch-state-warn) additionally emits a systemMessage so the user learns that
+# installing uv is required for the transaction guards to run, and the
+# git-sync-off/on command expansions are blocked so their skill bodies never
+# announce a toggle that didn't happen.  Other hooks stay silent to avoid
+# flooding the session with duplicate notices.
+
+set -e
+
+entry="$1"
+
+if [ -z "$entry" ]; then
+    exit 0
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+    case "$entry" in
+        branch-state-warn)
+            printf '%s' '{"systemMessage":"tx requires uv (Python package manager). Install it from https://docs.astral.sh/uv/getting-started/installation/ — without uv, the transaction guard hooks will not run."}'
+            ;;
+        git-sync-off|git-sync-on)
+            printf '%s' '{"decision":"block","reason":"tx requires uv (Python package manager) — the toggle did not happen. Install it from https://docs.astral.sh/uv/getting-started/installation/"}'
+            ;;
+    esac
+    exit 0
+fi
+
+exec uv run --project "${CLAUDE_PLUGIN_ROOT}" "$entry"

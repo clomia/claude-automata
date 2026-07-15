@@ -1,27 +1,23 @@
-"""Shared git-repository queries for the txgit transaction guards.
+"""Shared git-repository queries for the tx transaction guards.
 
 A transaction lives on a `tx-*` branch cut from the repository's base branch —
-the integration branch that transactions merge back into.  The guards resolve
-that branch once, here, so the whole plugin agrees on it:
-
-    TXGIT_BASE_BRANCH env override
-      -> origin's default branch (refs/remotes/origin/HEAD)
-      -> first of main / master / dev that exists locally
-      -> "main"
+the integration branch that transactions merge back into.  The base branch is
+the repository's GitHub default branch, read from its local mirror
+`refs/remotes/origin/HEAD`.  The mirror is healed by `set_origin_head` (one
+network round-trip) at SessionStart when it is missing, and re-synced by the
+open/close skills through `print_base`; the hot-path guards only read locally.
 
 Every helper degrades to a no-op value when git is unavailable or a query
 fails, so a non-repository session or a missing prerequisite never breaks the
 loop.
 """
 
-import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 TX_BRANCH_RE = re.compile(r"^tx-")
-BASE_BRANCH_ENV = "TXGIT_BASE_BRANCH"
-BASE_FALLBACKS = ("main", "master", "dev")
 
 
 def git(*args: str) -> str | None:
@@ -44,18 +40,45 @@ def is_tx_branch(branch: str) -> bool:
     return bool(TX_BRANCH_RE.match(branch))
 
 
-def base_branch() -> str:
-    """The integration branch transactions open from and merge back into."""
-    override = os.environ.get(BASE_BRANCH_ENV)
-    if override and override.strip():
-        return override.strip()
+def has_origin() -> bool:
+    """Whether an `origin` remote is configured — without one, tx does not apply."""
+    return git("remote", "get-url", "origin") is not None
+
+
+def base_branch() -> str | None:
+    """The GitHub default branch, as mirrored by origin/HEAD; None when unset."""
     head = git("symbolic-ref", "--short", "refs/remotes/origin/HEAD")
     if head and head.startswith("origin/"):
         return head[len("origin/") :]
-    for name in BASE_FALLBACKS:
-        if git("rev-parse", "--verify", "--quiet", f"refs/heads/{name}") is not None:
-            return name
-    return BASE_FALLBACKS[0]
+    return None
+
+
+def set_origin_head() -> bool:
+    """Sync origin/HEAD to the remote's default branch (network, one round-trip)."""
+    return git("remote", "set-head", "origin", "--auto") is not None
+
+
+def print_base() -> None:
+    """CLI for the open/close skills — resolve and print the base branch.
+
+    Re-syncs the mirror first, so a default-branch change on GitHub is picked
+    up at every transaction boundary.  Exit 1 with guidance when unresolvable.
+    """
+    set_origin_head()
+    base = base_branch()
+    if base is None:
+        print(
+            "Cannot resolve the GitHub default branch (origin/HEAD). "
+            "Ensure an `origin` remote exists, then run: git remote set-head origin --auto",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+    print(base)
+
+
+def rebase_cmd(base: str) -> str:
+    """The one sync remedy every guard recommends."""
+    return f"git fetch origin {base} && git rebase origin/{base}"
 
 
 def git_dir() -> Path | None:
@@ -64,14 +87,14 @@ def git_dir() -> Path | None:
 
 
 def pause_marker() -> Path | None:
-    """`<git-dir>/txgit-pause` — its presence silences the sync guards.
+    """`<git-dir>/tx-pause` — its presence silences the sync nudges.
 
-    /txgit:git-sync-off touches it, /txgit:git-sync-on removes it (pause.py),
+    /tx:git-sync-off touches it, /tx:git-sync-on removes it (pause.py),
     shielding long-running analysis that a mid-flight rebase would invalidate.
     It lives in the git dir: never committed, scoped per-worktree.
     """
     gd = git_dir()
-    return gd / "txgit-pause" if gd else None
+    return gd / "tx-pause" if gd else None
 
 
 def sync_paused() -> bool:

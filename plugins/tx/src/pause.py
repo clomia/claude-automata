@@ -1,4 +1,4 @@
-"""UserPromptExpansion commands — /txgit:git-sync-off|on toggle the sync pause.
+"""UserPromptExpansion commands — /tx:git-sync-off|on toggle the sync pause.
 
 The pause marker silences the sync guards (see repo.pause_marker); these two
 commands are its whole interface.  off touches the marker, on removes it —
@@ -17,7 +17,9 @@ from src.repo import pause_marker
 
 def block_expansion(reason: str) -> None:
     """Deny the expansion (decision: block) — pure, the turn erased."""
-    sys.stdout.write(json.dumps({"decision": "block", "reason": reason}))
+    sys.stdout.write(
+        json.dumps({"decision": "block", "reason": reason}, ensure_ascii=False)
+    )
     sys.exit(0)
 
 
@@ -36,13 +38,13 @@ def resolve_marker(command: str) -> Path:
         sys.exit(0)
     marker = pause_marker()
     if marker is None:
-        block_expansion("Not a git repository — txgit sync cannot be toggled here.")
+        block_expansion("Not a git repository — tx sync cannot be toggled here.")
     return marker
 
 
 def off() -> None:
-    resolve_marker("txgit:git-sync-off").touch()
+    resolve_marker("tx:git-sync-off").touch()
 
 
 def on() -> None:
-    resolve_marker("txgit:git-sync-on").unlink(missing_ok=True)
+    resolve_marker("tx:git-sync-on").unlink(missing_ok=True)

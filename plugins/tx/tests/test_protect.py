@@ -46,6 +46,13 @@ def test_allow_untracked_target_on_base(gitrepo, monkeypatch):
     assert protect.main() is None
 
 
+def test_no_guard_without_origin_head(gitrepo, monkeypatch):
+    """An unresolvable base (no GitHub default branch mirror) disables the guard."""
+    run(gitrepo, "symbolic-ref", "--delete", "refs/remotes/origin/HEAD")
+    feed(monkeypatch, {"tool_input": {"file_path": str(gitrepo / "tracked.txt")}})
+    assert protect.main() is None
+
+
 def test_fail_closed_on_base_without_path(gitrepo, monkeypatch):
     feed(monkeypatch, {})  # no target -> cannot prove untracked -> block stands
     with pytest.raises(SystemExit) as exc:

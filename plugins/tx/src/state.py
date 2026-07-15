@@ -1,4 +1,11 @@
-"""SessionStart guard — surface branch state: protected branch, stale transaction, base ahead."""
+"""SessionStart guard — surface branch state: protected branch, stale transaction, base ahead.
+
+This is the one guard that pays for network: it heals a missing origin/HEAD
+mirror (set_origin_head) and fetches the base to measure drift.  The hot-path
+guards read the mirror this guard and the skills maintain.  The sync pause
+silences only the rebase pressure (the ahead warning) — protected-branch and
+stale-transaction warnings still surface while it lingers.
+"""
 
 import json
 import re
@@ -11,7 +18,10 @@ from src.repo import (
     current_branch,
     fetch_base,
     git,
+    has_origin,
     is_tx_branch,
+    rebase_cmd,
+    set_origin_head,
     sync_paused,
 )
 
@@ -34,10 +44,10 @@ def tx_open_time(branch: str) -> datetime | None:
         return None
 
 
-def build_messages(branch: str, base: str) -> list[str]:
+def build_messages(branch: str, base: str, paused: bool) -> list[str]:
     if branch == base:
         return [
-            f"[branch-state-warn] You are on '{branch}' (protected). Open a transaction first: /txgit:tx-open"
+            f"[branch-state-warn] You are on '{branch}' (protected). Open a transaction first: /tx:open"
         ]
 
     messages: list[str] = []
@@ -53,12 +63,19 @@ def build_messages(branch: str, base: str) -> list[str]:
                     "Reach an integral point and consider splitting it."
                 )
 
+    if paused:
+        messages.append(
+            "[branch-state-warn] tx git-sync is off (protecting long-running "
+            "analysis). If that work is done, turn it back on: /tx:git-sync-on"
+        )
+        return messages
+
     fetch_ok = fetch_base(base)
     ahead = base_ahead_count(base)
     if ahead is not None and ahead >= BASE_AHEAD_THRESHOLD:
         message = (
             f"[branch-state-warn] origin/{base} is {ahead} PR(s) ahead. "
-            f"Resolve conflict risk before continuing: git fetch origin {base} && git rebase origin/{base}"
+            f"Resolve conflict risk before continuing: {rebase_cmd(base)}"
         )
         if not fetch_ok:
             message += " (fetch failed — local view)"
@@ -83,17 +100,22 @@ def main() -> None:
     sys.stdin.read()  # drain — payload unused
 
     branch = current_branch()
-    if not branch:
-        return
+    if not branch or not has_origin():
+        return  # not a repository, or no origin remote — tx does not apply
 
-    if sync_paused():
+    base = base_branch()
+    if base is None:
+        set_origin_head()
+        base = base_branch()
+    if base is None:
         emit(
-            "[branch-state-warn] txgit git-sync is off (protecting long-running "
-            "analysis). If that work is done, turn it back on: /txgit:git-sync-on"
+            "[branch-state-warn] Cannot resolve the GitHub default branch "
+            "(origin/HEAD is unset). Run: git remote set-head origin --auto "
+            "— tx guards stay off until it resolves."
         )
         return
 
-    messages = build_messages(branch, base_branch())
+    messages = build_messages(branch, base, sync_paused())
     if not messages:
         return
 

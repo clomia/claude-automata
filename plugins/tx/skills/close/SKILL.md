@@ -1,22 +1,26 @@
 ---
-name: tx-close
+name: close
 description: 트랜잭션을 닫는다 — 무결성을 검증하고, 열린 OpenSpec 변경을 아카이브한 뒤, base 브랜치로 squash merge · 정리한다.
 effort: max
 ---
 
 ## 개요
 
-`/txgit:tx-close`는 `/txgit:tx-open`으로 시작된 트랜잭션을 종결한다. 현재 `tx-*` 브랜치를 base 브랜치에 squash merge까지 수렴시킨다. 전 과정은 idempotent하다.
+`/tx:close`는 `/tx:open`으로 시작된 트랜잭션을 종결한다. 현재 `tx-*` 브랜치를 base 브랜치에 squash merge까지 수렴시킨다. 전 과정은 idempotent하다.
 
-**tx-close는 "현재 구현과 내용이 모두 무결하다"는 선언이다.** 무결하지 않으면 닫지 마라 — 필요한 수정을 트랜잭션 안에서 마친 뒤 진행한다.
+**tx close는 "현재 구현과 내용이 모두 무결하다"는 선언이다.** 무결하지 않으면 닫지 마라 — 필요한 수정을 트랜잭션 안에서 마친 뒤 진행한다.
 
-base 브랜치는 tx-open과 동일하게 해석한다: `TXGIT_BASE_BRANCH` → `origin/HEAD`의 기본 브랜치 → `main`.
+base 브랜치는 **레포지토리의 GitHub 기본 브랜치**다. open과 같은 코드로 해석하고, 실패하면 stderr의 지시를 전하고 거부한다:
+
+```bash
+BASE=$(uv run --project "${CLAUDE_SKILL_DIR}/../.." base)
+```
 
 ## 요구사항
 
-`/txgit:tx-close`가 도달시켜야 할 최종 상태:
+`/tx:close`가 도달시켜야 할 최종 상태:
 
-- 이 트랜잭션에 열린 OpenSpec 변경이 있으면, merge 전에 `openspec-archive-change`(`/opsx:archive`)로 **아카이브**한다. archive는 delta spec을 main spec에 sync(delta가 있을 때)하고 변경 디렉토리를 `openspec/changes/** → openspec/changes/archive/**`로 옮긴다 — 이 파일 변경들이 트랜잭션에 포함되어야 한다. (`openspec list`로 활성 변경 유무를 확인한다. 없으면 이 단계는 건너뛴다.)
+- 이 트랜잭션에 열린 OpenSpec 변경이 있으면, merge 전에 `openspec-archive-change` 스킬로 **아카이브**한다. archive는 delta spec을 main spec에 sync(delta가 있을 때)하고 변경 디렉토리를 `openspec/changes/** → openspec/changes/archive/**`로 옮긴다 — 이 파일 변경들이 트랜잭션에 포함되어야 한다. (`openspec list`로 활성 변경 유무를 확인한다. 없으면 이 단계는 건너뛴다.)
 - 트랜잭션의 모든 변경이 base에 **squash merge**되어 base 히스토리에 단일 commit으로 남는다.
 - 병합은 최신 `origin/<base>`가 rebase되고 **CI required check를 통과한 뒤에만** 일어난다.
 - 병합 후 이 트랜잭션 브랜치는 local·remote 어디에도 남지 않고, 로컬은 최신 base에 동기화된다.

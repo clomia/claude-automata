@@ -3,12 +3,13 @@
 Invariant: on a `tx-*` branch, origin/<base>'s first-parent history must stay an
 ancestor of HEAD.  When it pulls ahead (ahead > 0) the main agent's Stop is
 blocked to compel a sync — no permanent snooze; it re-announces until the
-invariant is restored.
+invariant is restored.  The base branch is the GitHub default branch read from
+the local origin/HEAD mirror; when the mirror is unset the guard stays off.
 
-Exception: the `<git-dir>/txgit-pause` marker disables this entirely —
-/txgit:git-sync-off sets it, /txgit:git-sync-on clears it.  A mid-flight
-rebase invalidates long-running analysis (large refactors, spec sync), so such
-work turns the sync off and back on around itself.  (If the pause lingers,
+Exception: the `<git-dir>/tx-pause` marker disables this entirely —
+/tx:git-sync-off sets it, /tx:git-sync-on clears it.  A mid-flight rebase
+invalidates long-running analysis (large refactors, spec sync), so such work
+turns the sync off and back on around itself.  (If the pause lingers,
 SessionStart re-warns.)
 
 Multi-session safety:
@@ -37,12 +38,13 @@ from src.repo import (
     git,
     git_dir,
     is_tx_branch,
+    rebase_cmd,
     sync_paused,
 )
 
 FETCH_TTL_SECONDS = 30
 DEDUPE_TTL_SECONDS = 600
-STATE_FILENAME = "txgit-sync-state.json"
+STATE_FILENAME = "tx-sync-state.json"
 
 
 class SyncState(TypedDict, total=False):
@@ -63,26 +65,27 @@ def load_json_dict(raw: str) -> dict[str, object] | None:
     return cast(dict[str, object], loaded)
 
 
+def finite_ts(value: object) -> float | None:
+    """A finite numeric timestamp, or None (bool is not a timestamp)."""
+    if (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    ):
+        return float(value)
+    return None
+
+
 def parse_state(raw: str) -> SyncState:
     data = load_json_dict(raw) or {}
     state = SyncState()
-    fetch_ts = data.get("last_fetch_ts")
-    if (
-        isinstance(fetch_ts, (int, float))
-        and not isinstance(fetch_ts, bool)
-        and math.isfinite(fetch_ts)
-    ):
-        state["last_fetch_ts"] = float(fetch_ts)
+    if (fetch_ts := finite_ts(data.get("last_fetch_ts"))) is not None:
+        state["last_fetch_ts"] = fetch_ts
     sha = data.get("last_announced_origin_sha")
     if isinstance(sha, str):
         state["last_announced_origin_sha"] = sha
-    announced_ts = data.get("last_announced_ts")
-    if (
-        isinstance(announced_ts, (int, float))
-        and not isinstance(announced_ts, bool)
-        and math.isfinite(announced_ts)
-    ):
-        state["last_announced_ts"] = float(announced_ts)
+    if (announced_ts := finite_ts(data.get("last_announced_ts"))) is not None:
+        state["last_announced_ts"] = announced_ts
     return state
 
 
@@ -119,7 +122,7 @@ def maybe_fetch(state: SyncState, base: str) -> None:
 def build_reason(ahead: int, base: str) -> str:
     return (
         f"Local is {ahead} commit(s) behind origin/{base}. "
-        f"Fetch and sync locally: git fetch origin {base} && git rebase origin/{base}. "
+        f"Fetch and sync locally: {rebase_cmd(base)}. "
         "It must complete cleanly — be ready for conflicts."
     )
 
@@ -170,11 +173,14 @@ def main() -> None:
     if not branch or not is_tx_branch(branch):
         return
 
+    base = base_branch()
+    if base is None:
+        return
+
     path = state_path()
     if path is None:
         return
 
-    base = base_branch()
     with locked_state(path) as state:
         announcement = decide_announcement(state, base)
 
