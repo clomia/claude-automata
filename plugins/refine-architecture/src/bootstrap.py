@@ -1,12 +1,14 @@
-# /// script
-# requires-python = ">=3.14"
-# ///
-"""Bootstrap a refine-architecture run.
+"""CLI — print the fully resolved Workflow tool call for a refine-architecture run.
 
-Resolve a repomix runner that works on this machine, create a private Agora
-workspace under the system temp directory, and emit (as JSON on stdout) the
-paths the workflow engine needs. Diagnostics go to stderr so stdout stays a
-parseable JSON document.
+The skill body runs this and executes the printed Workflow(...) call verbatim, so a
+single CLI covers both entry paths: a user typing /refine-architecture:refine-architecture
+and the model invoking the skill as a tool. (A UserPromptExpansion hook would catch only
+the first — it fires on user-typed commands alone; the model's tool call fires PreToolUse
+instead, so one skill-run CLI is simpler than two hooks.)
+
+It resolves a repomix runner that works on this machine, opens a private Agora workspace
+under the system temp directory, and prints the call — scriptPath and args fully filled
+in — to stdout. Diagnostics go to stderr so stdout stays exactly the call to run.
 """
 
 import json
@@ -17,7 +19,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
+SKILL_DIR = Path(__file__).resolve().parent.parent / "skills" / "refine-architecture"
 
 
 def resolve_repomix() -> str:
@@ -51,15 +53,18 @@ def main() -> int:
     project = Path(os.environ.get("CLAUDE_PROJECT_DIR") or ".").resolve()
     agora = Path(tempfile.mkdtemp(prefix="refine-architecture-agora-"))
 
-    config = {
+    script = str(SKILL_DIR / "workflows" / "refine-architecture.js")
+    args = {
         "focusArea": focus,
         "projectDir": str(project),
         "agoraPath": str(agora),
         "repomixCmd": resolve_repomix(),
-        "principlesPath": str(HERE / "design-principles.md"),
-        "workflowScript": str(HERE / "workflows" / "refine-architecture.js"),
+        "principlesPath": str(SKILL_DIR / "design-principles.md"),
     }
-    print(json.dumps(config, ensure_ascii=False, indent=2))
+    args_block = json.dumps(args, ensure_ascii=False, indent=2).replace("\n", "\n  ")
+    print(
+        f"Workflow({{\n  scriptPath: {json.dumps(script)},\n  args: {args_block}\n}})"
+    )
     return 0
 
 
