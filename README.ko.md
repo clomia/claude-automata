@@ -14,26 +14,31 @@
 claude plugin marketplace add clomia/claude-automata
 ```
 
-# Ploop - Overclock Loop
+# Ploop - Advisor Loop
 
 > Install: `claude plugin install ploop@claude-automata`  
 > Update: `claude plugin update ploop@claude-automata`  
 
-ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 루프입니다.
+ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 advisor loop입니다.
 
 - 독립된 advisor가 사용자를 대신하여 진행 상황을 관리합니다.
   - advisor는 메인 에이전트가 놓친 부분을 찾아줍니다.
 - 여러번의 auto compaction에도 맥락을 잃지 않습니다.
-  - compaction이 발생하면 미션이 재주입됩니다.
+  - compaction이 발생하면 anchor가 재주입됩니다.
   - advisor가 전체 맥락을 파일로 관리합니다.
 - 별도 세션을 만들지 않고 정식 서브에이전트 경로만 사용합니다 — 구독 요금제에 안전합니다.
+
+**anchor**는 루프를 붙들어 매는 기준 파일입니다. 두 종류가 있습니다.
+
+- **Mission** (목표) — 요구사항을 받아서 처리하고, 목표를 모두 달성하면 끝납니다. `/ploop:define-mission`으로 작성하세요.
+- **Purpose** (목적) — 요구사항을 만들며 계속 나아가고, 정해진 끝이 없습니다. `/ploop:define-purpose`로 작성하세요.
 
 ### 사용 방법
 
 > Auto-Compact가 True로 설정되어 있어야 합니다.
 
-1. 미션을 작성하세요. `/ploop:define-mission`을 활용하세요.
-2. 새로운 세션에서 `/ploop:launch [미션 내용]`을 실행하세요.
+1. anchor를 작성하세요. 명백한 목표면 `/ploop:define-mission`, 지속적으로 나아갈 방향이면 `/ploop:define-purpose`를 활용하세요.
+2. 새로운 세션에서 `/ploop:launch [anchor 내용]`을 실행하세요.
    루프는 Stop hook의 error 동작을 활용합니다 — 에이전트가 멈출 때마다 훅이 정지를 막고 advisor 호출을 지시합니다.
 3. 루프는 advisor가 더 이상 조언할 것이 없다고 판단하면 자동으로 끝나며, 이때 에이전트가 로그를 읽어 전체 라운드를 요약합니다.
    잠시 멈추려면 `/ploop:off`, 멈춘 지점부터 다시 이어가려면 `/ploop:on`을 실행하세요 (턴이 돌고 있으면 ESC로 끊은 뒤 실행).

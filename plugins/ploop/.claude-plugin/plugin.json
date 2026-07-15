@@ -1,7 +1,7 @@
 {
   "name": "ploop",
-  "version": "0.35.0",
-  "description": "Overclock Loop — an autonomous loop for long, multi-day missions: an independent advisor surfaces what the main agent overlooked and preserves the mission across compactions, on subscription-safe nested agents",
+  "version": "0.36.0",
+  "description": "Advisor Loop — an autonomous loop for long, multi-day work: an independent advisor surfaces what the main agent overlooked and preserves the anchor across compactions, on subscription-safe nested agents",
   "author": {
     "name": "clomia",
     "email": "clomia.sig@gmail.com",

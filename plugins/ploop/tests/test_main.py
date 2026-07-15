@@ -60,7 +60,7 @@ def arrange(tmp_path, monkeypatch, stdin):
     monkeypatch.setattr("sys.stdin", io.StringIO(stdin))
 
 
-def arrange_mission(
+def arrange_anchor(
     tmp_path,
     monkeypatch,
     main_messages,
@@ -70,17 +70,17 @@ def arrange_mission(
     advice=None,
     narration=None,
 ):
-    """Activate a mission and write the main transcript holding `main_messages`.
+    """Activate an anchor and write the main transcript holding `main_messages`.
 
-    The main agent runs the mission directly, so its work lives in the main session
-    transcript the Stop hook receives.  The active marker gates the loop; the mission
-    file is the anchor.  `ledger` (a partial dict) seeds the round state — load fills
+    The main agent does the anchor's work directly, so it lives in the main session
+    transcript the Stop hook receives.  The active marker gates the loop; anchor.md
+    holds the anchor text.  `ledger` (a partial dict) seeds the round state — load fills
     the rest with defaults.  `advice` / `narration` (when given) are the advisor's and
     narrator's temp-channel files, routed under tmp_path via gettempdir.
     """
     monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
     (tmp_path / f"{session_id}_active").touch()
-    (tmp_path / f"{session_id}_mission.md").write_text("build the thing")
+    (tmp_path / f"{session_id}_anchor.md").write_text("build the thing")
     if ledger:
         save_ledger(tmp_path / f"{session_id}_loop.json", ledger)
     if advice is not None:
@@ -119,11 +119,11 @@ class TestStop:
     ):
         """A fresh (just-launched) loop has no verdict to record: the first stop
         arms the first advisor round and advances the phase to advising."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             [
-                {"role": "user", "content": "mission"},
+                {"role": "user", "content": "anchor"},
                 {"role": "assistant", "content": "initial work"},
             ],
         )
@@ -133,8 +133,8 @@ class TestStop:
         assert load_ledger(tmp_path / "s1_loop.json")["phase"] == ADVISING
         assert "No prior advice." in (tmp_path / "s1_advice_history.md").read_text()
         err = capsys.readouterr().err
-        assert "original-mission:" in err
-        assert str(tmp_path / "s1_mission.md") in err
+        assert "anchor:" in err
+        assert str(tmp_path / "s1_anchor.md") in err
         assert "advice-history:" in err
         assert "instructions:" in err
         assert "ploop:advisor" in err
@@ -146,7 +146,7 @@ class TestStop:
         assert load_ledger(tmp_path / "s1_loop.json")["round_start_line"] == 3
 
     def test_records_advice_and_logs_completed_first_round(self, tmp_path, monkeypatch):
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -163,7 +163,7 @@ class TestStop:
         advice_history = (tmp_path / "s1_advice_history.md").read_text()
         assert "<advice-1>" in advice_history
         assert "consider error handling" in advice_history
-        # The narration narrates round 0 (mission work, no advice answered), so
+        # The narration narrates round 0 (anchor work, no advice answered), so
         # the completed entry is "Round 0" with no Advice section; the fresh
         # advice is not logged yet — its round completes at the next stop.
         log = (tmp_path / "s1_loop.log").read_text()
@@ -175,7 +175,7 @@ class TestStop:
     def test_advice_and_narration_cleared_on_arm(self, tmp_path, monkeypatch):
         """Both temp channels are read (advice stripped), then cleared as the next
         round arms — an absent file next round unambiguously means no write."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -199,7 +199,7 @@ class TestStop:
         (advice_history[-1]), numbered by that advice's ordinal — aligned with
         advice_history.md even after a skipped round, and the fresh advice waits
         for its own round to complete."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -225,7 +225,7 @@ class TestStop:
         and the round's inputs (round_start_line, advice_history.md) preserved by
         the merge so the retried advisor sees what the failed one saw; nothing is
         logged — the round completes at its eventual successful stop."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -253,9 +253,9 @@ class TestStop:
     def test_second_consecutive_anomaly_ends_loop(self, tmp_path, monkeypatch, capsys):
         """One retry is the benefit of the doubt; a second empty run in a row is
         accepted as a real malfunction — the loop halts with that cause, never
-        disguised as convergence: the phase stays advising (an unfinished mission
+        disguised as convergence: the phase stays advising (an unfinished anchor
         /ploop:on can resume), only the active marker is dropped."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -265,10 +265,10 @@ class TestStop:
             stop()
         assert exc.value.code == 2
         assert not (tmp_path / "s1_active").exists()  # halted
-        # an anomaly halt is not a finished mission — /ploop:on can wake it
+        # an anomaly halt is not a finished anchor — /ploop:on can wake it
         assert load_ledger(tmp_path / "s1_loop.json")["phase"] == ADVISING
         err = capsys.readouterr().err
-        assert "parallax loop has ended" in err
+        assert "advisor loop has ended" in err
         assert "malfunctioned" in err
 
     def test_anomaly_end_preserves_round_start_line(self, tmp_path, monkeypatch):
@@ -276,7 +276,7 @@ class TestStop:
         merge preserves it), else the first /ploop:on round would re-slice the
         whole transcript.  A second malfunction ends the loop with offset 500 —
         it must survive."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -295,7 +295,7 @@ class TestStop:
     def test_advice_after_anomaly_resets_the_counter(self, tmp_path, monkeypatch):
         """A clean round clears the anomaly streak — the cap counts consecutive
         anomalies, not lifetime ones."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -315,7 +315,7 @@ class TestStop:
         """One counter, not two per type: a decline at anomalies=1 (from a prior
         malfunction) reaches the cap and ends — no per-type cross-reset, so
         alternating anomaly kinds can't dodge the cap forever."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -326,13 +326,13 @@ class TestStop:
             stop()
         assert exc.value.code == 2
         assert not (tmp_path / "s1_active").exists()  # ended at the 2nd anomaly
-        assert "parallax loop has ended" in capsys.readouterr().err
+        assert "advisor loop has ended" in capsys.readouterr().err
 
     def test_read_failure_freezes_round_start_line(self, tmp_path, monkeypatch):
         """An unreadable transcript at a stop must not reset round_start_line to
         1 — that would make the next round slice the whole session.  Freeze it
         instead (the round's own slice degrades to empty; wider never happens)."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -354,10 +354,10 @@ class TestStop:
         assert exc.value.code == 2
         assert load_ledger(tmp_path / "s1_loop.json")["round_start_line"] == 200
 
-    def test_compacted_round_inlines_mission_text(self, tmp_path, monkeypatch, capsys):
-        """Mechanism 2: a compacted round re-injects the original-mission text into
+    def test_compacted_round_inlines_anchor_text(self, tmp_path, monkeypatch, capsys):
+        """Mechanism 2: a compacted round re-injects the anchor text into
         the trigger and consumes the marker."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -368,7 +368,7 @@ class TestStop:
         with pytest.raises(SystemExit):
             stop()
         err = capsys.readouterr().err
-        assert "build the thing" in err  # original-mission text inlined
+        assert "build the thing" in err  # anchor text inlined
         assert not (tmp_path / "s1_compacted").exists()  # consumed
 
     def test_termination_token_converges_and_triggers_recap(
@@ -378,7 +378,7 @@ class TestStop:
         deactivated, the final round completed in the log (its narration + the
         advice it answered; the token is machinery and never logged), and one last
         injection has the main agent report the end and recap the round log."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -408,7 +408,7 @@ class TestStop:
         """There is no round limit: a long history still arms the next round rather
         than terminating — only the advisor (or an anomaly failsafe) ends the loop;
         /ploop:off merely pauses it."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -428,7 +428,7 @@ class TestStop:
         """Running marker present (advisor in flight — e.g. the user pushed it to the
         background): allow the stop, don't re-trigger — no cascade.  SubagentStop is
         the marker's sole clearer, so the loop just waits for it."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -451,7 +451,7 @@ class TestStop:
         may end the loop, and the refusal turn is in the round's transcript slice,
         so the narrator routes its stated reasons to the advisor's verdict; no
         main-side exit is advertised."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -482,7 +482,7 @@ class TestStop:
         that honest cause instead of stalemating against the harness
         stop-block cap.  The cause names no actor: an unconsumed token may
         equally come from a refusal or from turns the user cut short."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -493,18 +493,18 @@ class TestStop:
             stop()
         assert exc.value.code == 2
         ledger = load_ledger(tmp_path / "s1_loop.json")
-        # an anomaly halt is not a finished mission — /ploop:on can wake it
+        # an anomaly halt is not a finished anchor — /ploop:on can wake it
         assert ledger["phase"] == ADVISING
         assert ledger["advice_history"] == ["r"]
         assert not (tmp_path / "s1_active").exists()
         err = capsys.readouterr().err
-        assert "parallax loop has ended" in err
+        assert "advisor loop has ended" in err
         assert "uninvoked" in err
 
     def test_compliance_resets_the_anomaly_counter(self, tmp_path, monkeypatch):
         """Invoking the advisor after a decline clears the streak — the cap
         counts consecutive anomalies, not lifetime ones."""
-        arrange_mission(
+        arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
@@ -538,7 +538,7 @@ class TestPreToolUse:
         assert (tmp_path / "s1_advisor_running").exists()
 
     def test_no_active_marker_allows_manual_advisor(self, tmp_path, monkeypatch):
-        """Outside an active mission the advisor gate does not interfere."""
+        """Outside an active anchor the advisor gate does not interfere."""
         arrange(tmp_path, monkeypatch, make_pretooluse_stdin())
         with pytest.raises(SystemExit) as exc:
             pre_tool_use()
@@ -606,47 +606,47 @@ class TestLaunch:
     def make_stdin(self, **payload):
         return io.StringIO(json.dumps(payload))
 
-    def test_writes_stripped_mission_and_arms_loop(self, tmp_path, monkeypatch):
+    def test_writes_stripped_anchor_and_arms_loop(self, tmp_path, monkeypatch):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        mission = '  do the thing\nwith "quotes" and $vars  '
+        anchor = '  do the thing\nwith "quotes" and $vars  '
         monkeypatch.setattr(
             "sys.stdin",
             self.make_stdin(
-                command_name="ploop:launch", command_args=mission, session_id="s1"
+                command_name="ploop:launch", command_args=anchor, session_id="s1"
             ),
         )
         save_ledger(
             tmp_path / "s1_loop.json",
             {"phase": CONVERGED, "advice_history": ["stale"]},
         )
-        (tmp_path / "s1_loop.log").write_text("prior mission log")
+        (tmp_path / "s1_loop.log").write_text("prior anchor log")
         launch()
-        saved = (tmp_path / "s1_mission.md").read_text()
+        saved = (tmp_path / "s1_anchor.md").read_text()
         assert saved == 'do the thing\nwith "quotes" and $vars'
         assert (tmp_path / "s1_active").exists()
         assert not (tmp_path / "s1_loop.json").exists()  # prior ledger cleared
-        # a mission owns one log, opened with its own text
+        # an anchor owns one log, opened with its own text
         log = (tmp_path / "s1_loop.log").read_text()
-        assert log.startswith("[[ MISSION ]]\n\n")
+        assert log.startswith("[[ ANCHOR ]]\n\n")
         assert saved in log
-        assert "prior mission log" not in log
+        assert "prior anchor log" not in log
 
     def test_array_command_args_join_verbatim(self, tmp_path, monkeypatch):
         """The reference schema types command_args as an array while observed
-        events carry a string — both shapes must yield the mission verbatim,
+        events carry a string — both shapes must yield the anchor verbatim,
         or a harness update corrupts the anchor."""
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         monkeypatch.setattr(
             "sys.stdin",
             self.make_stdin(
                 command_name="ploop:launch",
-                command_args=["multi\nline mission", "with args"],
+                command_args=["multi\nline anchor", "with args"],
                 session_id="s1",
             ),
         )
         launch()
-        saved = (tmp_path / "s1_mission.md").read_text()
-        assert saved == "multi\nline mission with args"
+        saved = (tmp_path / "s1_anchor.md").read_text()
+        assert saved == "multi\nline anchor with args"
         assert (tmp_path / "s1_active").exists()
 
     def test_ignores_non_ploop_launch_command(self, tmp_path, monkeypatch):
@@ -661,11 +661,11 @@ class TestLaunch:
         )
         with pytest.raises(SystemExit):
             launch()
-        assert not (tmp_path / "s1_mission.md").exists()
+        assert not (tmp_path / "s1_anchor.md").exists()
         assert not (tmp_path / "s1_active").exists()
 
-    def test_blank_mission_blocks_expansion(self, tmp_path, monkeypatch, capsys):
-        """A blank mission is blocked at expansion — otherwise the skill body
+    def test_blank_anchor_blocks_expansion(self, tmp_path, monkeypatch, capsys):
+        """A blank anchor is blocked at expansion — otherwise the skill body
         would announce an activation the hook never armed (a ghost loop)."""
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         monkeypatch.setattr(
@@ -681,18 +681,18 @@ class TestLaunch:
         assert not (tmp_path / "s1_active").exists()
 
     def test_armed_loop_blocks_relaunch_untouched(self, tmp_path, monkeypatch, capsys):
-        """Relaunching over an armed loop is blocked purely: mission, log, and
+        """Relaunching over an armed loop is blocked purely: anchor, log, and
         the in-flight marker survive — the running loop is not disturbed, and
         the reason routes the user to /ploop:off."""
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         (tmp_path / "s1_active").touch()
-        (tmp_path / "s1_mission.md").write_text("old mission")
+        (tmp_path / "s1_anchor.md").write_text("old anchor")
         (tmp_path / "s1_loop.log").write_text("old log")
         (tmp_path / "s1_advisor_running").touch()
         monkeypatch.setattr(
             "sys.stdin",
             self.make_stdin(
-                command_name="ploop:launch", command_args="new mission", session_id="s1"
+                command_name="ploop:launch", command_args="new anchor", session_id="s1"
             ),
         )
         with pytest.raises(SystemExit) as exc:
@@ -701,7 +701,7 @@ class TestLaunch:
         out = json.loads(capsys.readouterr().out)
         assert out["decision"] == "block"
         assert "/ploop:off" in out["reason"]
-        assert (tmp_path / "s1_mission.md").read_text() == "old mission"
+        assert (tmp_path / "s1_anchor.md").read_text() == "old anchor"
         assert (tmp_path / "s1_loop.log").read_text() == "old log"
         assert (tmp_path / "s1_advisor_running").exists()
 
@@ -734,7 +734,7 @@ class TestOffCommand:
             {"phase": ADVISING, "advice_history": ["r"]},
         )
         (tmp_path / "s1_advice_history.md").write_text("<advice-1>\n\nr\n\n</advice-1>")
-        (tmp_path / "s1_mission.md").write_text("m")
+        (tmp_path / "s1_anchor.md").write_text("m")
         (tmp_path / "s1_loop.log").write_text("log")
         self.arrange(tmp_path, monkeypatch)
         off_command()
@@ -745,7 +745,7 @@ class TestOffCommand:
         assert ledger["phase"] == ADVISING
         assert ledger["advice_history"] == ["r"]
         assert (tmp_path / "s1_advice_history.md").exists()
-        assert (tmp_path / "s1_mission.md").exists()
+        assert (tmp_path / "s1_anchor.md").exists()
         assert (tmp_path / "s1_loop.log").exists()
         assert capsys.readouterr().out == ""  # quiet — no report injected
 
@@ -753,13 +753,13 @@ class TestOffCommand:
         """Already off (or never launched): the expansion is blocked purely — the
         skill body never announces a pause that didn't happen, and prior state is
         untouched."""
-        (tmp_path / "s1_mission.md").write_text("m")
+        (tmp_path / "s1_anchor.md").write_text("m")
         self.arrange(tmp_path, monkeypatch)
         with pytest.raises(SystemExit) as exc:
             off_command()
         assert exc.value.code == 0
         assert json.loads(capsys.readouterr().out)["decision"] == "block"
-        assert (tmp_path / "s1_mission.md").exists()
+        assert (tmp_path / "s1_anchor.md").exists()
 
     def test_ignores_other_plugin_off(self, tmp_path, monkeypatch):
         """The guard matches the full scoped name, so another plugin's :off cannot
@@ -787,8 +787,8 @@ class TestOnCommand:
 
     def arrange_paused(self, tmp_path, *, ledger=None):
         """A paused loop: anchors on disk, no active marker."""
-        (tmp_path / "s1_mission.md").write_text("build the thing")
-        (tmp_path / "s1_loop.log").write_text("[[ MISSION ]]\n\nbuild the thing\n\n")
+        (tmp_path / "s1_anchor.md").write_text("build the thing")
+        (tmp_path / "s1_loop.log").write_text("[[ ANCHOR ]]\n\nbuild the thing\n\n")
         if ledger:
             save_ledger(tmp_path / "s1_loop.json", ledger)
 
@@ -852,10 +852,10 @@ class TestOnCommand:
         assert ledger["round_start_line"] == 200  # preserved
         assert not (tmp_path / "s1_advisor_running").exists()  # stranded marker cleared
 
-    def test_missing_mission_blocks_on(self, tmp_path, monkeypatch, capsys):
-        """No mission anchor (never launched, or a different session): nothing to
+    def test_missing_anchor_blocks_on(self, tmp_path, monkeypatch, capsys):
+        """No anchor (never launched, or a different session): nothing to
         resume — blocked, no loop armed."""
-        (tmp_path / "s1_loop.log").write_text("log")  # log without mission
+        (tmp_path / "s1_loop.log").write_text("log")  # log without anchor
         self.arrange(tmp_path, monkeypatch)
         with pytest.raises(SystemExit):
             on_command()
@@ -864,17 +864,17 @@ class TestOnCommand:
 
     def test_missing_log_blocks_on(self, tmp_path, monkeypatch, capsys):
         """No round log: nothing to resume — blocked, no loop armed."""
-        (tmp_path / "s1_mission.md").write_text("m")  # mission without log
+        (tmp_path / "s1_anchor.md").write_text("m")  # anchor without log
         self.arrange(tmp_path, monkeypatch)
         with pytest.raises(SystemExit):
             on_command()
         assert json.loads(capsys.readouterr().out)["decision"] == "block"
         assert not (tmp_path / "s1_active").exists()
 
-    def test_converged_mission_blocks_on(self, tmp_path, monkeypatch, capsys):
-        """The one non-resumable state: a converged mission — the advisor
+    def test_converged_anchor_blocks_on(self, tmp_path, monkeypatch, capsys):
+        """The one non-resumable state: a converged anchor — the advisor
         deliberately finished, a genuine completion, not a stall. on refuses it;
-        the user launches a fresh mission.  (An anomaly halt or /ploop:off leaves
+        the user launches a fresh anchor.  (An anomaly halt or /ploop:off leaves
         the phase advising, so it resumes like any paused loop — same state,
         covered by test_resumes_paused_loop_normalizing_state.)"""
         self.arrange_paused(
@@ -959,10 +959,10 @@ class TestWriteRoundSlice:
 class TestWriteLog:
     def test_round_zero_has_no_advice_section(self, tmp_path):
         log = tmp_path / "l.log"
-        write_log(log, 0, "mission work", None)
+        write_log(log, 0, "anchor work", None)
         content = log.read_text()
         assert "[[ Round 0 - " in content
-        assert "mission work" in content
+        assert "anchor work" in content
         assert "/ Advice" not in content
 
     def test_appends_completed_rounds_with_advice(self, tmp_path):

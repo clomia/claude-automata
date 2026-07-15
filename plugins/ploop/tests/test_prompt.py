@@ -23,15 +23,15 @@ class TestFormatAdviceHistory:
 
 
 class TestFormatAdvisorTrigger:
-    def trigger(self, mission_text=None):
+    def trigger(self, anchor_text=None):
         return format_advisor_trigger(
-            mission_path=Path("/d/s1_mission.md"),
+            anchor_path=Path("/d/s1_anchor.md"),
             round_path=Path("/d/s1_round.jsonl"),
             advice_history_path=Path("/d/s1_advice_history.md"),
             advice_path=Path("/d/s1_advice.md"),
             narration_path=Path("/t/s1_narration.md"),
             instruction_path=Path("/p/prompts/instruction.md"),
-            mission_text=mission_text,
+            anchor_text=anchor_text,
         )
 
     def test_lists_sections_in_canonical_order(self):
@@ -39,7 +39,7 @@ class TestFormatAdvisorTrigger:
         four in the loop's canonical order, with the narrator call inlined under actions-history."""
         out = self.trigger()
         assert (
-            out.index("original-mission:")
+            out.index("anchor:")
             < out.index("actions-history:")
             < out.index("advice-history:")
             < out.index("instructions:")
@@ -48,7 +48,7 @@ class TestFormatAdvisorTrigger:
 
     def test_carries_all_paths(self):
         out = self.trigger()
-        assert "/d/s1_mission.md" in out
+        assert "/d/s1_anchor.md" in out
         assert "/d/s1_round.jsonl" in out
         assert "/d/s1_advice_history.md" in out
         assert "/d/s1_advice.md" in out
@@ -89,15 +89,15 @@ class TestFormatAdvisorTrigger:
         assert "exactly" in out.lower()
         assert out.count("```") == 2
 
-    def test_mission_text_inlined_when_compacted(self):
-        """Mechanism 2: the mission text is inlined ahead of the section list on a
+    def test_anchor_text_inlined_when_compacted(self):
+        """Mechanism 2: the anchor text is inlined ahead of the section list on a
         compacted round (recency position)."""
-        out = self.trigger(mission_text="THE MISSION BODY")
-        assert "THE MISSION BODY" in out
-        assert out.index("THE MISSION BODY") < out.index("original-mission:")
+        out = self.trigger(anchor_text="THE ANCHOR BODY")
+        assert "THE ANCHOR BODY" in out
+        assert out.index("THE ANCHOR BODY") < out.index("anchor:")
 
-    def test_no_mission_text_by_default(self):
-        assert "THE MISSION BODY" not in self.trigger()
+    def test_no_anchor_text_by_default(self):
+        assert "THE ANCHOR BODY" not in self.trigger()
 
     def test_no_leftover_placeholders(self):
         out = self.trigger()

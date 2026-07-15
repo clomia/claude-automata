@@ -69,7 +69,7 @@ class TestWorkspace:
     def test_per_session_paths(self, tmp_path, monkeypatch):
         monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
         ws = Workspace(data_dir=tmp_path, session_id="s1")
-        assert ws.mission_path == tmp_path / "s1_mission.md"
+        assert ws.anchor_path == tmp_path / "s1_anchor.md"
         assert ws.active_path == tmp_path / "s1_active"
         assert ws.ledger_path == tmp_path / "s1_loop.json"
         assert ws.round_path == tmp_path / "s1_round.jsonl"
@@ -107,10 +107,10 @@ class TestWorkspace:
             ws.advice_path,
             ws.narration_path,
         )
-        for path in (*round_state, ws.mission_path, ws.active_path, ws.log_path):
+        for path in (*round_state, ws.anchor_path, ws.active_path, ws.log_path):
             path.touch()
         ws.clear_round_state()
         assert not any(path.exists() for path in round_state)
-        assert ws.mission_path.exists()
+        assert ws.anchor_path.exists()
         assert ws.active_path.exists()
         assert ws.log_path.exists()

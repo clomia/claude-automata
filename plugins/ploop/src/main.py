@@ -19,7 +19,7 @@ Prompt submission is otherwise a non-event for ploop — no hook fires on a type
 user turn, task notification, or scheduled wakeup, so they all pass through an
 armed loop untouched.  An ESC only cuts the turn (no hook fires on an interrupt
 either): the loop stays armed and resumes at the next stop, so the way to pause
-a running mission is ESC, then /ploop:off.  Both loop participants are unreliable
+a running loop is ESC, then /ploop:off.  Both loop participants are unreliable
 LLMs, so the first anomaly gets a corrective repeat (an advisor run that wrote
 nothing is retried, a stop that left the trigger unanswered is redirected to the
 advisor's authority) and a second consecutive anomaly ends the loop.  See
@@ -50,7 +50,7 @@ from src.state import (
 
 # Sentinel the advisor emits to end the turn.  Checked with `in` so the signal
 # survives any surrounding prose the model emits alongside it.
-TERMINATION_TOKEN = "I_HAVE_NO_FURTHER_ADVICE_ENDING_THE_PARALLAX_TURN"
+TERMINATION_TOKEN = "I_HAVE_NO_FURTHER_ADVICE_ENDING_THE_TURN"
 
 # Anomaly cap: the first anomaly gets one corrective repeat (an empty advisor run
 # is retried, an unanswered trigger is redirected to the advisor's authority); a
@@ -64,7 +64,7 @@ MAX_ANOMALIES = 2
 
 # Prefixes for anomalous re-arms.  The retry notice tells the main agent the
 # advisor's empty run was a malfunction, not a verdict.  The decline notice
-# upholds ploop's authority split — the main agent performs the mission, only
+# upholds ploop's authority split — the main agent does the work, only
 # the advisor ends the loop: a refusal's stated reasons reach the advisor
 # through the action history, so a sound refusal is honored by the advisor's
 # own termination verdict, never by a main-side exit.  An unconsumed token
@@ -105,14 +105,14 @@ def block_expansion(reason: str) -> None:
 def write_log(
     log_path: Path, round_number: int, narration: str, advice: str | None
 ) -> None:
-    """Append one completed round to the mission log.
+    """Append one completed round to the anchor log.
 
     An entry is the round's narrated work — which itself opens with the round's
     advice arriving and being read — followed by that advice verbatim under
-    /Advice (round 0 is the mission's initial work, so it has none).  Numbered
+    /Advice (round 0 is the anchor's initial work, so it has none).  Numbered
     by advice ordinal, so entries stay aligned with advice_history.md even when
-    a round is skipped.  launch() starts the file with the mission text; the finished log
-    outlives the mission so the whole turn stays reconstructable after any
+    a round is skipped.  launch() starts the file with the anchor text; the finished log
+    outlives the anchor so the whole turn stays reconstructable after any
     compaction.
     """
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -130,9 +130,9 @@ def end_loop(ws: Workspace, ledger: dict, cause: str, *, converged: bool) -> Non
 
     Every automatic exit lands here with an honest cause — the advisor's
     termination verdict, or a second consecutive anomaly; there is no round cap.
-    converged sets the phase: CONVERGED marks the mission FINISHED (the advisor's
+    converged sets the phase: CONVERGED marks the anchor FINISHED (the advisor's
     deliberate end — /ploop:on refuses it), while an anomaly end stays ADVISING
-    (an unfinished mission /ploop:on can resume).  Everything else in the ledger
+    (an unfinished anchor /ploop:on can resume).  Everything else in the ledger
     is preserved by the merge — round_start_line included, so a resumed anomaly
     end keeps the real slice offset instead of re-slicing the whole transcript.
     The active marker is dropped, so the next stop passes.
@@ -182,28 +182,28 @@ def arm_advisor(
 ) -> None:
     """Arm one advisor invocation and end the hook (exit 2).
 
-    Consumes any compaction marker (mechanism 2: the trigger inlines the
-    original-mission text), cuts this round's transcript slice into round_path
-    for the narrator, clears both handoff channels so an absent file at the next
-    stop unambiguously means its agent wrote nothing, sets the single-use token,
-    and injects the trigger — prefixed by `notice` on an anomalous re-arm.
+    Consumes any compaction marker (mechanism 2: the trigger inlines the anchor
+    text), cuts this round's transcript slice into round_path for the narrator,
+    clears both handoff channels so an absent file at the next stop unambiguously
+    means its agent wrote nothing, sets the single-use token, and injects the
+    trigger — prefixed by `notice` on an anomalous re-arm.
     """
-    mission_text = None
+    anchor_text = None
     if ws.compacted_path.exists():
         try:
-            mission_text = ws.mission_path.read_text()
+            anchor_text = ws.anchor_path.read_text()
         except OSError:
-            mission_text = None
+            anchor_text = None
         ws.compacted_path.unlink(missing_ok=True)
 
     write_round_slice(lines, round_start, ws.round_path)
     trigger = format_advisor_trigger(
-        mission_path=ws.mission_path,
+        anchor_path=ws.anchor_path,
         round_path=ws.round_path,
         advice_history_path=ws.advice_history_path,
         advice_path=ws.advice_path,
         narration_path=ws.narration_path,
-        mission_text=mission_text,
+        anchor_text=anchor_text,
     )
     ws.advice_path.unlink(missing_ok=True)
     ws.narration_path.unlink(missing_ok=True)
@@ -346,7 +346,7 @@ def pre_tool_use() -> None:
     token — consuming it and marking the advisor in flight, so a stop while it
     runs (e.g. pushed to the background) won't re-trigger.  A self-initiated
     call (no token) is denied so the main agent keeps working until the hook
-    drives the call properly.  Outside an active mission the gate stays out of
+    drives the call properly.  Outside an active loop the gate stays out of
     the way.
     """
     event = read_event()
@@ -370,9 +370,9 @@ def pre_tool_use() -> None:
 def mark_compaction() -> None:
     """PostCompact hook: mark the compaction.
 
-    The next stop() re-injects the original-mission text into its trigger
-    (parallax mechanism 2) and consumes the marker; a marker left by a
-    non-mission compaction is cleared when the next mission launches.
+    The next stop() re-injects the anchor text into its trigger (mechanism 2)
+    and consumes the marker; a marker left by a non-anchor compaction is cleared
+    when the next anchor launches.
     """
     event = read_event()
     Workspace.from_env(event.get("session_id", "")).compacted_path.touch()
@@ -396,22 +396,22 @@ def subagent_stop() -> None:
 def launch() -> None:
     """UserPromptExpansion hook (matcher: ploop:launch): the whole launch prep.
 
-    Fires when /ploop:launch <mission> expands.  The mission rides in
+    Fires when /ploop:launch <anchor> expands.  The anchor rides in
     command_args as structured JSON, so multi-line text with quotes or `$` is
     captured verbatim.  Observed as a single string; the reference schema says
     an array of arguments — both shapes are accepted so a harness update
-    cannot corrupt the mission anchor.
+    cannot corrupt the anchor.
 
     Two guards block the expansion (block_expansion — pure, turn erased): an
     armed loop (active marker), because relaunching over it would overwrite the
-    mission and log mid-flight and orphan an in-flight advisor — /ploop:off
-    pauses it first; and a blank mission, because the skill body would otherwise
+    anchor and log mid-flight and orphan an in-flight advisor — /ploop:off
+    pauses it first; and a blank anchor, because the skill body would otherwise
     announce an activation this hook never armed (a ghost loop).
 
-    A real launch clears the prior mission's round state, starts the round log
-    with the mission text (a mission owns one log, and its final summary reads
-    the goal first; the finished log survives ordinary turns), writes the
-    mission anchor, and arms the loop.
+    A real launch clears the prior anchor's round state, starts the round log
+    with the anchor text (an anchor owns one log, and its final summary reads
+    the anchor first; the finished log survives ordinary turns), writes the
+    anchor, and arms the loop.
     """
     event = read_event()
     if event.get("command_name", "") != "ploop:launch":
@@ -419,17 +419,17 @@ def launch() -> None:
     ws = Workspace.from_env(event.get("session_id", ""))
     if ws.active_path.exists():
         block_expansion(
-            "A parallax loop is already active. Pause it with /ploop:off, then launch again."
+            "An advisor loop is already active. Pause it with /ploop:off, then launch again."
         )
     args = event.get("command_args", "")
     if isinstance(args, list):
         args = " ".join(str(a) for a in args)
-    mission = str(args).strip()
-    if not mission:
-        block_expansion("The mission is empty. Run it as /ploop:launch <mission>.")
+    anchor = str(args).strip()
+    if not anchor:
+        block_expansion("The anchor is empty. Run it as /ploop:launch <anchor>.")
     ws.clear_round_state()
-    ws.log_path.write_text(f"[[ MISSION ]]\n\n{mission}\n\n")
-    ws.mission_path.write_text(mission)
+    ws.log_path.write_text(f"[[ ANCHOR ]]\n\n{anchor}\n\n")
+    ws.anchor_path.write_text(anchor)
     ws.active_path.touch()
 
 
@@ -457,7 +457,7 @@ def off_command() -> None:
         sys.exit(0)
     ws = Workspace.from_env(event.get("session_id", ""))
     if not ws.active_path.exists():
-        block_expansion("No active parallax loop to turn off.")
+        block_expansion("No active advisor loop to turn off.")
     ws.active_path.unlink(missing_ok=True)
     ws.advisor_running_path.unlink(missing_ok=True)
 
@@ -471,13 +471,13 @@ def on_command() -> None:
     by an exception (an accidental ESC, an API error, a subscription session
     limit; most of these fire no hook, so they leave the loop active and touch no
     state) — so it is the one way to wake a long-running loop, even one still
-    marked active.  The sole exception is a FINISHED mission (done): the advisor
+    marked active.  The sole exception is a FINISHED anchor (done): the advisor
     deliberately converged, a genuine completion rather than a stall, so on
-    refuses it and the user launches a fresh mission.
+    refuses it and the user launches a fresh anchor.
 
-    A resume requires the anchors on disk (mission and log; else there is no loop
-    to resume) and refuses a converged mission (phase == converged); either
-    failure blocks the expansion (block_expansion — pure, turn erased) so the
+    A resume requires the on-disk anchor and log (else there is no loop to
+    resume) and refuses a converged anchor (phase == converged); either failure
+    blocks the expansion (block_expansion — pure, turn erased) so the
     skill body never announces a resume that didn't happen, and the user gets a
     clear reason.
 
@@ -493,14 +493,14 @@ def on_command() -> None:
     if event.get("command_name", "") != "ploop:on":
         sys.exit(0)
     ws = Workspace.from_env(event.get("session_id", ""))
-    if not ws.mission_path.exists() or not ws.log_path.exists():
+    if not ws.anchor_path.exists() or not ws.log_path.exists():
         block_expansion(
-            "No parallax loop to resume. Launch one with /ploop:launch <mission>."
+            "No advisor loop to resume. Launch one with /ploop:launch <anchor>."
         )
     ledger = load_ledger(ws.ledger_path)
     if ledger["phase"] == CONVERGED:
         block_expansion(
-            "The advisor concluded this mission. Launch a new one with /ploop:launch <mission>."
+            "The advisor concluded this anchor. Launch a new one with /ploop:launch <anchor>."
         )
     ws.advisor_token_path.unlink(missing_ok=True)
     ws.advisor_running_path.unlink(missing_ok=True)

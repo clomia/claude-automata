@@ -14,32 +14,37 @@ Add this repository to the marketplace:
 claude plugin marketplace add clomia/claude-automata
 ```
 
-# Ploop - Overclock Loop
+# Ploop - Advisor Loop
 
 > Install: `claude plugin install ploop@claude-automata`  
 > Update: `claude plugin update ploop@claude-automata`  
 
-ploop is a loop built for long-running work that spans days.
+ploop is an advisor loop built for long-running work that spans days.
 
 - An independent advisor manages progress on the user's behalf.
   - The advisor finds what the main agent missed.
 - It never loses context across repeated auto-compactions.
-  - When a compaction occurs, the mission is re-injected.
+  - When a compaction occurs, the anchor is re-injected.
   - The advisor keeps the full context in files.
 - It creates no separate sessions and uses only the official subagent path — safe on subscription plans.
+
+The **anchor** is the file the loop is anchored to. It comes in two kinds.
+
+- **Mission** (a goal) — receive requirements, process them, and finish once the goal is fully met. Write one with `/ploop:define-mission`.
+- **Purpose** (a direction) — create requirements as you go and keep advancing, with no fixed end. Write one with `/ploop:define-purpose`.
 
 ### Usage
 
 > Auto-Compact must be set to True.
 
-1. Write your mission. Use `/ploop:define-mission` for this.
-2. In a fresh session, run `/ploop:launch [mission]`.
+1. Write your anchor — `/ploop:define-mission` for a clear goal, `/ploop:define-purpose` for an ongoing direction.
+2. In a fresh session, run `/ploop:launch [anchor]`.
    The loop rides the Stop hook's error behavior — whenever the agent stops, the hook blocks the stop and directs it to invoke the advisor.
 3. The loop ends on its own when the advisor judges there is nothing left to advise — at which point the agent reads the log and recaps every round.
    To pause it, run `/ploop:off`; to pick it back up from where it stopped, run `/ploop:on` (interrupt with ESC first if a turn is running).
    `off` halts the loop quietly and preserves its state; `on` resumes the loop from that state.
    `on` is also the one way to revive a long-running loop stalled by a mishap — an accidental ESC, an API error, a subscription session limit: it always resumes cleanly, except when the advisor ended the loop itself.
-   Nothing else — mid-mission instructions, answered questions, background-task notifications, ESC itself — stops the loop.
+   Nothing else — mid-run instructions, answered questions, background-task notifications, ESC itself — stops the loop.
 
 # Refine Architecture
 

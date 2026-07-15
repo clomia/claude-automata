@@ -1,6 +1,6 @@
 ---
-name: define-mission
-description: Write a mission anchor for ploop — a bounded goal to complete
+name: define-purpose
+description: Write a purpose anchor for ploop — an ongoing direction to advance
 argument-hint: "[anchor file save path]"
 disable-model-invocation: false
 ---
@@ -11,23 +11,25 @@ ploop(advisor loop)은 에이전트가 오랜 시간 자율적으로 작업하�
 anchor는 그 루프를 붙들어 매는 기준 파일로, 컨텍스트가 유실되어도 항상 원문 그대로 보존됩니다.  
 따라서 anchor를 명확히 정의하고 체계적으로 작성하는게 가장 중요합니다.
 
-**Mission은 명백한 목표입니다.** 요구사항을 받아서 처리하고, 목표를 모두 달성하면 끝납니다.  
-루프는 이 목표를 향해 수렴합니다 — advisor는 목표가 모두 커버되면 종료를 판단합니다.
+**Purpose는 지속적으로 나아갈 방향입니다.** 요구사항을 만들며 나아가고, 정해진 끝이 없습니다.  
+체크리스트는 미리 주어지지 않고 나아가며 만들어집니다 — advisor는 방향에 부합하는 다음 영역을 계속 표면화합니다.
 
 사용자를 추궁해서 사용자의 생각과 의도를 수집하세요.  
 수집된 정보를 종합해서 판단 기준으로 사용 가능한 축을 만드세요.
 
-그리고 Anchor file save path에 마크다운 형식으로 mission을 작성하세요.  
+그리고 Anchor file save path에 마크다운 형식으로 purpose를 작성하세요.  
 완료 후 작성된 anchor 텍스트를 복사해서 별도 세션에 `/ploop:launch` 하라고 안내하세요.
 
-# Mission 규칙
+# Purpose 규칙
 
 ## Fundamentals
 
-[IMPORTANT] **허용 범위**와 **달성할 목표**가 명확히 정의되어야 합니다.
+[IMPORTANT] **허용 범위**와 **나아갈 방향**이 명확히 정의되어야 합니다.
 
-허용 범위가 명확하지 않으면 에이전트가 목표를 위해 안전 반경을 벗어나는 위험한 행동을 할 수 있습니다.  
-달성할 목표가 명확하지 않으면 에이전트가 언제 끝났는지 판단할 수 없어 무한히 발산합니다.
+허용 범위가 명확하지 않으면 에이전트가 방향을 좇아 안전 반경을 벗어나는 위험한 행동을 할 수 있습니다.  
+나아갈 방향이 명확하지 않으면 에이전트가 만들어내는 요구사항이 발산하여 예측 불가능해집니다.
+
+목표와 달리 방향은 완료 조건이 아니라 **판단 기준**입니다. 무엇을 향하고 무엇을 피할지를 서술해서, 에이전트가 스스로 다음 요구사항을 옳게 생성하도록 만드세요.
 
 ## 명확하게 서술하기
 
@@ -42,9 +44,9 @@ anchor는 그 루프를 붙들어 매는 기준 파일로, 컨텍스트가 유�
 
 > 섹션은 제시된 4가지 말고도 자유롭게 추가할 수 있습니다.
 
-Section Order: Background → Mission → Constraint → Reference  
-Mandatory Section: `# Mission`(달성할 목표), `# Constraint`(허용 범위)  
-Optional Section: `# Background`(목표의 배경), `# Reference`(관련 링크들(URL or File Path))
+Section Order: Background → Purpose → Constraint → Reference  
+Mandatory Section: `# Purpose`(나아갈 방향), `# Constraint`(허용 범위)  
+Optional Section: `# Background`(방향의 배경), `# Reference`(관련 링크들(URL or File Path))
 
 # Instructions
 

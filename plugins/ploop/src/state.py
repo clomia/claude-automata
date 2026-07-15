@@ -20,7 +20,7 @@ hand off text files.  Four fields, each one fact:
   loop before it can stalemate.
 - phase: the round-cycle position — "fresh" (just launched/resumed, no verdict to
   record yet), "advising" (rounds running), "converged" (the advisor deliberately
-  finished the mission).  It subsumes the old skip-gate and the finished flag:
+  finished the anchor).  It subsumes the old skip-gate and the finished flag:
   record iff phase == "advising"; /ploop:on resumes any phase except "converged".
 
 load_ledger always returns every key, so callers index directly and update by
@@ -41,7 +41,7 @@ from pathlib import Path
 # The round-cycle position (ledger `phase`).
 FRESH = "fresh"  # just launched/resumed — the next stop arms without recording
 ADVISING = "advising"  # rounds running — the next stop records then arms
-CONVERGED = "converged"  # the advisor finished the mission — /ploop:on refuses
+CONVERGED = "converged"  # the advisor finished the anchor — /ploop:on refuses
 
 
 @dataclass(frozen=True)
@@ -59,8 +59,8 @@ class Workspace:
         return self.data_dir / f"{self.session_id}_{name}"
 
     @property
-    def mission_path(self) -> Path:
-        return self.path("mission.md")
+    def anchor_path(self) -> Path:
+        return self.path("anchor.md")
 
     @property
     def active_path(self) -> Path:
@@ -103,7 +103,7 @@ class Workspace:
         return Path(tempfile.gettempdir()) / f"ploop_{self.session_id}_narration.md"
 
     def clear_round_state(self) -> None:
-        """Remove the per-round loop state (mission.md and active marker kept)."""
+        """Remove the per-round loop state (anchor.md and active marker kept)."""
         for path in (
             self.ledger_path,
             self.round_path,

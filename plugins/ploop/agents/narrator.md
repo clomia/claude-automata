@@ -1,6 +1,6 @@
 ---
 name: narrator
-description: Describes the main agent's actions to the advisor in the parallax loop.
+description: Describes the main agent's actions to the advisor in the advisor loop.
 tools: Read, Write
 model: sonnet[1m]
 effort: medium

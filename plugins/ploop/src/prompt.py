@@ -1,12 +1,12 @@
 """Prompt — assemble the advisor's input artifacts and the trigger.
 
-The parallax loop feeds the advisor five sections in a canonical order.  ploop
+The advisor loop feeds the advisor five sections in a canonical order.  ploop
 can't run the advisor from the hook, so it writes the deterministic section
 (advice-history) to a file and emits a trigger that points the advisor at the
 five sections in that order:
 
     role (advisor system prompt)
-    -> original-mission (mission file)
+    -> anchor           (anchor file)
     -> action-history   (narrator call, run by the advisor)
     -> advice-history   (advice-history file)
     -> instructions     (static prompt file)
@@ -45,13 +45,13 @@ def format_advice_history(advice_history: list[str]) -> str:
 
 def format_advisor_trigger(
     *,
-    mission_path: Path,
+    anchor_path: Path,
     round_path: Path,
     advice_history_path: Path,
     advice_path: Path,
     narration_path: Path,
     instruction_path: Path = INSTRUCTION_PATH,
-    mission_text: str | None = None,
+    anchor_text: str | None = None,
 ) -> str:
     """Build the stderr feedback that drives the main agent to invoke the advisor.
 
@@ -73,13 +73,13 @@ def format_advisor_trigger(
     it Writes the narrative to narration_path, which the advisor reads as analysis
     input after the inlined call blocks — and the hook reads into the round log.
 
-    On a compacted round, mission_text is the original-mission's full text,
-    re-injected at this recency position (parallax mechanism 2) — the discrete
-    compaction event puts the mission text itself into context.
+    On a compacted round, anchor_text is the anchor's full text, re-injected at
+    this recency position (mechanism 2) — the discrete compaction event puts the
+    anchor text itself into context.
     """
     prefix = ""
-    if mission_text:
-        prefix = f"Your mission — stay anchored to it:\n\n{mission_text}\n\n---\n\n"
+    if anchor_text:
+        prefix = f"Your anchor — stay anchored to it:\n\n{anchor_text}\n\n---\n\n"
     body = textwrap.dedent(f'''\
         Invoke the advisor. Run the call below EXACTLY as written:
 
@@ -89,7 +89,7 @@ def format_advisor_trigger(
             description="review and advise",
             run_in_background=false,
             prompt="""
-                original-mission: {mission_path}
+                anchor: {anchor_path}
                 actions-history: Agent(
                     subagent_type="ploop:narrator",
                     description="narrate action history",
@@ -116,12 +116,12 @@ def format_end_notice(cause: str, log_path: Path | None = None) -> str:
 
     The main agent must clearly report the end and its cause to the user —
     whatever ended the loop.  When the turn surfaced any advice the notice
-    also has it recap the round log: over a long mission the main agent's
+    also has it recap the round log: over a long run the main agent's
     context may have auto-compacted early rounds away, so the log on disk is
     the one complete record.
     """
     notice = (
-        f"The parallax loop has ended — {cause}. "
+        f"The advisor loop has ended — {cause}. "
         f"Clearly report the end and its cause to the user."
     )
     if log_path is not None:
