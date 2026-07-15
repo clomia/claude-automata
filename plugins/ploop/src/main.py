@@ -81,6 +81,20 @@ DECLINE_NOTICE = (
     "end the loop.\n\n"
 )
 
+# One-time redirect when only background shell commands hold the round open.
+# A finite shell needs no action — its exit wakes the session (official Bash
+# contract) and the loop swallows the stops in between.  An ambient process
+# (a server, a watcher) has no exit to wait for, so it must leave the shell
+# lane: Monitor is the official session-lifetime lane and is never gated.
+# Sent once per shell set; stopping again with the same set means waiting.
+SHELL_WAIT_NOTICE = (
+    "Background shell command(s) are still running, so the round is held "
+    "open. If you are waiting for their output, simply stop — their "
+    "completion will wake the session. If any is an ambient process (a "
+    "server, a watcher), it does not belong to the round: kill it or run it "
+    "under a Monitor, then stop.\n"
+)
+
 
 def read_event() -> dict:
     """Parse the hook event from stdin; malformed input or a read error allows
@@ -207,6 +221,7 @@ def arm_advisor(
     )
     ws.advice_path.unlink(missing_ok=True)
     ws.narration_path.unlink(missing_ok=True)
+    ws.gated_shells_path.unlink(missing_ok=True)
     ws.advisor_token_path.write_text("")
     sys.stderr.write(notice + trigger)
     sys.exit(2)
@@ -235,18 +250,31 @@ def stop() -> None:
     if not ws.active_path.exists():
         sys.exit(0)
 
-    # The harness stops the session even while delegated background work is in
-    # flight (its completion notification wakes the session back up), reporting
-    # the in-flight work in `background_tasks`.  The round is complete only when
-    # that work is done, so wait — the same verdict as an in-flight advisor.
-    # Only delegated round work gates (subagent, workflow): a stop with just a
-    # shell command or monitor left is a legitimate round end, and an absent
-    # field degrades to no gating.
-    if any(
-        isinstance(task, dict) and task.get("type") in ("subagent", "workflow")
-        for task in event.get("background_tasks") or []
-    ):
+    # The advisor convenes only when foreground AND background are both empty.
+    # Foreground-empty is this very Stop; background-empty is read from the
+    # official `background_tasks` input.  Gate exactly the types whose
+    # completion is guaranteed to wake the session (their specs promise a
+    # notification/re-invoke on completion): subagent and workflow wait
+    # silently; a shell gets one redirect notice — an ambient process must
+    # leave the shell lane (Monitor, the never-completing session-lifetime
+    # lane, is never gated) — and the same shell set then waits silently.
+    # Every other type, and an absent field, degrades to no gating: stalling
+    # the loop is worse than an early advisor.
+    tasks = [t for t in event.get("background_tasks") or [] if isinstance(t, dict)]
+    if any(t.get("type") in ("subagent", "workflow") for t in tasks):
         sys.exit(0)
+    shell_ids = sorted(str(t.get("id", "")) for t in tasks if t.get("type") == "shell")
+    if shell_ids:
+        known = (
+            ws.gated_shells_path.read_text().split()
+            if ws.gated_shells_path.exists()
+            else []
+        )
+        if set(shell_ids) <= set(known):
+            sys.exit(0)
+        ws.gated_shells_path.write_text("\n".join(shell_ids))
+        sys.stderr.write(SHELL_WAIT_NOTICE)
+        sys.exit(2)
 
     ledger = load_ledger(ws.ledger_path)
     phase = ledger["phase"]
@@ -519,5 +547,6 @@ def on_command() -> None:
     ws.advisor_running_path.unlink(missing_ok=True)
     ws.advice_path.unlink(missing_ok=True)
     ws.narration_path.unlink(missing_ok=True)
+    ws.gated_shells_path.unlink(missing_ok=True)
     save_ledger(ws.ledger_path, {**ledger, "phase": FRESH, "anomalies": 0})
     ws.active_path.touch()

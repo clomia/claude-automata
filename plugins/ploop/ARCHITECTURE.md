@@ -155,6 +155,7 @@ main에 전가하지 않는다.
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight 마커 (PreToolUse set · SubagentStop clear) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 마커 (Stop이 메커니즘 2로 소비) |
+| `{session}_gated_shells` | hook | 교정 지시를 이미 보낸 background shell id 집합 — 같은 집합의 정지는 조용히 대기 (라운드 arm·`/ploop:on`·launch가 소거) |
 
 **loop 상태(advice_history·phase·anomalies·round_start_line)는 hook이 단독 소유한다.** advisor는
 advice(또는 종료 토큰)를 `advice.md`에 Write만 하고, hook이 다음 라운드 시작에 그 파일을 읽어
@@ -207,7 +208,7 @@ advice(또는 종료 토큰)를 `advice.md`에 Write만 하고, hook이 다음 �
 | **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | 슬래시 커맨드 확장(제출 전) | launch: 라운드 리셋 + `anchor`·`active` 기록 — `active` 존재·빈 `anchor`면 차단 · off: `active` 삭제(라운드 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·카운터 리셋(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`면 차단 |
 | **PostCompact** | `auto` | auto-compaction 후 | `compacted` 마커 touch (Stop이 메커니즘 2로 anchor 텍스트 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(자발 호출 차단) |
-| **Stop** | (전체) | main이 종료 시도 | active 게이트 → **background 게이트**(`background_tasks`의 subagent·workflow 대기) → **in-flight 가드** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 노티스+로그 recap) 또는 `exit 0`(허용) |
+| **Stop** | (전체) | main이 종료 시도 | active 게이트 → **background 게이트**(`background_tasks`: subagent·workflow 조용히 대기, shell은 집합당 1회 교정 지시 후 대기, monitor·그 외 통과) → **in-flight 가드** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 노티스+로그 recap) 또는 `exit 0`(허용) |
 | **SubagentStop** | (전체) | subagent 종료 | `advisor` 종료면 `advisor_running` clear (in-flight 추적) |
 | **SessionStart** | `startup\|clear` | 세션 시작 | 신규 릴리스 알림 |
 
@@ -307,16 +308,18 @@ SessionStart가 uv 설치를 안내한다.
     훅 이벤트가 없어 트랜스크립트 sentinel 판독이 필요한데 형식 의존을 하나 더 심는다 — ESC는 턴만 끊고
     armed 루프는 다음 정지에서 재개되며 공식 일시정지는 ESC 후 `/ploop:off`다. 이 정책으로 UserPromptSubmit
     훅이 통째로 사라졌다.
-16. **advisor는 background 완료 후 소집 — `background_tasks` 게이팅 + Agent 위임.** advisor 판정은 main이
-    라운드 작업을 완료한 뒤라야 유효하다. 하네스는 background 작업이 남아 있어도 세션을 정지시키고(완료
-    알림이 세션을 다시 깨운다), 대신 Stop 훅 입력에 in-flight 작업 배열 **`background_tasks`**(공식 필드,
-    v2.1.145+)를 담아 준다 — 훅은 `subagent`·`workflow` 유형이 남아 있으면 `exit 0`으로 대기해 advisor가
-    항상 완료 후 소집되게 한다(깨어난 main이 결과를 처리하고, 그 다음 정지가 라운드를 닫는다). 그래서
-    **완료 대기가 필요한 background는 게이팅 유형으로 위임한다 — 5분 이상 걸리는 Bash는
-    `Agent(run_in_background)`에 위임**한다. shell·monitor는 게이팅하지 않고(monitor만 남은 정지는 정당한
-    라운드 종료), 필드 부재(구버전 하네스)는 게이팅 없음으로 degrade한다. (설계 초기의 "하네스가 Stop 발화
-    자체를 보류한다" 가정은 background 기본화(v2.1.198)로 표류해 폐기 — 2026-07-15 세션 트랜스크립트 실측으로
-    확인, 공식 필드 판독으로 대체.)
+16. **advisor는 foreground·background가 모두 빈 정지에만 소집 — `background_tasks` 게이팅.** advisor 판정은
+    main이 라운드 작업을 완료한 뒤라야 유효하다. foreground가 비었다는 것은 Stop 발화 그 자체이고, background는
+    Stop 입력의 공식 배열 **`background_tasks`**(v2.1.145+)로 읽는다 — 하네스는 background가 남아 있어도 세션을
+    정지시키고 완료 이벤트로 다시 깨우므로, 게이트가 삼킨 정지는 반드시 되돌아온다. 게이트는 **완료가 세션을
+    깨운다고 명세가 보장하는 타입**에만 건다: `subagent`·`workflow`(완료 알림)는 조용히 대기(exit 0),
+    `shell`(exit 시 재호출)은 **집합당 1회 교정 지시** 후 조용히 대기 — 완료가 없는 ambient 프로세스(서버·워처)는
+    shell 차선에 속하지 않으니 정리하거나 세션 수명 차선인 `Monitor`로 옮기라는 지시다(`gated_shells` 마커가
+    지시 중복을 막고 라운드 arm이 소거). `monitor`는 명세상 세션 수명 프로세스라 게이트하면 영구 교착 — 통과가
+    정당한 라운드 종료다. 그 외 타입·미지 타입·필드 부재는 게이팅하지 않는다: 실패 방향은 이른 advisor이지
+    루프 정지가 아니다. (설계 초기의 "하네스가 pending background agent 동안 Stop 발화 자체를 보류한다" 가정은
+    background 기본화(v2.1.198)로 표류해 폐기 — 2026-07-15 세션 트랜스크립트 실측으로 확인, 공식 필드 판독으로
+    대체. 구 대처였던 "긴 Bash는 Agent에 위임" 규칙도 불필요해져 폐기 — background shell이 직접 게이트된다.)
 
 ---
 

@@ -25,8 +25,9 @@ disable-model-invocation: true
 - [CAUTION] 사용자의 도움이 필요한 질문이나 요청이 발생하면 멈추지 말고 `AskUserQuestion`를 사용하세요.
   - `AskUserQuestion`은 루프 안에서 사용자와 소통할 수 있는 유일한 도구입니다. 창의적으로 활용하세요.
   - 반드시 사용자의 도움이 꼭 필요할때만 사용하고 가급적 스스로 판단하세요.
-- [CRITICAL!] 5분 이상 걸리는 Bash 실행은 `Agent(run_in_background)`에 위임하세요.
-  - Monitor를 대기에 사용하지 마세요.
+- 완료를 기다릴 작업은 background(shell·`Agent`·`Workflow`)로 실행하세요.
+  - background가 빌 때까지 advisor는 소집되지 않으며, 완료가 세션을 깨웁니다.
+  - 서버 같은 ambient 프로세스는 `Monitor`로 돌리거나 라운드 안에서 정리하세요.
 </rules>
 
 <ANCHOR>

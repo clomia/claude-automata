@@ -472,22 +472,54 @@ class TestStop:
         assert load_ledger(tmp_path / "s1_loop.json")["phase"] == ADVISING
         assert not (tmp_path / "s1_advisor_token").exists()
 
-    def test_shell_or_monitor_background_does_not_gate(
-        self, tmp_path, monkeypatch, capsys
-    ):
-        """Only delegated round work (subagent, workflow) gates: a stop with just
-        a shell command or monitor left is a legitimate round end and arms the
-        advisor as usual."""
+    def test_background_shell_nags_once_then_waits(self, tmp_path, monkeypatch, capsys):
+        """A shell-only background holds the round open: the first stop gets one
+        redirect notice (wait, or move an ambient process off the shell lane) and
+        no advisor; a repeat stop with the same shell set waits silently; a new
+        shell id nags again."""
+        arrange_anchor(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+            ledger={"phase": ADVISING, "advice_history": []},
+        )
+        shell_stdin = lambda ids: make_stdin(  # noqa: E731
+            transcript_path=str(tmp_path / "s1.jsonl"),
+            background_tasks=[
+                {"id": i, "type": "shell", "status": "running"} for i in ids
+            ],
+        )
+        arrange(tmp_path, monkeypatch, shell_stdin(["t1"]))
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        assert "Background shell" in capsys.readouterr().err
+        assert not (tmp_path / "s1_advisor_token").exists()
+        assert load_ledger(tmp_path / "s1_loop.json")["phase"] == ADVISING
+
+        arrange(tmp_path, monkeypatch, shell_stdin(["t1"]))
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 0  # same set: the loop waits for the exit wake
+
+        arrange(tmp_path, monkeypatch, shell_stdin(["t1", "t9"]))
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2  # a new shell id gets its own redirect
+        assert "Background shell" in capsys.readouterr().err
+
+    def test_monitor_only_background_arms_advisor(self, tmp_path, monkeypatch, capsys):
+        """Monitor is the ambient, session-lifetime lane and never gates: a stop
+        with only monitors left is a legitimate round end — the advisor arms and
+        a stale shell-redirect marker is cleared."""
         arrange_anchor(tmp_path, monkeypatch, ROUND_WORK, ledger={"phase": FRESH})
+        (tmp_path / "s1_gated_shells").write_text("t1")
         arrange(
             tmp_path,
             monkeypatch,
             make_stdin(
                 transcript_path=str(tmp_path / "s1.jsonl"),
-                background_tasks=[
-                    {"id": "t1", "type": "shell", "status": "running"},
-                    {"id": "t2", "type": "monitor", "status": "running"},
-                ],
+                background_tasks=[{"id": "t2", "type": "monitor", "status": "running"}],
             ),
         )
         with pytest.raises(SystemExit) as exc:
@@ -495,6 +527,7 @@ class TestStop:
         assert exc.value.code == 2
         assert (tmp_path / "s1_advisor_token").exists()
         assert "ploop:advisor" in capsys.readouterr().err
+        assert not (tmp_path / "s1_gated_shells").exists()
 
     def test_first_decline_redirects_to_advisor_authority(
         self, tmp_path, monkeypatch, capsys

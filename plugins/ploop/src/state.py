@@ -95,6 +95,10 @@ class Workspace:
         return self.path("compacted")
 
     @property
+    def gated_shells_path(self) -> Path:
+        return self.path("gated_shells")
+
+    @property
     def advice_path(self) -> Path:
         return Path(tempfile.gettempdir()) / f"ploop_{self.session_id}_advice.md"
 
@@ -111,6 +115,7 @@ class Workspace:
             self.advisor_token_path,
             self.advisor_running_path,
             self.compacted_path,
+            self.gated_shells_path,
             self.advice_path,
             self.narration_path,
         ):
