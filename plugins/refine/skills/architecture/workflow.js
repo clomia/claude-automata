@@ -12,7 +12,7 @@ export const meta = {
   ],
 }
 
-const SYNOD = 'refine-architecture:synod'
+const SYNOD = 'refine:synod'
 const cfg = typeof args === 'string' ? JSON.parse(args) : args
 const { focusArea, projectDir, agoraPath, repomixCmd, principlesPath } = cfg
 const plansDir = `${agoraPath}/refactor-manager/plans`
@@ -24,7 +24,7 @@ function header(agoraName) {
     `Your Agora Path: ${agoraPath}/${agoraName}/`,
     `Agora Base Path: ${agoraPath}/`,
     `Project Dir: ${projectDir}`,
-    `design-principles: ${principlesPath}`,
+    `principles: ${principlesPath}`,
     `repomix: ${repomixCmd}`,
     focusArea ? `집중 분석 영역: ${focusArea}` : '분석 대상: 코드베이스 전체',
     '',
@@ -34,7 +34,7 @@ function header(agoraName) {
 const synod = (agoraName, task, opts = {}) =>
   agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
 
-const PRINCIPLE = `## 리팩토링 원칙 (design-principles 해석)
+const PRINCIPLE = `## 리팩토링 원칙 (principles 해석)
 - 최대한 단순한 설계로 side-effect 없이 최대한 많은 안티패턴을 제거하라.
 - 모든 안티패턴 제거는 불가능하다. ROI가 가장 높은 최적해를 찾아라.
 - backlog proposal 금지. ROI 낮은 계획은 과감히 폐기하라.`
@@ -96,6 +96,7 @@ const PLANS_SCHEMA = {
         properties: {
           name: {
             type: 'string',
+            pattern: '^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*$',
             description: "English kebab-case '{index}-{name}', exactly matching the plan directory you wrote",
           },
         },
@@ -166,7 +167,7 @@ const found = (
       synod(
         r.dir,
         `# 임무: 안티패턴 식별 — 영역 '${r.dir}' (${r.scope})
-design-principles를 기준으로 이 영역의 안티패턴을 식별하고 네 Agora에 기록하라.
+principles를 기준으로 이 영역의 안티패턴을 식별하고 네 Agora에 기록하라.
 **모든 안티패턴에는 합리적인 이유가 존재한다.** 코드 주변 환경과 히스토리(.claude/·문서·설정·git 등)를 탐구해서
 각 안티패턴의 존재 이유를 추론하고 함께 기록하라.`,
         { label: `identify:${r.dir}`, phase: 'Identify', schema: ANTIPATTERNS_SCHEMA },

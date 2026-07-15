@@ -64,8 +64,8 @@ wheels = [
 ]
 
 [[package]]
-name = "refine-architecture"
-version = "0.2.0"
+name = "refine"
+version = "0.3.0"
 source = { editable = "." }
 
 [package.dev-dependencies]

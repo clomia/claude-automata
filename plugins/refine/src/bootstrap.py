@@ -1,14 +1,16 @@
-"""CLI — print the fully resolved Workflow tool call for a refine-architecture run.
+"""CLI — print the fully resolved Workflow tool call for a refine run.
 
-The skill body runs this and executes the printed Workflow(...) call verbatim, so a
-single CLI covers both entry paths: a user typing /refine-architecture:refine-architecture
-and the model invoking the skill as a tool. (A UserPromptExpansion hook would catch only
-the first — it fires on user-typed commands alone; the model's tool call fires PreToolUse
-instead, so one skill-run CLI is simpler than two hooks.)
+Every refine skill body runs `bootstrap <skill>` and executes the printed
+Workflow(...) call verbatim, so a single CLI covers both entry paths: a user
+typing /refine:<skill> and the model invoking the skill as a tool. (A
+UserPromptExpansion hook would catch only the first — it fires on user-typed
+commands alone; the model's tool call fires PreToolUse instead, so one
+skill-run CLI is simpler than two hooks.)
 
-It resolves a repomix runner that works on this machine, opens a private Agora workspace
-under the system temp directory, and prints the call — scriptPath and args fully filled
-in — to stdout. Diagnostics go to stderr so stdout stays exactly the call to run.
+It resolves a repomix runner that works on this machine, opens a private Agora
+workspace under the system temp directory, and prints the call — scriptPath
+and args fully filled in — to stdout. Diagnostics go to stderr so stdout stays
+exactly the call to run.
 """
 
 import json
@@ -19,7 +21,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-SKILL_DIR = Path(__file__).resolve().parent.parent / "skills" / "refine-architecture"
+SKILLS_DIR = Path(__file__).resolve().parent.parent / "skills"
+SKILLS = tuple(
+    sorted(p.name for p in SKILLS_DIR.iterdir() if (p / "workflow.js").is_file())
+)
 
 
 def resolve_repomix() -> str:
@@ -49,17 +54,22 @@ def install_bun_bunx() -> str:
 
 
 def main() -> int:
-    focus = " ".join(sys.argv[1:]).strip()
+    if len(sys.argv) < 2 or sys.argv[1] not in SKILLS:
+        print(f"usage: bootstrap {{{'|'.join(SKILLS)}}} [focus ...]", file=sys.stderr)
+        return 1
+    skill = sys.argv[1]
+    focus = " ".join(sys.argv[2:]).strip()
     project = Path(os.environ.get("CLAUDE_PROJECT_DIR") or ".").resolve()
-    agora = Path(tempfile.mkdtemp(prefix="refine-architecture-agora-"))
+    agora = Path(tempfile.mkdtemp(prefix=f"refine-{skill}-agora-"))
 
-    script = str(SKILL_DIR / "workflows" / "refine-architecture.js")
+    skill_dir = SKILLS_DIR / skill
+    script = str(skill_dir / "workflow.js")
     args = {
         "focusArea": focus,
         "projectDir": str(project),
         "agoraPath": str(agora),
         "repomixCmd": resolve_repomix(),
-        "principlesPath": str(SKILL_DIR / "design-principles.md"),
+        "principlesPath": str(skill_dir / "principles.md"),
     }
     args_block = json.dumps(args, ensure_ascii=False, indent=2).replace("\n", "\n  ")
     print(

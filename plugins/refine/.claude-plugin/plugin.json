@@ -1,7 +1,7 @@
 {
-  "name": "refine-architecture",
-  "version": "0.2.0",
-  "description": "Code architecture optimization — cross-examines antipatterns into consensus, then applies only the highest-ROI refactors",
+  "name": "refine",
+  "version": "0.3.0",
+  "description": "Repository debt elimination — heavyweight multi-agent workflows that cross-examine findings into consensus, then apply only the highest-ROI fixes: architecture, docs, integrity",
   "author": {
     "name": "clomia",
     "email": "clomia.sig@gmail.com",
@@ -13,6 +13,8 @@
   "keywords": [
     "refactoring",
     "architecture",
+    "documentation",
+    "integrity",
     "antipattern",
     "workflow",
     "multi-agent",
