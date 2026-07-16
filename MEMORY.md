@@ -10,22 +10,30 @@ git 미추적, advisor는 메타인지), **tx가 응고 관문**(작업기억 �
 ## 기억 모델
 
 ```
-WORKING MEMORY                 CONSOLIDATION            LONG-TERM MEMORY
-(untracked, lossy,             (the only gate)          (git-tracked, verified,
- dies with the loop)                                     shared across agents/time)
---------------------           ----------------         --------------------------
-ploop workspace                tx transaction
-  anchor: loop intent            change artifacts       openspec/specs/     semantic
-  state: loop-local      --->    (proposal/design/ ---> openspec/changes/   episodic
-  facts: candidates              tasks/delta)             archive/
-  terms: candidates              + CI + verify           docs, CLAUDE.md    operational
-  rounds: discard                + squash merge          glossary           lexical
-                                                         .claude/skills     procedural
-                                       ^                          ^
-                                       |                          |
-                                refine workflows: re-ground docs against code,
-                                prune stale claims, dedup (maintenance cycle)
+WORKING MEMORY                CONSOLIDATION           LONG-TERM MEMORY
+(untracked, lossy,            (the only gate)         (git-tracked, non-executable
+ dies with the loop)                                   text; the refine:docs domain)
+--------------------          ----------------        ---------------------------------
+ploop workspace               tx transaction
+  anchor: loop intent           change artifacts      openspec/specs/        semantic: requirements
+  state: loop-local     --->    (proposal/design/ --> openspec/changes/      episodic
+  facts: candidates             tasks/delta)            archive/
+  terms: candidates             + CI + verify         docs, ARCHITECTURE     semantic: design, research
+  rounds: discard               + squash merge        CLAUDE.md, rules       operating rules
+                                                      glossary               lexical
+                                                      comments, docstrings   in-code constraints
+                                                      .claude/skills         procedural
+                                      ^                         ^
+                                      |                         |
+                               refine workflows: re-ground docs against code,
+                               prune stale claims, dedup (maintenance cycle)
 ```
+
+장기기억의 외연은 refine:docs의 도메인 정의와 일치한다 — **git 추적되는, 실행시킬 수 없는 모든
+텍스트**. 쉬운 구분으로 **docs + openspec**이고, 엄밀히는 주석·docstring까지다. openspec은 그중
+문법과 validate를 가진 구조화된 부분집합으로, 구조화가 이득인 기억 — 요구사항의 현재 상태와
+변경의 역사 — 만 담는다. 나머지 semantic(설계 정본·조사 기록)은 자유 산문인 docs가 담는다.
+openspec을 써도 docs는 반드시 생긴다.
 
 장기기억은 **레포 단위**다. 레포를 횡단하는 지식은 그것을 소유한 레포의 장기기억에 속한다.
 회상은 grep이다 — capability·파일 이름이 곧 검색 키이므로 이름이 검색성을 결정한다.
@@ -40,6 +48,7 @@ ploop workspace                tx transaction
 |---|---|
 | 제품 behavior 결정 | delta spec → `openspec/specs/` |
 | 변경의 의도·설계 | change의 proposal·design (archive에 동결) |
+| 레포 전반 구조·설계의 현재 상태 | 아키텍처 문서 — living design SSoT |
 | 코드를 구속하는 측정 사실 | 사용 지점의 constraint 주석 또는 아키텍처 문서 |
 | 외부 세계의 측정 사실 | 조사 문서 (`docs/research/` 류) |
 | 세션마다 참이어야 할 운영 규칙 | CLAUDE.md·rules — 비싼 자리, 최소로 |
@@ -72,7 +81,7 @@ glossary는 장기기억 소속이다. ubiquitous language는 모든 에이전�
 
 | 층 | 내용 | 소유 | 정책 |
 |---|---|---|---|
-| 기억 (data) | `openspec/**` 마크다운 | 이미 각 레포 | — |
+| 기억 (data) | `openspec/**` 마크다운 — 장기기억의 구조화 부분집합 | 이미 각 레포 | — |
 | 엔진 (engine) | CLI: validate·status·instructions·archive… | Fission-AI (MIT) | 채택 · 버전 핀 · seam 뒤 |
 | 정책 (policy) | 스킬 프롬프트 | tx 플러그인 | 전량 자작 — 업스트림 프롬프트 설치 금지 |
 
