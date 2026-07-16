@@ -85,3 +85,12 @@ Prerequisites: uv, [OpenSpec](https://github.com/Fission-AI/OpenSpec) (**must be
 ```
 
 For the full details — the transaction model, guard hooks, base-branch resolution, pausing sync — see the [plugin README](plugins/tx/README.md).
+
+# version-up-alert
+
+> Nothing to install — every claude-automata plugin installs it as a dependency.
+
+When a newer release of any installed claude-automata plugin ships, a one-line notice appears at session start.
+
+- Compares the installed versions against what this repository publishes, and raises one notice naming every plugin that is behind. Update interactively in `/plugin`.
+- Alert-only — it never swaps plugins out from under a running session. You choose when to update.

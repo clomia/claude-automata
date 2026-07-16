@@ -20,6 +20,10 @@
     {
       "name": "tx",
       "source": "./plugins/tx"
+    },
+    {
+      "name": "version-up-alert",
+      "source": "./plugins/version-up-alert"
     }
   ]
 }

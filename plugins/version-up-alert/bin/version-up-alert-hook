@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+# version-up-alert-hook — wraps the update check with a uv availability check.
+#
+# Usage: version-up-alert-hook <entry-point>
+#
+# Installed as a dependency of every claude-automata plugin, this is the one
+# place the marketplace surfaces its uv prerequisite: without uv no plugin's
+# Python hooks can run, so the wrapper emits a single systemMessage instead of
+# one notice per plugin, and exits 0 — a missing prerequisite never breaks the
+# session.
+
+set -e
+
+entry="$1"
+
+if [ -z "$entry" ]; then
+    exit 0
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+    printf '%s' '{"systemMessage":"claude-automata plugins require uv (Python package manager). Install it from https://docs.astral.sh/uv/getting-started/installation/ — without uv, no plugin hooks can run."}'
+    exit 0
+fi
+
+exec uv run --project "${CLAUDE_PLUGIN_ROOT}" "$entry"

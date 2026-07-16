@@ -210,16 +210,15 @@ advice(또는 종료 토큰)를 `advice.md`에 Write만 하고, hook이 다음 �
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(자발 호출 차단) |
 | **Stop** | (전체) | main이 종료 시도 | active 게이트 → **background 게이트**(`background_tasks`: subagent·workflow 조용히 대기, shell은 집합당 1회 교정 지시 후 대기, monitor·그 외 통과) → **in-flight 가드** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 노티스+로그 recap) 또는 `exit 0`(허용) |
 | **SubagentStop** | (전체) | subagent 종료 | `advisor` 종료면 `advisor_running` clear (in-flight 추적) |
-| **SessionStart** | `startup\|resume\|clear` | 세션 시작 | 신규 릴리스 알림 (resume 포함 — 장기 루프는 자주 resume되고 그때 업데이트가 가장 중요; compact은 노티스 스팸이라 제외) |
 
 플러그인 에이전트는 `ploop:<agent>`로 scoped 등록돼 Agent 호출의 subagent_type이 그 이름을 쓴다. 훅은
 `bin/ploop-hook` 셸 래퍼를 거쳐 `uv`를 호출하고, 래퍼가 uv 가용성을 먼저 확인해 미설치 시 graceful
-degrade와 SessionStart 안내를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`args`)으로
+degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`args`)으로
 래퍼를 호출한다 — 경로 placeholder가 셸 토큰화를 거치지 않아 설치 경로에 공백이 있어도 훅이 죽지 않는다.
 
 **Graceful degradation.** `uv`가 없으면 훅 spawn은 무해하게 실패한다. main은 advisor loop를 모르므로(루프는
-전적으로 훅이 구동) advisor 없이 anchor만 수행하고 종료한다 — 루프는 안 돌지만 세션은 깨지지 않고,
-SessionStart가 uv 설치를 안내한다.
+전적으로 훅이 구동) advisor 없이 anchor만 수행하고 종료한다 — 루프는 안 돌지만 세션은 깨지지 않고, uv
+설치 안내는 모든 claude-automata 플러그인이 의존하는 version-up-alert가 세션 시작에 맡는다.
 
 ---
 
@@ -370,12 +369,11 @@ ploop/
 ├── skills/launch/SKILL.md            # /ploop:launch — 루프 notice + 대기 규약 + anchor 핸드오프 (anchor 저장·활성화는 launch 훅)
 ├── skills/off/SKILL.md               # /ploop:off — 일시정지 조용한 고지 (일시정지는 off_command 훅)
 ├── skills/on/SKILL.md                # /ploop:on — 재개 확인 고지 (재개·정규화는 on_command 훅)
-├── hooks/hooks.json                  # UserPromptExpansion(launch·off·on) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop + SessionStart
+├── hooks/hooks.json                  # UserPromptExpansion(launch·off·on) + PostCompact + PreToolUse(Agent) + Stop + SubagentStop
 ├── bin/ploop-hook                    # uv 가용성 체크 래퍼
 ├── src/                              # 훅 구현 (런타임 의존성 없음)
 │   ├── main.py                       # 훅 엔트리포인트(stop·pre_tool_use·subagent_stop·mark_compaction·launch·off_command·on_command)
 │   ├── state.py                      # Workspace(세션 파일 경로의 단일 창구) + 4필드 ledger(advice_history·round_start_line·anomalies·phase) + phase 상수 · preserve-by-default 로드/저장
-│   ├── prompt.py                     # advice-history 포맷 + 5-section advisor trigger 조립(narrator 슬라이스 파일 경로 포함)
-│   └── updater.py                    # SessionStart 업데이트 알림
+│   └── prompt.py                     # advice-history 포맷 + 5-section advisor trigger 조립(narrator 슬라이스 파일 경로 포함)
 └── tests/                            # 구현 독립 (stdin/stdout/disk 구동)
 ```

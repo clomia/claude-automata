@@ -1,0 +1,19 @@
+{
+  "name": "version-up-alert",
+  "version": "0.1.0",
+  "description": "Marketplace-wide update alert — one SessionStart notice naming every claude-automata plugin with a newer release, applied interactively in /plugin. Installed automatically as a dependency of each plugin",
+  "author": {
+    "name": "clomia",
+    "email": "clomia.sig@gmail.com",
+    "url": "https://github.com/clomia"
+  },
+  "homepage": "https://github.com/clomia/claude-automata",
+  "repository": "https://github.com/clomia/claude-automata",
+  "license": "MIT",
+  "keywords": [
+    "update",
+    "version",
+    "alert",
+    "marketplace"
+  ]
+}

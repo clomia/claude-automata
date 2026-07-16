@@ -81,19 +81,6 @@
           }
         ]
       }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "startup|resume|clear",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
-            "args": ["update-check"],
-            "statusMessage": "ploop: checking for updates"
-          }
-        ]
-      }
     ]
   }
 }

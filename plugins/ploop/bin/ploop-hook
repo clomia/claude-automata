@@ -5,11 +5,11 @@
 #
 # Every ploop hook is routed through this script.  If uv is not
 # installed we cannot execute any Python code, so the wrapper exits 0 without
-# error.  SessionStart additionally emits a systemMessage so the user learns
-# that installing uv is required to run the parallax loop, and the
+# error — the session is never broken by a missing prerequisite.  The
 # launch/off/on command expansions are blocked so their skill bodies never
-# announce a loop state that wasn't reached.
-# Other hooks stay silent to avoid flooding the session with duplicate notices.
+# announce a loop state that wasn't reached; every other hook stays silent —
+# the session-start uv notice is version-up-alert's job (a dependency of every
+# claude-automata plugin).
 
 set -e
 
@@ -21,9 +21,6 @@ fi
 
 if ! command -v uv >/dev/null 2>&1; then
     case "$entry" in
-        update-check)
-            printf '%s' '{"systemMessage":"ploop requires uv (Python package manager). Install it from https://docs.astral.sh/uv/getting-started/installation/ — without uv, the parallax loop will not run."}'
-            ;;
         launch|off-command|on-command)
             printf '%s' '{"decision":"block","reason":"ploop requires uv (Python package manager) — the loop state did not change. Install it from https://docs.astral.sh/uv/getting-started/installation/"}'
             ;;
