@@ -210,11 +210,12 @@ advice(또는 종료 토큰)를 `advice.md`에 Write만 하고, hook이 다음 �
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(자발 호출 차단) |
 | **Stop** | (전체) | main이 종료 시도 | active 게이트 → **background 게이트**(`background_tasks`: subagent·workflow 조용히 대기, shell은 집합당 1회 교정 지시 후 대기, monitor·그 외 통과) → **in-flight 가드** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 노티스+로그 recap) 또는 `exit 0`(허용) |
 | **SubagentStop** | (전체) | subagent 종료 | `advisor` 종료면 `advisor_running` clear (in-flight 추적) |
-| **SessionStart** | `startup\|clear` | 세션 시작 | 신규 릴리스 알림 |
+| **SessionStart** | `startup\|resume\|clear` | 세션 시작 | 신규 릴리스 알림 (resume 포함 — 장기 루프는 자주 resume되고 그때 업데이트가 가장 중요; compact은 노티스 스팸이라 제외) |
 
 플러그인 에이전트는 `ploop:<agent>`로 scoped 등록돼 Agent 호출의 subagent_type이 그 이름을 쓴다. 훅은
 `bin/ploop-hook` 셸 래퍼를 거쳐 `uv`를 호출하고, 래퍼가 uv 가용성을 먼저 확인해 미설치 시 graceful
-degrade와 SessionStart 안내를 한 지점에서 일원화한다.
+degrade와 SessionStart 안내를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`args`)으로
+래퍼를 호출한다 — 경로 placeholder가 셸 토큰화를 거치지 않아 설치 경로에 공백이 있어도 훅이 죽지 않는다.
 
 **Graceful degradation.** `uv`가 없으면 훅 spawn은 무해하게 실패한다. main은 advisor loop를 모르므로(루프는
 전적으로 훅이 구동) advisor 없이 anchor만 수행하고 종료한다 — 루프는 안 돌지만 세션은 깨지지 않고,

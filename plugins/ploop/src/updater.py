@@ -1,10 +1,13 @@
 """Update notifier — SessionStart hook that surfaces newer ploop releases.
 
-Runs on SessionStart with source in {startup, clear}.  Reads the installed
-version from .claude-plugin/plugin.json, fetches the same manifest from the
-remote repository under a 6-hour cooldown, and emits a user-visible
-systemMessage JSON envelope to stdout when the remote version is strictly
-newer.
+Runs on SessionStart with source in {startup, resume, clear} — resume included
+because ploop's multi-day loops are resumed constantly, and that is exactly when
+a pending update matters most.  Reads the installed version from
+.claude-plugin/plugin.json, fetches the same manifest from the remote repository
+under a 6-hour cooldown, and emits a user-visible systemMessage JSON envelope to
+stdout when the remote version is strictly newer.  `compact` is deliberately
+excluded from the matcher: the notice re-emits on every fire (only the fetch is
+cooled), and a loop compacts often, so compact would spam it.
 
 Fails silently on every error path — missing env, network, parse — to
 guarantee session startup is never delayed or disrupted.

@@ -6,7 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook launch"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
+            "args": ["launch"]
           }
         ]
       },
@@ -15,7 +16,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook off-command"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
+            "args": ["off-command"]
           }
         ]
       },
@@ -24,7 +26,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook on-command"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
+            "args": ["on-command"]
           }
         ]
       }
@@ -35,7 +38,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook mark-compaction"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
+            "args": ["mark-compaction"]
           }
         ]
       }
@@ -46,7 +50,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook pre-tool-use",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
+            "args": ["pre-tool-use"],
             "timeout": 30,
             "statusMessage": "ploop: gating"
           }
@@ -58,7 +63,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook stop",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
+            "args": ["stop"],
             "timeout": 120,
             "statusMessage": "ploop: advising"
           }
@@ -70,18 +76,21 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook subagent-stop"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
+            "args": ["subagent-stop"]
           }
         ]
       }
     ],
     "SessionStart": [
       {
-        "matcher": "startup|clear",
+        "matcher": "startup|resume|clear",
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook update-check"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
+            "args": ["update-check"],
+            "statusMessage": "ploop: checking for updates"
           }
         ]
       }
