@@ -1,9 +1,10 @@
 # 기억 아키텍처
 
-claude-automata의 세 플러그인은 하나의 기억 시스템을 이룬다 — **ploop이 작업기억**(루프 스코프,
-git 미추적, advisor는 메타인지), **tx가 응고 관문**(작업기억 → 장기기억의 유일한 문), **refine이
-재접지**(장기기억을 실측과 재대조). 이 문서는 장기기억의 설계 정본이다: 무엇이 기억되고, 어디에
-살고, 어떻게 검증되며, OpenSpec 의존의 경계가 어디인지.
+claude-automata의 세 플러그인은 하나의 기억 시스템을 이룬다 — **ploop은 작업기억 기반 장기
+루프**(git 미추적, advisor는 메타인지), **tx는 장기기억 기반 정합 메커니즘**(분산 정합이자 응고
+관문 — 작업기억 → 장기기억의 유일한 문), **refine은 환경 청소기**(장기기억·코드·시스템의 유지보수
+주기). 이 문서는 장기기억의 설계 정본이다: 무엇이 기억되고, 어디에 살고, 어떻게 검증되며,
+OpenSpec 의존의 경계가 어디인지.
 
 ---
 
@@ -34,6 +35,13 @@ ploop workspace               tx transaction
 문법과 validate를 가진 구조화된 부분집합으로, 구조화가 이득인 기억 — 요구사항의 현재 상태와
 변경의 역사 — 만 담는다. 나머지 semantic(설계 정본·조사 기록)은 자유 산문인 docs가 담는다.
 openspec을 써도 docs는 반드시 생긴다.
+
+장기기억은 두 표면으로 나뉜다. **spec 표면**(구조화)은 이 문서가 확정한다 — **raw openspec**
+(`init --tools none` 스캐폴드 + 핀 버전 CLI, 업스트림 프롬프트 0) 위에 tx 소유 스킬. **docs
+표면**(자유 산문)은 자리만 승격 라우팅으로 정해졌고, 규약 — glossary 형식·조사 기록 구조·설계
+정본의 위치 — 은 열린 설계 항목이다(작업 목록 6). 표면의 비대칭에 주의: spec 표면이 도구를
+요구하는 이유는 문법·validate·상태기계이고, docs 표면은 자유 산문이라 회상(grep)·유지보수
+(refine:docs)·승격(tx)이 이미 있다 — 남은 것은 도구가 아니라 규약일 가능성이 높다.
 
 장기기억은 **레포 단위**다. 레포를 횡단하는 지식은 그것을 소유한 레포의 장기기억에 속한다.
 회상은 grep이다 — capability·파일 이름이 곧 검색 키이므로 이름이 검색성을 결정한다.
@@ -118,10 +126,16 @@ tx의 OpenSpec 의존은 다음이 전부다:
   전부여야 한다.
 - **validate의 1차 소비자는 CI다** — 각 레포의 required check로 실행해 tx:close의 CI 대기가
   문서 무결성까지 지키게 한다. 에이전트 측 CLI 표면은 최소로 유지한다.
-- **설치는 핀 버전이다** (`@latest` 금지). 업그레이드는 릴리스 노트 검토 + 스킬 표면
-  재감사를 거친 의도적 행위다(audit-harness-deps 패턴).
-- **exit plan** — 포맷은 플레인 텍스트라 기억은 도구와 독립이다. 필요 시 같은 seam 뒤에서
-  사용 커맨드만 재구현하거나 MIT 포크한다.
+- **결합은 `npx --yes @fission-ai/openspec@<pin>` 호출이다** — 설치가 아니다. 핀의 정본은 tx이고
+  tx 릴리스와 함께 버전된다(글로벌 설치·레포별 package.json 없음). 업그레이드는 릴리스 노트 검토 +
+  스킬 표면 재감사를 거친 의도적 tx 릴리스다(audit-harness-deps 패턴).
+- **스캐폴드는 `openspec init --tools none`이다** — 산출물은 `specs/`·`changes/archive/`·
+  `config.yaml`뿐이다(1.6.0 실측, 비대화식). 업스트림 프롬프트는 어떤 레포에도 배포되지 않는다.
+- **fork하지 않는다** — fork는 validate 유지보수를 떠안아 채택의 이유를 소멸시키고, 기억 문법을
+  에이전트의 수정 권한 안으로 들여 외부 고정점을 파괴한다. npm 버전 불변성으로 핀이 동결을 이미
+  보장한다.
+- **exit plan** — 포맷은 플레인 텍스트라 기억은 도구와 독립이다. `npm pack` 타르볼 보관으로 소멸
+  리스크를 헤지하고, 필요 시에만 같은 seam 뒤에서 사용 커맨드를 재구현하거나 MIT 포크한다.
 
 ---
 
@@ -138,7 +152,9 @@ tx의 OpenSpec 의존은 다음이 전부다:
      게이트로 편입. CI가 기계적 무결성이면 verify는 의도 무결성이다.
    - **archive** (archive-change 대체): 확인 다이얼로그 전부 제거 — change는 tx 브랜치에서
      결정되고, 미완료 태스크는 close 차단 사유이며, delta sync는 무조건 수행한다.
-2. **설치 절차 정리** — README에서 `@latest` → 핀 버전, "skills-only 설치" 요구 삭제.
+2. **결합 절차 교체** — README의 설치 절차(글로벌 `@latest` + config profile + skills-only)를
+   npx 핀 + `init --tools none`으로 통째로 대체한다. 스캐폴드 부재 시 tx:open이 직접
+   초기화한다(비대화식).
 3. **schema 감사** — `openspec instructions <id> --json` 출력 전수 검사. 사용자 호출 유도가
    있으면 `openspec schema fork spec-driven automata`로 schema.yaml·templates를 소유한다.
    없으면 fork하지 않는다.
@@ -148,12 +164,13 @@ tx의 OpenSpec 의존은 다음이 전부다:
 5. **ploop×tx Stop 훅 동거를 계약으로 문서화** — git-sync가 `stop_hook_active`에서 조기
    반환해 ploop 라운드 체인에 rebase nudge가 끼어들지 않는 현행 동작은 옳지만 창발적이다.
    tx가 루프의 응고 관문이 되는 순간 이 접면은 심장부다 — 의도된 계약으로 명문화한다.
+6. **docs 표면 설계** — glossary 형식, 조사 기록 구조, 설계 정본의 위치 규약, 전용 도구의
+   필요 여부(규약만으로 충분할 가능성이 높다). 이것이 잡히면 claude-automata의 전체 구조가
+   닫힌다.
 
 ## 검증 대기 — 실측 전까지 가정
 
-- `openspec init`이 프롬프트 산출물 0개로 스캐폴드만 만들 수 있는지 (profile에 무배포 옵션이
-  있는지, 없다면 생성-후-삭제 또는 update 미실행으로 충분한지).
-- schema fork가 `instructions` 출력의 모든 텍스트를 커버하는지 (업스트림
-  `schemas/spec-driven/`에 schema.yaml과 templates가 함께 있어 파일 구조상 그래 보이나,
-  fork 산출물로 확인 필요).
+- schema fork가 `instructions` 출력의 모든 텍스트를 커버하는지 — 작업 목록 3의 감사가 fork를
+  요구하는 경우에만 확인한다 (업스트림 `schemas/spec-driven/`에 schema.yaml과 templates가 함께
+  있어 파일 구조상 그래 보인다).
 - 완전 무인(headless) 환경에서 AskUserQuestion의 실제 동작 (대기·타임아웃·실패 중 무엇인지).
