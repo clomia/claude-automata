@@ -6,8 +6,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook branch-state-warn",
-            "timeout": 30
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook",
+            "args": ["branch-state-warn"],
+            "timeout": 30,
+            "statusMessage": "tx: checking branch state"
           }
         ]
       }
@@ -18,7 +20,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook branch-protect-block",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook",
+            "args": ["branch-protect-block"],
             "statusMessage": "tx: guarding branch"
           }
         ]
@@ -29,7 +32,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook git-sync",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook",
+            "args": ["git-sync"],
             "timeout": 60,
             "statusMessage": "tx: sync check"
           }
@@ -42,7 +46,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook git-sync-off"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook",
+            "args": ["git-sync-off"]
           }
         ]
       },
@@ -51,7 +56,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook git-sync-on"
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook",
+            "args": ["git-sync-on"]
           }
         ]
       }

@@ -157,13 +157,38 @@ def decide_announcement(state: SyncState, base: str) -> str | None:
     return should_announce(state, ahead, origin_sha, base, time.time())
 
 
-def is_stop_hook_active(raw: str) -> bool:
-    data = load_json_dict(raw)
+def is_stop_hook_active(data: dict[str, object] | None) -> bool:
     return bool(data and data.get("stop_hook_active"))
 
 
+# Background task types that hold or mutate the working tree.  While one is in
+# flight the harness stops the session but wakes it again on completion (their
+# specs promise a notification/re-invoke), so the rebase nudge is deferred until
+# the tree is genuinely idle — a mid-flight rebase would rewrite tracked files
+# under that work, the exact hazard /tx:git-sync-off guards against.  monitor,
+# teammate, and cron never complete, so they never gate.
+WORKTREE_BACKGROUND_TYPES = ("shell", "subagent", "workflow")
+
+
+def worktree_work_in_flight(data: dict[str, object] | None) -> bool:
+    tasks = (data or {}).get("background_tasks")
+    if not isinstance(tasks, list):
+        return False
+    return any(
+        isinstance(t, dict) and t.get("type") in WORKTREE_BACKGROUND_TYPES
+        for t in tasks
+    )
+
+
 def main() -> None:
-    if is_stop_hook_active(sys.stdin.read()):
+    event = load_json_dict(sys.stdin.read())
+    if is_stop_hook_active(event):
+        return
+
+    # Defer the nudge while worktree-holding background work is still running —
+    # the completion event re-wakes the session, and the sha-dedupe re-announces
+    # at the next genuinely idle stop, so nothing is lost.
+    if worktree_work_in_flight(event):
         return
 
     if sync_paused():

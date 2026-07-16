@@ -83,7 +83,7 @@ no-op outside a git repository, without an `origin` remote, or when uv is missin
 | ---- | ----- | ------------ |
 | `branch-protect-block` | `PreToolUse(Edit\|Write\|NotebookEdit)` | Blocks edits to **tracked** files on the base branch — open a transaction first. Untracked, new, and gitignored targets are allowed. |
 | `branch-state-warn` | `SessionStart` (incl. after compaction) | Heals a missing `origin/HEAD` mirror, then surfaces branch state: on the protected branch, a transaction open > 24h, or `origin/<base>` ahead by unmerged PRs. |
-| `git-sync` | `Stop` | On a `tx-*` branch, if `origin/<base>` has pulled ahead, blocks the stop and nudges a rebase — until the branch is synced. Multi-session safe (flock, fetch throttle, announce dedupe). |
+| `git-sync` | `Stop` | On a `tx-*` branch, if `origin/<base>` has pulled ahead, blocks the stop and nudges a rebase — until the branch is synced. Defers while worktree-holding background work (a shell, subagent, or workflow) is in flight, so the rebase never rewrites files under it. Multi-session safe (flock, fetch throttle, announce dedupe). |
 
 ## Pause the sync nagging
 

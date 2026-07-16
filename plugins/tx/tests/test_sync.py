@@ -57,9 +57,25 @@ def test_should_announce_new_sha_announces_immediately():
 
 
 def test_is_stop_hook_active():
-    assert sync.is_stop_hook_active('{"stop_hook_active": true}')
-    assert not sync.is_stop_hook_active("{}")
-    assert not sync.is_stop_hook_active("garbage")
+    assert sync.is_stop_hook_active({"stop_hook_active": True})
+    assert not sync.is_stop_hook_active({})
+    assert not sync.is_stop_hook_active(None)
+
+
+def test_worktree_work_in_flight():
+    """Worktree-holding types (shell/subagent/workflow) defer the nudge; the
+    session-lifetime and never-completing types (monitor/teammate) do not, and a
+    missing or malformed field degrades to no deferral."""
+    for kind in ("shell", "subagent", "workflow"):
+        assert sync.worktree_work_in_flight({"background_tasks": [{"type": kind}]})
+    assert not sync.worktree_work_in_flight({"background_tasks": [{"type": "monitor"}]})
+    assert not sync.worktree_work_in_flight(
+        {"background_tasks": [{"type": "teammate"}]}
+    )
+    assert not sync.worktree_work_in_flight({"background_tasks": []})
+    assert not sync.worktree_work_in_flight({})
+    assert not sync.worktree_work_in_flight(None)
+    assert not sync.worktree_work_in_flight({"background_tasks": "nonsense"})
 
 
 def test_build_reason_mentions_base_and_count():
