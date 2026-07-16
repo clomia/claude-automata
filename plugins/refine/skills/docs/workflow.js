@@ -3,10 +3,10 @@ export const meta = {
   description: 'Documentation-to-code alignment — verify every claim in every non-executable text against the code, cross-examine discrepancies into consensus, then apply only the highest-ROI fixes',
   phases: [
     { title: 'Census', detail: 'inventory every non-executable text and split into verification regions' },
-    { title: 'Verify', detail: 'check every claim in every document against the code' },
+    { title: 'Verify', detail: 'sweep every claim in every document against the code until findings run dry' },
     { title: 'Deliberate', detail: 'defend, critique, and settle the consensus list' },
     { title: 'Plan', detail: 'draft self-contained alignment plans' },
-    { title: 'Review', detail: 'audit each plan for ROI and side effects' },
+    { title: 'Review', detail: 'audit each plan through claim, reduction, and side-effect lenses' },
     { title: 'Refine', detail: 'improve plans and fix the execution order' },
     { title: 'Apply', detail: 'execute plans sequentially and re-verify' },
   ],
@@ -148,7 +148,8 @@ await synod(
   `# 임무: 문서 전수조사와 검증 영역 정의
 ${DOMAIN}
 레포지토리의 문서를 하나도 빠짐없이 목록화하고, **독립적으로 검증 가능한 영역**으로 나눠라.
-한 영역은 문서 집합과 그 문서들이 서술하는 코드 범위로 구성된다. 모든 영역은 모호한 경계 없이 명확히 나누어 떨어져야 한다.
+한 영역은 문서 집합과 그 문서들이 서술하는 코드 범위로 구성된다.
+모든 영역은 모호한 경계 없이 명확히 나누어 떨어져야 하고, 에이전트 하나가 전수 검증할 수 있는 크기여야 한다.
 영역별 문서 인벤토리와 착수 컨텍스트를 네 Agora에 기록하라.`,
   { label: 'census:draft', schema: REGIONS_SCHEMA },
 )
@@ -171,70 +172,90 @@ const regions = (mapping?.regions ?? []).map((r, i) => {
 if (!regions.length) return { status: 'no-regions', agoraPath }
 log(`${regions.length} regions: ${regions.map((r) => r.dir).join(', ')}`)
 
-// 2. Verify — 영역별 주장 검증 (parallel)
+// 2. Verify — 영역별 주장 검증: 새 발견이 마를 때까지 재수색 (parallel per region)
 phase('Verify')
-const found = (
-  await parallel(
-    regions.map((r) => () =>
-      synod(
-        r.dir,
-        `# 임무: 주장 검증 — 영역 '${r.dir}' (${r.scope})
+const SWEEPS = 4
+async function verifyRegion(r) {
+  let count = 0
+  for (let round = 1; round <= SWEEPS; round++) {
+    const res = await synod(
+      r.dir,
+      `# 임무: 주장 검증 — 영역 '${r.dir}' (${r.scope})
 ${DOMAIN}
 인벤토리의 모든 문서를 읽고, 문서의 모든 주장(claim)을 코드와 대조해 검증하라.
 발견은 다음으로 분류한다: mismatch(코드와 다른 주장) / duplication(같은 정보의 다중 서술 — 다른 영역 문서와의 중복 포함) / dead-doc(대상이 사라진 문서) / restating-comment(코드를 재언하는 주석) / code-defect(문서가 의도를 담고 코드가 결함인 충돌).
-각 발견의 근거(문서 위치·코드 위치)를 네 Agora에 기록하라. code-defect는 보고 대상이며 이 워크플로우의 수정 대상이 아니다.`,
-        { label: `verify:${r.dir}`, phase: 'Verify', schema: FINDINGS_SCHEMA },
-      ),
-    ),
-  )
-).filter(Boolean)
-
-const totalFindings = found.reduce((n, x) => n + (x.findings?.length ?? 0), 0)
+각 발견의 근거(문서 위치·코드 위치)를 네 Agora에 기록하라. code-defect는 보고 대상이며 이 워크플로우의 수정 대상이 아니다.
+네 Agora에 이미 발견이 기록되어 있다면 그 너머의 새 발견만 기록·반환하라. 새 발견이 없으면 빈 배열을 반환하라.`,
+      { label: `verify:${r.dir}#${round}`, phase: 'Verify', schema: FINDINGS_SCHEMA },
+    )
+    const fresh = res?.findings?.length ?? 0
+    count += fresh
+    if (!fresh) break
+  }
+  return count
+}
+const counts = (await parallel(regions.map((r) => () => verifyRegion(r)))).filter((n) => n !== null)
+const totalFindings = counts.reduce((a, b) => a + b, 0)
 if (totalFindings === 0) return { status: 'no-findings', agoraPath }
-log(`${totalFindings} findings across ${found.length} regions`)
+log(`${totalFindings} findings across ${regions.length} regions`)
 
 // 3. Deliberate — 비판·반박·합의 (barriers: 각 단계가 이전 단계 전체 산출물을 요구)
+// 영역이 하나면 독립 스켑틱이 비판을 맡아 교차검증을 보존한다
 phase('Deliberate')
 const names = regions.map((r) => r.dir)
+const critics =
+  regions.length > 1
+    ? regions.map((r) => ({
+        dir: r.dir,
+        role: `영역 '${r.dir}'의 변호인이자 다른 영역의 비판자`,
+        targets: names.filter((n) => n !== r.dir),
+      }))
+    : [{ dir: 'skeptic', role: '독립 비판자', targets: names }]
 
-if (regions.length > 1) {
-  // 3.1 비판: 다른 영역의 발견을 검토, 비평은 자기 Agora에 기록
-  await parallel(
-    regions.map((r) => () =>
-      synod(
-        r.dir,
-        `# 임무: 비판 (회의 1/3)
-너는 영역 '${r.dir}'의 변호인이자 다른 영역의 비판자다.
-다른 영역들(${names.filter((n) => n !== r.dir).join(', ')})의 Agora에 기록된 발견을 비판적으로 검토하라 —
-문서가 실제로는 옳은 오검출을 지목하고, 영역 경계에 걸쳐 놓친 중복·불일치를 찾아라.
-각 비평을 **네 Agora**에 기록하라 (누구의 어떤 발견에 대한 비평인지 명시).`,
-        { label: `critique:${r.dir}`, phase: 'Deliberate' },
-      ),
+// 3.1 비판: 대상 영역의 발견을 검토, 비평은 자기 Agora에 기록
+await parallel(
+  critics.map((c) => () =>
+    synod(
+      c.dir,
+      `# 임무: 비판 (회의 1/3)
+너는 ${c.role}다.
+대상 영역(${c.targets.join(', ')})의 Agora에 기록된 발견을 비판적으로 검토하라 —
+문서가 실제로는 옳은 오검출을 지목하고, 그들이 놓친 중복·불일치를 찾아 보완하라.
+각 비평과 보완 발견을 **네 Agora**에 기록하라 (누구의 어떤 발견에 대한 것인지 명시).`,
+      { label: `critique:${c.dir}`, phase: 'Deliberate' },
     ),
-  )
+  ),
+)
 
-  // 3.2 반박: 자기 발견에 달린 비평을 찾아 수용/반박
-  await parallel(
-    regions.map((r) => () =>
-      synod(
-        r.dir,
-        `# 임무: 반박 (회의 2/3)
-다른 영역들의 Agora에서 너의 발견을 겨냥한 비평을 모두 찾아 검토하고,
+// 3.2 반박: 자기 발견에 달린 비평을 찾아 수용/반박
+await parallel(
+  regions.map((r) => () =>
+    synod(
+      r.dir,
+      `# 임무: 반박 (회의 2/3)
+비판자들(${critics.map((c) => c.dir).filter((d) => d !== r.dir).join(', ')})의 Agora에서 너의 발견을 겨냥한 비평을 모두 찾아 검토하고,
 각 비평에 대한 수용/반박 의견을 네 Agora에 기록하라.`,
-        { label: `rebut:${r.dir}`, phase: 'Deliberate' },
-      ),
+      { label: `rebut:${r.dir}`, phase: 'Deliberate' },
     ),
-  )
-}
+  ),
+)
 
-// 3.3 합의: cartographer가 종합
-const consensus = await synod(
+// 3.3 합의: cartographer가 종합하고 완전성을 검수
+await synod(
   'cartographer',
   `# 임무: 합의 도출 (회의 3/3)
-모든 영역의 발견·비평·반박(${agoraPath}/ 전체)을 종합해서 **합의된 발견 리스트**를
+모든 발견·비평·반박(${agoraPath}/ 전체)을 종합해서 **합의된 발견 리스트**를
 ${agoraPath}/cartographer/consensus.md 에 작성하라.
-교차검증을 통과한, 실재하며 정합 가치가 있는 발견만 남겨라. code-defect 발견은 별도 섹션으로 모아라.`,
-  { label: 'consensus', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
+모든 발견을 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한, 실재하며 정합 가치가 있는 발견만 리스트에 남겨라.
+code-defect 발견은 별도 섹션으로 모아라.`,
+  { label: 'consensus:draft', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
+)
+const consensus = await synod(
+  'cartographer',
+  `# 임무: 합의 완전성 검수
+${agoraPath}/ 전체를 consensus.md 와 대조해 판정이 누락된 발견과 반영되지 않은 비평·반박을 찾아라.
+누락이 있으면 consensus.md 를 수정하고, 최종 리스트를 반환하라.`,
+  { label: 'consensus:review', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
 )
 if (!consensus?.count) return { status: 'no-consensus', agoraPath }
 log(`consensus: ${consensus.count} findings`)
@@ -264,19 +285,24 @@ const plans = (planned?.plans ?? []).map((p, i) => {
 if (!plans.length) return { status: 'no-plans', findings: consensus.count, agoraPath }
 log(`${plans.length} alignment plans`)
 
-// 5. Review — 계획별 검수 (parallel)
+// 5. Review — 계획별 · 렌즈별 독립 검수 (parallel)
 phase('Review')
+const LENSES = [
+  { key: 'claims', charge: '계획의 새 텍스트가 그 자체로 코드와 어긋나는 새 주장을 만들지 않는지 검증하라.' },
+  { key: 'reduction', charge: '계획이 irreducible한지 — 더 삭제·축약할 수 있는지 — 고찰하라.' },
+  { key: 'side-effects', charge: '계획이 고려하지 못한 side-effect를 탐색하라.' },
+]
 await parallel(
-  plans.map((p) => () =>
-    synod(
-      `review-${p.name}`,
-      `# 임무: 정합 계획 검수 — '${p.name}'
+  plans.flatMap((p) =>
+    LENSES.map((l) => () =>
+      synod(
+        `review-${p.name}-${l.key}`,
+        `# 임무: 정합 계획 검수 — '${p.name}' / ${l.key}
 합의된 발견(${agoraPath}/cartographer/consensus.md)과 대상 계획(${p.proposal})을 읽어라.
-- 계획의 새 텍스트가 그 자체로 코드와 어긋나는 새 주장을 만들지 않는지 검증하라.
-- 계획이 irreducible한지 — 더 삭제·축약할 수 있는지 — 고찰하라.
-- 계획이 고려하지 못한 side-effect를 탐색하라.
+${l.charge}
 이슈나 개선점을 네 Agora(review.md)에 기록하라.`,
-      { label: `review:${p.label}`, phase: 'Review' },
+        { label: `review:${p.label}:${l.key}`, phase: 'Review' },
+      ),
     ),
   ),
 )
@@ -308,12 +334,13 @@ for (const name of order) {
     `apply-${name}`,
     `# 임무: 정합 수행 — '${name}'
 계획(${p.proposal})을 읽고 그대로 구현하라. **실행되지 않는 텍스트만 수정한다.**
+선행 적용 기록(${agoraPath}/apply-*)이 있으면 현재 상태 파악에 참고하라.
 주석·docstring 수정으로 코드 파일을 건드렸다면 프로젝트의 테스트 스위트로 behavior가 불변임을 확인하라.
 변경 요약과 확인 결과를 네 Agora에 기록하고 반환하라.`,
     { label: `apply:${p.label}`, phase: 'Apply', schema: APPLY_SCHEMA },
   )
   applied.push({ name, status: res?.status ?? 'unknown', testsPassed: res?.testsPassed ?? null })
-  log(`applied ${applied.length}/${order.length}: ${name}`)
+  log(`applied ${applied.length}/${order.length}: ${name} (${res?.status ?? 'unknown'})`)
 }
 
 const finalReview = await synod(

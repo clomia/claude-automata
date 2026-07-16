@@ -3,10 +3,10 @@ export const meta = {
   description: 'Code architecture optimization — cross-examine antipatterns into consensus, then apply only the highest-ROI refactors',
   phases: [
     { title: 'Map', detail: 'split the codebase into independent analysis regions' },
-    { title: 'Identify', detail: 'find antipatterns per region and infer why they exist' },
+    { title: 'Identify', detail: 'find antipatterns per region until findings run dry' },
     { title: 'Deliberate', detail: 'defend, critique, and settle the consensus list' },
     { title: 'Plan', detail: 'draft self-contained refactoring plans' },
-    { title: 'Review', detail: 'audit each plan for ROI and side effects' },
+    { title: 'Review', detail: 'audit each plan through value and side-effect lenses' },
     { title: 'Refine', detail: 'improve plans and fix the execution order' },
     { title: 'Apply', detail: 'execute plans sequentially and test' },
   ],
@@ -138,7 +138,7 @@ await synod(
   'cartographer',
   `# 임무: 분석 영역 정의
 거시적 관점에서 전체 구조를 이해하고 **독립적으로 해석 가능한 분석 영역**으로 나눠라.
-모든 영역은 모호한 경계 없이 명확히 나누어 떨어져야 한다.
+모든 영역은 모호한 경계 없이 명확히 나누어 떨어져야 하고, 에이전트 하나가 전수 분석할 수 있는 크기여야 한다.
 각 영역의 착수 컨텍스트(범위·진입점·핵심 파일)를 네 Agora에 기록하라.`,
   { label: 'map:draft', schema: REGIONS_SCHEMA },
 )
@@ -159,68 +159,88 @@ const regions = (mapping?.regions ?? []).map((r, i) => {
 if (!regions.length) return { status: 'no-regions', agoraPath }
 log(`${regions.length} regions: ${regions.map((r) => r.dir).join(', ')}`)
 
-// 2. Identify — 영역별 안티패턴 식별 (parallel)
+// 2. Identify — 영역별 안티패턴 식별: 새 발견이 마를 때까지 재수색 (parallel per region)
 phase('Identify')
-const found = (
-  await parallel(
-    regions.map((r) => () =>
-      synod(
-        r.dir,
-        `# 임무: 안티패턴 식별 — 영역 '${r.dir}' (${r.scope})
+const SWEEPS = 4
+async function identifyRegion(r) {
+  let count = 0
+  for (let round = 1; round <= SWEEPS; round++) {
+    const res = await synod(
+      r.dir,
+      `# 임무: 안티패턴 식별 — 영역 '${r.dir}' (${r.scope})
 principles를 기준으로 이 영역의 안티패턴을 식별하고 네 Agora에 기록하라.
 **모든 안티패턴에는 합리적인 이유가 존재한다.** 코드 주변 환경과 히스토리(.claude/·문서·설정·git 등)를 탐구해서
-각 안티패턴의 존재 이유를 추론하고 함께 기록하라.`,
-        { label: `identify:${r.dir}`, phase: 'Identify', schema: ANTIPATTERNS_SCHEMA },
-      ),
-    ),
-  )
-).filter(Boolean)
-
-const totalAntipatterns = found.reduce((n, x) => n + (x.antipatterns?.length ?? 0), 0)
+각 안티패턴의 존재 이유를 추론하고 함께 기록하라.
+네 Agora에 이미 안티패턴이 기록되어 있다면 그 너머의 새 안티패턴만 기록·반환하라. 새 안티패턴이 없으면 빈 배열을 반환하라.`,
+      { label: `identify:${r.dir}#${round}`, phase: 'Identify', schema: ANTIPATTERNS_SCHEMA },
+    )
+    const fresh = res?.antipatterns?.length ?? 0
+    count += fresh
+    if (!fresh) break
+  }
+  return count
+}
+const counts = (await parallel(regions.map((r) => () => identifyRegion(r)))).filter((n) => n !== null)
+const totalAntipatterns = counts.reduce((a, b) => a + b, 0)
 if (totalAntipatterns === 0) return { status: 'no-antipatterns', agoraPath }
-log(`${totalAntipatterns} antipatterns across ${found.length} regions`)
+log(`${totalAntipatterns} antipatterns across ${regions.length} regions`)
 
 // 3. Deliberate — 변호·비판·합의 (barriers: 각 단계가 이전 단계 전체 산출물을 요구)
+// 영역이 하나면 독립 스켑틱이 비판을 맡아 교차검증을 보존한다
 phase('Deliberate')
 const names = regions.map((r) => r.dir)
+const critics =
+  regions.length > 1
+    ? regions.map((r) => ({
+        dir: r.dir,
+        role: `영역 '${r.dir}'의 변호인이자 다른 영역의 비판자`,
+        targets: names.filter((n) => n !== r.dir),
+      }))
+    : [{ dir: 'skeptic', role: '독립 비판자', targets: names }]
 
-if (regions.length > 1) {
-  // 3.1 비판: 다른 영역의 안티패턴을 검토, 비평은 자기 Agora에 기록
-  await parallel(
-    regions.map((r) => () =>
-      synod(
-        r.dir,
-        `# 임무: 비판 (회의 1/3)
-너는 영역 '${r.dir}'의 변호인이자 다른 영역의 비판자다.
-다른 영역들(${names.filter((n) => n !== r.dir).join(', ')})의 Agora에 기록된 안티패턴을 비판적으로 검토하고,
-각 비평을 **네 Agora**에 기록하라 (누구의 어떤 안티패턴에 대한 비평인지 명시).`,
-        { label: `critique:${r.dir}`, phase: 'Deliberate' },
-      ),
+// 3.1 비판: 대상 영역의 안티패턴을 검토, 비평은 자기 Agora에 기록
+await parallel(
+  critics.map((c) => () =>
+    synod(
+      c.dir,
+      `# 임무: 비판 (회의 1/3)
+너는 ${c.role}다.
+대상 영역(${c.targets.join(', ')})의 Agora에 기록된 안티패턴을 비판적으로 검토하라 —
+실재하지 않거나 존재 이유가 여전히 정당한 오검출을 지목하고, 그들이 놓친 안티패턴을 찾아 보완하라.
+각 비평과 보완 안티패턴을 **네 Agora**에 기록하라 (누구의 어떤 안티패턴에 대한 것인지 명시).`,
+      { label: `critique:${c.dir}`, phase: 'Deliberate' },
     ),
-  )
+  ),
+)
 
-  // 3.2 반박: 자기 안티패턴에 달린 비평을 찾아 수용/반박
-  await parallel(
-    regions.map((r) => () =>
-      synod(
-        r.dir,
-        `# 임무: 반박 (회의 2/3)
-다른 영역들의 Agora에서 너의 안티패턴을 겨냥한 비평을 모두 찾아 검토하고,
+// 3.2 반박: 자기 안티패턴에 달린 비평을 찾아 수용/반박
+await parallel(
+  regions.map((r) => () =>
+    synod(
+      r.dir,
+      `# 임무: 반박 (회의 2/3)
+비판자들(${critics.map((c) => c.dir).filter((d) => d !== r.dir).join(', ')})의 Agora에서 너의 안티패턴을 겨냥한 비평을 모두 찾아 검토하고,
 각 비평에 대한 수용/반박 의견을 네 Agora에 기록하라.`,
-        { label: `rebut:${r.dir}`, phase: 'Deliberate' },
-      ),
+      { label: `rebut:${r.dir}`, phase: 'Deliberate' },
     ),
-  )
-}
+  ),
+)
 
-// 3.3 합의: cartographer가 종합
-const consensus = await synod(
+// 3.3 합의: cartographer가 종합하고 완전성을 검수
+await synod(
   'cartographer',
   `# 임무: 합의 도출 (회의 3/3)
-모든 영역의 안티패턴·비평·반박(${agoraPath}/ 전체)을 종합해서 **합의된 안티패턴 리스트**를
+모든 안티패턴·비평·반박(${agoraPath}/ 전체)을 종합해서 **합의된 안티패턴 리스트**를
 ${agoraPath}/cartographer/consensus.md 에 작성하라.
-교차검증을 통과한, 실재하며 개선 가치가 있는 안티패턴만 남겨라.`,
-  { label: 'consensus', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
+모든 안티패턴을 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한, 실재하며 개선 가치가 있는 안티패턴만 리스트에 남겨라.`,
+  { label: 'consensus:draft', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
+)
+const consensus = await synod(
+  'cartographer',
+  `# 임무: 합의 완전성 검수
+${agoraPath}/ 전체를 consensus.md 와 대조해 판정이 누락된 안티패턴과 반영되지 않은 비평·반박을 찾아라.
+누락이 있으면 consensus.md 를 수정하고, 최종 리스트를 반환하라.`,
+  { label: 'consensus:review', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
 )
 if (!consensus?.count) return { status: 'no-consensus', agoraPath }
 log(`consensus: ${consensus.count} antipatterns`)
@@ -250,18 +270,23 @@ const plans = (planned?.plans ?? []).map((p, i) => {
 if (!plans.length) return { status: 'no-plans', antipatterns: consensus.count, agoraPath }
 log(`${plans.length} refactoring plans`)
 
-// 5. Review — 계획별 검수 (parallel)
+// 5. Review — 계획별 · 렌즈별 독립 검수 (parallel)
 phase('Review')
+const LENSES = [
+  { key: 'value', charge: '계획이 실제로 유효한 개선안인지 득실을 계산·고찰하라.' },
+  { key: 'side-effects', charge: '계획이 고려하지 못한 side-effect를 탐색하라.' },
+]
 await parallel(
-  plans.map((p) => () =>
-    synod(
-      `review-${p.name}`,
-      `# 임무: 리팩토링 계획 검수 — '${p.name}'
+  plans.flatMap((p) =>
+    LENSES.map((l) => () =>
+      synod(
+        `review-${p.name}-${l.key}`,
+        `# 임무: 리팩토링 계획 검수 — '${p.name}' / ${l.key}
 합의된 안티패턴(${agoraPath}/cartographer/consensus.md)과 대상 계획(${p.proposal})을 읽어라.
-- 계획이 실제로 유효한 개선안인지 득실을 계산·고찰하라.
-- 계획이 고려하지 못한 side-effect를 탐색하라.
+${l.charge}
 이슈나 개선점을 네 Agora(review.md)에 기록하라.`,
-      { label: `review:${p.label}`, phase: 'Review' },
+        { label: `review:${p.label}:${l.key}`, phase: 'Review' },
+      ),
     ),
   ),
 )
@@ -293,12 +318,13 @@ for (const name of order) {
     `apply-${name}`,
     `# 임무: 리팩토링 수행 — '${name}'
 계획(${p.proposal})을 읽고 그대로 구현하라. 실행 가능한 코드를 실제로 수정한다.
+선행 적용 기록(${agoraPath}/apply-*)이 있으면 현재 상태 파악에 참고하라.
 구현 후 프로젝트의 테스트 스위트를 실행해 회귀가 없음을 확인하고, 변경 영역을 커버하는 테스트가 없으면 추가하라.
 변경 요약과 테스트 결과를 네 Agora에 기록하고 반환하라.`,
     { label: `apply:${p.label}`, phase: 'Apply', schema: APPLY_SCHEMA },
   )
   applied.push({ name, status: res?.status ?? 'unknown', testsPassed: res?.testsPassed ?? null })
-  log(`applied ${applied.length}/${order.length}: ${name}`)
+  log(`applied ${applied.length}/${order.length}: ${name} (${res?.status ?? 'unknown'})`)
 }
 
 const finalReview = await synod(
