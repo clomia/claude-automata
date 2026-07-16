@@ -1,0 +1,52 @@
+# claude-automata 아키텍처
+
+**claude-automata는 24시간 주도권을 갖는 자율 에이전트 환경이다.** 사용자는 이벤트 타입 중
+하나이며, 루프는 사용자가 제공한 anchor(SSoT)로 정박된다. 세 플러그인이 하나의 시스템을
+이룬다 — **ploop은 작업기억 기반 장기 루프**(git 미추적, advisor가 메타인지), **tx는 장기기억
+기반 정합 메커니즘**(분산 정합이자 응고 관문 — 작업기억에서 장기기억으로 가는 유일한 문),
+**refine은 환경 청소기**(장기기억·코드·시스템의 유지보수 주기).
+
+이 문서는 생태계 정본이다 — 플러그인들이 어떻게 하나로 합성되는지, 그 접면과 횡단 정책만
+소유한다. 각 구성요소의 내부는 소유 정본이 담당한다 — 한 사실은 한 곳에만 산다.
+
+## 진입점 지도
+
+| 정본 | 소유 |
+|---|---|
+| [MEMORY.md](MEMORY.md) | 기억 시스템 전체 — 작업기억/장기기억, 두 표면(spec·docs), 승격 라우팅, 불변식, OpenSpec seam, docs 표면 규약과 그 운반 |
+| [plugins/ploop/ARCHITECTURE.md](plugins/ploop/ARCHITECTURE.md) | advisor loop 설계 결정 전체 (내부 용어 포함) |
+| [plugins/tx/README.md](plugins/tx/README.md) | 트랜잭션 모델 · base 해석 · 가드 훅 |
+| plugins/refine/skills/\*/principles.md | 각 정제 워크플로우의 판단 axiom |
+| [README.ko.md](README.ko.md) / [README.md](README.md) | 설치·사용 (사람 대상, 한·영 쌍) |
+
+기억 도메인 용어(작업기억·장기기억·응고·표면·정본)는 MEMORY.md가, ploop 내부 용어(advisor
+loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의하지 않는다.
+
+## 플러그인 접면 계약
+
+- **ploop × tx — Stop 훅 동거.** 두 플러그인은 조정 코드 없이 같은 Stop 이벤트를 후킹하며,
+  tx git-sync가 `stop_hook_active`(훅 유발 연속 정지)에서 조기 반환하므로 ploop이 정지를 막아
+  이어가는 라운드 체인에는 rebase nudge가 끼어들지 않는다. **이것은 우연이 아니라 계약이다** —
+  라운드 중의 rebase는 진행 중 분석을 무효화하므로 sync nudge는 루프 밖 정지에서만 발화해야
+  한다. 이 동작을 바꾸는 변경은 양쪽 정본의 동시 개정을 요구한다.
+- **refine × tx — 청소도 관문을 지난다.** refine의 쓰기(재접지·강등·삭제)는 일반 작업과 같은
+  tx를 통과한다(MEMORY 불변식 1 — 쓰기는 방향을 가리지 않는다).
+- **ploop × 기억 — 루프는 레포를 오염하지 않는다.** ploop의 모든 상태는 레포 밖에 산다. 레포로
+  들어가는 유일한 경로는 응고(MEMORY 승격 라우팅)다.
+- **규약 운반** — docs 표면 규약의 층별 배치(W=tx 릴리스, M=refine 릴리스, R=산물, 기계
+  백스톱=씨앗·훅)와 fork 경계는 MEMORY.md 운반 절이 소유한다.
+
+## 언어·프롬프트 정책 (레포 전역)
+
+단일 **"한국어 기반, 영어 활용"** — 산문은 한국어, 식별자·경로·도구 이름·역할 명칭은 영어,
+ASCII 다이어그램은 정렬을 위해 영어만. 프롬프트는 한국어 단일본이고, 사람이 읽는 문서(README)는
+한·영 쌍으로 관리한다. 플러그인 특이사항은 소유 정본에 남는다(예: ploop의 훅 주입 메시지 조립).
+
+## 결정 기록 (배제 — YAGNI/오컴)
+
+- **업스트림 OpenSpec 프롬프트 미설치** — 엔진·포맷만 채택하고 정책은 전량 자작한다. 근거와
+  seam은 MEMORY의 OpenSpec 채택 경계.
+- **별도 세션 자동화(claude -p) 기각** — 정식 nested subagent 경로만 사용한다(구독 안전).
+  근거는 ploop 정본.
+- **ADR·사실 DB·문서 인덱스 기각** — 결정 기록은 각 정본의 배제·결정 섹션, 측정은 조사 기록,
+  회상은 grep. 근거는 MEMORY의 docs 표면 규약.
