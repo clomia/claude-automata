@@ -318,9 +318,9 @@ SessionStart가 uv 설치를 안내한다.
     shell 차선에 속하지 않으니 정리하거나 세션 수명 차선인 `Monitor`로 옮기라는 지시다(`gated_shells` 마커가
     지시 중복을 막고 라운드 arm이 소거). `monitor`는 명세상 세션 수명 프로세스라 게이트하면 영구 교착 — 통과가
     정당한 라운드 종료다. 그 외 타입·미지 타입·필드 부재(task registry 도달 불가 — 명세상 이때만 배열이
-    빠진다)는 게이팅하지 않는다: 실패 방향은 이른 advisor이지 루프 정지가 아니다. (설계 초기의 "하네스가 pending background agent 동안 Stop 발화 자체를 보류한다" 가정은
-    background 기본화(v2.1.198)로 표류해 폐기 — 2026-07-15 세션 트랜스크립트 실측으로 확인, 공식 필드 판독으로
-    대체. 구 대처였던 "긴 Bash는 Agent에 위임" 규칙도 불필요해져 폐기 — background shell이 직접 게이트된다.)
+    빠진다)는 게이팅하지 않는다: 실패 방향은 이른 advisor이지 루프 정지가 아니다. 완료를 기다려야 하는
+    background는 게이팅 유형(shell·subagent·workflow)으로 두고, 서버 같은 ambient 프로세스는 `Monitor`(세션
+    수명 차선)로 돌린다.
 
 ---
 
@@ -328,22 +328,22 @@ SessionStart가 uv 설치를 안내한다.
 
 설계는 성립하나 라이브 트리 없이 유닛 테스트할 수 없던 항목들이다. 모두 **graceful degrade**한다.
 
-1. **Stop block cap — 해소.** Claude Code는 Stop 훅이 **연속** N회 종료를 막으면 강제 종료하나
+1. **Stop block cap.** Claude Code는 Stop 훅이 **연속** N회 종료를 막으면 강제 종료하나
    (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, 기본 8), 이 카운터는 생산적 작업(tool-use) 턴마다 0으로 리셋된다.
    ploop은 매 라운드 advisor 호출·advice 작업을 하므로 걸리지 않고, main이 트리거를 무시하는 무진전 정지는
    decline failsafe(결정 14)가 앞서 끝낸다 — cap은 백스톱으로만 남는다. advisor가 종료를 안 내고 main이
    무한히 **일하는** 생산적 무한 루프만 이 cap도 못 막으므로(작업이 리셋) 그땐 `/ploop:off`가 수단이다.
-2. **트랜스크립트 형식 가정 — 대부분 해소.** hook은 더 이상 트랜스크립트를 파싱하지 않는다(결정 4). 남은
-   의존은 **트랜스크립트가 라인 단위 append-only라 라인 번호가 안정적**이라는 것 하나로 축소됐다(compaction도
-   append) — 형식 필드가 아니라 파일 구조이고 어긋나도 슬라이스가 "넓게"로 degrade한다.
+2. **트랜스크립트 형식 가정.** hook은 트랜스크립트를 파싱하지 않는다(결정 4). 유일한 의존은
+   **트랜스크립트가 라인 단위 append-only라 라인 번호가 안정적**이라는 것 하나다(compaction도 append) —
+   형식 필드가 아니라 파일 구조이고 어긋나도 슬라이스가 "넓게"로 degrade한다.
 3. **main의 지시 순응도 — 리스크로 취급.** main이 stderr "advisor 호출"에 매 라운드 응하지 않을 수 있다
    (in-band 사용자 지시를 근거로 정당하게 거부하는 사건 관측). 미호출 1회는 권한 고지로 합의 채널에
    재유도되고 2연속이면 failsafe가 무결하게 닫는다(결정 14).
 4. **PreToolUse 발동·session 일치** — 자발 호출 게이팅은 PreToolUse가 main의 Agent 호출에 발동하고
    session_id가 Stop과 같아야 성립한다. 미발동 시 게이팅만 무효화되고 루프는 현행대로(graceful).
 
-초기 nested(operator) 버전의 리스크였던 subagent 내부 `PostCompact` 발화와 background 동기 호출 honor는
-main 승격으로 소멸했다 — 메인 세션은 `PostCompact`가 확실히 발화하고 foreground라 동기 호출이 보장된다.
+loop main이 메인 세션(depth 0)이라 `PostCompact`는 확실히 발화하고, main이 foreground라 advisor·narrator
+동기 호출이 보장된다 — subagent tier에서라면 불확실했을 두 가정을 main 위치가 보장으로 만든다.
 
 ---
 

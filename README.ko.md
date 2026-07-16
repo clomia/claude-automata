@@ -50,7 +50,6 @@ ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 advisor loop입�
 
 > Install: `claude plugin install refine@claude-automata`  
 > Update: `claude plugin update refine@claude-automata`  
-> 구 refine-architecture 설치본은 제거하세요: `claude plugin uninstall refine-architecture@claude-automata`
 
 refine은 레포지토리에 쌓이는 부채를 없애는 대규모 워크플로우 모음입니다.
 
@@ -66,7 +65,6 @@ refine은 레포지토리에 쌓이는 부채를 없애는 대규모 워크플�
 
 > Install: `claude plugin install tx@claude-automata`  
 > Update: `claude plugin update tx@claude-automata`  
-> 구 txgit 설치본은 제거하세요: `claude plugin uninstall txgit@claude-automata`
 
 tx는 변경을 트랜잭션 단위로 관리하는 Git 워크플로우입니다.
 

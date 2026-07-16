@@ -50,7 +50,6 @@ The **anchor** is the file the loop is anchored to. It comes in two kinds.
 
 > Install: `claude plugin install refine@claude-automata`  
 > Update: `claude plugin update refine@claude-automata`  
-> Had the old refine-architecture installed? Remove it: `claude plugin uninstall refine-architecture@claude-automata`
 
 refine is a family of large-scale workflows that eliminate the debt a repository accumulates.
 
@@ -66,7 +65,6 @@ Leave the focus empty to target the whole codebase. Watch progress with `/workfl
 
 > Install: `claude plugin install tx@claude-automata`  
 > Update: `claude plugin update tx@claude-automata`  
-> Had the old txgit installed? Remove it: `claude plugin uninstall txgit@claude-automata`
 
 tx is a Git workflow that manages change as transactions.
 
