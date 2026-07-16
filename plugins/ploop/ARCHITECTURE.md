@@ -348,10 +348,9 @@ loop main이 메인 세션(depth 0)이라 `PostCompact`는 확실히 발화하�
 
 ## 언어와 프롬프트
 
-모든 프롬프트는 **단일 "한국어 기반, 영어 활용"**으로 통일한다(이중 언어 쌍 없음). 식별자·경로·도구
-이름과 `main agent` 같은 역할 명칭은 영어, 산문은 한국어, ASCII 다이어그램은 정렬을 위해 영어.
-에이전트·스킬 프롬프트와 advisor instruction은 단일 `.md`이고, 훅 주입 메시지(advisor trigger)는
-`prompt.py`가 조립한다. 프롬프트는 한국어 단일본, 사람이 읽는 문서(README)는 한·영 쌍으로 관리한다.
+언어 정책은 레포 전역 규약이다 — 정본은 루트 [ARCHITECTURE.md](../../ARCHITECTURE.md)의
+언어·프롬프트 정책 절. ploop 특이사항만 남는다: 에이전트·스킬 프롬프트와 advisor instruction은
+단일 `.md`이고, 훅 주입 메시지(advisor trigger)는 `prompt.py`가 조립한다.
 
 ---
 

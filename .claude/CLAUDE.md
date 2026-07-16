@@ -1,5 +1,7 @@
 @README.ko.md
 
+설계 정본: [ARCHITECTURE.md](../ARCHITECTURE.md) — 생태계 합성 · [MEMORY.md](../MEMORY.md) — 기억 시스템
+
 # Principles
 
 ## Take ownership of the product
