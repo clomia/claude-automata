@@ -11,11 +11,12 @@ body never announces a toggle that didn't happen.
 import json
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 from src.repo import pause_marker
 
 
-def block_expansion(reason: str) -> None:
+def block_expansion(reason: str) -> NoReturn:
     """Deny the expansion (decision: block) — pure, the turn erased."""
     sys.stdout.write(
         json.dumps({"decision": "block", "reason": reason}, ensure_ascii=False)

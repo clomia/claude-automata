@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import TypedDict, cast
 
 from src.repo import (
+    ahead_notice,
     base_ahead_count,
     base_branch,
     current_branch,
@@ -121,9 +122,8 @@ def maybe_fetch(state: SyncState, base: str) -> None:
 
 def build_reason(ahead: int, base: str) -> str:
     return (
-        f"Local is {ahead} commit(s) behind origin/{base}. "
-        f"Fetch and sync locally: {rebase_cmd(base)}. "
-        "It must complete cleanly — be ready for conflicts."
+        f"{ahead_notice(ahead, base)}. "
+        f"Sync now: {rebase_cmd(base)} — it must complete cleanly; be ready for conflicts."
     )
 
 

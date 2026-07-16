@@ -22,6 +22,7 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook",
             "args": ["branch-protect-block"],
+            "timeout": 30,
             "statusMessage": "tx: guarding branch"
           }
         ]
@@ -42,7 +43,7 @@
     ],
     "UserPromptExpansion": [
       {
-        "matcher": "tx:git-sync-off",
+        "matcher": "^tx:git-sync-off$",
         "hooks": [
           {
             "type": "command",
@@ -52,7 +53,7 @@
         ]
       },
       {
-        "matcher": "tx:git-sync-on",
+        "matcher": "^tx:git-sync-on$",
         "hooks": [
           {
             "type": "command",

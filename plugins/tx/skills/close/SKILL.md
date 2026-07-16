@@ -49,5 +49,4 @@ BASE=$(uv run --project "${CLAUDE_PLUGIN_ROOT}" base)
 - push 전에 최종 이름으로 rename한다. 이미 `tx-*`로 push된 stale remote가 있으면 삭제하고 다시 push한다.
 - PR은 `gh`로 연다. base가 되는 브랜치를 target으로 지정한다.
 - CI 종료를 `gh pr checks <PR#> --watch --fail-fast`로 대기하고 exit code로 통과를 판정하라.
-- squash merge 후 브랜치를 local·remote 모두 삭제하고, base로 checkout해 최신으로 pull한다.
 - 이미 병합된 트랜잭션을 다시 close하면 (idempotent) 남은 정리만 수행한다.

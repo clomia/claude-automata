@@ -26,7 +26,7 @@ def git(*args: str) -> str | None:
         result = subprocess.run(
             ["git", *args], capture_output=True, text=True, check=False
         )
-    except FileNotFoundError:
+    except OSError:
         return None
     return result.stdout.strip() if result.returncode == 0 else None
 
@@ -79,6 +79,11 @@ def print_base() -> None:
 def rebase_cmd(base: str) -> str:
     """The one sync remedy every guard recommends."""
     return f"git fetch origin {base} && git rebase origin/{base}"
+
+
+def ahead_notice(ahead: int, base: str) -> str:
+    """The one drift fact every guard reports (first-parent commits = merged PRs)."""
+    return f"origin/{base} is {ahead} PR(s) ahead"
 
 
 def git_dir() -> Path | None:

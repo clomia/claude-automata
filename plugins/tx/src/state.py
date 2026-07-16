@@ -13,6 +13,7 @@ import sys
 from datetime import UTC, datetime, timedelta
 
 from src.repo import (
+    ahead_notice,
     base_ahead_count,
     base_branch,
     current_branch,
@@ -74,7 +75,7 @@ def build_messages(branch: str, base: str, paused: bool) -> list[str]:
     ahead = base_ahead_count(base)
     if ahead is not None and ahead >= BASE_AHEAD_THRESHOLD:
         message = (
-            f"[branch-state-warn] origin/{base} is {ahead} PR(s) ahead. "
+            f"[branch-state-warn] {ahead_notice(ahead, base)}. "
             f"Resolve conflict risk before continuing: {rebase_cmd(base)}"
         )
         if not fetch_ok:

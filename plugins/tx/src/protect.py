@@ -1,4 +1,4 @@
-"""PreToolUse(Edit|Write) guard — block edits to tracked files on the base branch.
+"""PreToolUse(Edit|Write|NotebookEdit) guard — block edits to tracked files on the base branch.
 
 Invariant: the base branch (the GitHub default branch) holds only what merged
 through a transaction, so its tracked files may not be edited in place — open a

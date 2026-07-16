@@ -42,7 +42,3 @@ base를 먼저 떠나 트랜잭션 경계를 연다 — 이후의 계획·구현
 경로 선택은 요청의 무결성과 optimality를 검토한 결과여야 한다. 애매하면 explore로 시작하는 편이 안전하다.
 
 OpenSpec CLI가 없거나 `openspec/`가 초기화돼 있지 않으면 (`openspec list` 실패), 이를 알리고 openspec 생략 경로로 진행한다.
-
-# 참고
-
-`/tx:close` 전에 이 트랜잭션에서 연 OpenSpec 변경을 `openspec-archive-change`로 아카이브해야 한다. 그래야 delta spec이 main spec에 sync되고 변경이 트랜잭션에 깔끔하게 포함된다. close가 이를 확인·수행한다.
