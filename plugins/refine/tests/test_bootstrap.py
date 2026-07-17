@@ -43,7 +43,7 @@ def test_invalid_skill_fails_fast(monkeypatch, env, capsys, argv):
 
 def test_focus_from_argv(monkeypatch, env, capsys):
     """Focus words after the skill join into a single focusArea."""
-    monkeypatch.setattr("sys.argv", ["bootstrap", "architecture", "auth", "module"])
+    monkeypatch.setattr("sys.argv", ["bootstrap", "code", "auth", "module"])
     bootstrap.main()
     assert '"focusArea": "auth module"' in capsys.readouterr().out
 
