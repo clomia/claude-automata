@@ -269,15 +269,21 @@ rebase에 **후행**하고 rebase가 재발생하면 재실행한다. diff 핵�
 
 ## 작업 목록
 
-1. **tx의 OpenSpec 스킬 내장화** — tx가 스킬 4종을 싣고 open/close가 업스트림 스킬 대신
-   그것을 부른다. 대상 레포에는 `openspec/` 스캐폴드만 남는다.
+1. **tx의 OpenSpec 스킬 내장화** — tx가 스킬 3종과 verify 스테이지를 싣고 open/close가
+   업스트림 스킬 대신 그것을 부른다. 대상 레포에는 `openspec/` 스캐폴드만 남는다.
    - **plan** (propose 대체): 모멘텀 유지. 미지(未知)의 3분기 번역 — 측정 가능하면 측정하고
      기록 / 가역적이면 가정을 채택하고 design에 명기 / 둘 다 아니면 변경을 중단·연기하고
      사유를 기록. 질문 채널은 지정하지 않는다 — 사용 여부는 맥락의 정책(ploop launch 또는
      대화 세션)이 결정한다.
-   - **apply** (apply-change 대체): "불명확하면 멈추고 물어라"를 같은 3분기로 교체.
-   - **verify** (신설): 구현을 change 아티팩트와 실측 대조(완전성·정확성·정합성), close의
-     게이트로 편입. CI가 기계적 무결성이면 verify는 의도 무결성이다.
+   - **apply** (apply-change 대체): "불명확하면 멈추고 물어라"를 같은 3분기로 교체. 꼬리에서
+     verify 스테이지를 필수 spawn하고, 실패는 구현 컨텍스트가 살아있는 그 자리에서 수리 후
+     재spawn한다.
+   - **verify** (스테이지, 스킬 아님): 검증자 프롬프트는 `references/verify.md` 고정본 —
+     깨끗한 컨텍스트의 독립 에이전트로 spawn하며, spawner는 change-id만 전달한다(구현 서사
+     전달 금지 — 검증자가 spec delta·tasks·코드를 직접 읽는다. 구현과 검증의 독립). 호출
+     지점 둘: apply 꼬리(필수) + close의 archive 직전(마지막 verify 이후 코드 변경 시·이력
+     불명 시 재실행). 구현을 change 아티팩트와 실측 대조한다(완전성·정확성·정합성) — CI가
+     기계적 무결성이면 verify는 의도 무결성이다.
    - **archive** (archive-change 대체): 확인 다이얼로그 전부 제거 — change는 tx 브랜치에서
      결정되고, 미완료 태스크는 close 차단 사유이며, delta sync는 무조건 수행한다.
 2. **결합 절차 교체 + 씨앗** — README의 설치 절차(글로벌 `@latest` + config profile +
