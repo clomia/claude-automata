@@ -24,11 +24,16 @@ loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의
 
 ## 플러그인 접면 계약
 
-- **ploop × tx — Stop 훅 동거.** 두 플러그인은 조정 코드 없이 같은 Stop 이벤트를 후킹하며,
-  tx git-sync가 `stop_hook_active`(훅 유발 연속 정지)에서 조기 반환하므로 ploop이 정지를 막아
-  이어가는 라운드 체인에는 rebase nudge가 끼어들지 않는다. **이것은 우연이 아니라 계약이다** —
-  라운드 중의 rebase는 진행 중 분석을 무효화하므로 sync nudge는 루프 밖 정지에서만 발화해야
-  한다. 이 동작을 바꾸는 변경은 양쪽 정본의 동시 개정을 요구한다.
+- **ploop × tx — Stop 훅 동거.** 두 플러그인은 조정 코드 없이 같은 Stop 이벤트를 후킹한다.
+  tx git-sync는 `stop_hook_active`(훅 유발 연속 정지)에서 조기 반환하고 ploop은 그 필드를 보지
+  않으므로, ploop이 정지를 막아 이어가는 라운드 체인의 **내부 정지**에는 rebase nudge가
+  끼어들지 않는다 — 라운드 중의 rebase는 진행 중 분석을 무효화하기 때문이며, **이것은 우연이
+  아니라 계약이다**(변경은 양쪽 정본의 동시 개정을 요구한다). 체인 **진입 정지**(launch 후 첫
+  정지·background 대기 후 재개 정지)에서는 두 훅이 함께 발화해 advisor 트리거와 rebase nudge가
+  같이 주입되고 수행 순서는 main이 정한다. 장기 루프의 remote 정합 인지는 이 진입 정지들과
+  auto-compaction마다 발화하는 branch-state-warn(SessionStart `compact` matcher)이 유지하고,
+  정합의 보증 자체는 close의 강제 fetch·rebase·CI가 소유한다 — 루프 중 nudge는 신선도
+  최적화이지 무결성 요건이 아니다.
 - **refine × tx — 청소도 관문을 지난다.** refine의 쓰기(재접지·강등·삭제)는 일반 작업과 같은
   tx를 통과한다(MEMORY 불변식 1 — 쓰기는 방향을 가리지 않는다).
 - **ploop × 기억 — 루프는 레포를 오염하지 않는다.** ploop의 모든 상태는 레포 밖에 산다. 레포로
