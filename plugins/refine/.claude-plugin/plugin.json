@@ -1,6 +1,6 @@
 {
   "name": "refine",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Repository debt elimination — heavyweight multi-agent workflows that cross-examine findings into consensus, then apply only the highest-ROI fixes: code, docs, integrity",
   "author": {
     "name": "clomia",
