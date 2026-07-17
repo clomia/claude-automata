@@ -55,7 +55,7 @@ refine is a family of large-scale workflows that eliminate the debt a repository
 
 All three skills work the same way — split into regions for parallel analysis, settle findings through a cross-examination assembly, and execute only the highest-ROI plans. Each run is a heavyweight workflow taking hours (3–12h).
 
-- `/refine:architecture [focus]` — code architecture optimization. Filters antipatterns through consensus and applies only the highest-ROI refactors.
+- `/refine:code [focus]` — code architecture optimization. Filters antipatterns through consensus and applies only the highest-ROI refactors.
 - `/refine:docs [focus]` — documentation-to-code alignment. Every claim in every non-executable text (markdown, doc systems like openspec, comments and docstrings) is checked against the code and set right.
 - `/refine:integrity [focus]` — logical-integrity hardening. Hunts the states where code can fail, digs in from **"should this be defined as an error?"**, hardens integrity, and pins every defined behavior with tests.
 

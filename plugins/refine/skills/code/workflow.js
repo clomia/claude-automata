@@ -1,5 +1,5 @@
 export const meta = {
-  name: 'refine-architecture',
+  name: 'refine-code',
   description: 'Code architecture optimization — cross-examine antipatterns into consensus, then apply only the highest-ROI refactors',
   phases: [
     { title: 'Map', detail: 'split the codebase into independent analysis regions' },
