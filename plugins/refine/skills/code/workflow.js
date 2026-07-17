@@ -1,11 +1,11 @@
 export const meta = {
   name: 'refine-code',
-  description: 'Code architecture optimization — cross-examine antipatterns into consensus, then apply only the highest-ROI refactors',
+  description: 'Code architecture optimization — cross-examine antipatterns and defects into consensus, then apply the highest-ROI refactors and repair every confirmed defect; the optimum presupposes correct code, and docs invalidated by the changes are realigned',
   phases: [
     { title: 'Map', detail: 'split the codebase into independent analysis regions' },
-    { title: 'Identify', detail: 'find antipatterns per region until findings run dry' },
+    { title: 'Identify', detail: 'find antipatterns and defects per region until findings run dry' },
     { title: 'Deliberate', detail: 'defend, critique, and settle the consensus list' },
-    { title: 'Plan', detail: 'draft self-contained refactoring plans' },
+    { title: 'Plan', detail: 'draft self-contained refactoring and repair plans' },
     { title: 'Review', detail: 'audit each plan through value and side-effect lenses' },
     { title: 'Refine', detail: 'improve plans and fix the execution order' },
     { title: 'Apply', detail: 'execute plans sequentially and test' },
@@ -35,9 +35,12 @@ const synod = (agoraName, task, opts = {}) =>
   agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
 
 const PRINCIPLE = `## 리팩토링 원칙 (principles 해석)
+- 목표 상태는 코드 아키텍처 최적해다. 이 상태에는 '모든 코드가 정상동작한다'가 전제로 들어있다 — 탐색이 드러낸 결함은 백로그가 아니라 수리 대상이다.
+- 결함 수리는 ROI 필터의 예외다. 합의로 실재가 확정된 결함은 반드시 계획에 배정한다.
 - 최대한 단순한 설계로 side-effect 없이 최대한 많은 안티패턴을 제거하라.
 - 모든 안티패턴 제거는 불가능하다. ROI가 가장 높은 최적해를 찾아라.
-- backlog proposal 금지. ROI 낮은 계획은 과감히 폐기하라.`
+- backlog proposal 금지. ROI 낮은 계획은 과감히 폐기하라.
+- 리팩토링이 무효화하는 문서 주장(주석·문서·스펙)은 같은 계획 안에서 정합시킨다.`
 
 const REGIONS_SCHEMA = {
   type: 'object',
@@ -68,6 +71,11 @@ const ANTIPATTERNS_SCHEMA = {
         required: ['title'],
         properties: {
           title: { type: 'string' },
+          kind: {
+            type: 'string',
+            enum: ['antipattern', 'defect'],
+            description: 'antipattern(구조 개선 대상) 또는 defect(정상동작 위반 — 수리 대상). 생략 시 antipattern',
+          },
           reason: { type: 'string', description: '이 안티패턴이 존재하는 추론된 이유' },
         },
       },
@@ -171,6 +179,7 @@ async function identifyRegion(r) {
 principles를 기준으로 이 영역의 안티패턴을 식별하고 네 Agora에 기록하라.
 **모든 안티패턴에는 합리적인 이유가 존재한다.** 코드 주변 환경과 히스토리(.claude/·문서·설정·git 등)를 탐구해서
 각 안티패턴의 존재 이유를 추론하고 함께 기록하라.
+탐색 중 결함 — 현재 정상동작하지 않는 코드(버그·깨진 동작) — 을 발견하면 kind: defect로 함께 기록하라. 코드 아키텍처 최적해는 모든 코드의 정상동작을 전제한다.
 네 Agora에 이미 안티패턴이 기록되어 있다면 그 너머의 새 안티패턴만 기록·반환하라. 새 안티패턴이 없으면 빈 배열을 반환하라.`,
       { label: `identify:${r.dir}#${round}`, phase: 'Identify', schema: ANTIPATTERNS_SCHEMA },
     )
@@ -205,8 +214,8 @@ await parallel(
       c.dir,
       `# 임무: 비판 (회의 1/3)
 너는 ${c.role}다.
-대상 영역(${c.targets.join(', ')})의 Agora에 기록된 안티패턴을 비판적으로 검토하라 —
-실재하지 않거나 존재 이유가 여전히 정당한 오검출을 지목하고, 그들이 놓친 안티패턴을 찾아 보완하라.
+대상 영역(${c.targets.join(', ')})의 Agora에 기록된 안티패턴·결함을 비판적으로 검토하라 —
+실재하지 않거나 존재 이유가 여전히 정당한 오검출을 지목하고(결함은 재현 경로로 실재를 판정하라), 그들이 놓친 안티패턴·결함을 찾아 보완하라.
 각 비평과 보완 안티패턴을 **네 Agora**에 기록하라 (누구의 어떤 안티패턴에 대한 것인지 명시).`,
       { label: `critique:${c.dir}`, phase: 'Deliberate' },
     ),
@@ -232,7 +241,7 @@ await synod(
   `# 임무: 합의 도출 (회의 3/3)
 모든 안티패턴·비평·반박(${agoraPath}/ 전체)을 종합해서 **합의된 안티패턴 리스트**를
 ${agoraPath}/cartographer/consensus.md 에 작성하라.
-모든 안티패턴을 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한, 실재하며 개선 가치가 있는 안티패턴만 리스트에 남겨라.`,
+모든 안티패턴·결함을 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한, 실재하며 개선 가치가 있는 것만 리스트에 남겨라. 결함(defect)은 별도 표기하라 — 결함의 채택 기준은 ROI가 아니라 실재성이다(최적해는 정상동작을 전제한다).`,
   { label: 'consensus:draft', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
 )
 const consensus = await synod(
@@ -250,12 +259,12 @@ phase('Plan')
 const planned = await synod(
   'refactor-manager',
   `# 임무: 리팩토링 계획 수립
-합의된 안티패턴(${agoraPath}/cartographer/consensus.md)을 파악한 뒤 리팩토링 계획을 작성하라.
+합의된 안티패턴·결함(${agoraPath}/cartographer/consensus.md)을 파악한 뒤 리팩토링·수리 계획을 작성하라.
 ${PRINCIPLE}
 - 전체 작업을 최대한 크게 쪼개서 계획 갯수를 적게 유지하라.
 ## 계획 형식
 각 계획은 self-contained 마크다운으로 ${plansDir}/{순번}-{kebab-name}/proposal.md 에 작성한다.
-proposal.md는 다음을 포함한다: 대상 안티패턴 / 변경 내용 / ROI 근거 / 예상 side-effect / 영향 범위.
+proposal.md는 다음을 포함한다: 대상 발견(안티패턴·결함) / 변경 내용 / ROI 근거 / 예상 side-effect / 영향 범위(무효화되는 문서 주장 포함).
 반환하는 각 계획 name 은 그 디렉토리명 '{순번}-{kebab-name}' 과 정확히 일치시켜라.`,
   { label: 'plan', schema: PLANS_SCHEMA },
 )
@@ -267,7 +276,7 @@ const plans = (planned?.plans ?? []).map((p, i) => {
     proposal: `${plansDir}/${name}/proposal.md`,
   }
 })
-if (!plans.length) return { status: 'no-plans', antipatterns: consensus.count, agoraPath }
+if (!plans.length) return { status: 'no-plans', antipatterns: consensus.count, consensusTitles: consensus.titles ?? [], agoraPath }
 log(`${plans.length} refactoring plans`)
 
 // 5. Review — 계획별 · 렌즈별 독립 검수 (parallel)
@@ -319,7 +328,8 @@ for (const name of order) {
     `# 임무: 리팩토링 수행 — '${name}'
 계획(${p.proposal})을 읽고 그대로 구현하라. 실행 가능한 코드를 실제로 수정한다.
 선행 적용 기록(${agoraPath}/apply-*)이 있으면 현재 상태 파악에 참고하라.
-구현 후 프로젝트의 테스트 스위트를 실행해 회귀가 없음을 확인하고, 변경 영역을 커버하는 테스트가 없으면 추가하라.
+구현 후 프로젝트의 테스트 스위트를 실행하라 — 리팩토링은 behavior 불변을 확인하고, 결함 수리는 옳은 behavior를 고정하는 테스트를 추가한다. 변경 영역을 커버하는 테스트가 없으면 추가하라.
+변경이 무효화한 문서 주장(주석·문서·스펙의 서술)을 함께 정합시켜라.
 변경 요약과 테스트 결과를 네 Agora에 기록하고 반환하라.`,
     { label: `apply:${p.label}`, phase: 'Apply', schema: APPLY_SCHEMA },
   )
@@ -330,8 +340,9 @@ for (const name of order) {
 const finalReview = await synod(
   'refactor-manager',
   `# 임무: 최종 검수
+${PRINCIPLE}
 적용된 모든 계획(${agoraPath}/apply-* 기록)과 실제 변경된 코드를 종합 검수하라.
-모든 변경이 리팩토링 원칙에 부합하는지, side-effect가 없는지, 테스트가 통과하는지 확인하고 결과를 반환하라.`,
+모든 변경이 리팩토링 원칙에 부합하는지, side-effect가 없는지, 테스트가 통과하는지, 변경이 낡게 만든 문서 주장이 남아있지 않은지, consensus의 결함(defect)이 전부 수리되었는지 확인하고 결과를 반환하라.`,
   { label: 'final-review', phase: 'Apply', schema: FINAL_SCHEMA },
 )
 

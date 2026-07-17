@@ -1,6 +1,6 @@
 ---
 name: docs
-description: "Heavyweight, hours-long (3-12h) documentation-to-code alignment — a large multi-agent workflow that verifies every claim in every non-executable text (markdown, spec systems, comments) against the code, cross-examines discrepancies into consensus, then applies only the highest-ROI fixes. Invoke only when a deep, deliberate docs pass is genuinely needed, not for touching up a single file."
+description: "Heavyweight, hours-long (3-12h) documentation-architecture optimization — a large multi-agent workflow that verifies every claim in every non-executable text (markdown, spec systems, comments) against the code, cross-examines discrepancies into consensus, then applies only the highest-ROI fixes. The target state, the documentation-architecture optimum, presupposes that every doc matches the code; code itself is never modified — defects are reported, not fixed. Invoke only when a deep, deliberate docs pass is genuinely needed, not for touching up a single file."
 argument-hint: "[focus area]"
 effort: max
 ---
