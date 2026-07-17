@@ -1,9 +1,9 @@
 export const meta = {
   name: 'refine-integrity',
-  description: "Logical-integrity hardening — hunt every state where code can fail, interrogate each from 'should this be defined as an error?', cross-examine hazards into consensus, then apply only the highest-ROI hardening pinned by tests",
+  description: "Integrity-boundary optimization — hunt every reachable state the existing boundary (types, invariants, error definitions, tests) fails to contain, interrogate each from 'should this be defined as an error?', cross-examine hazards into consensus, then absorb only the highest-ROI set into the boundary — code and docs both — pinned by tests",
   phases: [
     { title: 'Map', detail: 'split the codebase into independent analysis regions' },
-    { title: 'Hunt', detail: 'hunt failure-capable states per region until findings run dry' },
+    { title: 'Hunt', detail: 'hunt states outside the integrity boundary per region until findings run dry' },
     { title: 'Deliberate', detail: 'defend, critique, and settle the consensus list' },
     { title: 'Plan', detail: 'draft self-contained hardening plans' },
     { title: 'Review', detail: 'audit each plan through hazard-fit, simplicity, and test-pin lenses' },
@@ -35,7 +35,8 @@ const synod = (agoraName, task, opts = {}) =>
   agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
 
 const PRINCIPLE = `## 강화 원칙 (principles 해석)
-- 모든 hazard 제거는 불가능하다. ROI가 가장 높은 최적해를 찾아라.
+- 목표 상태는 분석 영역 전체가 무결성 경계 안에 있는 상태다. 단위는 hazard 수리가 아니라 경계 흡수다 — behavior는 코드와 테스트로, 이유는 문서·주석으로 고정한다.
+- 모든 hazard 흡수는 불가능하다. ROI가 가장 높은 최적해를 찾아라.
 - backlog proposal 금지. ROI 낮은 계획은 과감히 폐기하라.`
 
 const REGIONS_SCHEMA = {
@@ -70,7 +71,7 @@ const HAZARDS_SCHEMA = {
           verdict: {
             type: 'string',
             enum: ['make-impossible', 'define-error', 'normal-flow', 'keep'],
-            description: '첫 질문의 제안 답 — principles의 네 답에 순서대로 대응',
+            description: '경계 흡수 방식의 제안 — principles의 네 답에 순서대로 대응',
           },
         },
       },
@@ -132,6 +133,7 @@ const FINAL_SCHEMA = {
   properties: {
     ok: { type: 'boolean' },
     notes: { type: 'string' },
+    unabsorbed: { type: 'array', items: { type: 'string' }, description: '확정됐으나 이번 패스에서 흡수되지 않은 hazard — 침묵 금지' },
   },
 }
 
@@ -171,7 +173,7 @@ async function huntRegion(r) {
     const res = await synod(
       r.dir,
       `# 임무: hazard 수집 — 영역 '${r.dir}' (${r.scope})
-principles를 기준으로, 이 영역에서 코드가 실패하거나 정의되지 않은 상태에 도달할 수 있는 지점을 모두 찾아라 —
+principles를 기준으로, 이 영역에서 기존 무결성 경계(타입·불변식·에러 정의·테스트)가 포함하지 못하는 도달 가능한 상태를 모두 찾아라 —
 삼켜진 예외, 무시된 반환값, 실패를 가리는 기본값, 검증 없는 경계 입력, 부분 실패, 경합, 도달 불가능하다고 가정만 된 분기.
 각 hazard의 도달 경로(입력·상태)와 현재 동작을 추적하고, 첫 질문 — **"이것을 에러로 정의할 것인가?"** — 의 답을 verdict로 제안하고 근거를 기록하라.
 네 Agora에 이미 hazard가 기록되어 있다면 그 너머의 새 hazard만 기록·반환하라. 새 hazard가 없으면 빈 배열을 반환하라.`,
@@ -235,7 +237,7 @@ await synod(
   `# 임무: 합의 도출 (회의 3/3)
 모든 hazard·비평·반박(${agoraPath}/ 전체)을 종합해서 **합의된 hazard 리스트**를
 ${agoraPath}/cartographer/consensus.md 에 작성하라.
-모든 hazard를 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한 — 실재하고 도달 가능하며 정의할 가치가 있는 — hazard만 verdict와 함께 리스트에 남겨라.
+모든 hazard를 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한 — 실재하고 도달 가능하며 경계 안으로 흡수할 가치가 있는 — hazard만 verdict와 함께 리스트에 남겨라.
 verdict가 keep인 것은 근거만 기록하고 리스트에서 제외한다.`,
   { label: 'consensus:draft', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
 )
@@ -259,7 +261,7 @@ ${PRINCIPLE}
 - 전체 작업을 최대한 크게 쪼개서 계획 갯수를 적게 유지하라.
 ## 계획 형식
 각 계획은 self-contained 마크다운으로 ${plansDir}/{순번}-{kebab-name}/proposal.md 에 작성한다.
-proposal.md는 다음을 포함한다: 대상 hazard와 verdict / 변경 내용 / 고정 테스트 / ROI 근거 / 예상 side-effect / 영향 범위.
+proposal.md는 다음을 포함한다: 대상 hazard와 verdict / 변경 내용 / 고정 테스트 / 정의의 서술(필요한 문서·주석) / ROI 근거 / 예상 side-effect / 영향 범위.
 반환하는 각 계획 name 은 그 디렉토리명 '{순번}-{kebab-name}' 과 정확히 일치시켜라.`,
   { label: 'plan', schema: PLANS_SCHEMA },
 )
@@ -271,7 +273,7 @@ const plans = (planned?.plans ?? []).map((p, i) => {
     proposal: `${plansDir}/${name}/proposal.md`,
   }
 })
-if (!plans.length) return { status: 'no-plans', hazards: consensus.count, agoraPath }
+if (!plans.length) return { status: 'no-plans', hazards: consensus.count, unabsorbed: consensus.titles ?? [], agoraPath }
 log(`${plans.length} hardening plans`)
 
 // 5. Review — 계획별 · 렌즈별 독립 검수 (parallel)
@@ -325,6 +327,7 @@ for (const name of order) {
 계획(${p.proposal})을 읽고 그대로 구현하라. 실행 가능한 코드를 실제로 수정한다.
 선행 적용 기록(${agoraPath}/apply-*)이 있으면 현재 상태 파악에 참고하라.
 **수정마다 새로 정의된 behavior를 고정하는 테스트를 추가하고**, 전체 테스트 스위트로 회귀가 없음을 확인하라.
+정의가 문서 표면의 주장을 요구하거나(에러 의미·제약) 기존 주장을 낡게 만들면 문서·주석을 함께 기록·정합하라.
 변경 요약과 테스트 결과를 네 Agora에 기록하고 반환하라.`,
     { label: `apply:${p.label}`, phase: 'Apply', schema: APPLY_SCHEMA },
   )
@@ -335,8 +338,10 @@ for (const name of order) {
 const finalReview = await synod(
   'integrity-manager',
   `# 임무: 최종 검수
+${PRINCIPLE}
 적용된 모든 계획(${agoraPath}/apply-* 기록)과 실제 변경된 코드를 종합 검수하라.
-모든 변경이 강화 원칙에 부합하는지, 각 정의가 테스트로 고정되었는지, 전체 테스트가 통과하는지 확인하고 결과를 반환하라.`,
+모든 변경이 강화 원칙에 부합하는지, 각 정의가 테스트로 고정되고 이유가 기록되었는지, 전체 테스트가 통과하는지 확인하고,
+확정됐으나 흡수되지 않은 hazard를 unabsorbed로 수집해 함께 반환하라.`,
   { label: 'final-review', phase: 'Apply', schema: FINAL_SCHEMA },
 )
 

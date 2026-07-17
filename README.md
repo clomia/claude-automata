@@ -55,9 +55,9 @@ refine is a family of large-scale workflows that eliminate the debt a repository
 
 All three skills work the same way — split into regions for parallel analysis, settle findings through a cross-examination assembly, and execute only the highest-ROI plans. Each run is a heavyweight workflow taking hours (3–12h).
 
-- `/refine:code [focus]` — code architecture optimization. Filters antipatterns through consensus and applies only the highest-ROI refactors.
-- `/refine:docs [focus]` — documentation-to-code alignment. Every claim in every non-executable text (markdown, doc systems like openspec, comments and docstrings) is checked against the code and set right.
-- `/refine:integrity [focus]` — logical-integrity hardening. Hunts the states where code can fail, digs in from **"should this be defined as an error?"**, hardens integrity, and pins every defined behavior with tests.
+- `/refine:code [focus]` — code architecture optimization. Filters antipatterns through consensus and applies only the highest-ROI refactors. The optimum presupposes correct code, so defects surfaced en route are repaired and docs invalidated by the changes are realigned.
+- `/refine:docs [focus]` — documentation architecture optimization. Every claim in every non-executable text (markdown, doc systems like openspec, comments and docstrings) is checked against the code and set right. Alignment is the precondition — converging duplicates, deleting dead docs, and keeping docs minimal is the optimum. Code is never modified — code defects are reported.
+- `/refine:integrity [focus]` — integrity-boundary optimization. Hunts the reachable states the existing boundary (types, invariants, error definitions, tests) fails to contain, digs in from **"should this be defined as an error?"**, absorbs them into the boundary, and pins every defined behavior with tests and its rationale in docs and comments.
 
 Leave the focus empty to target the whole codebase. Watch progress with `/workflows`.
 

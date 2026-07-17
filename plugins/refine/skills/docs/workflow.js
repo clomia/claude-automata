@@ -1,6 +1,6 @@
 export const meta = {
   name: 'refine-docs',
-  description: 'Documentation-to-code alignment — verify every claim in every non-executable text against the code, cross-examine discrepancies into consensus, then apply only the highest-ROI fixes',
+  description: 'Documentation architecture optimization — verify every claim in every non-executable text against the code, cross-examine findings into consensus, then apply only the highest-ROI fixes toward the optimum (aligned, irreducible, minimal); code is never modified',
   phases: [
     { title: 'Census', detail: 'inventory every non-executable text and split into verification regions' },
     { title: 'Verify', detail: 'sweep every claim in every document against the code until findings run dry' },
@@ -36,7 +36,9 @@ const synod = (agoraName, task, opts = {}) =>
 
 const DOMAIN = `**실행시킬 수 없는 텍스트는 모두 문서다** — 마크다운, 문서 시스템(openspec 등), 주석·docstring, 설정의 설명 텍스트.`
 
-const PRINCIPLE = `## 정합 원칙 (principles 해석)
+const PRINCIPLE = `## 문서 최적화 원칙 (principles 해석)
+- 목표 상태는 문서 아키텍처 최적해다. 이 상태에는 '모든 문서가 코드와 일치한다'가 전제로 들어있다 — 정합은 출발점이고, irreducible과 최소 문서가 최적해의 형태다.
+- 이 워크플로우는 코드를 수정하지 않는다. 코드 결함은 보고가 산출물이다.
 - 모든 발견 해소는 불가능하다. ROI가 가장 높은 최적해를 찾아라.
 - backlog proposal 금지. ROI 낮은 계획은 과감히 폐기하라.`
 
@@ -85,6 +87,7 @@ const CONSENSUS_SCHEMA = {
   properties: {
     count: { type: 'integer', description: '교차검증을 통과한 합의된 발견 수' },
     titles: { type: 'array', items: { type: 'string' } },
+    codeDefects: { type: 'array', items: { type: 'string' }, description: '별도 섹션으로 모은 code-defect 제목들 — 수정하지 않고 보고하는 것' },
   },
 }
 
@@ -220,7 +223,7 @@ await parallel(
       `# 임무: 비판 (회의 1/3)
 너는 ${c.role}다.
 대상 영역(${c.targets.join(', ')})의 Agora에 기록된 발견을 비판적으로 검토하라 —
-문서가 실제로는 옳은 오검출을 지목하고, 그들이 놓친 중복·불일치를 찾아 보완하라.
+오검출을 종류별 기준으로 지목하라 — mismatch는 문서가 실제로는 옳은 경우, duplication은 수렴할 거처가 실은 없는 경우, dead-doc은 대상이 실재하는 경우, restating-comment는 코드가 설명 못 하는 제약을 담은 경우, code-defect는 의도의 출처가 없거나 재현되지 않는 경우다. 그들이 놓친 모든 종류의 발견을 찾아 보완하라.
 각 비평과 보완 발견을 **네 Agora**에 기록하라 (누구의 어떤 발견에 대한 것인지 명시).`,
       { label: `critique:${c.dir}`, phase: 'Deliberate' },
     ),
@@ -247,17 +250,17 @@ await synod(
 모든 발견·비평·반박(${agoraPath}/ 전체)을 종합해서 **합의된 발견 리스트**를
 ${agoraPath}/cartographer/consensus.md 에 작성하라.
 모든 발견을 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한, 실재하며 정합 가치가 있는 발견만 리스트에 남겨라.
-code-defect 발견은 별도 섹션으로 모아라.`,
+code-defect 발견은 별도 섹션으로 모으고 codeDefects로 반환하라 — 채택 판정은 의도의 출처와 재현 근거로 한다.`,
   { label: 'consensus:draft', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
 )
 const consensus = await synod(
   'cartographer',
   `# 임무: 합의 완전성 검수
 ${agoraPath}/ 전체를 consensus.md 와 대조해 판정이 누락된 발견과 반영되지 않은 비평·반박을 찾아라.
-누락이 있으면 consensus.md 를 수정하고, 최종 리스트를 반환하라.`,
+누락이 있으면 consensus.md 를 수정하고, 최종 리스트를 codeDefects와 함께 반환하라.`,
   { label: 'consensus:review', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
 )
-if (!consensus?.count) return { status: 'no-consensus', agoraPath }
+if (!consensus?.count) return { status: 'no-consensus', codeFindings: consensus?.codeDefects ?? [], agoraPath }
 log(`consensus: ${consensus.count} findings`)
 
 // 4. Plan — 정합 계획 수립
@@ -282,7 +285,7 @@ const plans = (planned?.plans ?? []).map((p, i) => {
     proposal: `${plansDir}/${name}/proposal.md`,
   }
 })
-if (!plans.length) return { status: 'no-plans', findings: consensus.count, agoraPath }
+if (!plans.length) return { status: 'no-plans', findings: consensus.count, codeFindings: consensus.codeDefects ?? [], agoraPath }
 log(`${plans.length} alignment plans`)
 
 // 5. Review — 계획별 · 렌즈별 독립 검수 (parallel)
@@ -313,7 +316,7 @@ const refined = await synod(
   'doc-manager',
   `# 임무: 정합 계획 개선 + 실행 순서 확정
 ${agoraPath}/ 전체(계획들과 review-* 검수 기록)를 읽어 컨텍스트를 복원하라.
-검수 내용을 기반으로 각 계획을 개선하라. 판단 기준은 정합 원칙이다.
+검수 내용을 기반으로 각 계획을 개선하라. 판단 기준은 문서 최적화 원칙이다.
 ${PRINCIPLE}
 개선이 끝나면 계획들의 **실행 순서**를 확정해서 ${agoraPath}/doc-manager/execution-order.md 에 기록하고,
 그 순서를 계획 name 배열로 반환하라.`,
@@ -346,8 +349,10 @@ for (const name of order) {
 const finalReview = await synod(
   'doc-manager',
   `# 임무: 최종 검수
+${PRINCIPLE}
 적용된 모든 계획(${agoraPath}/apply-* 기록)과 실제 변경된 문서를 종합 검수하라.
 변경된 모든 문서를 코드와 재대조해 남은 불일치가 없는지, 실행되는 behavior가 불변인지 확인하라.
+이 검수는 아무것도 수정하지 않는다 — 남은 문제는 반환으로 보고한다.
 consensus.md의 code-defect 섹션을 codeFindings 로 수집해 함께 반환하라.`,
   { label: 'final-review', phase: 'Apply', schema: FINAL_SCHEMA },
 )

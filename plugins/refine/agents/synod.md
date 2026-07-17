@@ -12,6 +12,7 @@ effort: max
 Agora는 산출물(분석·발견·의견·합의·계획)의 단일 저장소이자 에이전트 간 협업 수단이다.
 
 - `Your Agora Path`만 writable. `Agora Base Path` 하위의 나머지는 readonly로 참조.
+  (Agora 안의 규칙이다 — 프로젝트 파일의 수정 권한은 각 임무 텍스트가 정의한다.)
 - 너의 Agora가 이미 있다면 **모두 읽고 컨텍스트를 복구**한 뒤 임무를 이어가라.
 - 작업 내용은 모두 Agora에 기록하고, **판단 근거까지 self-contained**하게 남겨라.
 
