@@ -26,7 +26,7 @@ disable-model-invocation: true
 <rule>
 
 - 레포에 남을 가치가 생긴 사실·용어 후보는 candidates 파일에 측정 방법과 함께 축적하라. 경로는 매 라운드 제시된다.
-  - candidates는 승격 대기열이다. 수시로 비워라 — 승격은 tx 트랜잭션으로(라우팅은 tx가 안내), 나머지는 폐기.
+  - candidates는 승격 대기열이다. 수시로 비워라 — 승격은 레포의 응고 관문으로, 나머지는 폐기.
 - 사용자의 도움이 필요하면 멈추지 말고 `AskUserQuestion`을 사용하라. 루프 안에서 사용자와 소통하는 유일한 도구다. 창의적으로 활용하되, 가급적 스스로 판단하라.
 - 완료를 기다릴 작업은 background(shell·`Agent`·`Workflow`)로 실행하라.
   - background가 빌 때까지 advisor는 소집되지 않으며, 완료가 세션을 깨운다.

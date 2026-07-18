@@ -251,7 +251,7 @@ degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`
    advisor에 전달하며, steering은 라운드를 리셋하지 않는다.
 5. **활성화 게이트 + 의미론적 종료(숫자 상한 없음) + 수동 pause/resume.** `/ploop:launch`가 `active`를 써야
    Stop이 루프를 돌고, 종료는 라운드 상한 없이 advisor 종료 토큰·anomaly failsafe로만 일어난다(advice-history가
-   파일이라 컨텍스트를 안 차지 — `/goal`도 동일). 이 자동 종료와 별개로 사용자는 `/ploop:off`로
+   파일이라 컨텍스트를 안 차지 — anchor도 동일). 이 자동 종료와 별개로 사용자는 `/ploop:off`로
    일시정지·`/ploop:on`으로 재개한다(위 활성화 lifecycle).
 6. **anchor 정박 — 메커니즘 1 + 2.** 외부 보존(`anchor.md`)으로 원문이 디스크에 영속하고, `PostCompact`
    마커를 소비한 Stop이 compacted 라운드의 트리거에 anchor 원문을 inline한다(메커니즘 2 — discrete
@@ -374,7 +374,7 @@ loop main이 메인 세션(depth 0)이라 `PostCompact`는 확실히 fire하고,
 - **candidates 라벨의 stale/growing 판정은 라운드 단면 스냅숏이다** — advisor는 큐의 추이를 갖지
   않는다. 표면화의 근거는 "쌓여 있고 처리되지 않았다"뿐이고 그 이상의 판단은 main 몫이다.
 - **worker 내부 행위는 advisor에 비가시다** — narrator는 메인 트랜스크립트(지휘·주장)만 서술한다.
-  결함이 아니라 신뢰 모델의 이동이다: 산출의 판정은 관측이 아니라 관문(독립 검증·tx·CI)이 소유한다.
+  결함이 아니라 신뢰 모델의 이동이다: 산출의 판정은 관측이 아니라 관문(독립 검증·CI)이 소유한다.
 
 ---
 
