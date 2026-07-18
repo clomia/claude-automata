@@ -29,7 +29,7 @@ effort: max
 4. 모든 태스크가 완료되면 **verify 스테이지를 spawn한다** (필수):
 
    ```
-   Agent(subagent_type="tx:verify", run_in_background=false, prompt="change-id: <change-id>")
+   Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
    ```
 
    change-id 외에는 아무것도 전달하지 않는다 — 검증자는 아티팩트와 코드를 직접 읽는다.

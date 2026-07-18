@@ -17,7 +17,7 @@ BASE=$(uv run --project "${CLAUDE_PLUGIN_ROOT}" base)
 1. **verify** — 활성 change가 있으면(`uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec list --json`) 각각에 대해, 마지막 verify 이후 코드가 변했거나 이력이 불명하면 verify 스테이지를 실행한다 — 불명은 재실행이다:
 
    ```
-   Agent(subagent_type="tx:verify", run_in_background=false, prompt="change-id: <change-id>")
+   Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
    ```
 
    change-id 외에는 아무것도 전달하지 않는다. 결함이 보고되면 수리 후 재spawn한다 — pass 전에는 닫지 않는다.
