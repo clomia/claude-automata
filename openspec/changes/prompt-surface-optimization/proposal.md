@@ -20,5 +20,6 @@ claude-automata의 정책층은 프롬프트다 — 에이전트에 주입되는
 
 ## Impact
 
-- plugins/{ploop,tx,refine}의 skills, agents, prompts, references와 표면을 조립하는 src 코드·테스트.
+- plugins/{ploop,tx,refine,version-up-alert}의 skills, agents, prompts, references, hooks와 표면을 조립하는 src 코드·bin 래퍼·테스트.
+- `.claude/rules/language.md`(어조·번역투 규약 영속화)와 README 한·영(표면 문구 인용 동기화).
 - 요구사항(behavior) 변화 없음 — spec delta 없는 change로, archive는 --skip-specs.
