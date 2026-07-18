@@ -10,7 +10,6 @@ effort: max
 1. 게이트를 판정한다: `applyRequires`에 열거된 아티팩트가 전부 `done`이어야 한다.
    (`isComplete`는 게이트가 아니다 — design은 포함 조건에 해당할 때만 존재한다.)
    아니면 구현이 아니라 계획이 부족한 것 — `tx:plan`으로 돌아간다.
-   **게이트 통과 전에는 apply 지시를 소비하지 않는다.**
 
    ```bash
    uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec status --change <change-id> --json
@@ -22,7 +21,7 @@ effort: max
    uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec instructions apply --change <change-id> --json
    ```
 
-3. 태스크를 의존 순서대로 구현하고, 완료할 때마다 tasks.md의 체크박스를 `- [x]`로 갱신한다.
+3. 태스크를 의존 순서대로 구현한다.
    spec wording이 구현을 구속한다 — 구현 중 spec이 틀렸음이 드러나면 `tx:plan`으로 delta를
    고친 뒤 계속한다.
 

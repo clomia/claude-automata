@@ -10,21 +10,21 @@ effort: max
 
 # 절차
 
-1. change-id를 정한다 — 의도를 나타내는 kebab-case. 보통 tx 브랜치의 slug와 같다.
+1. change-id를 정한다 — 보통 tx 브랜치의 slug와 같다.
 
    ```bash
    uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec new change <change-id>
    ```
 
-2. 아티팩트를 의존 순서(proposal → specs·design → tasks)로 작성한다. 각 아티팩트마다
+2. 아티팩트를 의존 순서로 작성한다. 각 아티팩트마다
    지시·형식·템플릿을 엔진에서 받는다 — 형식의 정본은 엔진이다:
 
    ```bash
    uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec instructions <artifact> --change <change-id> --json
    ```
 
-   design은 그 지시가 명시한 포함 조건에 해당할 때만 작성한다. 태스크는 이 트랜잭션 안에서
-   완결된다 — merge 이후의 행동(배포·운영 검증)은 태스크가 아니라 후속 change다.
+   태스크는 이 트랜잭션 안에서 완결된다 — merge 이후의 행동(배포·운영 검증)은 태스크가
+   아니라 후속 change다.
 
 3. 검증한다:
 
