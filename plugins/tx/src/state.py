@@ -13,6 +13,7 @@ import sys
 from datetime import UTC, datetime, timedelta
 
 from src.repo import (
+    ORIGIN_HEAD_REMEDY,
     ahead_notice,
     base_ahead_count,
     base_branch,
@@ -111,7 +112,7 @@ def main() -> None:
     if base is None:
         emit(
             "[branch-state-warn] Cannot resolve the GitHub default branch "
-            "(origin/HEAD is unset). Run: git remote set-head origin --auto "
+            f"(origin/HEAD is unset). Run: {ORIGIN_HEAD_REMEDY} "
             "— tx guards stay off until it resolves."
         )
         return

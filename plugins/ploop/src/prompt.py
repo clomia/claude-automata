@@ -100,7 +100,7 @@ def format_advisor_trigger(
             " an uncovered region"
         )
     body = textwrap.dedent(f'''\
-        Invoke the advisor. Run the call below EXACTLY as written:
+        Run the call below EXACTLY as written:
 
         ```
         Agent(
@@ -126,7 +126,7 @@ def format_advisor_trigger(
         ```
 
         When the advisor returns, read its advice at {advice_path}.
-        Your candidates queue (facts and terms awaiting promotion): {candidates_path}
+        Your candidates queue: {candidates_path}
     ''')
     return prefix + body
 

@@ -5,8 +5,6 @@ argument-hint: "[change-id]"
 effort: max
 ---
 
-계획된 change를 구현한다. 구현의 완료는 자기 보고가 아니라 독립 검증(verify)이 판정한다.
-
 # 절차
 
 1. 게이트를 판정한다: `applyRequires`에 열거된 아티팩트가 전부 `done`이어야 한다.

@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from src.prompt import (
+    INSTRUCTION_PATH,
     format_advice_history,
     format_advisor_trigger,
     format_end_notice,
@@ -110,10 +111,7 @@ class TestFormatAdvisorTrigger:
         """The trigger is the loop's one deterministic per-round channel into
         main context, so the queue path rides every trigger — pending or not —
         on the line after the advice-read direction."""
-        expected = (
-            "Your candidates queue (facts and terms awaiting promotion): "
-            "/t/s1_candidates.md"
-        )
+        expected = "Your candidates queue: /t/s1_candidates.md"
         for out in (self.trigger(), self.trigger(candidates_pending=True)):
             assert expected in out
             assert out.index("read its advice at") < out.index("Your candidates queue")
@@ -158,3 +156,26 @@ class TestFormatEndNotice:
         out = format_end_notice("c", candidates_path=Path("/t/s1_candidates.md"))
         assert "The candidates queue at /t/s1_candidates.md still holds entries" in out
         assert "promote or discard each one" in out
+
+
+def test_instruction_file_carries_termination_token():
+    """instruction.md의 토큰 문면과 main.py 상수는 같은 계약의 양면 — 표류는 침묵 고장이 된다."""
+    from src.main import TERMINATION_TOKEN
+
+    assert TERMINATION_TOKEN in INSTRUCTION_PATH.read_text()
+
+
+def test_static_agent_files_carry_trigger_labels():
+    """테스트는 trigger 측 라벨만 단정해 왔다 — 정적 파일 측 개정이 조용히 계약을 깨지 못하게 고정."""
+    agents = INSTRUCTION_PATH.parent.parent / "agents"
+    advisor = (agents / "advisor.md").read_text()
+    for label in (
+        "anchor",
+        "actions-history",
+        "narration-path",
+        "advice-history",
+        "instructions",
+    ):
+        assert label in advisor
+    narrator = (agents / "narrator.md").read_text()
+    assert "round" in narrator and "narration-path" in narrator

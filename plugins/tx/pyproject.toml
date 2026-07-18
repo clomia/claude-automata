@@ -1,6 +1,6 @@
 [project]
 name = "tx"
-version = "0.6.2"
+version = "0.7.0"
 requires-python = ">=3.14"
 dependencies = []
 
@@ -12,6 +12,7 @@ branch-state-warn = "src.state:main"
 git-sync = "src.sync:main"
 git-sync-off = "src.pause:off"
 git-sync-on = "src.pause:on"
+open-tx = "src.open_tx:main"
 openspec = "src.openspec:main"
 seed = "src.seed:main"
 

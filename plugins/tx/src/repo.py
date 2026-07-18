@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 TX_BRANCH_RE = re.compile(r"^tx-")
+ORIGIN_HEAD_REMEDY = "git remote set-head origin --auto"
 
 
 def git(*args: str) -> str | None:
@@ -58,22 +59,27 @@ def set_origin_head() -> bool:
     return git("remote", "set-head", "origin", "--auto") is not None
 
 
-def print_base() -> None:
-    """CLI for the open/close skills — resolve and print the base branch.
-
-    Re-syncs the mirror first, so a default-branch change on GitHub is picked
-    up at every transaction boundary.  Exit 1 with guidance when unresolvable.
-    """
+def resolve_base_or_exit() -> str:
+    """Resolve the base branch or exit 1 with the standard guidance."""
     set_origin_head()
     base = base_branch()
     if base is None:
         print(
             "Cannot resolve the GitHub default branch (origin/HEAD). "
-            "Ensure an `origin` remote exists, then run: git remote set-head origin --auto",
+            f"Ensure an `origin` remote exists, then run: {ORIGIN_HEAD_REMEDY}",
             file=sys.stderr,
         )
         raise SystemExit(1)
-    print(base)
+    return base
+
+
+def print_base() -> None:
+    """CLI for the close skill — resolve and print the base branch.
+
+    Re-syncs the mirror first, so a default-branch change on GitHub is picked
+    up at every transaction boundary.  Exit 1 with guidance when unresolvable.
+    """
+    print(resolve_base_or_exit())
 
 
 def rebase_cmd(base: str) -> str:

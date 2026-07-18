@@ -1,12 +1,12 @@
 ---
 name: plan
-description: Plan the change as OpenSpec artifacts — proposal, delta specs, design, tasks — until validate is green
+description: Plan the change as OpenSpec artifacts — proposal, delta specs, design, tasks
 argument-hint: "[change intent]"
 effort: max
 ---
 
 변경의 의도·설계를 change 아티팩트로 기록한다. squash merge는 브랜치 히스토리를 지운다 —
-이 아티팩트의 archive만이 변경의 의도·설계·과정을 생존시킨다.
+이 아티팩트의 archive만이 그 과정 기록을 생존시킨다.
 
 # 절차
 
@@ -25,13 +25,17 @@ effort: max
 
    design은 그 지시가 명시한 포함 조건에 해당할 때만 작성한다.
 
-3. green까지 검증하고 수정한다:
+3. 검증한다:
 
    ```bash
    uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec validate <change-id> --strict --no-interactive --json
    ```
 
-4. green이면 즉시 `tx:apply`로 이어간다 — 계획은 구현의 시작이지 정지점이 아니다.
+   delta 없는 change(도구·인프라·문서 변경)에서는 validate가 클래스 전체로 `no deltas`
+   ERROR를 낸다 — 이 ERROR는 수리 대상이 아니고, 그 클래스의 관문은 태스크 완료와
+   archive의 `--skip-specs`, 사후 CI다. 그 외의 지적은 전부 green까지 수정한다.
+
+4. 즉시 `tx:apply`로 이어간다 — 계획은 구현의 시작이지 정지점이 아니다.
 
 # 미지(未知)의 번역
 

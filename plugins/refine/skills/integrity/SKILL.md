@@ -1,6 +1,6 @@
 ---
 name: integrity
-description: "Heavyweight, hours-long (3-12h) integrity-boundary optimization — a large multi-agent workflow that hunts every reachable state the existing boundary (types, invariants, error definitions, tests) fails to contain, interrogates each from 'should this be defined as an error?', cross-examines hazards into consensus, then absorbs only the highest-ROI set into the boundary — code and docs both, pinned by tests. Invoke only when a deep, deliberate integrity pass is genuinely needed, not for fixing a known bug."
+description: "Hours-long (3-12h) multi-agent integrity-boundary optimization — hunts every reachable state the boundary (types, invariants, error definitions, tests) fails to contain, then absorbs only the highest-ROI set into it — code and docs both, pinned by tests. Not for fixing a known bug."
 argument-hint: "[focus area]"
 effort: max
 ---

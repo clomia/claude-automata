@@ -27,7 +27,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from src.openspec import PIN
+from src.openspec import NPX_MISSING, PIN
 from src.repo import git
 
 WORKFLOW_TARGET = Path(".github/workflows/memory-check.yml")
@@ -81,7 +81,7 @@ def seed_scaffold() -> None:
             check=False,
         )
     except OSError:
-        print("npx not found — openspec requires Node.js >= 20.", file=sys.stderr)
+        print(NPX_MISSING, file=sys.stderr)
         raise SystemExit(1)
     if result.returncode != 0:
         print(f"openspec init failed (exit {result.returncode})", file=sys.stderr)

@@ -13,11 +13,12 @@ import sys
 from typing import NoReturn
 
 PIN = "1.6.0"
+NPX_MISSING = "npx not found — openspec requires Node.js >= 20."
 
 
 def main() -> NoReturn:
     try:
         os.execvp("npx", ["npx", "--yes", f"@fission-ai/openspec@{PIN}", *sys.argv[1:]])
     except FileNotFoundError:
-        print("npx not found — openspec requires Node.js >= 20.", file=sys.stderr)
+        print(NPX_MISSING, file=sys.stderr)
         sys.exit(1)

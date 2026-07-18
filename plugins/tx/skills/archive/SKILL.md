@@ -5,8 +5,7 @@ argument-hint: "[change-id]"
 effort: high
 ---
 
-완료된 change를 아카이브한다 — delta가 main spec에 sync되고 change 디렉토리가
-`openspec/changes/archive/`로 동결된다.
+delta가 main spec에 sync되고 change 디렉토리가 `openspec/changes/archive/`로 동결된다.
 
 # 절차
 
