@@ -1,7 +1,7 @@
 """Deterministic preflight and branch cut for /tx:open.
 
-The open skill's steps 1-2 were prose logic executed by the agent; this entry
-point owns them.  Fail-closed on a failed fetch: the integrity boundary must
+The open skill states the opened-branch fact; this entry point owns reaching
+it.  Fail-closed on a failed fetch: the integrity boundary must
 not open on a stale base.
 """
 

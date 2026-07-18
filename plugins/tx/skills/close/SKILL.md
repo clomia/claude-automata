@@ -4,7 +4,8 @@ description: Close the transaction — verify, archive, docs gate, then squash m
 effort: max
 ---
 
-**tx close는 "현재 구현과 내용이 모두 무결하다"는 선언이다.** 무결하지 않으면 닫지 마라 — 필요한 수정을 트랜잭션 안에서 마친 뒤 진행한다.
+**tx close는 "현재 구현과 내용이 모두 무결하다"는 선언이다.** 무결하지 않으면 닫지 마라 —
+필요한 수정을 트랜잭션 안에서 마친 뒤 닫는다.
 
 base는 레포지토리의 GitHub 기본 브랜치다. 해석이 실패하면 stderr의 지시를 전하고 거부한다:
 
@@ -12,38 +13,29 @@ base는 레포지토리의 GitHub 기본 브랜치다. 해석이 실패하면 st
 BASE=$(uv run --project "${CLAUDE_PLUGIN_ROOT}" base)
 ```
 
-## 시퀀스
+# 닫힌 상태 — 아래가 전부 참이면 트랜잭션은 닫힌 것이다
 
-1. **verify** — 활성 change가 있으면(`uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec list --json`) 각각에 대해, 마지막 verify 이후 코드가 변했거나 이력이 불명하면 verify 스테이지를 실행한다 — 불명은 재실행이다:
+- 트랜잭션의 change마다 verify 스테이지의 pass가 있고, 그 pass는 마지막 코드 변경 이후의 것이다.
+  검증자에게는 change-id 외에 아무것도 전달하지 않는다:
 
-   ```
-   Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
-   ```
+  ```
+  Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
+  ```
 
-   change-id 외에는 아무것도 전달하지 않는다. 결함이 보고되면 수리 후 재spawn한다 — pass 전에는 닫지 않는다.
+- 활성 change는 `tx:archive` 스킬(Skill 도구)로 아카이브되어 있다. 태스크 부재·미완료는
+  close 불가 사유다 — 수리는 `tx:plan`·`tx:apply`.
+- 브랜치는 최신 `origin/<base>` 위에 rebase되어 있다. git-sync pause는 이를 면제하지 않는다.
+- diff에 장기기억 표면(추적 `.md`·`openspec/**`)이 있으면, 최종 트리에 대해
+  `${CLAUDE_PLUGIN_ROOT}/references/docs-surface.md` 규약 판정과 diff 신·구 어휘의 추적
+  텍스트 전체 상충 스캔이 수행되었고, 발견은 이 트랜잭션에서 해소되어 있다.
+- 트랜잭션 전체가 원격 브랜치 `<prefix>/<scope>/<slug>`의 PR로 base에 squash merge되어
+  있다 — CI green이 병합 조건이고 체크 부재도 차단이다(PR 직후의 부재는 스케줄링 지연일 수
+  있다). 로컬 브랜치는 병합까지 tx-*로 남는다. squash 메시지는
+  conventional-commit(`<prefix>(<scope>): <요약>`)으로 트랜잭션 전체를 요약한다.
+- 로컬은 병합된 base에 동기화되어 있고, 트랜잭션 브랜치·stray 산출물·빈 디렉토리가 남아
+  있지 않다.
 
-2. **archive** — 활성 change가 있으면 `tx:archive` 스킬(Skill 도구)로 아카이브한다. 태스크 부재·미완료는 close 차단 사유다 — 수리(`tx:plan`·`tx:apply`) 후 재개한다. archive가 만든 spec 편집·디렉토리 이동은 이 트랜잭션에 포함된다.
-
-3. **commit** — 트랜잭션의 모든 변경을 commit한다.
-
-4. **rebase** — `git fetch origin "$BASE" && git rebase "origin/$BASE"`. git-sync-off는 close를 면제하지 않는다 — pause와 무관하게 수행한다. conflict는 양쪽 변경의 의도를 분석해 주도적으로 해결하고 결과의 무결성을 검증하라. 해소가 코드를 만졌으면 1의 verify를 재실행한다.
-
-5. **docs 게이트** — diff에 장기기억 표면 파일(추적 `.md` · `openspec/**`)이 있으면 `${CLAUDE_PLUGIN_ROOT}/references/docs-surface.md`를 읽고 그 규약으로 diff를 판정한다.
-
-   - **상충 스캔** — diff의 핵심 어휘(신·구 이름, 소멸한 개념)로 추적 텍스트 전체를 `git grep`해 교차 파일·교차 표면 상충을 이 트랜잭션에서 해소한다.
-   - 게이트가 파일을 만졌으면 commit한다. **스캔은 rebase에 후행한다 — rebase가 재발생하면 게이트를 재실행한다.**
-
-6. **push·PR** — `git push origin tx-<slug>:<prefix>/<scope>/<slug>`로 push하고, `gh pr create --head <prefix>/<scope>/<slug>`로 base를 target 삼아 PR을 연다. 로컬 브랜치는 병합까지 tx-*로 남는다. 이미 push된 stale remote 브랜치는 그 브랜치의 열린 PR이 없음을 확인한 뒤 삭제하고 다시 push한다.
-
-7. **CI** — `gh pr checks <PR#> --watch --fail-fast`로 대기하고 exit code로 판정한다. 체크 실패와 체크 부재는 구분해 보고하되, 둘 다 병합 차단이다. PR 직후의 부재는 스케줄링 지연일 수 있다 — 잠시 후 재시도해 구분한다.
-
-8. **merge** — base가 다시 전진했으면 4·5를 반복하고, 4·5가 로컬을 바꿨으면 `git push --force-with-lease origin tx-<slug>:<prefix>/<scope>/<slug>` 후 7(CI 대기)을 재수행한 뒤 진행한다: `gh pr merge <PR#> --squash --delete-branch`. squash commit message는 conventional-commit 형식(`<prefix>(<scope>): <요약>`)으로 트랜잭션 전체를 요약한다.
-
-9. **정리** — 로컬을 최신 base로 동기화하고 로컬 트랜잭션 브랜치를 지운다. 작업 트리에 트랜잭션이 남긴 stray 산출물이나 빈 디렉토리가 없어야 한다:
-
-   ```bash
-   find . -type d -empty -not -path './.git/*' -delete
-   ```
+이미 닫힌 트랜잭션의 close는 부족한 상태만 채운다 (idempotent).
 
 ## GitFlow prefix 계약 (conventional commits)
 
@@ -56,7 +48,3 @@ BASE=$(uv run --project "${CLAUDE_PLUGIN_ROOT}" base)
 | `docs`     | 문서만 변경                                        |
 
 `scope`는 변경이 속한 도메인·모듈이다. `chore`·`docs`는 scope를 생략한다.
-
-## 규칙
-
-- 이미 병합된 트랜잭션을 다시 close하면 (idempotent) 남은 정리만 수행한다.
