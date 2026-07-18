@@ -17,14 +17,14 @@ uv run --project "${CLAUDE_PLUGIN_ROOT}" open-tx <slug>
 `slug`는 의도를 나타내는 짧은 kebab-case다. 실패하면 stderr의 지시를 전하고, 조치 후
 재실행한다.
 
-# 2. 씨앗
+# 2. seed
 
 ```bash
 uv run --project "${CLAUDE_PLUGIN_ROOT}" seed
 ```
 
-심긴 파일은 이 트랜잭션에 실려 함께 병합된다. 실패하면 stderr를 전하고 openspec 생략
-경로로 진행한다.
+seed가 만든 파일은 이 트랜잭션에 실려 함께 병합된다. 실패하면 stderr를 전하고 openspec
+생략 경로로 진행한다.
 
 # 3. 경로 선택
 

@@ -363,7 +363,7 @@ loop main이 메인 세션(depth 0)이라 `PostCompact`는 확실히 발화하�
 - **advice-history·loop.log는 무상한 성장한다** — advisor가 매 라운드 advice-history 전문을 읽으므로
   월 단위 purpose 루프에서 비용이 누적된다. 윈도잉은 관측 후 별도 작업이다.
 - **세션 hard-death에는 drain 노티스가 닿지 않는다** — candidates의 종료 프로토콜 운반체는 종료
-  노티스뿐이라, 프로세스 사망 시 잔량은 유실된다. "수시로 비우세요"(launch rules)가 손실 창을
+  노티스뿐이라, 프로세스 사망 시 잔량은 유실된다. "수시로 비워라"(launch rules)가 손실 창을
   bound한다 — 작업기억은 lossy가 정의다.
 - **orchestrator 정체성의 재주입은 launch 본문 re-inject 1겹이다** — anchor의 3겹 정박과 비대칭.
   compaction 후 정체성 표류는 관측 항목이다.

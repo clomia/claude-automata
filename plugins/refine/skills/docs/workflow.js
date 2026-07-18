@@ -81,9 +81,9 @@ const CONSENSUS_SCHEMA = {
   type: 'object',
   required: ['count'],
   properties: {
-    count: { type: 'integer', description: '교차검증을 통과한 합의된 발견 수' },
+    count: { type: 'integer', description: '합의된 발견 수' },
     titles: { type: 'array', items: { type: 'string' } },
-    codeDefects: { type: 'array', items: { type: 'string' }, description: '별도 섹션으로 모은 code-defect 제목들 — 수정하지 않고 보고하는 것' },
+    codeDefects: { type: 'array', items: { type: 'string' }, description: 'consensus.md의 code-defect 섹션 제목들' },
   },
 }
 
@@ -145,7 +145,7 @@ phase('Census')
 await synod(
   'cartographer',
   `# 임무: 문서 전수조사와 검증 영역 정의
-레포지토리의 문서를 하나도 빠짐없이 목록화하고, **독립적으로 검증 가능한 영역**으로 나눠라.
+레포지토리의 문서를 하나도 빠짐없이 목록화하고, 독립적으로 검증 가능한 영역으로 나눠라.
 영역은 겹침 없이 나누어 떨어지고, 에이전트 하나가 전수 검증할 수 있는 크기여야 한다.
 영역별 문서 인벤토리와 착수 컨텍스트를 네 Agora에 기록하라.`,
   { label: 'census:draft', schema: REGIONS_SCHEMA },
@@ -237,7 +237,7 @@ await parallel(
 await synod(
   'cartographer',
   `# 임무: 합의 도출 (회의 3/3)
-모든 발견·비평·반박(${agoraPath}/ 전체)을 종합해서 **합의된 발견 리스트**를
+모든 발견·비평·반박(${agoraPath}/ 전체)을 종합해서 합의된 발견 리스트를
 ${agoraPath}/cartographer/consensus.md 에 작성하라.
 모든 발견을 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 실재하고 정합 가치가 있는 발견만 남겨라.
 code-defect 발견은 별도 섹션으로 모으고 codeDefects로 반환하라.`,
@@ -308,7 +308,7 @@ const refined = await synod(
 ${agoraPath}/ 전체(계획들과 review-* 검수 기록)를 읽어 컨텍스트를 복원하라.
 검수 내용을 기반으로 각 계획을 개선하라.
 ${PRINCIPLE}
-개선이 끝나면 계획들의 **실행 순서**를 ${agoraPath}/doc-manager/execution-order.md 에 기록하고, 그 순서를 계획 name 배열로 반환하라.`,
+개선이 끝나면 계획들의 실행 순서를 ${agoraPath}/doc-manager/execution-order.md 에 기록하고, 그 순서를 계획 name 배열로 반환하라.`,
   { label: 'refine', schema: ORDER_SCHEMA },
 )
 const ordered = (refined?.executionOrder ?? [])

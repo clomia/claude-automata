@@ -79,7 +79,7 @@ const CONSENSUS_SCHEMA = {
   type: 'object',
   required: ['count'],
   properties: {
-    count: { type: 'integer', description: '교차검증을 통과한 합의된 안티패턴 수' },
+    count: { type: 'integer', description: '합의된 안티패턴 수' },
     titles: { type: 'array', items: { type: 'string' } },
   },
 }

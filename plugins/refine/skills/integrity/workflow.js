@@ -71,7 +71,7 @@ const HAZARDS_SCHEMA = {
           verdict: {
             type: 'string',
             enum: ['make-impossible', 'define-error', 'normal-flow', 'keep'],
-            description: '경계 흡수 방식의 제안 — principles의 네 답에 순서대로 대응',
+            description: '경계 흡수 방식의 제안 — principles의 답 넷에 순서대로 대응',
           },
         },
       },
@@ -83,7 +83,7 @@ const CONSENSUS_SCHEMA = {
   type: 'object',
   required: ['count'],
   properties: {
-    count: { type: 'integer', description: '교차검증을 통과한 합의된 hazard 수' },
+    count: { type: 'integer', description: '합의된 hazard 수' },
     titles: { type: 'array', items: { type: 'string' } },
   },
 }
@@ -142,7 +142,7 @@ phase('Map')
 await synod(
   'cartographer',
   `# 임무: 분석 영역 정의
-코드베이스 전체 구조를 **독립적으로 해석 가능한 분석 영역**으로 나눠라.
+코드베이스 전체 구조를 독립적으로 해석 가능한 분석 영역으로 나눠라.
 모든 영역은 모호한 경계 없이 나누어 떨어져야 하고, 에이전트 하나가 전수 분석할 수 있는 크기여야 한다.
 각 영역의 착수 컨텍스트(범위·진입점·경계 입력·핵심 파일)를 네 Agora에 기록하라.`,
   { label: 'map:draft', schema: REGIONS_SCHEMA },
@@ -211,7 +211,7 @@ await parallel(
 너는 ${c.role}다.
 대상 영역(${c.targets.join(', ')})의 Agora에 기록된 hazard를 검토하라 —
 실제로는 도달 불가능한 오검출을 지목하고, verdict가 옳은지 반론하고, 그들이 놓친 hazard를 찾아 보완하라.
-각 비평과 보완 hazard를 **네 Agora**에 기록하라 (누구의 어떤 hazard에 대한 것인지 명시).`,
+각 비평과 보완 hazard를 네 Agora에 기록하라 (누구의 어떤 hazard에 대한 것인지 명시).`,
       { label: `critique:${c.dir}`, phase: 'Deliberate' },
     ),
   ),
@@ -234,7 +234,7 @@ await parallel(
 await synod(
   'cartographer',
   `# 임무: 합의 도출 (회의 3/3)
-모든 hazard·비평·반박(${agoraPath}/ 전체)을 종합해서 **합의된 hazard 리스트**를
+모든 hazard·비평·반박(${agoraPath}/ 전체)을 종합해서 합의된 hazard 리스트를
 ${consensusPath} 에 작성하라.
 모든 hazard를 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한 — 실재하고 도달 가능하며 경계 안으로 흡수할 가치가 있는 — hazard만 verdict와 함께 리스트에 남겨라.
 verdict가 keep인 것은 근거만 기록하고 리스트에서 제외한다.`,
@@ -257,7 +257,7 @@ const planned = await synod(
   `# 임무: 강화 계획 수립
 합의된 hazard(${consensusPath})를 파악한 뒤 무결성 강화 계획을 작성하라.
 ${PRINCIPLE}
-- 전체 작업을 최대한 크게 쪼개서 계획 갯수를 적게 유지하라.
+- 전체 작업을 최대한 크게 쪼개서 계획 개수를 적게 유지하라.
 ## 계획 형식
 각 계획은 self-contained 마크다운으로 ${plansDir}/{순번}-{kebab-name}/proposal.md 에 작성한다.
 proposal.md는 다음을 포함한다: 대상 hazard와 verdict / 변경 내용 / 고정 테스트 / ROI 근거 / 예상 side-effect / 영향 범위.
@@ -305,7 +305,7 @@ const refined = await synod(
 ${agoraPath}/ 전체(계획들과 review-* 검수 기록)를 읽어 컨텍스트를 복원하라.
 검수 내용을 기반으로 각 계획을 개선하라.
 ${PRINCIPLE}
-계획들의 **실행 순서**를 확정해서 ${agoraPath}/integrity-manager/execution-order.md 에 기록하고,
+계획들의 실행 순서를 확정해서 ${agoraPath}/integrity-manager/execution-order.md 에 기록하고,
 그 순서를 계획 name 배열로 반환하라.`,
   { label: 'refine', schema: ORDER_SCHEMA },
 )
