@@ -30,7 +30,7 @@ disable-model-invocation: true
 - 사용자의 도움이 필요하면 멈추지 말고 `AskUserQuestion`을 사용하라. 루프 안에서 사용자와 소통하는 유일한 도구다. 창의적으로 활용하되, 가급적 스스로 판단하라.
 - 완료를 기다릴 작업은 background(shell·`Agent`·`Workflow`)로 실행하라.
   - background가 빌 때까지 advisor는 소집되지 않으며, 완료가 세션을 깨운다.
-  - 서버 같은 ambient 프로세스는 `Monitor`로 돌리거나 라운드 안에서 정리하라.
+  - `Monitor`는 외부 채널·감시 같은 ambient 프로세스를 라이브로 돌리는 데만 사용하라 — advisor 소집을 막지 않으므로 완료 대기에 쓰지 마라.
 
 </rule>
 
