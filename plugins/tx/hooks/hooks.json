@@ -32,6 +32,7 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Bash(git *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook",
             "args": ["base-commit-block"],
             "timeout": 30,

@@ -56,7 +56,9 @@ RULESET = {
         {
             "type": "required_status_checks",
             "parameters": {
-                "strict_required_status_checks_policy": False,
+                # strict up-to-date closes the post-rebase-scan race server-side by
+                # forcing a re-rebase (and so a re-scan); close rebases anyway.
+                "strict_required_status_checks_policy": True,
                 "required_status_checks": [
                     {"context": "openspec-validate"},
                     {"context": "docs-form-check"},

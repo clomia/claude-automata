@@ -17,9 +17,8 @@ token must be `commit` — no regex backtracking, so a hostile option string
 cannot stall the hook into its timeout.
 
 Once detected, resolution is fail-closed.  The target is the segment's `-C`
-path, else the payload `cwd`, else CLAUDE_PROJECT_DIR — payload `cwd` is an
-observation-based dependency with no official reference; if it drifts away
-the fallback chain stands.  A `cd`/`pushd` segment earlier in the same
+path, else the payload `cwd` (a documented hook input field), else
+CLAUDE_PROJECT_DIR.  A `cd`/`pushd` segment earlier in the same
 command makes those fallbacks meaningless for the commit's real directory,
 so a detected commit after one blocks unless it names its own `-C`.
 Repository identity is `--git-common-dir` equality, so a linked worktree of
