@@ -282,7 +282,8 @@ diff 핵심 어휘로 장기기억 표면 전체(추적 텍스트 전부)를 gre
 
 ## 검증 대기 — 실측 전까지 가정
 
-- 완전 무인(headless) 환경에서 AskUserQuestion의 실제 동작 (대기·타임아웃·실패 중 무엇인지) —
-  tx 표면은 질문 채널을 생략해 의존이 소멸했고, 잔존 의존은 ploop launch의 비상 채널뿐이다.
 - cron 류 외부 ping이 죽은 프로세스의 루프를 부활시키는지 — 프로세스 사망(δ)은 인간 몫으로
   남는 마지막 예외 클래스다.
+
+(해소: 무인 환경의 AskUserQuestion — 공식 문서가 답했다. 기본은 무한 대기,
+`askUserQuestionTimeout` 설정 시 자동 진행. 무인 운용 권장 설정은 README ploop 절이 나른다.)

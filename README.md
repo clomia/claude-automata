@@ -36,7 +36,8 @@ The **anchor** is the file the loop is anchored to. It comes in two kinds.
 
 ### Usage
 
-> Auto-Compact must be set to True.
+> Auto-Compact must be set to True.  
+> For unattended runs, set `askUserQuestionTimeout` — an unanswered question then never parks the loop forever.
 
 1. Write your anchor — `/ploop:define-mission` for a clear goal, `/ploop:define-purpose` for an ongoing direction.
 2. In a fresh session, run `/ploop:launch [anchor]`.

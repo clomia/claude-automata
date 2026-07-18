@@ -36,7 +36,8 @@ ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 advisor loop입�
 
 ### 사용 방법
 
-> Auto-Compact가 True로 설정되어 있어야 합니다.
+> Auto-Compact가 True로 설정되어 있어야 합니다.  
+> 무인 운용에는 `askUserQuestionTimeout` 설정을 권장합니다 — 응답 없는 질문에서 루프가 영구 대기하지 않습니다.
 
 1. anchor를 작성하세요. 명백한 목표면 `/ploop:define-mission`, 지속적으로 나아갈 방향이면 `/ploop:define-purpose`를 활용하세요.
 2. 새로운 세션에서 `/ploop:launch [anchor 내용]`을 실행하세요.

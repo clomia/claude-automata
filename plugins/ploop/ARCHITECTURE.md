@@ -348,10 +348,10 @@ degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`
    재유도되고 2연속이면 failsafe가 무결하게 닫는다(결정 14).
 4. **PreToolUse 발동·session 일치** — 자발 호출 게이팅은 PreToolUse가 main의 Agent 호출에 발동하고
    session_id가 Stop과 같아야 성립한다. 미발동 시 게이팅만 무효화되고 루프는 현행대로(graceful).
-5. **SubagentStop `agent_type` 필드 형식은 관측 기반이다** — 실측이 bare(`advisor`)를 기록해
-   scoped(`ploop:advisor`)와 2형 매칭한다(PreToolUse의 `subagent_type`은 scoped 정확 일치).
-   표류하면 in-flight 마커가 leak해 stuck-active가 되고 `/ploop:on`이 복구한다(결정 13의 수용
-   트레이드오프와 동일 경로).
+5. **SubagentStop `agent_type`은 공식 문서상 플러그인 에이전트에 scoped(`ploop:advisor`)다** —
+   이 레포의 실측은 bare(`advisor`)도 기록한 바 있어 2형 매칭으로 관용한다(PreToolUse의
+   `subagent_type`은 scoped 정확 일치). 표류하면 in-flight 마커가 leak해 stuck-active가 되고
+   `/ploop:on`이 복구한다(결정 13의 수용 트레이드오프와 동일 경로).
 
 loop main이 메인 세션(depth 0)이라 `PostCompact`는 확실히 발화하고, main이 foreground라 advisor·narrator
 동기 호출이 보장된다 — subagent tier에서라면 불확실했을 두 가정을 main 위치가 보장으로 만든다.
