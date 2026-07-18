@@ -112,7 +112,7 @@ const ORDER_SCHEMA = {
   type: 'object',
   required: ['executionOrder'],
   properties: {
-    executionOrder: { type: 'array', items: { type: 'string' }, description: '계획 name 들의 실행 순서' },
+    executionOrder: { type: 'array', items: { type: 'string' } },
   },
 }
 
@@ -135,7 +135,6 @@ const FINAL_SCHEMA = {
     codeFindings: {
       type: 'array',
       items: { type: 'string' },
-      description: '문서가 드러낸 코드 결함들 — 이 워크플로우가 수정하지 않고 보고만 하는 것',
     },
   },
 }
@@ -154,7 +153,7 @@ const mapping = await synod(
   'cartographer',
   `# 임무: 전수조사 완전성 검수
 인벤토리를 실제 파일 시스템과 대조해 누락된 문서를 찾고, 영역 간 책임이 나누어 떨어지는지 검수하라.
-누락·모호가 있으면 수정해서 네 Agora에 반영하고, 최종 영역 목록을 반환하라.`,
+누락이 있거나 경계가 모호하면 수정해서 네 Agora에 반영하고, 최종 영역 목록을 반환하라.`,
   { label: 'census:review', schema: REGIONS_SCHEMA },
 )
 const usedDirs = new Set()
@@ -263,8 +262,7 @@ ${PRINCIPLE}
 - 작업을 크게 묶어 계획 개수를 적게 유지하라.
 ## 계획 형식
 각 계획은 self-contained 마크다운으로 ${plansDir}/{순번}-{kebab-name}/proposal.md 에 작성한다.
-proposal.md는 다음을 포함한다: 대상 발견 / 변경 내용 / ROI 근거 / 예상 side-effect / 영향 범위.
-반환하는 각 계획 name 은 그 디렉토리명 '{순번}-{kebab-name}' 과 정확히 일치시켜라.`,
+proposal.md는 다음을 포함한다: 대상 발견 / 변경 내용 / ROI 근거 / 예상 side-effect / 영향 범위.`,
   { label: 'plan', schema: PLANS_SCHEMA },
 )
 const plans = (planned?.plans ?? []).map((p, i) => {

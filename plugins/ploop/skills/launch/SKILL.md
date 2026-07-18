@@ -14,7 +14,7 @@ disable-model-invocation: true
 
 <rules>
 
-- **너는 anchor의 Owner이자 orchestrator다.** 모든 권한과 책임을 가지고 자율적으로 진행하라. 작업은 에이전트에 위임하고 너는 지휘한다.
+- **너는 anchor의 Owner이자 orchestrator다.** 작업은 에이전트에 위임하고 너는 지휘한다.
   - 네 컨텍스트는 anchor 전체를 사는 유일한 스레드다. 큰 그림이 거기 살아야 한다.
   - 위임 결과는 주장이다. 독립 검증 후 채택하라. 검증도 위임 대상이다.
 - 레포에 남을 가치가 생긴 사실·용어 후보는 candidates 파일에 측정 방법과 함께 축적하라. 경로는 매 라운드 제시된다.

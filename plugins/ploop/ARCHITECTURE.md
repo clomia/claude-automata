@@ -43,7 +43,7 @@ API 요금제 전용이 된다. 반면 `Agent` 툴 subagent는 **모든 요금�
 
 ```
 main      depth 0  session     full tools    loop main: runs the anchor
-   |  Agent(advisor)  <- "invoke advisor" injected by Stop hook
+   |  Agent(advisor)  <- advisor trigger injected by Stop hook
    v
 advisor   depth 1  Agent ro    advise           analyzes blind spots; writes advice
    |  Agent(narrator)  Grep Glob Web*
@@ -231,7 +231,7 @@ degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`
    트리거는 Stop 훅이다. advisor·narrator만 nested subagent로 격리해 구독 안전성을 얻는다 — anchor의
    지휘(orchestration)는 원래 main 컨텍스트에서 일어나므로 별도 operator subagent는 격리 이점 없이
    부채만 남겨 제거했다. main은 orchestrator다(launch rules가 세운다): 작업은 위임한 에이전트에서
-   소비되고 main 컨텍스트에는 전략·조율·검증·응고가 산다 — depth 0의 보장(PostCompact 확실 발화·동기
+   소비되고 main 컨텍스트에는 지휘가 산다 — depth 0의 보장(PostCompact 확실 발화·동기
    Agent 호출·전체 훅 수명주기)이 작업이 아니라 지휘에 필요한 전부라 배치가 정확히 맞는다.
 2. **훅은 트리거, 실행은 Agent 툴.** Claude Code 훅은 stdout/stderr/exit code로만 통신해 tool call을
    발화하지 못하므로, Stop이 `exit 2`+stderr로 main에게 advisor 호출을 **지시**하고 main(LLM)이 Agent 툴로

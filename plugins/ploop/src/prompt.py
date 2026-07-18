@@ -109,7 +109,7 @@ def format_advisor_trigger(
             run_in_background=false,
             prompt="""
                 anchor: {anchor_path}
-                actions-history: Agent(
+                action-history: Agent(
                     subagent_type="ploop:narrator",
                     description="narrate action history",
                     run_in_background=false,

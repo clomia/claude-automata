@@ -23,7 +23,7 @@ ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 advisor loop입�
 
 - 독립된 advisor가 사용자를 대신하여 진행 상황을 관리합니다.
   - advisor는 메인 에이전트가 놓친 부분을 찾아줍니다.
-- 메인 에이전트는 orchestrator입니다 — 작업을 에이전트들에 위임하고 전략·검증·응고를 소유합니다.
+- 메인 에이전트는 orchestrator입니다 — 작업을 에이전트들에 위임하고 지휘합니다.
 - 여러번의 auto compaction에도 맥락을 잃지 않습니다.
   - compaction이 발생하면 anchor가 재주입됩니다.
   - advisor가 전체 맥락을 파일로 관리합니다.

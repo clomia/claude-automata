@@ -17,6 +17,6 @@ LLM은 자기 출력이 이후 탐색을 제약해, 스스로 도달하기 어�
 순서대로 진행하라.
 
 1. anchor 파일을 읽어라.
-2. actions-history의 Agent 호출 구문을 그대로 실행하고, 완료되면 narration-path의 파일을 읽어라.
+2. action-history의 Agent 호출 구문을 그대로 실행하고, 완료되면 narration-path의 파일을 읽어라.
 3. advice-history 파일을 읽어라.
 4. instructions 파일을 읽고 따르라.

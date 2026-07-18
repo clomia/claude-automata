@@ -113,7 +113,7 @@ const ORDER_SCHEMA = {
   type: 'object',
   required: ['executionOrder'],
   properties: {
-    executionOrder: { type: 'array', items: { type: 'string' }, description: '계획 name 들의 실행 순서' },
+    executionOrder: { type: 'array', items: { type: 'string' } },
   },
 }
 
@@ -133,7 +133,7 @@ const FINAL_SCHEMA = {
   properties: {
     ok: { type: 'boolean' },
     notes: { type: 'string' },
-    unabsorbed: { type: 'array', items: { type: 'string' }, description: '확정됐으나 이번 패스에서 흡수되지 않은 hazard — 침묵 금지' },
+    unabsorbed: { type: 'array', items: { type: 'string' } },
   },
 }
 
@@ -260,8 +260,7 @@ ${PRINCIPLE}
 - 전체 작업을 최대한 크게 쪼개서 계획 개수를 적게 유지하라.
 ## 계획 형식
 각 계획은 self-contained 마크다운으로 ${plansDir}/{순번}-{kebab-name}/proposal.md 에 작성한다.
-proposal.md는 다음을 포함한다: 대상 hazard와 verdict / 변경 내용 / 고정 테스트 / ROI 근거 / 예상 side-effect / 영향 범위.
-반환하는 각 계획 name 은 그 디렉토리명 '{순번}-{kebab-name}' 과 정확히 일치시켜라.`,
+proposal.md는 다음을 포함한다: 대상 hazard와 verdict / 변경 내용 / 고정 테스트 / ROI 근거 / 예상 side-effect / 영향 범위.`,
   { label: 'plan', schema: PLANS_SCHEMA },
 )
 const plans = (planned?.plans ?? []).map((p, i) => {
@@ -290,7 +289,7 @@ await parallel(
         `# 임무: 강화 계획 검수 — '${p.name}' / ${l.key}
 합의된 hazard(${consensusPath})와 대상 계획(${p.proposal})을 읽어라.
 ${l.charge}
-이슈나 개선점을 네 Agora(review.md)에 기록하라.`,
+이슈나 개선점을 네 Agora에 기록하라.`,
         { label: `review:${p.label}:${l.key}`, phase: 'Review' },
       ),
     ),

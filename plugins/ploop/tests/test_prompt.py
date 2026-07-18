@@ -39,11 +39,11 @@ class TestFormatAdvisorTrigger:
 
     def test_lists_sections_in_canonical_order(self):
         """role lives in the advisor system prompt; the trigger carries the other
-        four in the loop's canonical order, with the narrator call inlined under actions-history."""
+        four in the loop's canonical order, with the narrator call inlined under action-history."""
         out = self.trigger()
         assert (
             out.index("anchor:")
-            < out.index("actions-history:")
+            < out.index("action-history:")
             < out.index("advice-history:")
             < out.index("instructions:")
             < out.index("advice-path:")
@@ -171,7 +171,7 @@ def test_static_agent_files_carry_trigger_labels():
     advisor = (agents / "advisor.md").read_text()
     for label in (
         "anchor",
-        "actions-history",
+        "action-history",
         "narration-path",
         "advice-history",
         "instructions",
