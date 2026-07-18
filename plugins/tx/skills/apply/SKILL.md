@@ -23,7 +23,7 @@ effort: max
    ```
 
 3. 태스크를 의존 순서대로 구현하고, 완료할 때마다 tasks.md의 체크박스를 `- [x]`로 갱신한다.
-   spec 문면이 구현을 구속한다 — 구현 중 spec이 틀렸음이 드러나면 `tx:plan`으로 delta를
+   spec wording이 구현을 구속한다 — 구현 중 spec이 틀렸음이 드러나면 `tx:plan`으로 delta를
    고친 뒤 계속한다.
 
 4. 모든 태스크가 완료되면 **verify 스테이지를 spawn한다** (필수):
