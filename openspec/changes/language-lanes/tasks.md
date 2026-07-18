@@ -11,6 +11,7 @@
 - [x] 2.3 어휘 스윕 적용 — 문면·거처(mirror+MEMORY 동반)·발화·축자·잠식·소거·드리프트·locative
 - [x] 2.4 tx:plan post-merge 태스크 가드 + plan calque 수리
 - [x] 2.5 이 레포 스킬 해라체 전환(translate·commit), 버전 3쌍 상향
+- [x] 2.6 ploop off/on notice 영어 통일(상태 고지 = English-only UI 클래스)
 
 ## 3. 검증
 

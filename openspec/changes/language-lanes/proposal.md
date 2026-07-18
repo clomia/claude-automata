@@ -17,7 +17,8 @@
   (미완료 태스크 데드락의 발견 시점을 close에서 plan으로 앞당김.)
 - **배제 기록**: 소급 capability spec 전사 기각(루트 ARCHITECTURE 결정 기록) — 빈 `specs/`는
   설계상 정답, 첫 진짜 behavior delta의 ADDED에서 유기적으로 탄생.
-- 이 레포 스킬(translate·commit) 해라체 전환, 소유자 명명 반영(Agent Orchestrator).
+- 이 레포 스킬(translate·commit) 해라체 전환, 소유자 명명 반영(Agent Orchestrator),
+  ploop off/on notice의 영어 통일 — tx git-sync-off/on과 같은 순수 상태 고지 클래스(English-only UI).
 
 ## Capabilities
 
