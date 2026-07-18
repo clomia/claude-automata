@@ -23,6 +23,7 @@ ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 advisor loop입�
 
 - 독립된 advisor가 사용자를 대신하여 진행 상황을 관리합니다.
   - advisor는 메인 에이전트가 놓친 부분을 찾아줍니다.
+- 메인 에이전트는 orchestrator입니다 — 작업을 에이전트들에 위임하고 전략·검증·응고를 소유합니다.
 - 여러번의 auto compaction에도 맥락을 잃지 않습니다.
   - compaction이 발생하면 anchor가 재주입됩니다.
   - advisor가 전체 맥락을 파일로 관리합니다.
@@ -43,7 +44,7 @@ ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 advisor loop입�
 3. 루프는 advisor가 더 이상 조언할 것이 없다고 판단하면 자동으로 끝나며, 이때 에이전트가 로그를 읽어 전체 라운드를 요약합니다.
    잠시 멈추려면 `/ploop:off`, 멈춘 지점부터 다시 이어가려면 `/ploop:on`을 실행하세요 (턴이 돌고 있으면 ESC로 끊은 뒤 실행).
    `off`는 조용히 루프를 멈추고 상태를 보존하며, `on`은 그 상태에서 루프를 재개합니다.
-   `on`은 실수로 누른 ESC·API 에러·구독 세션 리밋 등으로 멈춘 장기 루프까지 되살리는 유일한 수단입니다 — advisor가 스스로 루프를 종료한 경우만 빼고 언제나 정상 재개합니다.
+   `on`은 실수로 누른 ESC·API 에러·구독 세션 리밋 등으로 멈춘 장기 루프까지 깨우는 범용 wake 버튼입니다 — advisor가 스스로 루프를 종료한 경우만 빼고 언제나 정상 재개합니다.
    그 밖의 어떤 것도 — 중간 지시, 질문 응답, 백그라운드 작업 알림, ESC 자체 — 루프를 멈추지 않습니다.
 
 # Refine
@@ -70,18 +71,19 @@ tx는 변경을 트랜잭션 단위로 관리하는 Git 워크플로우입니다
 
 - 트랜잭션은 작업 단위가 아니라 **무결성 경계**입니다. open부터 close까지가 하나로 묶입니다.
 - base 브랜치는 **레포지토리의 GitHub 기본 브랜치**입니다. 설정할 것이 없습니다 — `origin/HEAD`에서 자동으로 읽습니다.
-- `/tx:open`으로 base에서 `tx-*` 분기를 열고 [OpenSpec](https://github.com/Fission-AI/OpenSpec)으로 변경을 계획합니다.
-- `/tx:close`로 OpenSpec 변경을 아카이브하고 CI 통과 후 base로 squash merge합니다.
-- 세 개의 가드 훅이 보호 브랜치 편집·오래 열린 트랜잭션·동기화 이탈을 막습니다.
+- `/tx:open`이 base에서 `tx-*` 분기를 열고, 필요하면 씨앗(OpenSpec 스캐폴드 + CI workflow)을 심은 뒤 변경을 라우팅합니다.
+- 계획·구현은 tx 내장 스킬이 수행합니다 — `tx:plan`(OpenSpec 아티팩트), `tx:apply`(구현), 그리고 깨끗한 컨텍스트에서 구현을 실측 대조하는 독립 `tx:verify` 스테이지.
+- `/tx:close`가 변경을 아카이브하고 docs 게이트와 CI 통과 후 base로 squash merge합니다.
+- 네 개의 가드 훅이 보호 브랜치 편집과 base 커밋을 막고, 오래 열린 트랜잭션을 표면화하며, 동기화 이탈을 막습니다.
 
-사전 요구: uv, [OpenSpec](https://github.com/Fission-AI/OpenSpec) (**skills-only로 설치**해야 합니다 — 절차는 플러그인 README), GitHub CLI(`gh`).
+사전 요구: uv, Node.js >= 20 (핀 버전 [OpenSpec](https://github.com/Fission-AI/OpenSpec) CLI를 npx로 구동 — 설치할 것 없음), GitHub CLI(`gh`).
 
 ### 사용 방법
 
 ```
-/tx:open  [변경 설명]   # base에서 tx-* 분기 생성 + OpenSpec 계획
-...작업...              # 구현 (예: openspec-apply-change 스킬)
-/tx:close               # 변경 아카이브 후 base로 squash merge
+/tx:open  [변경 설명]   # base에서 tx-* 분기 + 씨앗 + 경로 선택
+...작업...              # tx:plan → tx:apply → tx:verify
+/tx:close               # verify·archive·docs 게이트 후 base로 squash merge
 ```
 
 트랜잭션 정의·가드 훅·base 브랜치 해석·sync 일시정지 등 자세한 내용은 [플러그인 README](plugins/tx/README.md)를 참고하세요.

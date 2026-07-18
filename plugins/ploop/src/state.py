@@ -1,10 +1,12 @@
 """State — the per-session workspace layout and the round ledger.
 
 Workspace is the single authority for where a session's files live: the loop
-state under CLAUDE_PLUGIN_DATA, plus the two agent handoff channels (advice,
-narration) under the system temp dir — a Write TOOL call into the protected
-~/.claude routes to the auto-permission-mode classifier and can be silently
-blocked, so the agents write to unprotected temp, where it is auto-approved.
+state under CLAUDE_PLUGIN_DATA, plus three files under the system temp dir —
+the two agent handoff channels (advice, narration) and the main agent's
+candidates queue (facts and terms staged for promotion).  A Write TOOL call
+into the protected ~/.claude routes to the auto-permission-mode classifier and
+can be silently blocked, so their writers use unprotected temp, where it is
+auto-approved.
 
 The ledger ({advice_history, round_start_line, anomalies, phase}) is the loop's
 persisted state; the hook owns it as single writer — advisor and narrator only
@@ -106,8 +108,17 @@ class Workspace:
     def narration_path(self) -> Path:
         return Path(tempfile.gettempdir()) / f"ploop_{self.session_id}_narration.md"
 
+    @property
+    def candidates_path(self) -> Path:
+        return Path(tempfile.gettempdir()) / f"ploop_{self.session_id}_candidates.md"
+
     def clear_round_state(self) -> None:
-        """Remove the per-round loop state (anchor.md and active marker kept)."""
+        """Remove the per-round loop state (anchor.md and active marker kept).
+
+        Only launch calls this, so the candidates queue empties exactly when a
+        fresh anchor starts — a pause, resume, or anomaly end leaves it for the
+        drain.
+        """
         for path in (
             self.ledger_path,
             self.round_path,
@@ -118,6 +129,7 @@ class Workspace:
             self.gated_shells_path,
             self.advice_path,
             self.narration_path,
+            self.candidates_path,
         ):
             path.unlink(missing_ok=True)
 

@@ -15,7 +15,7 @@
 |---|---|
 | [MEMORY.md](MEMORY.md) | 기억 시스템 전체 — 작업기억/장기기억, 두 표면(spec·docs), 승격 라우팅, 불변식, OpenSpec seam, docs 표면 규약과 그 운반 |
 | [plugins/ploop/ARCHITECTURE.md](plugins/ploop/ARCHITECTURE.md) | advisor loop 설계 결정 전체 (내부 용어 포함) |
-| [plugins/tx/README.md](plugins/tx/README.md) | 트랜잭션 모델 · base 해석 · 가드 훅 |
+| [plugins/tx/README.md](plugins/tx/README.md) | 트랜잭션 모델 · base 해석 · 가드 훅 · 씨앗 · verify 스테이지 |
 | plugins/refine/skills/\*/principles.md | 각 정제 워크플로우의 판단 axiom |
 | [README.ko.md](README.ko.md) / [README.md](README.md) | 설치·사용 (사람 대상, 한·영 쌍) |
 
@@ -37,7 +37,10 @@ loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의
 - **refine × tx — 청소도 관문을 지난다.** refine의 쓰기(재접지·강등·삭제)는 일반 작업과 같은
   tx를 통과한다(MEMORY 불변식 1 — 쓰기는 방향을 가리지 않는다).
 - **ploop × 기억 — 루프는 레포를 오염하지 않는다.** ploop의 모든 상태는 레포 밖에 산다. 레포로
-  들어가는 유일한 경로는 응고(MEMORY 승격 라우팅)다.
+  들어가는 유일한 경로는 응고(MEMORY 승격 라우팅)이며, launch rules의 응고 포인터가 그 관문으로
+  tx를 명명한다 — tx 미설치 환경에서는 해석 불가능한 한 구절로 남을 뿐 루프는 무손상이다.
+- **멀티 인스턴스 — 동시성의 단위는 워크트리, 수렴 지점은 origin이다.** tx 상태는 워크트리 격리·
+  ploop 상태는 세션 키잉이고, 정합은 close의 fetch·rebase·CI가 수렴시킨다.
 - **규약 운반** — docs 표면 규약의 층별 배치(W=tx 릴리스, M=refine 릴리스, R=산물, 기계
   백스톱=씨앗·훅)와 fork 경계는 MEMORY.md 운반 절이 소유한다.
 
@@ -55,3 +58,6 @@ ASCII 다이어그램은 정렬을 위해 영어만. 프롬프트는 한국어 �
   근거는 ploop 정본.
 - **ADR·사실 DB·문서 인덱스 기각** — 결정 기록은 각 정본의 배제·결정 섹션, 측정은 조사 기록,
   회상은 grep. 근거는 MEMORY의 docs 표면 규약.
+- **부트스트랩 예외 1회** — 기억 아키텍처를 완성한 트랜잭션 자신은 자신이 설치한
+  기계(plan·verify·docs 게이트)보다 앞서, change 아티팩트 없이 병합되었다(2026-07).
+  이후 구조 변경의 예외는 0이다.

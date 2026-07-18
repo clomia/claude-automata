@@ -23,13 +23,15 @@ class TestFormatAdviceHistory:
 
 
 class TestFormatAdvisorTrigger:
-    def trigger(self, anchor_text=None):
+    def trigger(self, anchor_text=None, candidates_pending=False):
         return format_advisor_trigger(
             anchor_path=Path("/d/s1_anchor.md"),
             round_path=Path("/d/s1_round.jsonl"),
             advice_history_path=Path("/d/s1_advice_history.md"),
             advice_path=Path("/d/s1_advice.md"),
             narration_path=Path("/t/s1_narration.md"),
+            candidates_path=Path("/t/s1_candidates.md"),
+            candidates_pending=candidates_pending,
             instruction_path=Path("/p/prompts/instruction.md"),
             anchor_text=anchor_text,
         )
@@ -53,6 +55,7 @@ class TestFormatAdvisorTrigger:
         assert "/d/s1_advice_history.md" in out
         assert "/d/s1_advice.md" in out
         assert "/t/s1_narration.md" in out
+        assert "/t/s1_candidates.md" in out
         assert "/p/prompts/instruction.md" in out
 
     def test_narrator_gets_the_round_slice_file(self):
@@ -103,6 +106,34 @@ class TestFormatAdvisorTrigger:
         out = self.trigger()
         assert "{" not in out and "}" not in out
 
+    def test_candidates_queue_path_always_rides_the_main_direction(self):
+        """The trigger is the loop's one deterministic per-round channel into
+        main context, so the queue path rides every trigger — pending or not —
+        on the line after the advice-read direction."""
+        expected = (
+            "Your candidates queue (facts and terms awaiting promotion): "
+            "/t/s1_candidates.md"
+        )
+        for out in (self.trigger(), self.trigger(candidates_pending=True)):
+            assert expected in out
+            assert out.index("read its advice at") < out.index("Your candidates queue")
+
+    def test_advisor_sees_candidates_only_when_pending(self):
+        """Emptiness is decided in code: the advisor block names the queue only
+        on candidates_pending, between advice-history and instructions — a loop
+        that never queues candidates keeps its advisor prompt free of the
+        promotion domain."""
+        out = self.trigger(candidates_pending=True)
+        assert "candidates: /t/s1_candidates.md — facts and terms" in out
+        assert (
+            out.index("advice-history:")
+            < out.index("candidates: /t/s1_candidates.md")
+            < out.index("instructions:")
+        )
+        bare = self.trigger()
+        assert "uncovered region" not in bare
+        assert "candidates: /t/s1_candidates.md —" not in bare
+
 
 class TestFormatEndNotice:
     def test_directs_main_to_report_end_and_cause(self):
@@ -119,3 +150,11 @@ class TestFormatEndNotice:
         with_log = format_end_notice("c", log_path=Path("/d/s1_loop.log"))
         assert "Read /d/s1_loop.log" in with_log
         assert "recap" in with_log
+
+    def test_candidates_drain_appended_only_when_given(self):
+        """A still-loaded queue at termination gets the drain directive; an
+        empty one (candidates_path None) leaves the notice silent about it."""
+        assert "candidates" not in format_end_notice("c")
+        out = format_end_notice("c", candidates_path=Path("/t/s1_candidates.md"))
+        assert "The candidates queue at /t/s1_candidates.md still holds entries" in out
+        assert "promote or discard each one" in out

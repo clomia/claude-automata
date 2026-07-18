@@ -68,9 +68,9 @@ glossary는 장기기억 소속이다. ubiquitous language는 모든 에이전�
 
 1. **tx가 유일한 응고 관문이다.** git 추적 기억으로 들어가는 모든 쓰기는 transaction을
    통과한다 — 장기기억의 모든 항목은 CI green이라는 실측 검증을 통과한 기억이다. 쓰기는
-   방향을 가리지 않는다: refine의 재접지·강등·삭제도 같은 문을 지난다. (branch-protect 훅이
-   이 불변식의 절반을 강제한다 — 나머지 절반(신규 파일·Bash 커밋 경로)은 base 브랜치
-   git commit 차단 훅이 완성한다. ⬜ 작업 목록 7.)
+   방향을 가리지 않는다: refine의 재접지·강등·삭제도 같은 문을 지난다. (클라이언트 강제는
+   두 훅이 나눠 진다 — branch-protect가 Edit/Write 경로를, base-commit-block이 신규 파일·
+   Bash 커밋 경로를 막는다.)
 2. **provenance 없는 사실은 승격 금지.** 장기기억에 들어가는 사실은 측정 방법을 동반한다.
    사용자 발화는 사실이 아니라 의도로 기록된다(define-mission의 CRITICAL 규칙을 기억 전체로
    확장) — 의도의 자리는 proposal이다.
@@ -124,8 +124,11 @@ tx의 OpenSpec 의존은 다음이 전부다:
 
 - **파일 포맷** — 핀 버전 기준으로 동결: `specs/`·`changes/`·`changes/archive/` 레이아웃,
   delta 대수(ADDED/MODIFIED/REMOVED/RENAMED), 요구사항 문법.
-- **CLI 커맨드** — 스킬은 JSON 출력만 소비한다. 사용 커맨드는 tx 스킬 본문에 열거된 것이
-  전부여야 한다.
+- **CLI 커맨드** — 판정 입력은 `--json`으로, 액션(init·new·archive)은 exit code로만 소비한다.
+  사용 커맨드는 tx 스킬 본문에 열거된 것이 전부여야 한다. 미완 상태의 `instructions apply`는
+  소비하지 않는다 — 그 출력의 업스트림 스킬 참조 문자열은 CLI 소유라 schema fork로도 지워지지
+  않는다(핀 실측). **schema fork 기각**이 이 실측의 배제 기록이다: artifact instructions
+  4종에 개입 유도 0, 유일한 오염 문자열은 커맨드 표면 선택으로 회피된다.
 - **validate의 1차 소비자는 CI다** — 각 레포의 required check로 실행해 tx:close의 CI 대기가
   문서 무결성까지 지키게 한다. 에이전트 측 CLI 표면은 최소로 유지한다.
 - **결합은 `npx --yes @fission-ai/openspec@<pin>` 호출이다** — 설치가 아니다. 핀의 정본은 tx이고
@@ -144,10 +147,7 @@ tx의 OpenSpec 의존은 다음이 전부다:
 ## docs 표면 규약 — 자유 산문의 정본
 
 spec 표면과 달리 docs 표면에는 문법·validate·상태기계가 없다 — 규약과 그 운반이 전부이고
-전용 도구는 0이다. 필요한 것은 기존 표면의 확장뿐이다(작업 목록 5–8).
-
-> 구현 상태: 규약은 이 문서로 발효된다. 운반과 게이트(작업 목록 5–8)는 ⬜ 미구현 — 그때까지
-> 이 문서가 유일한 운반체다.
+전용 도구는 0이다.
 
 ### 기하 — living/dated는 유지보수 모드다
 
@@ -178,11 +178,13 @@ litmus: **spec은 제품이 무엇을 하는가, 정본은 단위가 왜 이 모
 문장은 분리한다(behavior→spec, 이유→정본, 상호 링크). 특정 변경 하나의 사유는 change
 proposal로 — 정본의 결정 기록과 탄생 시 같은 텍스트일 수 있으나 권위가 즉시 분화한다(정본
 사본은 living으로 개정·삭제되고 archive 사본은 동결·권위 0 — 중복이 아니라 설계다).
+추적 텍스트는 어디서든 gitignored·`/tmp/` 경로를 지시하지 않는다 — 자기완결은 조사 기록만의
+의무가 아니고, CI docs-form-check가 전 추적 `.md`에서 형식 검사한다.
 
 ### 자리 규약
 
 **설계 정본** — 소유 단위(레포 루트 / 필요를 입증한 하위 단위 / 자기 불변식을 가진 횡단
-도메인)당 하나, 고정 이름 — 이름이 회상 키다. 허브는 위성에 링크 위임하고 어느 방향도
+도메인)당 하나, 고정 이름(`ARCHITECTURE.md`) — 이름이 회상 키다. 허브는 위성에 링크 위임하고 어느 방향도
 재서술하지 않는다. 범위: 구조·경계·도구 결정·비용·로드맵·**배제 기록**(별도 ADR 없이 정본의
 섹션) + 구현 상태 범례. 정본은 코드를 앞설 수 있되 **앞서는 주장은 미구현 표기가 의무다** —
 무표기 선행 주장은 mismatch다. 신생 레포의 정본은 스캐폴드하지 않는다 — 첫 구조적 결정과 함께
@@ -226,21 +228,23 @@ openspec 생략은 둘뿐이다: **변경이 docs 표면(장기기억 중 opensp
 또는 구조·세계관에 영향 없는 trivial한 변경일 때. 구조에 영향을 주는 코드 변경은 behavior
 불변(refactor)이라도 propose 소관이다 — 그 의도·설계는 archive만이 squash를 생존한다.
 
-close의 docs 게이트(diff에 docs 표면 파일이 있으면): 헤더·배너·provenance 자기완결 / 정본 선행
-주장 표기 / 상주 diff의 클래스 판정 / **상충 스캔** — 순서 불변식: 스캔은 최신 `origin/<base>`
-rebase에 **후행**하고 rebase가 재발생하면 재실행한다. diff 핵심 어휘로 장기기억 표면
-전체(추적 텍스트 전부)를 grep해 교차 파일·교차 표면 상충을 해소한다. git-sync-off는 close를
-면제하지 않는다 — close는 pause와 무관하게 fetch·rebase를 선행한다. 상충 검출의 3단 분업:
-쓰기 시점(기존 거처 grep) / 병합 시점(post-rebase 스캔) / 주기(refine:docs).
+close의 docs 게이트(diff에 장기기억 표면 — 추적 `.md`·`openspec/**` — 이 있으면): 헤더·배너·
+provenance 자기완결 / 정본 선행 주장 표기 / 상주 diff의 클래스 판정 / 첫 구조적 승격이면 설계
+정본·상주 진입점 1행 생성(신생 레포의 정본은 스캐폴드가 아니라 여기서 태어난다) / **상충 스캔**
+— 순서 불변식: 스캔은 최신 `origin/<base>` rebase에 **후행**하고 rebase가 재발생하면 재실행한다.
+diff 핵심 어휘로 장기기억 표면 전체(추적 텍스트 전부)를 grep해 교차 파일·교차 표면 상충을
+해소한다. git-sync-off는 close를 면제하지 않는다 — close는 pause와 무관하게 fetch·rebase를
+선행한다. 상충 검출의 3단 분업: 쓰기 시점(기존 거처 grep) / 병합 시점(post-rebase 스캔) /
+주기(refine:docs).
 
 ### 운반 — 규약은 세 층으로 도달해야 작동한다
 
 | 층 | 실리는 곳 | 소비 시점 | 상태 |
 |---|---|---|---|
-| W (쓰기) | tx open/close 본문 + `references/docs-surface.md` | 승격 순간 — close 시점 로드라 compaction에 면역 | ⬜ 작업 5 |
-| M (유지보수) | refine:docs reference + convention 발견종 | refine 주기, 전 에이전트 | ⬜ 작업 6 |
+| W (쓰기) | tx open/close 본문 + `references/docs-surface.md` | 승격 순간 — close 시점 로드라 compaction에 면역 | 발효 |
+| M (유지보수) | refine:docs reference(`docs-surface.md`) + convention 발견종 | refine 주기, 전 에이전트 | 발효 |
 | R (산물) | 배너·파일명 연도·정본 범례·진입점 라벨 | 회상 시점 — 포크·부분 읽기를 생존하는 유일 층 | 발효 |
-| 기계 백스톱 | CI docs-form-check + base-commit 차단 훅 | 병합·커밋 — 포크 레포에도 도달 | ⬜ 작업 7·8 |
+| 기계 백스톱 | CI docs-form-check(씨앗) + base-commit 차단 훅 | 병합·커밋 — CI는 레포 동반이라 포크에 도달, 훅은 플러그인 동반이라 미도달 | 발효 |
 
 정본→운반체는 번역이라 기계 대조가 불가능하다 — 사본을 은폐하지 않고 4중 방어를 둔다:
 **동거**(정본과 운반층 원본이 이 레포에 살아 같은 tx로 개정되고, 이 레포의 refine:docs가 주기
@@ -257,9 +261,18 @@ rebase에 **후행**하고 rebase가 재발생하면 재실행한다. diff 핵�
 
 - 산문 의미에 대한 기계 검증력은 0이다 — CI는 형식만 결정론이고, 의미의 게이트는 close 판단과
   refine 주기다. 그럴듯하지만 틀린 산문이 응고되면 다음 루프의 오염 입력이 된다.
+- 씨앗 CI는 코드의 의미도 검증하지 않는다 — validate와 형식 체크뿐이다. 코드 의미의 게이트는
+  verify 스테이지와 대상 레포 자신의 테스트다.
 - 병렬 close의 분 단위 경합 창 — post-rebase 스캔 이후·병합 이전에 상대가 병합하는 창은
-  클라이언트측에서 제거 불가다. 서버측 "require branches to be up to date"가 있으면 재rebase →
-  재스캔이 강제되어 사실상 닫히나, 이는 레포 설정이지 tx의 보증이 아니다.
+  클라이언트측에서 제거 불가다. 서버측 규칙이 있으면 사실상 닫히나 tx는 그것을 보증하지
+  못한다 — 씨앗이 1회 시도하고(실패는 1행 고지 후 진행), 성공해도 admin 토큰은 관문을 우회·
+  철거할 수 있다. 서버측이 주는 것은 불변 보증이 아니라 **우회의 감사 가능화**다. 한편
+  `gh pr checks`는 required 지정과 무관하게 보고된 전 체크를 감시하므로 에이전트 병합 경로의
+  게이트는 서버 설정 없이 성립한다 — 잔여는 인간이 tx 밖에서 병합하는 경로뿐이다.
+- 훅은 로컬 git 경로만 지배한다 — 원격 쓰기 도구(gh api·MCP push 류)로 base에 직접 쓰는
+  레인은 클라이언트가 막지 못한다. 서버측 보호가 성립한 레포에서만 닫힌다.
+- origin 없는 레포에서는 tx가 적용되지 않는다(가드 침묵 계약) — 관문 없는 장기기억 쓰기가
+  열린다. 표면화 지점은 첫 승격 시도에서 base 해석이 실패하는 tx:open의 거부다.
 - refine 주기에는 소유자가 없다 — 주기적 백스톱은 상위 주체(purpose 루프)가 돌린다는 운영 가정
   위에 있다.
 - 설계가 보증하는 것은 규약의 도달이지 준수가 아니다 — 준수는 LLM 전제이고, dated의 오염은
@@ -267,50 +280,9 @@ rebase에 **후행**하고 rebase가 재발생하면 재실행한다. diff 핵�
 
 ---
 
-## 작업 목록
-
-1. **tx의 OpenSpec 스킬 내장화** — tx가 스킬 3종과 verify 스테이지를 싣고 open/close가
-   업스트림 스킬 대신 그것을 부른다. 대상 레포에는 `openspec/` 스캐폴드만 남는다.
-   - **plan** (propose 대체): 모멘텀 유지. 미지(未知)의 3분기 번역 — 측정 가능하면 측정하고
-     기록 / 가역적이면 가정을 채택하고 design에 명기 / 둘 다 아니면 변경을 중단·연기하고
-     사유를 기록. 질문 채널은 지정하지 않는다 — 사용 여부는 맥락의 정책(ploop launch 또는
-     대화 세션)이 결정한다.
-   - **apply** (apply-change 대체): "불명확하면 멈추고 물어라"를 같은 3분기로 교체. 꼬리에서
-     verify 스테이지를 필수 spawn하고, 실패는 구현 컨텍스트가 살아있는 그 자리에서 수리 후
-     재spawn한다.
-   - **verify** (스테이지, 스킬 아님): 검증자 프롬프트는 `references/verify.md` 고정본 —
-     깨끗한 컨텍스트의 독립 에이전트로 spawn하며, spawner는 change-id만 전달한다(구현 서사
-     전달 금지 — 검증자가 spec delta·tasks·코드를 직접 읽는다. 구현과 검증의 독립). 호출
-     지점 둘: apply 꼬리(필수) + close의 archive 직전(마지막 verify 이후 코드 변경 시·이력
-     불명 시 재실행). 구현을 change 아티팩트와 실측 대조한다(완전성·정확성·정합성) — CI가
-     기계적 무결성이면 verify는 의도 무결성이다.
-   - **archive** (archive-change 대체): 확인 다이얼로그 전부 제거 — change는 tx 브랜치에서
-     결정되고, 미완료 태스크는 close 차단 사유이며, delta sync는 무조건 수행한다.
-2. **결합 절차 교체 + 씨앗** — README의 설치 절차(글로벌 `@latest` + config profile +
-   skills-only)를 npx 핀 + `init --tools none`으로 통째로 대체한다. 스캐폴드 부재 시 tx:open이
-   직접 초기화하고(비대화식), 씨앗에 CI workflow(required check — docs-form-check 포함)를
-   동봉하며, 첫 승격 시 설계 정본(고정 이름·범례)과 상주 진입점 1행을 함께 생성한다.
-3. **schema 감사** — `openspec instructions <id> --json` 출력 전수 검사. 사용자 호출 유도가
-   있으면 `openspec schema fork spec-driven automata`로 schema.yaml·templates를 소유한다.
-   없으면 fork하지 않는다.
-4. **ploop 워크스페이스에 응고 계약 내장** — 워크스페이스 설계(state·facts·용어 후보)에 종료
-   프로토콜을 포함: 승격 라우팅에 따라 tx로 커밋하고 나머지는 폐기. 불변식 2(provenance)·
-   5(주기 승격)를 강제한다. 계약은 라우팅 표의 사본이 아니라 포인터 1행만 나른다 — 규약은
-   tx가 운반한다.
-5. **tx open/close의 docs 표면 개정** — open: openspec 생략 조건에 "docs 표면에 갇힌 변경"을
-   추가한다(trivial 문면 존치·합집합, propose 조건 무개정 — 구조에 영향을 주는 코드 변경은
-   behavior 불변이라도 propose 소관). close: docs 게이트 + post-rebase 상충 스캔(순서
-   불변식·sync-off 비면제) + `references/docs-surface.md`(W층 배포본, 머리에 정본 좌표 1행).
-6. **refine:docs에 표면 규약 reference 주입** — `principlesPath`와 나란히(기성 채널), 발견종
-   enum에 convention 추가. principles.md는 불변 — reference는 원칙의 해석이지 개정이 아니다.
-7. **base 브랜치 git commit 차단 훅** — 불변식 1의 나머지 절반(신규 파일·Bash 커밋 경로).
-8. **CI docs-form-check** — ① research 파일명 `-[0-9]{4}(-[0-9]{2})?.md` 패턴 ② docs 표면
-   파일의 gitignored 경로 참조 0 ③ research 헤더의 작성일·방법 행 존재. 2의 씨앗에 동봉한다.
-   이름을 form으로 한정한다 — 의미를 축복하지 않는다.
-
 ## 검증 대기 — 실측 전까지 가정
 
-- schema fork가 `instructions` 출력의 모든 텍스트를 커버하는지 — 작업 목록 3의 감사가 fork를
-  요구하는 경우에만 확인한다 (업스트림 `schemas/spec-driven/`에 schema.yaml과 templates가 함께
-  있어 파일 구조상 그래 보인다).
-- 완전 무인(headless) 환경에서 AskUserQuestion의 실제 동작 (대기·타임아웃·실패 중 무엇인지).
+- 완전 무인(headless) 환경에서 AskUserQuestion의 실제 동작 (대기·타임아웃·실패 중 무엇인지) —
+  tx 표면은 질문 채널을 생략해 의존이 소멸했고, 잔존 의존은 ploop launch의 비상 채널뿐이다.
+- cron 류 외부 ping이 죽은 프로세스의 루프를 부활시키는지 — 프로세스 사망(δ)은 인간 몫으로
+  남는 마지막 예외 클래스다.
