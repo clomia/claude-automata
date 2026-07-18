@@ -41,7 +41,7 @@ BASE=$(uv run --project "${CLAUDE_PLUGIN_ROOT}" base)
 
 6. **rename·push·PR** — 브랜치를 `<prefix>/<scope>/<slug>`로 rename하고 push한 뒤, `gh`로 base를 target으로 PR을 연다. 이미 push된 stale remote 브랜치는 그 브랜치의 열린 PR이 없음을 확인한 뒤 삭제하고 다시 push한다.
 
-7. **CI** — `gh pr checks <PR#> --watch --fail-fast`로 대기하고 exit code로 판정한다. 체크 실패와 체크 부재는 구분해 보고하되, 둘 다 병합 차단이다.
+7. **CI** — `gh pr checks <PR#> --watch --fail-fast`로 대기하고 exit code로 판정한다. 체크 실패와 체크 부재는 구분해 보고하되, 둘 다 병합 차단이다. PR 직후의 부재는 스케줄링 지연일 수 있다 — 잠시 후 재시도해 구분한다.
 
 8. **merge** — base가 다시 전진했으면 4·5를 반복하고, 4·5가 로컬을 바꿨으면 `git push --force-with-lease` 후 7(CI 대기)을 재수행한 뒤 진행한다: `gh pr merge <PR#> --squash --delete-branch`. squash commit message는 conventional-commit 형식(`<prefix>(<scope>): <요약>`)으로 트랜잭션 전체를 요약한다.
 
