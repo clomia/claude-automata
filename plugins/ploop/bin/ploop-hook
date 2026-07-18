@@ -22,7 +22,7 @@ fi
 if ! command -v uv >/dev/null 2>&1; then
     case "$entry" in
         launch|off-command|on-command)
-            printf '%s' '{"decision":"block","reason":"ploop requires uv (Python package manager) — the loop state did not change. Install it from https://docs.astral.sh/uv/getting-started/installation/"}'
+            printf '%s' '{"decision":"block","reason":"uv is unavailable — the loop state did not change."}'
             ;;
     esac
     exit 0

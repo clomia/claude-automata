@@ -22,7 +22,7 @@ fi
 if ! command -v uv >/dev/null 2>&1; then
     case "$entry" in
         git-sync-off|git-sync-on)
-            printf '%s' '{"decision":"block","reason":"tx requires uv (Python package manager) — the toggle did not happen. Install it from https://docs.astral.sh/uv/getting-started/installation/"}'
+            printf '%s' '{"decision":"block","reason":"uv is unavailable — the toggle did not happen."}'
             ;;
     esac
     exit 0
