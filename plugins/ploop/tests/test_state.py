@@ -80,17 +80,22 @@ class TestWorkspace:
         assert ws.compacted_path == tmp_path / "s1_compacted"
         assert ws.advice_path == tmp_path / "ploop_s1_advice.md"
         assert ws.narration_path == tmp_path / "ploop_s1_narration.md"
+        assert ws.candidates_path == tmp_path / "ploop_s1_candidates.md"
 
     def test_from_env(self, tmp_path, monkeypatch):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         assert Workspace.from_env("s1") == Workspace(data_dir=tmp_path, session_id="s1")
 
     def test_temp_channels_live_outside_the_protected_claude_dir(self):
-        """The advisor's and narrator's Write targets must be unprotected (not
-        under ~/.claude), else an auto-mode Write is classifier-gated and can be
-        silently blocked."""
+        """The advisor's, narrator's, and main agent's Write targets must be
+        unprotected (not under ~/.claude), else an auto-mode Write is
+        classifier-gated and can be silently blocked."""
         ws = Workspace(data_dir=Path("/home/u/.claude/plugins/data"), session_id="s1")
-        for path in (str(ws.advice_path), str(ws.narration_path)):
+        for path in (
+            str(ws.advice_path),
+            str(ws.narration_path),
+            str(ws.candidates_path),
+        ):
             assert ".claude" not in path
             assert "s1" in path
 
@@ -106,6 +111,7 @@ class TestWorkspace:
             ws.compacted_path,
             ws.advice_path,
             ws.narration_path,
+            ws.candidates_path,
         )
         for path in (*round_state, ws.anchor_path, ws.active_path, ws.log_path):
             path.touch()

@@ -137,10 +137,27 @@ def write_log(
         f.write(entry)
 
 
+def candidates_pending(ws: Workspace) -> bool:
+    """True iff the candidates queue holds anything.
+
+    Emptiness is decided here in code — the advisor prompt names the queue only
+    on True, so a loop that never queues candidates keeps its advisor prompt
+    free of the promotion domain; any read failure counts as empty (a hook
+    never breaks the session).
+    """
+    try:
+        return (
+            ws.candidates_path.exists() and ws.candidates_path.read_text().strip() != ""
+        )
+    except OSError, UnicodeDecodeError:
+        return False
+
+
 def end_loop(ws: Workspace, ledger: dict, cause: str, *, converged: bool) -> None:
     """Terminate the loop: drop the active gate and inject the end notice — the
     main agent reports the end and its cause to the user, with a round-log recap
-    when the turn surfaced any advice.
+    when the turn surfaced any advice and a candidates-drain directive when the
+    queue still holds entries.
 
     Every automatic exit lands here with an honest cause — the advisor's
     termination verdict, or a second consecutive anomaly; there is no round cap.
@@ -157,7 +174,9 @@ def end_loop(ws: Workspace, ledger: dict, cause: str, *, converged: bool) -> Non
     ws.active_path.unlink(missing_ok=True)
     sys.stderr.write(
         format_end_notice(
-            cause, log_path=ws.log_path if ledger["advice_history"] else None
+            cause,
+            log_path=ws.log_path if ledger["advice_history"] else None,
+            candidates_path=ws.candidates_path if candidates_pending(ws) else None,
         )
     )
     sys.exit(2)
@@ -217,6 +236,8 @@ def arm_advisor(
         advice_history_path=ws.advice_history_path,
         advice_path=ws.advice_path,
         narration_path=ws.narration_path,
+        candidates_path=ws.candidates_path,
+        candidates_pending=candidates_pending(ws),
         anchor_text=anchor_text,
     )
     ws.advice_path.unlink(missing_ok=True)
@@ -388,14 +409,16 @@ def pre_tool_use() -> None:
     runs (e.g. pushed to the background) won't re-trigger.  A self-initiated
     call (no token) is denied so the main agent keeps working until the hook
     drives the call properly.  Outside an active loop the gate stays out of
-    the way.
+    the way.  The match is exact — ploop:advisor is the registered scoped name
+    every trigger spells out — so a delegated worker whose type merely contains
+    "advisor" is neither denied nor allowed to consume the token.
     """
     event = read_event()
     tool_input = event.get("tool_input") or {}
     subagent_type = (
         tool_input.get("subagent_type", "") if isinstance(tool_input, dict) else ""
     )
-    if "advisor" not in subagent_type:
+    if subagent_type != "ploop:advisor":
         sys.exit(0)
     ws = Workspace.from_env(event.get("session_id", ""))
     if not ws.active_path.exists():
@@ -423,11 +446,16 @@ def subagent_stop() -> None:
     """SubagentStop hook: the sole clearer of the advisor-running marker.
 
     Paired with PreToolUse setting it, the marker tells stop() an advisor is
-    still in flight; narrator and other subagent stops are ignored.
+    still in flight; narrator and other subagent stops are ignored.  The stop
+    payload has been observed carrying the bare agent name as well as the
+    scoped one, so both forms clear the marker — a missed clear would strand
+    the in-flight marker and stall the loop; a merely-containing name (a
+    delegated worker) must not clear it, or the next stop re-triggers a
+    second advisor.
     """
     event = read_event()
     agent_type = str(event.get("agent_type") or event.get("subagent_type") or "")
-    if "advisor" not in agent_type:
+    if agent_type not in ("advisor", "ploop:advisor"):
         sys.exit(0)
     Workspace.from_env(event.get("session_id", "")).advisor_running_path.unlink(
         missing_ok=True

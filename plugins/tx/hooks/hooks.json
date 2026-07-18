@@ -26,6 +26,18 @@
             "statusMessage": "tx: guarding branch"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook",
+            "args": ["base-commit-block"],
+            "timeout": 30,
+            "statusMessage": "tx: guarding base commits"
+          }
+        ]
       }
     ],
     "Stop": [

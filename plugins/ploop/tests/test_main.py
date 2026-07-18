@@ -144,6 +144,9 @@ class TestStop:
         assert "round:" in err  # narrator gets the round slice file
         assert str(tmp_path / "s1_round.jsonl") in err
         assert (tmp_path / "s1_advisor_token").exists()
+        # the queue path rides every trigger; an empty queue shows no advisor line
+        assert "Your candidates queue" in err
+        assert "uncovered region" not in err
         # the fresh round's slice is the whole transcript (from line 1)
         assert "initial work" in (tmp_path / "s1_round.jsonl").read_text()
         assert load_ledger(tmp_path / "s1_loop.json")["round_start_line"] == 3
@@ -406,6 +409,7 @@ class TestStop:
         assert "has ended" in err
         assert str(tmp_path / "s1_loop.log") in err
         assert "recap" in err
+        assert "candidates" not in err  # empty queue: no drain directive
 
     def test_no_round_cap_arms_indefinitely(self, tmp_path, monkeypatch):
         """There is no round limit: a long history still arms the next round rather
@@ -588,6 +592,49 @@ class TestStop:
         assert "advisor loop has ended" in err
         assert "uninvoked" in err
 
+    def test_pending_candidates_surface_to_advisor(self, tmp_path, monkeypatch, capsys):
+        """A non-empty candidates queue reaches the advisor as a conditional
+        prompt line — the hook decides emptiness in code — and the main-owned
+        file survives the arm (rounds accumulate into it, only launch clears)."""
+        arrange_anchor(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+            ledger={"phase": ADVISING, "advice_history": []},
+            advice="keep going",
+            narration="worked",
+        )
+        (tmp_path / "ploop_s1_candidates.md").write_text("fact: X — measured via Y")
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        err = capsys.readouterr().err
+        assert "uncovered region" in err  # the advisor-facing conditional line
+        assert str(tmp_path / "ploop_s1_candidates.md") in err
+        assert (tmp_path / "ploop_s1_candidates.md").exists()
+
+    def test_end_notice_directs_candidates_drain(self, tmp_path, monkeypatch, capsys):
+        """An automatic end with entries still queued appends the drain
+        directive — end_loop is the single point, so every auto-termination
+        path carries it — and the queue file survives the end."""
+        arrange_anchor(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+            ledger={"phase": ADVISING, "advice_history": ["r"]},
+            advice=f"All covered. {TERMINATION_TOKEN}",
+            narration="final",
+        )
+        (tmp_path / "ploop_s1_candidates.md").write_text("term: foo")
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        err = capsys.readouterr().err
+        assert "still holds entries" in err
+        assert "promote or discard" in err
+        assert str(tmp_path / "ploop_s1_candidates.md") in err
+        assert (tmp_path / "ploop_s1_candidates.md").exists()
+
     def test_compliance_resets_the_anomaly_counter(self, tmp_path, monkeypatch):
         """Invoking the advisor after a decline clears the streak — the cap
         counts consecutive anomalies, not lifetime ones."""
@@ -649,6 +696,20 @@ class TestPreToolUse:
             pre_tool_use()
         assert exc.value.code == 0
 
+    def test_worker_types_containing_advisor_pass_ungated(self, tmp_path, monkeypatch):
+        """The gate matches the registered scoped name exactly: a delegated
+        worker whose type merely contains "advisor" is neither denied without a
+        token nor allowed to consume one."""
+        (tmp_path / "s1_active").touch()
+        (tmp_path / "s1_advisor_token").write_text("")
+        for name in ("security-advisor", "advisor"):
+            arrange(tmp_path, monkeypatch, make_pretooluse_stdin(subagent_type=name))
+            with pytest.raises(SystemExit) as exc:
+                pre_tool_use()
+            assert exc.value.code == 0
+            assert (tmp_path / "s1_advisor_token").exists()  # not consumed
+            assert not (tmp_path / "s1_advisor_running").exists()
+
 
 # ── subagent_stop advisor-running marker ──
 
@@ -664,12 +725,39 @@ class TestSubagentStop:
         subagent_stop()
         assert not (tmp_path / "s1_advisor_running").exists()
 
+    def test_scoped_advisor_stop_clears_running_marker(self, tmp_path, monkeypatch):
+        """The stop payload has carried the bare name as well as the scoped
+        registration name — both forms must clear the marker, else it strands
+        and stalls the loop."""
+        (tmp_path / "s1_advisor_running").touch()
+        arrange(
+            tmp_path,
+            monkeypatch,
+            json.dumps({"session_id": "s1", "agent_type": "ploop:advisor"}),
+        )
+        subagent_stop()
+        assert not (tmp_path / "s1_advisor_running").exists()
+
     def test_narrator_stop_leaves_marker(self, tmp_path, monkeypatch):
         (tmp_path / "s1_advisor_running").touch()
         arrange(
             tmp_path,
             monkeypatch,
             json.dumps({"session_id": "s1", "agent_type": "narrator"}),
+        )
+        with pytest.raises(SystemExit):
+            subagent_stop()
+        assert (tmp_path / "s1_advisor_running").exists()
+
+    def test_worker_name_containing_advisor_leaves_marker(self, tmp_path, monkeypatch):
+        """A delegated worker whose name merely contains "advisor" must not
+        clear the in-flight marker — an early clear would let the next stop
+        re-trigger a second advisor."""
+        (tmp_path / "s1_advisor_running").touch()
+        arrange(
+            tmp_path,
+            monkeypatch,
+            json.dumps({"session_id": "s1", "agent_type": "my-advisor-x"}),
         )
         with pytest.raises(SystemExit):
             subagent_stop()

@@ -23,6 +23,7 @@ ploop is an advisor loop built for long-running work that spans days.
 
 - An independent advisor manages progress on the user's behalf.
   - The advisor finds what the main agent missed.
+- The main agent is an orchestrator — it delegates work to agents and owns strategy, verification, and consolidation.
 - It never loses context across repeated auto-compactions.
   - When a compaction occurs, the anchor is re-injected.
   - The advisor keeps the full context in files.
@@ -43,7 +44,7 @@ The **anchor** is the file the loop is anchored to. It comes in two kinds.
 3. The loop ends on its own when the advisor judges there is nothing left to advise — at which point the agent reads the log and recaps every round.
    To pause it, run `/ploop:off`; to pick it back up from where it stopped, run `/ploop:on` (interrupt with ESC first if a turn is running).
    `off` halts the loop quietly and preserves its state; `on` resumes the loop from that state.
-   `on` is also the one way to revive a long-running loop stalled by a mishap — an accidental ESC, an API error, a subscription session limit: it always resumes cleanly, except when the advisor ended the loop itself.
+   `on` is also a universal wake button for a long-running loop stalled by a mishap — an accidental ESC, an API error, a subscription session limit: it always resumes cleanly, except when the advisor ended the loop itself.
    Nothing else — mid-run instructions, answered questions, background-task notifications, ESC itself — stops the loop.
 
 # Refine
@@ -70,18 +71,19 @@ tx is a Git workflow that manages change as transactions.
 
 - A transaction is not a unit of work — it is an **integrity boundary**. Everything from open to close is bound into one.
 - The base branch is **the repository's GitHub default branch**. There is nothing to configure — it is read automatically from `origin/HEAD`.
-- `/tx:open` cuts a `tx-*` branch off base and plans the change with [OpenSpec](https://github.com/Fission-AI/OpenSpec).
-- `/tx:close` archives the OpenSpec change and squash-merges to base once CI passes.
-- Three guard hooks keep edits off protected branches, flag stale transactions, and stop out-of-sync branches.
+- `/tx:open` cuts a `tx-*` branch off base, seeds the repo when needed (OpenSpec scaffold + CI workflow), then routes the change.
+- Planning and implementation run on tx's own skills — `tx:plan` (OpenSpec artifacts), `tx:apply` (implementation), and the independent `tx:verify` stage that checks the implementation against the artifacts in a clean context.
+- `/tx:close` archives the change and squash-merges to base once the docs gate and CI pass.
+- Four guard hooks keep edits and commits off the base branch, flag stale transactions, and stop out-of-sync branches.
 
-Prerequisites: uv, [OpenSpec](https://github.com/Fission-AI/OpenSpec) (**must be installed skills-only** — see the plugin README for the steps), GitHub CLI (`gh`).
+Prerequisites: uv, Node.js >= 20 (drives the pinned [OpenSpec](https://github.com/Fission-AI/OpenSpec) CLI through npx — nothing to install), GitHub CLI (`gh`).
 
 ### Usage
 
 ```
-/tx:open  [change description]   # cut a tx-* branch off base, plan with OpenSpec
-...work...                       # implement (e.g. the openspec-apply-change skill)
-/tx:close                        # archive the change, squash-merge to base
+/tx:open  [change description]   # cut a tx-* branch off base, seed, route the change
+...work...                       # tx:plan → tx:apply → tx:verify
+/tx:close                        # verify, archive, docs gate, then squash-merge to base
 ```
 
 For the full details — the transaction model, guard hooks, base-branch resolution, pausing sync — see the [plugin README](plugins/tx/README.md).

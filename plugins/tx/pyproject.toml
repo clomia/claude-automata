@@ -1,16 +1,19 @@
 [project]
 name = "tx"
-version = "0.5.0"
+version = "0.6.0"
 requires-python = ">=3.14"
 dependencies = []
 
 [project.scripts]
 base = "src.repo:print_base"
+base-commit-block = "src.commit_guard:main"
 branch-protect-block = "src.protect:main"
 branch-state-warn = "src.state:main"
 git-sync = "src.sync:main"
 git-sync-off = "src.pause:off"
 git-sync-on = "src.pause:on"
+openspec = "src.openspec:main"
+seed = "src.seed:main"
 
 [build-system]
 requires = ["uv_build>=0.11.0,<0.12.0"]

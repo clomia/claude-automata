@@ -1,0 +1,75 @@
+# Seeded by the tx plugin (clomia/claude-automata) — seed-owned: the seed
+# overwrites this file whole when its openspec pin drifts from the plugin's.
+name: memory-check
+
+on: pull_request
+
+jobs:
+  openspec-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: openspec validate
+        if: hashFiles('openspec/config.yaml') != ''
+        run: npx --yes @fission-ai/openspec@1.6.0 validate --all --strict --no-interactive
+
+  docs-form-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: docs form check
+        run: |
+          python3 - <<'PY'
+          import re
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          def sh(*args):
+              return subprocess.run(args, capture_output=True, text=True)
+
+          tracked = sh("git", "ls-files").stdout.splitlines()
+          md = [f for f in tracked if f.endswith(".md")]
+          research = [f for f in md if "/docs/research/" in "/" + f]
+          violations = []
+
+          name_re = re.compile(r"-[0-9]{4}(-[0-9]{2})?\.md$")
+          for f in research:
+              if not name_re.search(f.rsplit("/", 1)[-1]):
+                  violations.append(f + ": research filename must end with -<yyyy>[-<mm>].md")
+
+          link_re = re.compile(r"\]\(([^()\s]+)\)")
+          span_re = re.compile(r"`([^`\n]+)`")
+          scheme_re = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*://")
+          space_re = re.compile(r"\s")
+
+          def path_tokens(text):
+              raw = link_re.findall(text) + span_re.findall(text)
+              return [t for t in raw
+                      if "/" in t and not space_re.search(t) and not scheme_re.match(t)]
+
+          for f in md:
+              text = Path(f).read_text(encoding="utf-8", errors="replace")
+              for token in dict.fromkeys(path_tokens(text)):
+                  if token.startswith("/tmp/"):
+                      violations.append(f + ": references /tmp/ path " + token)
+                  elif sh("git", "check-ignore", "-q", "--", token).returncode == 0:
+                      violations.append(f + ": references gitignored path " + token)
+
+          date_re = re.compile(r"^[-*]?\s*(작성일|Date)\s*:")
+          method_re = re.compile(r"^[-*]?\s*(방법|Method)\s*:")
+          for f in research:
+              head = Path(f).read_text(encoding="utf-8", errors="replace").splitlines()[:20]
+              if not any(date_re.search(line) for line in head):
+                  violations.append(f + ": missing '작성일:'/'Date:' line in first 20 lines")
+              if not any(method_re.search(line) for line in head):
+                  violations.append(f + ": missing '방법:'/'Method:' line in first 20 lines")
+
+          if violations:
+              print("\n".join(violations))
+              sys.exit(1)
+          print("docs form: clean")
+          PY

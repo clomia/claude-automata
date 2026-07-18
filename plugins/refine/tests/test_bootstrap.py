@@ -63,6 +63,34 @@ def test_workflow_call_contract(monkeypatch, env, capsys):
     out = capsys.readouterr().out
     assert out.strip().startswith("Workflow(")
     assert "scriptPath:" in out
-    for key in ("focusArea", "projectDir", "agoraPath", "repomixCmd", "principlesPath"):
+    for key in (
+        "focusArea",
+        "projectDir",
+        "agoraPath",
+        "repomixCmd",
+        "principlesPath",
+        "conventionPath",
+    ):
         assert f'"{key}"' in out
     assert "/usr/bin/repomix" in out
+
+
+@pytest.mark.parametrize(
+    ("skill", "expected"),
+    [
+        (
+            "docs",
+            f'"conventionPath": "{bootstrap.SKILLS_DIR / "docs" / "docs-surface.md"}"',
+        ),
+        ("code", '"conventionPath": ""'),
+        ("integrity", '"conventionPath": ""'),
+    ],
+)
+def test_convention_path_follows_file_presence(
+    monkeypatch, env, capsys, skill, expected
+):
+    """File presence decides the convention channel: docs ships docs-surface.md,
+    skills without it get an empty string."""
+    monkeypatch.setattr("sys.argv", ["bootstrap", skill])
+    bootstrap.main()
+    assert expected in capsys.readouterr().out

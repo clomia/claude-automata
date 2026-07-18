@@ -10,7 +10,9 @@ skill-run CLI is simpler than two hooks.)
 It resolves a repomix runner that works on this machine, opens a private Agora
 workspace under the system temp directory, and prints the call — scriptPath
 and args fully filled in — to stdout. Diagnostics go to stderr so stdout stays
-exactly the call to run.
+exactly the call to run. conventionPath carries the skill's docs-surface.md
+when the file exists and stays empty otherwise — file presence decides, not
+the skill name.
 """
 
 import json
@@ -64,12 +66,14 @@ def main() -> int:
 
     skill_dir = SKILLS_DIR / skill
     script = str(skill_dir / "workflow.js")
+    convention = skill_dir / "docs-surface.md"
     args = {
         "focusArea": focus,
         "projectDir": str(project),
         "agoraPath": str(agora),
         "repomixCmd": resolve_repomix(),
         "principlesPath": str(skill_dir / "principles.md"),
+        "conventionPath": str(convention) if convention.exists() else "",
     }
     args_block = json.dumps(args, ensure_ascii=False, indent=2).replace("\n", "\n  ")
     print(

@@ -12,6 +12,8 @@ five sections in that order:
     -> instructions     (static prompt file)
 
 The advisor reads/runs them top-to-bottom, building the ordered context.
+A sixth, conditional section — the main agent's candidates queue — rides
+between advice-history and instructions only when the queue is non-empty.
 
 action-history is the one runtime-collected section: the hook slices the round's
 own lines out of the main transcript into a small file (round_path), and the
@@ -50,6 +52,8 @@ def format_advisor_trigger(
     advice_history_path: Path,
     advice_path: Path,
     narration_path: Path,
+    candidates_path: Path,
+    candidates_pending: bool,
     instruction_path: Path = INSTRUCTION_PATH,
     anchor_text: str | None = None,
 ) -> str:
@@ -76,10 +80,25 @@ def format_advisor_trigger(
     On a compacted round, anchor_text is the anchor's full text, re-injected at
     this recency position (mechanism 2) — the discrete compaction event puts the
     anchor text itself into context.
+
+    The candidates queue rides the trigger in both directions: a standing line
+    after the advice-read direction hands the per-session path to the main agent
+    (the trigger is the loop's one deterministic per-round channel — the static
+    launch skill cannot know the session), and the advisor block names the queue
+    only when candidates_pending — the hook decides emptiness in code, so a loop
+    that never queues candidates keeps its advisor prompt free of the promotion
+    domain.
     """
     prefix = ""
     if anchor_text:
         prefix = f"Your anchor — stay anchored to it:\n\n{anchor_text}\n\n---\n\n"
+    candidates_line = ""
+    if candidates_pending:
+        candidates_line = (
+            f"\n                candidates: {candidates_path} — facts and terms"
+            " the main agent queued for promotion; a stale or growing queue is"
+            " an uncovered region"
+        )
     body = textwrap.dedent(f'''\
         Invoke the advisor. Run the call below EXACTLY as written:
 
@@ -99,7 +118,7 @@ def format_advisor_trigger(
                         narration-path: {narration_path}
                     '
                 )
-                advice-history: {advice_history_path}
+                advice-history: {advice_history_path}{candidates_line}
                 instructions: {instruction_path}
                 advice-path: {advice_path}
             """
@@ -107,18 +126,25 @@ def format_advisor_trigger(
         ```
 
         When the advisor returns, read its advice at {advice_path}.
+        Your candidates queue (facts and terms awaiting promotion): {candidates_path}
     ''')
     return prefix + body
 
 
-def format_end_notice(cause: str, log_path: Path | None = None) -> str:
+def format_end_notice(
+    cause: str,
+    log_path: Path | None = None,
+    candidates_path: Path | None = None,
+) -> str:
     """Build the notice every termination path sends to the main agent.
 
     The main agent must clearly report the end and its cause to the user —
     whatever ended the loop.  When the turn surfaced any advice the notice
     also has it recap the round log: over a long run the main agent's
     context may have auto-compacted early rounds away, so the log on disk is
-    the one complete record.
+    the one complete record.  A candidates_path (passed when the queue still
+    holds entries) appends the drain directive — promote or discard — so an
+    automatic end never strands the queue.
     """
     notice = (
         f"The advisor loop has ended — {cause}. "
@@ -126,4 +152,9 @@ def format_end_notice(cause: str, log_path: Path | None = None) -> str:
     )
     if log_path is not None:
         notice += f" Read {log_path} and add a brief recap of the rounds."
+    if candidates_path is not None:
+        notice += (
+            f" The candidates queue at {candidates_path} still holds entries — "
+            "drain it before finishing: promote or discard each one."
+        )
     return notice + "\n"

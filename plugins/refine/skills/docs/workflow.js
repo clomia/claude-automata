@@ -14,7 +14,7 @@ export const meta = {
 
 const SYNOD = 'refine:synod'
 const cfg = typeof args === 'string' ? JSON.parse(args) : args
-const { focusArea, projectDir, agoraPath, repomixCmd, principlesPath } = cfg
+const { focusArea, projectDir, agoraPath, repomixCmd, principlesPath, conventionPath } = cfg
 const plansDir = `${agoraPath}/doc-manager/plans`
 
 const slug = (s) => String(s).trim().replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '')
@@ -25,10 +25,11 @@ function header(agoraName) {
     `Agora Base Path: ${agoraPath}/`,
     `Project Dir: ${projectDir}`,
     `principles: ${principlesPath}`,
+    conventionPath ? `convention: ${conventionPath}` : null,
     `repomix: ${repomixCmd}`,
     focusArea ? `집중 분석 영역: ${focusArea}` : '분석 대상: 레포지토리 전체',
     '',
-  ].join('\n')
+  ].filter((l) => l !== null).join('\n')
 }
 
 const synod = (agoraName, task, opts = {}) =>
@@ -71,7 +72,7 @@ const FINDINGS_SCHEMA = {
           title: { type: 'string' },
           kind: {
             type: 'string',
-            enum: ['mismatch', 'duplication', 'dead-doc', 'restating-comment', 'code-defect'],
+            enum: ['mismatch', 'duplication', 'dead-doc', 'restating-comment', 'code-defect', 'convention'],
           },
         },
       },
@@ -184,7 +185,7 @@ async function verifyRegion(r) {
       `# 임무: 주장 검증 — 영역 '${r.dir}' (${r.scope})
 ${DOMAIN}
 인벤토리의 모든 문서를 읽고, 문서의 모든 주장(claim)을 코드와 대조해 검증하라.
-발견은 다음으로 분류한다: mismatch(코드와 다른 주장) / duplication(같은 정보의 다중 서술 — 다른 영역 문서와의 중복 포함) / dead-doc(대상이 사라진 문서) / restating-comment(코드를 재언하는 주석) / code-defect(문서가 의도를 담고 코드가 결함인 충돌).
+발견은 다음으로 분류한다: mismatch(코드와 다른 주장) / duplication(같은 정보의 다중 서술 — 다른 영역 문서와의 중복 포함) / dead-doc(대상이 사라진 문서) / restating-comment(코드를 재언하는 주석) / code-defect(문서가 의도를 담고 코드가 결함인 충돌) / convention(표면 규약 위반 — convention 파일과 대조: 자리·형식·배너·파일명).
 각 발견의 근거(문서 위치·코드 위치)를 네 Agora에 기록하라. code-defect는 보고 대상이며 이 워크플로우의 수정 대상이 아니다.
 네 Agora에 이미 발견이 기록되어 있다면 그 너머의 새 발견만 기록·반환하라. 새 발견이 없으면 빈 배열을 반환하라.`,
       { label: `verify:${r.dir}#${round}`, phase: 'Verify', schema: FINDINGS_SCHEMA },
