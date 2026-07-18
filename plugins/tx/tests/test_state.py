@@ -41,6 +41,26 @@ def test_pause_silences_only_the_ahead_warning(gitrepo):
     ]
 
 
+def test_mid_rebase_warns_resume_instead_of_generic_rebase(gitrepo):
+    """Detached mid-rebase: one resume warning, never the fetch-and-rebase
+    prescription (which would die on the existing rebase-merge directory)."""
+    run(gitrepo, "checkout", "-q", "--detach")
+    marker = gitrepo / ".git" / "rebase-merge"
+    marker.mkdir()
+    (marker / "head-name").write_text("refs/heads/tx-demo")
+    make_origin_ahead(gitrepo, "main", 2)
+    messages = state.build_messages("HEAD", "main", paused=False)
+    assert len(messages) == 1
+    assert "rebase" in messages[0] and "tx-demo" in messages[0]
+    assert state.rebase_cmd("main") not in messages[0]
+
+
+def test_plain_detached_suppresses_prescriptions(gitrepo):
+    run(gitrepo, "checkout", "-q", "--detach")
+    make_origin_ahead(gitrepo, "main", 2)
+    assert state.build_messages("HEAD", "main", paused=False) == []
+
+
 def test_tx_open_time_parses_reflog(gitrepo):
     assert isinstance(state.tx_open_time("main"), datetime)
 

@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from conftest import run
 
@@ -53,3 +55,35 @@ def test_seed_scaffold_skips_when_present(tmp_path, monkeypatch, capsys):
     (tmp_path / "openspec" / "config.yaml").write_text("schema: spec-driven\n")
     seed.seed_scaffold()
     assert "scaffold present" in capsys.readouterr().out
+
+
+def fake_gh(permissions: tuple[str | None, str], posted: list[str]):
+    """run_gh stand-in: no ruleset installed yet; records the POST payload."""
+
+    def run_gh(args: list[str], payload: str | None = None) -> tuple[str | None, str]:
+        if args[0] == "repo":
+            return "owner/repo\n", ""
+        if "actions/permissions" in args[1]:
+            return permissions
+        if "--method" in args:
+            posted.append(payload)
+            return "{}", ""
+        return "", ""
+
+    return run_gh
+
+
+def test_protection_skips_checks_rule_when_actions_disabled(monkeypatch):
+    posted: list[str] = []
+    monkeypatch.setattr(seed, "run_gh", fake_gh(("false\n", ""), posted))
+    report = seed.protection_report()
+    rules = json.loads(posted[0])["rules"]
+    assert "required_status_checks" not in [r["type"] for r in rules]
+    assert "checks rule skipped" in report
+
+
+def test_protection_posts_full_ruleset_when_probe_fails(monkeypatch):
+    posted: list[str] = []
+    monkeypatch.setattr(seed, "run_gh", fake_gh((None, "HTTP 403"), posted))
+    assert seed.protection_report() == "branch protection: attempted"
+    assert json.loads(posted[0]) == seed.RULESET

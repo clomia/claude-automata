@@ -7,6 +7,7 @@
 ## Getting Started
 
 **[`uv`가 필요합니다. 없다면 먼저 설치하세요.](https://docs.astral.sh/uv/getting-started/installation/)**
+**POSIX 환경(macOS / Linux / WSL)에서 동작합니다.**
 
 이 레포지토리를 마켓플레이스에 추가하세요
 

@@ -7,8 +7,10 @@ refuses (exit 1) instead of planting into the void.  Three steps, each
 converging on presence and reporting one line on stdout:
 
 - openspec scaffold: absent -> `init --tools none` under the pinned version.
-  Plan cannot run without the scaffold, so a failed init aborts the seed
-  (exit 1) with the CLI's stderr relayed for the open skill to surface.
+  Plan cannot run without the scaffold (the openspec wrapper refuses
+  un-scaffolded roots — the bare CLI would silently self-scaffold an implicit
+  root), so a failed init aborts the seed (exit 1) with the CLI's stderr
+  relayed for the open skill to surface.
 - memory-check workflow: absent -> copied whole from this plugin's
   references/; present with a drifted pin -> overwritten whole, so a stale
   seed never propagates its pin.
@@ -16,7 +18,10 @@ converging on presence and reporting one line on stdout:
   `tx-base-protection` ruleset already exists).  An attempt, not a guarantee:
   any failure — no gh, no permission, API refusal — is one reported line and
   the seed continues.  What the ruleset buys is not immutability but making
-  bypass an explicit, auditable API call.
+  bypass an explicit, auditable API call.  The Actions probe is
+  point-in-time: Actions disabled after the seed, or re-enabled behind an
+  already-installed reduced ruleset, stays as-is — the `present`
+  short-circuit never upgrades a ruleset.
 """
 
 import json
@@ -70,6 +75,8 @@ RULESET = {
 
 
 def seed_scaffold() -> None:
+    # A store-pointer root (config.yaml `store:`) also counts as present: tx assumes a
+    # repo-local openspec root — store-externalized repos are out of scope (loud-fail).
     if Path("openspec/config.yaml").exists():
         print("scaffold present")
         return
@@ -134,6 +141,12 @@ def run_gh(args: list[str], payload: str | None = None) -> tuple[str | None, str
     return result.stdout, ""
 
 
+def actions_enabled(slug: str) -> bool | None:
+    """None when the probe fails — fall through to the full ruleset (no new failure mode)."""
+    out, _ = run_gh(["api", f"repos/{slug}/actions/permissions", "--jq", ".enabled"])
+    return None if out is None else out.strip() == "true"
+
+
 def protection_report() -> str:
     """One idempotent server-side attempt; the one-line outcome to print."""
     slug, reason = run_gh(
@@ -148,12 +161,23 @@ def protection_report() -> str:
         return f"branch protection: unavailable ({reason})"
     if RULESET_NAME in names.splitlines():
         return "branch protection: present"
+    enabled = actions_enabled(slug.strip())
+    ruleset = RULESET
+    if enabled is False:
+        ruleset = {
+            **RULESET,
+            "rules": [
+                r for r in RULESET["rules"] if r["type"] != "required_status_checks"
+            ],
+        }
     created, reason = run_gh(
         ["api", f"repos/{slug.strip()}/rulesets", "--method", "POST", "--input", "-"],
-        payload=json.dumps(RULESET),
+        payload=json.dumps(ruleset),
     )
     if created is None:
         return f"branch protection: unavailable ({reason})"
+    if enabled is False:
+        return "branch protection: attempted (checks rule skipped — Actions disabled)"
     return "branch protection: attempted"
 
 

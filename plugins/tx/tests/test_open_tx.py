@@ -36,8 +36,9 @@ def test_refuses_dirty_tree(gitrepo, monkeypatch, capsys):
     assert "not clean" in capsys.readouterr().err
 
 
-def test_rejects_bad_slug(monkeypatch, capsys):
+@pytest.mark.parametrize("slug", ["Bad_Slug", "2fa-support"])
+def test_rejects_bad_slug(slug, monkeypatch, capsys):
     with pytest.raises(SystemExit) as exc:
-        invoke(monkeypatch, "Bad_Slug")
+        invoke(monkeypatch, slug)
     assert exc.value.code == 1
     assert "usage: open-tx" in capsys.readouterr().err

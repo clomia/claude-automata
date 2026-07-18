@@ -13,7 +13,6 @@ import sys
 from datetime import UTC, datetime, timedelta
 
 from src.repo import (
-    ORIGIN_HEAD_REMEDY,
     ahead_notice,
     base_ahead_count,
     base_branch,
@@ -22,7 +21,9 @@ from src.repo import (
     git,
     has_origin,
     is_tx_branch,
+    origin_head_remedy,
     rebase_cmd,
+    rebase_in_progress_branch,
     set_origin_head,
     sync_paused,
 )
@@ -47,6 +48,14 @@ def tx_open_time(branch: str) -> datetime | None:
 
 
 def build_messages(branch: str, base: str, paused: bool) -> list[str]:
+    if branch == "HEAD":
+        rebasing = rebase_in_progress_branch()
+        if rebasing:
+            return [
+                f"[branch-state-warn] A rebase on '{rebasing}' is paused mid-conflict — "
+                "resolve and `git rebase --continue`, or `git rebase --abort`."
+            ]
+        return []  # plain detached is an investigation state — tx prescriptions do not apply
     if branch == base:
         return [
             f"[branch-state-warn] You are on '{branch}' (protected). Open a transaction first: /tx:open"
@@ -112,7 +121,7 @@ def main() -> None:
     if base is None:
         emit(
             "[branch-state-warn] Cannot resolve the GitHub default branch "
-            f"(origin/HEAD is unset). Run: {ORIGIN_HEAD_REMEDY} "
+            f"(origin/HEAD is unset). Run: {origin_head_remedy()} "
             "— tx guards stay off until it resolves."
         )
         return

@@ -7,6 +7,7 @@ Plugins that amplify Claude Code's autonomy.
 ## Getting Started
 
 **[`uv` is required. If you don't have it, install it first.](https://docs.astral.sh/uv/getting-started/installation/)**
+**Runs on POSIX (macOS / Linux / WSL).**
 
 Add this repository to the marketplace:
 

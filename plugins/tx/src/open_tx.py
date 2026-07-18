@@ -11,12 +11,16 @@ import sys
 
 from src.repo import current_branch, fetch_base, resolve_base_or_exit
 
-SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+# subset of the openspec change-name grammar — keeps slug ≒ change-id satisfiable
+SLUG_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
 
 
 def main() -> None:
     if len(sys.argv) != 2 or not SLUG_RE.fullmatch(sys.argv[1]):
-        print("usage: open-tx <slug> (short kebab-case)", file=sys.stderr)
+        print(
+            "usage: open-tx <slug> (short kebab-case, starts with a letter)",
+            file=sys.stderr,
+        )
         raise SystemExit(1)
     slug = sys.argv[1]
 

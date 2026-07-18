@@ -4,10 +4,10 @@
 # Usage: version-up-alert-hook <entry-point>
 #
 # Installed as a dependency of every claude-automata plugin, this is the one
-# place the marketplace surfaces its uv prerequisite: without uv no plugin's
-# Python hooks can run, so the wrapper emits a single systemMessage instead of
-# one notice per plugin, and exits 0 — a missing prerequisite never breaks the
-# session.
+# place the marketplace surfaces its uv prerequisite: if uv is not installed
+# or unable to provision the environment no plugin's Python hooks can run, so
+# the wrapper emits a single systemMessage instead of one notice per plugin,
+# and exits 0 — a missing prerequisite never breaks the session.
 
 set -e
 
@@ -22,4 +22,9 @@ if ! command -v uv >/dev/null 2>&1; then
     exit 0
 fi
 
-exec uv run --project "${CLAUDE_PLUGIN_ROOT}" "$entry"
+if ! uv sync --project "${CLAUDE_PLUGIN_ROOT}" --no-dev -q >/dev/null 2>&1; then
+    printf '%s' '{"systemMessage":"uv cannot provision the plugin environment (Python >= 3.14 needs a download or network) — claude-automata hooks are off this session."}'
+    exit 0
+fi
+
+exec uv run --project "${CLAUDE_PLUGIN_ROOT}" --no-dev "$entry"

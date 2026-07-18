@@ -33,7 +33,7 @@ def git(*args: str) -> str | None:
 
 
 def current_branch() -> str | None:
-    """The checked-out branch name, or None outside a repository."""
+    """The checked-out branch name — `"HEAD"` when detached, None outside a repository."""
     return git("rev-parse", "--abbrev-ref", "HEAD") or None
 
 
@@ -59,6 +59,14 @@ def set_origin_head() -> bool:
     return git("remote", "set-head", "origin", "--auto") is not None
 
 
+def origin_head_remedy() -> str:
+    """The remedy that heals origin/HEAD in this clone — narrow-refspec clones widen first."""
+    lines = (git("config", "--get-all", "remote.origin.fetch") or "").splitlines()
+    if not lines or "+refs/heads/*:refs/remotes/origin/*" in lines:
+        return ORIGIN_HEAD_REMEDY
+    return f"git remote set-branches origin '*' && git fetch origin && {ORIGIN_HEAD_REMEDY}"
+
+
 def resolve_base_or_exit() -> str:
     """Resolve the base branch or exit 1 with the standard guidance."""
     set_origin_head()
@@ -66,7 +74,7 @@ def resolve_base_or_exit() -> str:
     if base is None:
         print(
             "Cannot resolve the GitHub default branch (origin/HEAD). "
-            f"Ensure an `origin` remote exists, then run: {ORIGIN_HEAD_REMEDY}",
+            f"Ensure an `origin` remote exists, then run: {origin_head_remedy()}",
             file=sys.stderr,
         )
         raise SystemExit(1)
@@ -77,8 +85,15 @@ def print_base() -> None:
     """CLI for the close skill — resolve and print the base branch.
 
     Re-syncs the mirror first, so a default-branch change on GitHub is picked
-    up at every transaction boundary.  Exit 1 with guidance when unresolvable.
+    up at every transaction boundary.  Exit 1 with guidance when unresolvable
+    or when a rebase is in progress.
     """
+    if rebase_in_progress_branch():
+        print(
+            "A rebase is in progress — `git rebase --continue` (or --abort) first.",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
     print(resolve_base_or_exit())
 
 
@@ -95,6 +110,22 @@ def ahead_notice(ahead: int, base: str) -> str:
 def git_dir() -> Path | None:
     out = git("rev-parse", "--absolute-git-dir")
     return Path(out) if out else None
+
+
+def rebase_in_progress_branch() -> str | None:
+    """The branch a paused rebase started from — None when no rebase is in progress."""
+    gd = git_dir()
+    if gd is None:
+        return None
+    for kind in ("rebase-merge", "rebase-apply"):
+        marker = gd / kind
+        if marker.is_dir():
+            try:
+                ref = (marker / "head-name").read_text(encoding="utf-8").strip()
+            except OSError:
+                ref = ""
+            return ref.removeprefix("refs/heads/") or "(unknown)"
+    return None
 
 
 def pause_marker() -> Path | None:

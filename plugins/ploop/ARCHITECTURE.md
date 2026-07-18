@@ -209,19 +209,19 @@ advice(또는 종료 토큰)를 `advice.md`에 Write만 하고, hook이 다음 �
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
 | **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | 슬래시 커맨드 확장(제출 전) | launch: 라운드 리셋 + `anchor`·`active` 기록 — `active` 존재·빈 `anchor`면 차단 · off: `active` 삭제(라운드 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·카운터 리셋(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`면 차단 |
-| **PostCompact** | `auto` | auto-compaction 후 | `compacted` 마커 touch (Stop이 메커니즘 2로 anchor 텍스트 재주입) |
+| **PostCompact** | (전체) | compaction 후 | `compacted` 마커 touch (Stop이 메커니즘 2로 anchor 텍스트 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 토큰 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(자발 호출 차단) |
 | **Stop** | (전체) | main이 종료 시도 | active 게이트 → **background 게이트**(`background_tasks`: subagent·workflow 조용히 대기, shell은 집합당 1회 교정 지시 후 대기, monitor·그 외 통과) → **in-flight 가드** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 노티스+로그 recap) 또는 `exit 0`(허용) |
 | **SubagentStop** | (전체) | subagent 종료 | `advisor` 종료면 `advisor_running` clear (in-flight 추적) |
 
 플러그인 에이전트는 `ploop:<agent>`로 scoped 등록돼 Agent 호출의 subagent_type이 그 이름을 쓴다. 훅은
-`bin/ploop-hook` 셸 래퍼를 거쳐 `uv`를 호출하고, 래퍼가 uv 가용성을 먼저 확인해 미설치 시 graceful
+`bin/ploop-hook` 셸 래퍼를 거쳐 `uv`를 호출하고, 래퍼가 uv 가용성을 먼저 확인해 실행 불가 시 graceful
 degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`args`)으로
 래퍼를 호출한다 — 경로 placeholder가 셸 토큰화를 거치지 않아 설치 경로에 공백이 있어도 훅이 죽지 않는다.
 
-**Graceful degradation.** `uv`가 없으면 훅 spawn은 무해하게 실패한다. main은 advisor loop를 모르므로(루프는
-전적으로 훅이 구동) advisor 없이 anchor만 수행하고 종료한다 — 루프는 안 돌지만 세션은 깨지지 않고, uv
-설치 안내는 모든 claude-automata 플러그인이 의존하는 version-up-alert가 세션 시작에 맡는다.
+**Graceful degradation.** uv가 없거나 환경을 provision하지 못하면 래퍼가 launch·off·on expansion을
+사유와 함께 차단하고(선언 없는 상태 변화 방지) 그 외 훅은 무음 exit 0이다 — 세션은 깨지지 않고, 안내는
+모든 claude-automata 플러그인이 의존하는 version-up-alert가 세션 시작에 맡는다.
 
 ---
 

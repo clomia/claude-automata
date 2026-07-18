@@ -15,8 +15,9 @@ delta가 main spec에 sync되고 change 디렉토리가 `openspec/changes/archiv
    uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec list --json
    ```
 
-   활성 change가 없으면 그렇다고 반환한다. **미완료 태스크가 있으면 실패를 반환한다** —
-   CLI는 경고만 하고 진행하므로 이 게이트는 여기서 강제된다. 수리는 `tx:apply` 소관이다.
+   활성 change가 없으면 그렇다고 반환한다. **태스크가 없거나(no-tasks) 미완료면
+   실패를 반환한다** — CLI는 막지 않으므로 이 게이트는 여기서 강제된다. 수리는 태스크
+   부재면 `tx:plan`, 미완료면 `tx:apply` 소관이다.
 
 2. 아카이브한다. delta spec이 없는 change(도구·인프라·문서 변경)는 `--skip-specs`를 덧붙인다:
 

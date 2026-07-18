@@ -133,3 +133,22 @@ def test_no_guard_without_origin_head(gitrepo, monkeypatch):
     run(gitrepo, "symbolic-ref", "--delete", "refs/remotes/origin/HEAD")
     feed(monkeypatch, gitrepo, "git commit -m msg")
     assert commit_guard.main() is None
+
+
+def test_unresolved_deny_reason(gitrepo, monkeypatch, capsys):
+    """A fail-closed block names its real reason, not base protection."""
+    feed(monkeypatch, gitrepo, "cd /x && git commit -m y")
+    with pytest.raises(SystemExit) as exc:
+        commit_guard.main()
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    assert "cannot resolve" in err
+    assert "protected" not in err
+
+
+def test_base_deny_reason(gitrepo, monkeypatch, capsys):
+    feed(monkeypatch, gitrepo, "git commit -m y")
+    with pytest.raises(SystemExit) as exc:
+        commit_guard.main()
+    assert exc.value.code == 2
+    assert "protected" in capsys.readouterr().err

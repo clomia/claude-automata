@@ -3,9 +3,10 @@
 #
 # Usage: tx-hook <entry-point>
 #
-# Every tx hook is routed through this script.  If uv is not installed we
-# cannot execute any Python code, so the wrapper exits 0 without error — the
-# session is never broken by a missing prerequisite.  The git-sync-off/on
+# Every tx hook is routed through this script.  If uv is not installed or
+# unable to provision the environment we cannot execute any Python code, so
+# the wrapper exits 0 without error — the session is never broken by a missing
+# prerequisite.  The git-sync-off/on
 # command expansions are blocked so their skill bodies never announce a toggle
 # that didn't happen; every other hook stays silent — the session-start uv
 # notice is version-up-alert's job (a dependency of every claude-automata
@@ -19,13 +20,14 @@ if [ -z "$entry" ]; then
     exit 0
 fi
 
-if ! command -v uv >/dev/null 2>&1; then
+if ! command -v uv >/dev/null 2>&1 || \
+   ! uv sync --project "${CLAUDE_PLUGIN_ROOT}" --no-dev -q >/dev/null 2>&1; then
     case "$entry" in
         git-sync-off|git-sync-on)
-            printf '%s' '{"decision":"block","reason":"uv is unavailable — the toggle did not happen."}'
+            printf '%s' '{"decision":"block","reason":"uv cannot run the plugin — the toggle did not happen."}'
             ;;
     esac
     exit 0
 fi
 
-exec uv run --project "${CLAUDE_PLUGIN_ROOT}" "$entry"
+exec uv run --project "${CLAUDE_PLUGIN_ROOT}" --no-dev "$entry"

@@ -22,7 +22,7 @@ BASE=$(uv run --project "${CLAUDE_PLUGIN_ROOT}" base)
 
    change-id 외에는 아무것도 전달하지 않는다. 결함이 보고되면 수리 후 재spawn한다 — pass 전에는 닫지 않는다.
 
-2. **archive** — 활성 change가 있으면 `tx:archive` 스킬(Skill 도구)로 아카이브한다. 미완료 태스크는 close 차단 사유다 — 수리(`tx:apply`) 후 재개한다. archive가 만든 spec 편집·디렉토리 이동은 이 트랜잭션에 포함된다.
+2. **archive** — 활성 change가 있으면 `tx:archive` 스킬(Skill 도구)로 아카이브한다. 태스크 부재·미완료는 close 차단 사유다 — 수리(`tx:plan`·`tx:apply`) 후 재개한다. archive가 만든 spec 편집·디렉토리 이동은 이 트랜잭션에 포함된다.
 
 3. **commit** — 트랜잭션의 모든 변경을 commit한다.
 
@@ -33,11 +33,11 @@ BASE=$(uv run --project "${CLAUDE_PLUGIN_ROOT}" base)
    - **상충 스캔** — diff의 핵심 어휘(신·구 이름, 소멸한 개념)로 추적 텍스트 전체를 `git grep`해 교차 파일·교차 표면 상충을 이 트랜잭션에서 해소한다.
    - 게이트가 파일을 만졌으면 commit한다. **스캔은 rebase에 후행한다 — rebase가 재발생하면 게이트를 재실행한다.**
 
-6. **rename·push·PR** — 브랜치를 `<prefix>/<scope>/<slug>`로 rename하고 push한 뒤, `gh`로 base를 target으로 PR을 연다. 이미 push된 stale remote 브랜치는 그 브랜치의 열린 PR이 없음을 확인한 뒤 삭제하고 다시 push한다.
+6. **push·PR** — `git push origin tx-<slug>:<prefix>/<scope>/<slug>`로 push하고, `gh pr create --head <prefix>/<scope>/<slug>`로 base를 target 삼아 PR을 연다. 로컬 브랜치는 병합까지 tx-*로 남는다. 이미 push된 stale remote 브랜치는 그 브랜치의 열린 PR이 없음을 확인한 뒤 삭제하고 다시 push한다.
 
 7. **CI** — `gh pr checks <PR#> --watch --fail-fast`로 대기하고 exit code로 판정한다. 체크 실패와 체크 부재는 구분해 보고하되, 둘 다 병합 차단이다. PR 직후의 부재는 스케줄링 지연일 수 있다 — 잠시 후 재시도해 구분한다.
 
-8. **merge** — base가 다시 전진했으면 4·5를 반복하고, 4·5가 로컬을 바꿨으면 `git push --force-with-lease` 후 7(CI 대기)을 재수행한 뒤 진행한다: `gh pr merge <PR#> --squash --delete-branch`. squash commit message는 conventional-commit 형식(`<prefix>(<scope>): <요약>`)으로 트랜잭션 전체를 요약한다.
+8. **merge** — base가 다시 전진했으면 4·5를 반복하고, 4·5가 로컬을 바꿨으면 `git push --force-with-lease origin tx-<slug>:<prefix>/<scope>/<slug>` 후 7(CI 대기)을 재수행한 뒤 진행한다: `gh pr merge <PR#> --squash --delete-branch`. squash commit message는 conventional-commit 형식(`<prefix>(<scope>): <요약>`)으로 트랜잭션 전체를 요약한다.
 
 9. **정리** — 로컬을 최신 base로 동기화하고 로컬 트랜잭션 브랜치를 지운다. 작업 트리에 트랜잭션이 남긴 stray 산출물이나 빈 디렉토리가 없어야 한다:
 

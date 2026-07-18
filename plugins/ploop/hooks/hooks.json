@@ -2,7 +2,7 @@
   "hooks": {
     "UserPromptExpansion": [
       {
-        "matcher": "ploop:launch",
+        "matcher": "^ploop:launch$",
         "hooks": [
           {
             "type": "command",
@@ -12,7 +12,7 @@
         ]
       },
       {
-        "matcher": "ploop:off",
+        "matcher": "^ploop:off$",
         "hooks": [
           {
             "type": "command",
@@ -22,7 +22,7 @@
         ]
       },
       {
-        "matcher": "ploop:on",
+        "matcher": "^ploop:on$",
         "hooks": [
           {
             "type": "command",
@@ -34,7 +34,6 @@
     ],
     "PostCompact": [
       {
-        "matcher": "auto",
         "hooks": [
           {
             "type": "command",
