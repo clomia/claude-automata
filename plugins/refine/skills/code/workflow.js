@@ -26,9 +26,9 @@ function header(agoraName) {
     `Project Dir: ${projectDir}`,
     `principles: ${principlesPath}`,
     `repomix: ${repomixCmd}`,
-    focusArea ? `집중 분석 영역: ${focusArea}` : '분석 대상: 코드베이스 전체',
+    focusArea ? `집중 분석 영역: ${focusArea}` : null,
     '',
-  ].join('\n')
+  ].filter((l) => l !== null).join('\n')
 }
 
 const synod = (agoraName, task, opts = {}) =>
@@ -36,8 +36,8 @@ const synod = (agoraName, task, opts = {}) =>
 
 const PRINCIPLE = `## 리팩토링 원칙 (principles 해석)
 - 최대한 단순한 설계로 side-effect 없이 최대한 많은 안티패턴을 제거하라.
-- 모든 안티패턴 제거는 불가능하다. ROI가 가장 높은 최적해를 찾아라.
-- backlog proposal 금지. ROI 낮은 계획은 과감히 폐기하라.`
+- 모든 안티패턴 제거는 불가능하다. ROI 최적해를 찾아라.
+- backlog proposal 금지. ROI 낮은 계획은 폐기하라.`
 
 const REGIONS_SCHEMA = {
   type: 'object',
@@ -68,7 +68,7 @@ const ANTIPATTERNS_SCHEMA = {
         required: ['title'],
         properties: {
           title: { type: 'string' },
-          reason: { type: 'string', description: '이 안티패턴이 존재하는 추론된 이유' },
+          reason: { type: 'string' },
         },
       },
     },
@@ -79,7 +79,7 @@ const CONSENSUS_SCHEMA = {
   type: 'object',
   required: ['count'],
   properties: {
-    count: { type: 'integer', description: '교차검증을 통과한 합의된 안티패턴 수' },
+    count: { type: 'integer', description: '합의된 안티패턴 수' },
     titles: { type: 'array', items: { type: 'string' } },
   },
 }
@@ -109,7 +109,7 @@ const ORDER_SCHEMA = {
   type: 'object',
   required: ['executionOrder'],
   properties: {
-    executionOrder: { type: 'array', items: { type: 'string' }, description: '계획 name 들의 실행 순서' },
+    executionOrder: { type: 'array', items: { type: 'string' } },
   },
 }
 
@@ -137,16 +137,15 @@ phase('Map')
 await synod(
   'cartographer',
   `# 임무: 분석 영역 정의
-거시적 관점에서 전체 구조를 이해하고 **독립적으로 해석 가능한 분석 영역**으로 나눠라.
-모든 영역은 모호한 경계 없이 명확히 나누어 떨어져야 하고, 에이전트 하나가 전수 분석할 수 있는 크기여야 한다.
+코드베이스를 독립적으로 해석 가능한 분석 영역으로 나눠라.
+모든 영역은 경계가 명확히 나누어 떨어져야 하고, 에이전트 하나가 전수 분석할 수 있는 크기여야 한다.
 각 영역의 착수 컨텍스트(범위·진입점·핵심 파일)를 네 Agora에 기록하라.`,
   { label: 'map:draft', schema: REGIONS_SCHEMA },
 )
 const mapping = await synod(
   'cartographer',
   `# 임무: 분석 영역 검수
-${agoraPath}/cartographer/ 를 읽고 분석 영역 간 책임이 명확히 나누어 떨어지는지 검수하라.
-경계가 모호하거나 겹치면 수정해서 네 Agora에 반영하고, 최종 영역 목록을 반환하라.`,
+네 Agora의 분석 영역들을 검수하라. 경계가 모호하거나 겹치면 수정해서 반영하고, 최종 영역 목록을 반환하라.`,
   { label: 'map:review', schema: REGIONS_SCHEMA },
 )
 const usedDirs = new Set()
@@ -168,9 +167,8 @@ async function identifyRegion(r) {
     const res = await synod(
       r.dir,
       `# 임무: 안티패턴 식별 — 영역 '${r.dir}' (${r.scope})
-principles를 기준으로 이 영역의 안티패턴을 식별하고 네 Agora에 기록하라.
-**모든 안티패턴에는 합리적인 이유가 존재한다.** 코드 주변 환경과 히스토리(.claude/·문서·설정·git 등)를 탐구해서
-각 안티패턴의 존재 이유를 추론하고 함께 기록하라.
+이 영역의 안티패턴을 식별하고 네 Agora에 기록하라.
+각 안티패턴의 존재 이유를 코드 주변 환경과 히스토리(.claude/·문서·설정·git 등)에서 추론해 함께 기록하라.
 네 Agora에 이미 안티패턴이 기록되어 있다면 그 너머의 새 안티패턴만 기록·반환하라. 새 안티패턴이 없으면 빈 배열을 반환하라.`,
       { label: `identify:${r.dir}#${round}`, phase: 'Identify', schema: ANTIPATTERNS_SCHEMA },
     )
@@ -205,9 +203,8 @@ await parallel(
       c.dir,
       `# 임무: 비판 (회의 1/3)
 너는 ${c.role}다.
-대상 영역(${c.targets.join(', ')})의 Agora에 기록된 안티패턴을 비판적으로 검토하라 —
-실재하지 않거나 존재 이유가 여전히 정당한 오검출을 지목하고, 그들이 놓친 안티패턴을 찾아 보완하라.
-각 비평과 보완 안티패턴을 **네 Agora**에 기록하라 (누구의 어떤 안티패턴에 대한 것인지 명시).`,
+대상 영역(${c.targets.join(', ')})의 Agora에 기록된 안티패턴 중 실재하지 않거나 존재 이유가 여전히 정당한 오검출을 지목하고, 그들이 놓친 안티패턴을 찾아 보완하라.
+각 비평과 보완 안티패턴을 네 Agora에 기록하라 (누구의 어떤 안티패턴에 대한 것인지 명시).`,
       { label: `critique:${c.dir}`, phase: 'Deliberate' },
     ),
   ),
@@ -219,7 +216,7 @@ await parallel(
     synod(
       r.dir,
       `# 임무: 반박 (회의 2/3)
-비판자들(${critics.map((c) => c.dir).filter((d) => d !== r.dir).join(', ')})의 Agora에서 너의 안티패턴을 겨냥한 비평을 모두 찾아 검토하고,
+비판자들(${critics.map((c) => c.dir).filter((d) => d !== r.dir).join(', ')})의 Agora에서 너의 안티패턴을 겨냥한 비평을 모두 찾아,
 각 비평에 대한 수용/반박 의견을 네 Agora에 기록하라.`,
       { label: `rebut:${r.dir}`, phase: 'Deliberate' },
     ),
@@ -230,9 +227,9 @@ await parallel(
 await synod(
   'cartographer',
   `# 임무: 합의 도출 (회의 3/3)
-모든 안티패턴·비평·반박(${agoraPath}/ 전체)을 종합해서 **합의된 안티패턴 리스트**를
+모든 안티패턴·비평·반박(${agoraPath}/ 전체)을 종합해서 합의된 안티패턴 리스트를
 ${agoraPath}/cartographer/consensus.md 에 작성하라.
-모든 안티패턴을 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한, 실재하며 개선 가치가 있는 안티패턴만 리스트에 남겨라.`,
+모든 안티패턴을 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 실재하며 개선 가치가 있는 것만 채택하라.`,
   { label: 'consensus:draft', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
 )
 const consensus = await synod(
@@ -252,11 +249,9 @@ const planned = await synod(
   `# 임무: 리팩토링 계획 수립
 합의된 안티패턴(${agoraPath}/cartographer/consensus.md)을 파악한 뒤 리팩토링 계획을 작성하라.
 ${PRINCIPLE}
-- 전체 작업을 최대한 크게 쪼개서 계획 갯수를 적게 유지하라.
-## 계획 형식
+- 전체 작업을 최대한 크게 쪼개서 계획 개수를 적게 유지하라.
 각 계획은 self-contained 마크다운으로 ${plansDir}/{순번}-{kebab-name}/proposal.md 에 작성한다.
-proposal.md는 다음을 포함한다: 대상 안티패턴 / 변경 내용 / ROI 근거 / 예상 side-effect / 영향 범위.
-반환하는 각 계획 name 은 그 디렉토리명 '{순번}-{kebab-name}' 과 정확히 일치시켜라.`,
+proposal.md는 대상 안티패턴 / 변경 내용 / ROI 근거 / 예상 side-effect / 영향 범위를 포함한다.`,
   { label: 'plan', schema: PLANS_SCHEMA },
 )
 const plans = (planned?.plans ?? []).map((p, i) => {
@@ -273,7 +268,7 @@ log(`${plans.length} refactoring plans`)
 // 5. Review — 계획별 · 렌즈별 독립 검수 (parallel)
 phase('Review')
 const LENSES = [
-  { key: 'value', charge: '계획이 실제로 유효한 개선안인지 득실을 계산·고찰하라.' },
+  { key: 'value', charge: '계획이 실제로 유효한 개선안인지 득실을 계산하라.' },
   { key: 'side-effects', charge: '계획이 고려하지 못한 side-effect를 탐색하라.' },
 ]
 await parallel(
@@ -284,7 +279,7 @@ await parallel(
         `# 임무: 리팩토링 계획 검수 — '${p.name}' / ${l.key}
 합의된 안티패턴(${agoraPath}/cartographer/consensus.md)과 대상 계획(${p.proposal})을 읽어라.
 ${l.charge}
-이슈나 개선점을 네 Agora(review.md)에 기록하라.`,
+이슈나 개선점을 네 Agora에 기록하라.`,
         { label: `review:${p.label}:${l.key}`, phase: 'Review' },
       ),
     ),
@@ -296,11 +291,9 @@ phase('Refine')
 const refined = await synod(
   'refactor-manager',
   `# 임무: 리팩토링 계획 개선 + 실행 순서 확정
-${agoraPath}/ 전체(계획들과 review-* 검수 기록)를 읽어 컨텍스트를 복원하라.
-검수 내용을 기반으로 각 계획을 개선하라. 판단 기준은 리팩토링 원칙이다.
+${agoraPath}/ 전체(계획들과 review-* 검수 기록)를 읽고, 검수 내용을 기반으로 각 계획을 개선하라.
 ${PRINCIPLE}
-개선이 끝나면 계획들의 **실행 순서**를 확정해서 ${agoraPath}/refactor-manager/execution-order.md 에 기록하고,
-그 순서를 계획 name 배열로 반환하라.`,
+개선이 끝나면 계획들의 실행 순서를 확정하고, 그 순서를 계획 name 배열로 반환하라.`,
   { label: 'refine', schema: ORDER_SCHEMA },
 )
 const ordered = (refined?.executionOrder ?? [])
@@ -331,7 +324,7 @@ const finalReview = await synod(
   'refactor-manager',
   `# 임무: 최종 검수
 적용된 모든 계획(${agoraPath}/apply-* 기록)과 실제 변경된 코드를 종합 검수하라.
-모든 변경이 리팩토링 원칙에 부합하는지, side-effect가 없는지, 테스트가 통과하는지 확인하고 결과를 반환하라.`,
+모든 변경이 principles에 부합하는지, side-effect가 없는지, 테스트가 통과하는지 확인하고 결과를 반환하라.`,
   { label: 'final-review', phase: 'Apply', schema: FINAL_SCHEMA },
 )
 

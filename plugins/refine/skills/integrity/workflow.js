@@ -1,6 +1,6 @@
 export const meta = {
   name: 'refine-integrity',
-  description: "Integrity-boundary optimization — hunt every reachable state the existing boundary (types, invariants, error definitions, tests) fails to contain, interrogate each from 'should this be defined as an error?', cross-examine hazards into consensus, then absorb only the highest-ROI set into the boundary — code and docs both — pinned by tests",
+  description: "Integrity-boundary optimization — cross-examine hazards into consensus, then absorb only the highest-ROI set into the boundary, pinned by tests",
   phases: [
     { title: 'Map', detail: 'split the codebase into independent analysis regions' },
     { title: 'Hunt', detail: 'hunt states outside the integrity boundary per region until findings run dry' },
@@ -16,6 +16,7 @@ const SYNOD = 'refine:synod'
 const cfg = typeof args === 'string' ? JSON.parse(args) : args
 const { focusArea, projectDir, agoraPath, repomixCmd, principlesPath } = cfg
 const plansDir = `${agoraPath}/integrity-manager/plans`
+const consensusPath = `${agoraPath}/cartographer/consensus.md`
 
 const slug = (s) => String(s).trim().replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '')
 
@@ -26,17 +27,17 @@ function header(agoraName) {
     `Project Dir: ${projectDir}`,
     `principles: ${principlesPath}`,
     `repomix: ${repomixCmd}`,
-    focusArea ? `집중 분석 영역: ${focusArea}` : '분석 대상: 코드베이스 전체',
+    focusArea ? `집중 분석 영역: ${focusArea}` : null,
     '',
-  ].join('\n')
+  ].filter((l) => l !== null).join('\n')
 }
 
 const synod = (agoraName, task, opts = {}) =>
   agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
 
 const PRINCIPLE = `## 강화 원칙 (principles 해석)
-- 모든 hazard 흡수는 불가능하다. ROI가 가장 높은 최적해를 찾아라.
-- backlog proposal 금지. ROI 낮은 계획은 과감히 폐기하라.`
+- 모든 hazard 흡수는 불가능하다. ROI 최적해를 찾아라.
+- backlog proposal 금지. ROI 낮은 계획은 폐기하라.`
 
 const REGIONS_SCHEMA = {
   type: 'object',
@@ -70,7 +71,7 @@ const HAZARDS_SCHEMA = {
           verdict: {
             type: 'string',
             enum: ['make-impossible', 'define-error', 'normal-flow', 'keep'],
-            description: '경계 흡수 방식의 제안 — principles의 네 답에 순서대로 대응',
+            description: '경계 흡수 방식의 제안 — principles의 답 넷에 순서대로 대응',
           },
         },
       },
@@ -82,7 +83,7 @@ const CONSENSUS_SCHEMA = {
   type: 'object',
   required: ['count'],
   properties: {
-    count: { type: 'integer', description: '교차검증을 통과한 합의된 hazard 수' },
+    count: { type: 'integer', description: '합의된 hazard 수' },
     titles: { type: 'array', items: { type: 'string' } },
   },
 }
@@ -112,7 +113,7 @@ const ORDER_SCHEMA = {
   type: 'object',
   required: ['executionOrder'],
   properties: {
-    executionOrder: { type: 'array', items: { type: 'string' }, description: '계획 name 들의 실행 순서' },
+    executionOrder: { type: 'array', items: { type: 'string' } },
   },
 }
 
@@ -132,7 +133,7 @@ const FINAL_SCHEMA = {
   properties: {
     ok: { type: 'boolean' },
     notes: { type: 'string' },
-    unabsorbed: { type: 'array', items: { type: 'string' }, description: '확정됐으나 이번 패스에서 흡수되지 않은 hazard — 침묵 금지' },
+    unabsorbed: { type: 'array', items: { type: 'string' } },
   },
 }
 
@@ -141,15 +142,15 @@ phase('Map')
 await synod(
   'cartographer',
   `# 임무: 분석 영역 정의
-거시적 관점에서 전체 구조를 이해하고 **독립적으로 해석 가능한 분석 영역**으로 나눠라.
-모든 영역은 모호한 경계 없이 명확히 나누어 떨어져야 하고, 에이전트 하나가 전수 분석할 수 있는 크기여야 한다.
+코드베이스 전체 구조를 독립적으로 해석 가능한 분석 영역으로 나눠라.
+모든 영역은 모호한 경계 없이 나누어 떨어져야 하고, 에이전트 하나가 전수 분석할 수 있는 크기여야 한다.
 각 영역의 착수 컨텍스트(범위·진입점·경계 입력·핵심 파일)를 네 Agora에 기록하라.`,
   { label: 'map:draft', schema: REGIONS_SCHEMA },
 )
 const mapping = await synod(
   'cartographer',
   `# 임무: 분석 영역 검수
-${agoraPath}/cartographer/ 를 읽고 분석 영역 간 책임이 명확히 나누어 떨어지는지 검수하라.
+분석 영역 간 책임이 명확히 나누어 떨어지는지 검수하라.
 경계가 모호하거나 겹치면 수정해서 네 Agora에 반영하고, 최종 영역 목록을 반환하라.`,
   { label: 'map:review', schema: REGIONS_SCHEMA },
 )
@@ -172,9 +173,8 @@ async function huntRegion(r) {
     const res = await synod(
       r.dir,
       `# 임무: hazard 수집 — 영역 '${r.dir}' (${r.scope})
-principles를 기준으로, 이 영역에서 기존 무결성 경계가 포함하지 못하는 도달 가능한 상태를 모두 찾아라 —
-삼켜진 예외, 무시된 반환값, 실패를 가리는 기본값, 검증 없는 경계 입력, 부분 실패, 경합, 도달 불가능하다고 가정만 된 분기.
-각 hazard의 도달 경로(입력·상태)와 현재 동작을 추적하고, 첫 질문 — **"이것을 에러로 정의할 것인가?"** — 의 답을 verdict로 제안하고 근거를 기록하라.
+principles를 기준으로, 이 영역에서 무결성 경계가 포함하지 못하는 도달 가능한 상태를 모두 찾아라 — 검증 없는 경계 입력과 경합까지.
+각 hazard의 도달 경로(입력·상태)와 현재 동작을 추적하고, 첫 질문의 답을 verdict로 제안하고 근거를 기록하라.
 네 Agora에 이미 hazard가 기록되어 있다면 그 너머의 새 hazard만 기록·반환하라. 새 hazard가 없으면 빈 배열을 반환하라.`,
       { label: `hunt:${r.dir}#${round}`, phase: 'Hunt', schema: HAZARDS_SCHEMA },
     )
@@ -209,9 +209,9 @@ await parallel(
       c.dir,
       `# 임무: 비판 (회의 1/3)
 너는 ${c.role}다.
-대상 영역(${c.targets.join(', ')})의 Agora에 기록된 hazard를 비판적으로 검토하라 —
-실제로는 도달 불가능한 오검출을 지목하고, verdict가 옳은지(에러로 정의할 가치가 있는지) 반론하고, 그들이 놓친 hazard를 찾아 보완하라.
-각 비평과 보완 hazard를 **네 Agora**에 기록하라 (누구의 어떤 hazard에 대한 것인지 명시).`,
+대상 영역(${c.targets.join(', ')})의 Agora에 기록된 hazard를 검토하라 —
+실제로는 도달 불가능한 오검출을 지목하고, verdict가 옳은지 반론하고, 그들이 놓친 hazard를 찾아 보완하라.
+각 비평과 보완 hazard를 네 Agora에 기록하라 (누구의 어떤 hazard에 대한 것인지 명시).`,
       { label: `critique:${c.dir}`, phase: 'Deliberate' },
     ),
   ),
@@ -234,8 +234,8 @@ await parallel(
 await synod(
   'cartographer',
   `# 임무: 합의 도출 (회의 3/3)
-모든 hazard·비평·반박(${agoraPath}/ 전체)을 종합해서 **합의된 hazard 리스트**를
-${agoraPath}/cartographer/consensus.md 에 작성하라.
+모든 hazard·비평·반박(${agoraPath}/ 전체)을 종합해서 합의된 hazard 리스트를
+${consensusPath} 에 작성하라.
 모든 hazard를 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한 — 실재하고 도달 가능하며 경계 안으로 흡수할 가치가 있는 — hazard만 verdict와 함께 리스트에 남겨라.
 verdict가 keep인 것은 근거만 기록하고 리스트에서 제외한다.`,
   { label: 'consensus:draft', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
@@ -255,13 +255,12 @@ phase('Plan')
 const planned = await synod(
   'integrity-manager',
   `# 임무: 강화 계획 수립
-합의된 hazard(${agoraPath}/cartographer/consensus.md)를 파악한 뒤 무결성 강화 계획을 작성하라.
+합의된 hazard(${consensusPath})를 파악한 뒤 무결성 강화 계획을 작성하라.
 ${PRINCIPLE}
-- 전체 작업을 최대한 크게 쪼개서 계획 갯수를 적게 유지하라.
+- 전체 작업을 최대한 크게 쪼개서 계획 개수를 적게 유지하라.
 ## 계획 형식
 각 계획은 self-contained 마크다운으로 ${plansDir}/{순번}-{kebab-name}/proposal.md 에 작성한다.
-proposal.md는 다음을 포함한다: 대상 hazard와 verdict / 변경 내용 / 고정 테스트 / ROI 근거 / 예상 side-effect / 영향 범위.
-반환하는 각 계획 name 은 그 디렉토리명 '{순번}-{kebab-name}' 과 정확히 일치시켜라.`,
+proposal.md는 다음을 포함한다: 대상 hazard와 verdict / 변경 내용 / 고정 테스트 / ROI 근거 / 예상 side-effect / 영향 범위.`,
   { label: 'plan', schema: PLANS_SCHEMA },
 )
 const plans = (planned?.plans ?? []).map((p, i) => {
@@ -278,8 +277,8 @@ log(`${plans.length} hardening plans`)
 // 5. Review — 계획별 · 렌즈별 독립 검수 (parallel)
 phase('Review')
 const LENSES = [
-  { key: 'hazard-fit', charge: '계획이 hazard를 실제로 제거하는지, verdict에 맞는 최단 해법인지 득실을 계산·고찰하라.' },
-  { key: 'simplicity', charge: '계획이 새로운 hazard나 복잡성을 만들지 않는지 — 방어 코드 남발이 아닌지 — 검증하라.' },
+  { key: 'hazard-fit', charge: '계획이 hazard를 실제로 제거하는지, verdict에 맞는 최단 해법인지 따져라.' },
+  { key: 'simplicity', charge: '계획이 새로운 hazard나 복잡성을 만들지 않는지 검증하라.' },
   { key: 'test-pin', charge: '고정 테스트가 정의된 behavior를 정확히 고정하는지 확인하라.' },
 ]
 await parallel(
@@ -288,9 +287,9 @@ await parallel(
       synod(
         `review-${p.name}-${l.key}`,
         `# 임무: 강화 계획 검수 — '${p.name}' / ${l.key}
-합의된 hazard(${agoraPath}/cartographer/consensus.md)와 대상 계획(${p.proposal})을 읽어라.
+합의된 hazard(${consensusPath})와 대상 계획(${p.proposal})을 읽어라.
 ${l.charge}
-이슈나 개선점을 네 Agora(review.md)에 기록하라.`,
+이슈나 개선점을 네 Agora에 기록하라.`,
         { label: `review:${p.label}:${l.key}`, phase: 'Review' },
       ),
     ),
@@ -303,9 +302,9 @@ const refined = await synod(
   'integrity-manager',
   `# 임무: 강화 계획 개선 + 실행 순서 확정
 ${agoraPath}/ 전체(계획들과 review-* 검수 기록)를 읽어 컨텍스트를 복원하라.
-검수 내용을 기반으로 각 계획을 개선하라. 판단 기준은 강화 원칙이다.
+검수 내용을 기반으로 각 계획을 개선하라.
 ${PRINCIPLE}
-개선이 끝나면 계획들의 **실행 순서**를 확정해서 ${agoraPath}/integrity-manager/execution-order.md 에 기록하고,
+계획들의 실행 순서를 확정해서 ${agoraPath}/integrity-manager/execution-order.md 에 기록하고,
 그 순서를 계획 name 배열로 반환하라.`,
   { label: 'refine', schema: ORDER_SCHEMA },
 )
@@ -337,7 +336,7 @@ const finalReview = await synod(
   'integrity-manager',
   `# 임무: 최종 검수
 적용된 모든 계획(${agoraPath}/apply-* 기록)과 실제 변경된 코드를 종합 검수하라.
-모든 변경이 강화 원칙에 부합하는지, 각 정의가 테스트로 고정되고 이유가 기록되었는지, 전체 테스트가 통과하는지 확인하고,
+각 정의가 테스트로 고정되고 이유가 기록되었는지, 전체 테스트가 통과하는지 확인하고,
 확정됐으나 흡수되지 않은 hazard를 unabsorbed로 수집해 함께 반환하라.`,
   { label: 'final-review', phase: 'Apply', schema: FINAL_SCHEMA },
 )

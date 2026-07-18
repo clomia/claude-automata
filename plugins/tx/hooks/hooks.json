@@ -61,7 +61,8 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook",
-            "args": ["git-sync-off"]
+            "args": ["git-sync-off"],
+            "statusMessage": "tx: pausing sync"
           }
         ]
       },
@@ -71,7 +72,8 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook",
-            "args": ["git-sync-on"]
+            "args": ["git-sync-on"],
+            "statusMessage": "tx: resuming sync"
           }
         ]
       }

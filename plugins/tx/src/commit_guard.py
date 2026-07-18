@@ -168,12 +168,23 @@ def common_dir(directory: str | None = None) -> str | None:
     return git(*prefix, "rev-parse", "--path-format=absolute", "--git-common-dir")
 
 
-def deny(base: str) -> NoReturn:
-    print(
+UNRESOLVED_DENY = (
+    "[base-commit-block] cannot resolve this commit's target repository before it "
+    "runs (`cd` earlier in the command, or a `-C` path that does not exist yet) — "
+    "fail-closed. Run the commit as its own command, or give `-C` a literal "
+    "path that already exists."
+)
+
+
+def base_deny(base: str) -> str:
+    return (
         f"[base-commit-block] '{base}' is protected — commit inside a transaction "
-        "(/tx:open). For a repository outside this one, use git -C <path>.",
-        file=sys.stderr,
+        "(/tx:open). For a repository outside this one, use git -C <path>."
     )
+
+
+def deny(reason: str) -> NoReturn:
+    print(reason, file=sys.stderr)
     sys.exit(2)
 
 
@@ -192,16 +203,16 @@ def main() -> None:
 
     for c_path, cd_before in targets:
         if c_path is None and cd_before:
-            deny(base)
+            deny(UNRESOLVED_DENY)
         target = resolve_dir(c_path, payload_cwd)
         target_common = common_dir(target)
         if target_common is None:
-            deny(base)
+            deny(UNRESOLVED_DENY)
         if target_common != session_common:
             continue
         branch = git("-C", target, "rev-parse", "--abbrev-ref", "HEAD")
         if branch is None or branch == base:
-            deny(base)
+            deny(base_deny(base))
 
 
 if __name__ == "__main__":

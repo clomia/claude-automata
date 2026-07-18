@@ -7,6 +7,7 @@ Plugins that amplify Claude Code's autonomy.
 ## Getting Started
 
 **[`uv` is required. If you don't have it, install it first.](https://docs.astral.sh/uv/getting-started/installation/)**
+**Runs on POSIX (macOS / Linux / WSL).**
 
 Add this repository to the marketplace:
 
@@ -23,7 +24,7 @@ ploop is an advisor loop built for long-running work that spans days.
 
 - An independent advisor manages progress on the user's behalf.
   - The advisor finds what the main agent missed.
-- The main agent is an orchestrator — it delegates work to agents and owns strategy, verification, and consolidation.
+- The main agent is an orchestrator — it delegates work to agents and stays in command.
 - It never loses context across repeated auto-compactions.
   - When a compaction occurs, the anchor is re-injected.
   - The advisor keeps the full context in files.

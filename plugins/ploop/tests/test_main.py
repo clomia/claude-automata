@@ -254,7 +254,7 @@ class TestStop:
         assert not (tmp_path / "s1_loop.log").exists()  # nothing logged
         err = capsys.readouterr().err
         assert "malfunctioned" in err
-        assert "Invoke the advisor" in err  # the trigger follows the notice
+        assert "EXACTLY as written" in err  # the trigger follows the notice
 
     def test_second_consecutive_anomaly_ends_loop(self, tmp_path, monkeypatch, capsys):
         """One retry is the benefit of the doubt; a second empty run in a row is
@@ -562,7 +562,7 @@ class TestStop:
         assert "round:" in err
         assert "working on the advice" in (tmp_path / "s1_round.jsonl").read_text()
         assert "authority to end the loop belongs to the advisor" in err
-        assert "Invoke the advisor" in err  # the trigger follows the notice
+        assert "EXACTLY as written" in err  # the trigger follows the notice
         assert "loop will end" not in err  # no main-side exit advertised
 
     def test_second_consecutive_decline_trips_failsafe_and_ends_loop(

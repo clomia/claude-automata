@@ -90,7 +90,7 @@ wheels = [
 
 [[package]]
 name = "tx"
-version = "0.6.2"
+version = "0.8.0"
 source = { editable = "." }
 
 [package.dev-dependencies]

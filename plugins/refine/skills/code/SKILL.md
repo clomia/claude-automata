@@ -1,6 +1,6 @@
 ---
 name: code
-description: "Heavyweight, hours-long (3-12h) code-architecture optimization — a large multi-agent workflow that cross-examines antipatterns into consensus, then applies only the highest-ROI refactors. Invoke only when a deep, deliberate architecture pass is genuinely needed, not for routine refactors."
+description: "Hours-long (3-12h) multi-agent code-architecture optimization — cross-examines antipatterns into consensus, then applies only the highest-ROI refactors. Not for routine refactors."
 argument-hint: "[focus area]"
 effort: max
 ---

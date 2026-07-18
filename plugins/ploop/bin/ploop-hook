@@ -3,9 +3,10 @@
 #
 # Usage: ploop-hook <entry-point>
 #
-# Every ploop hook is routed through this script.  If uv is not
-# installed we cannot execute any Python code, so the wrapper exits 0 without
-# error — the session is never broken by a missing prerequisite.  The
+# Every ploop hook is routed through this script.  If uv is not installed or
+# unable to provision the environment we cannot execute any Python code, so
+# the wrapper exits 0 without error — the session is never broken by a missing
+# prerequisite.  The
 # launch/off/on command expansions are blocked so their skill bodies never
 # announce a loop state that wasn't reached; every other hook stays silent —
 # the session-start uv notice is version-up-alert's job (a dependency of every
@@ -19,13 +20,14 @@ if [ -z "$entry" ]; then
     exit 0
 fi
 
-if ! command -v uv >/dev/null 2>&1; then
+if ! command -v uv >/dev/null 2>&1 || \
+   ! uv sync --project "${CLAUDE_PLUGIN_ROOT}" --no-dev -q >/dev/null 2>&1; then
     case "$entry" in
         launch|off-command|on-command)
-            printf '%s' '{"decision":"block","reason":"uv is unavailable — the loop state did not change."}'
+            printf '%s' '{"decision":"block","reason":"uv cannot run the plugin — the loop state did not change."}'
             ;;
     esac
     exit 0
 fi
 
-exec uv run --project "${CLAUDE_PLUGIN_ROOT}" "$entry"
+exec uv run --project "${CLAUDE_PLUGIN_ROOT}" --no-dev "$entry"

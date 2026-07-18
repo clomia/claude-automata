@@ -1,6 +1,6 @@
 ---
 name: docs
-description: "Heavyweight, hours-long (3-12h) documentation-architecture optimization — a large multi-agent workflow that verifies every claim in every non-executable text (markdown, spec systems, comments) against the code, cross-examines discrepancies into consensus, then applies only the highest-ROI fixes. Code is never modified — defects are reported, not fixed. Invoke only when a deep, deliberate docs pass is genuinely needed, not for touching up a single file."
+description: "Hours-long (3-12h) multi-agent documentation-architecture optimization — verifies every claim in every non-executable text (markdown, spec systems, comments) against the code, cross-examines discrepancies into consensus, then applies only the highest-ROI fixes. Code is never modified — defects are reported, not fixed. Not for touching up a single file."
 argument-hint: "[focus area]"
 effort: max
 ---
