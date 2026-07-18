@@ -7,7 +7,8 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
-            "args": ["launch"]
+            "args": ["launch"],
+            "statusMessage": "ploop: launching loop"
           }
         ]
       },
@@ -17,7 +18,8 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
-            "args": ["off-command"]
+            "args": ["off-command"],
+            "statusMessage": "ploop: pausing loop"
           }
         ]
       },
@@ -27,7 +29,8 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
-            "args": ["on-command"]
+            "args": ["on-command"],
+            "statusMessage": "ploop: resuming loop"
           }
         ]
       }
@@ -38,7 +41,8 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
-            "args": ["mark-compaction"]
+            "args": ["mark-compaction"],
+            "statusMessage": "ploop: marking compaction"
           }
         ]
       }
@@ -52,7 +56,7 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
             "args": ["pre-tool-use"],
             "timeout": 30,
-            "statusMessage": "ploop: gating"
+            "statusMessage": "ploop: advisor gate"
           }
         ]
       }
@@ -65,7 +69,7 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
             "args": ["stop"],
             "timeout": 120,
-            "statusMessage": "ploop: advising"
+            "statusMessage": "ploop: loop check"
           }
         ]
       }
@@ -76,7 +80,8 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
-            "args": ["subagent-stop"]
+            "args": ["subagent-stop"],
+            "statusMessage": "ploop: subagent check"
           }
         ]
       }
