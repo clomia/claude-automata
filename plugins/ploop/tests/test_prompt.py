@@ -159,7 +159,7 @@ class TestFormatEndNotice:
 
 
 def test_instruction_file_carries_termination_token():
-    """instruction.md의 토큰 문면과 main.py 상수는 같은 계약의 양면 — 표류는 침묵 고장이 된다."""
+    """instruction.md의 토큰 wording과 main.py 상수는 같은 계약의 양면 — 표류는 침묵 고장이 된다."""
     from src.main import TERMINATION_TOKEN
 
     assert TERMINATION_TOKEN in INSTRUCTION_PATH.read_text()

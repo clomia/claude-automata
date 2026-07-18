@@ -112,7 +112,7 @@ advisor는 종료조차 토큰 Write로 표현하므로 안 쓴 것은 판정이
 권한은 advisor에게만 있다"를 고지하며 재주입하면, 거부의 근거 발언이 라운드 슬라이스→narrator를 타고
 advisor에 닿아 타당한 거부는 advisor 종료 토큰으로 관철된다(합의 경로). 오작동·거부 모두 **연속 2회**면
 정직한 사유로 종료한다(anomaly cap — 결정 14). **숫자 라운드 상한은 없다** — advice-history는 파일이라
-컨텍스트를 안 잠식하고 advisor는 매 라운드 stateless하게 리셋되므로, 종료는 "더 제공할 advice가
+컨텍스트를 차지하지 않고 advisor는 매 라운드 stateless하게 리셋되므로, 종료는 "더 제공할 advice가
 있는가"라는 의미론적 판단에 맡긴다.
 
 **모든 자동 종료 경로(advisor 종료 토큰 + malfunction·decline failsafe)는 main에게 정직한 사유와 함께
@@ -123,7 +123,7 @@ advisor에 닿아 타당한 거부는 advisor 종료 토큰으로 관철된다(�
 일시정지·`/ploop:on`으로 재개하며(아래 활성화 lifecycle), off는 종료가 아니라 종료 노티스를 보내지
 않는다.
 
-Stop 훅은 메인 세션 정지마다 발화하므로 `active` 마커가 게이트한다. advisor·narrator의 정지는
+Stop 훅은 메인 세션 정지마다 fire하므로 `active` 마커가 게이트한다. advisor·narrator의 정지는
 `SubagentStop`이라 이 Stop 훅에 잡히지 않는다 — 재귀 가드가 필요 없다.
 
 ---
@@ -153,12 +153,12 @@ main에 전가하지 않는다.
 | `{session}_advice_history.md` | hook | advisor 입력의 advice-history (XML) |
 | `advice.md` (temp) | advisor (`Write`) | advice 또는 종료 토큰 (유일 채널) — 비보호 temp라 auto 모드 Write 승인 · main·hook이 읽음 · prose 격리 |
 | `narration.md` (temp) | narrator (`Write`) | action-history 서사 (advice와 동일 채널) — advisor가 분석 입력으로 · hook이 라운드 로그로 읽음 |
-| `candidates.md` (temp) | main | 승격 대기열 (자유 형식) — 트리거가 경로를 상시 안내 · 비어있지 않으면 advisor 입력에 조건부 1행 · launch만 소거(off·on·종료는 보존) · 종료 노티스가 잔량 drain을 지시 |
+| `candidates.md` (temp) | main | 승격 대기열 (자유 형식) — 트리거가 경로를 상시 안내 · 비어있지 않으면 advisor 입력에 조건부 1행 · launch만 지움(off·on·종료는 보존) · 종료 노티스가 잔량 drain을 지시 |
 | `{session}_loop.log` | hook | 완결 라운드 로그 (서사 + 그 라운드의 advice) · launch가 `[[ ANCHOR ]]` 원문으로 새로 시작 · 종료 요약의 소스 |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 토큰 (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight 마커 (PreToolUse set · SubagentStop clear) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 마커 (Stop이 메커니즘 2로 소비) |
-| `{session}_gated_shells` | hook | 교정 지시를 이미 보낸 background shell id 집합 — 같은 집합의 정지는 조용히 대기 (라운드 arm·`/ploop:on`·launch가 소거) |
+| `{session}_gated_shells` | hook | 교정 지시를 이미 보낸 background shell id 집합 — 같은 집합의 정지는 조용히 대기 (라운드 arm·`/ploop:on`·launch가 지움) |
 
 **loop 상태(advice_history·phase·anomalies·round_start_line)는 hook이 단독 소유한다.** advisor는
 advice(또는 종료 토큰)를 `advice.md`에 Write만 하고, hook이 다음 라운드 시작에 그 파일을 읽어
@@ -167,7 +167,7 @@ advice(또는 종료 토큰)를 `advice.md`에 Write만 하고, hook이 다음 �
 `advice.md`를 읽어 그 advice로 작업하므로 이 파일이 advice/종료의 유일 채널이자 main·hook 공통 소스다 —
 단일 작성자(hook)가 ledger를 소유해 race가 없다.
 
-**활성화 lifecycle.** Stop 훅은 메인 세션 정지마다 발화하므로 `active` 마커가 루프를 게이트한다.
+**활성화 lifecycle.** Stop 훅은 메인 세션 정지마다 fire하므로 `active` 마커가 루프를 게이트한다.
 
 1. **`/ploop:launch`** (UserPromptExpansion) — 직전 anchor의 라운드 상태를 리셋하고 `anchor.md`·`active`를
    쓴다. main이 anchor의 지휘(위임·검증)를 시작한다. `active`가 이미 있거나(중복 launch — 진행 중인 anchor를
@@ -189,7 +189,7 @@ advice(또는 종료 토큰)를 `advice.md`에 Write만 하고, hook이 다음 �
    converged`(advisor 수렴 종료 = 진짜 완료; 새 anchor를 launch) — 이때만 **차단**한다.
 
 **anchor 정박은 세 겹이다.** 셋 다 anchor *텍스트*의 보존·주입이다 — "흐려지면 anchor.md를 다시 읽어라"류
-포인터는 두지 않는다(agent가 드리프트를 자각해야 작동하는데 goal drift는 점진적이라 자가감지되지 않는다).
+포인터는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal drift는 점진적이라 자가감지되지 않는다).
 
 1. **외부 보존(메커니즘 1)** — launch 훅이 anchor를 `anchor.md`에 기록한다. 트랜스크립트와 독립이라 main이
    어떻게 compaction되든 원본이 보존된다. advisor가 매 라운드 읽고, 메커니즘 2가 재주입 소스로 쓴다.
@@ -200,7 +200,7 @@ advice(또는 종료 토큰)를 `advice.md`에 Write만 하고, hook이 다음 �
 3. **메커니즘 2(PostCompact + anchor 텍스트 inline)** — `PostCompact`가 `_compacted`를 touch하면 다음
    Stop이 그 라운드 트리거에 **anchor 원문을 recency 위치에 inline**한다(`format_advisor_trigger`의
    `anchor_text`). re-inject(2)는 5,000토큰 cap에 잘리고 원래 깊이에 남는 반면, 이것은 discrete한
-   compaction 이벤트마다 anchor 전문을 무조건 recency에 박는다. 메인 세션 `PostCompact`는 확실히 발화한다.
+   compaction 이벤트마다 anchor 전문을 무조건 recency에 박는다. 메인 세션 `PostCompact`는 확실히 fire한다.
 
 ---
 
@@ -231,10 +231,10 @@ degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`
    트리거는 Stop 훅이다. advisor·narrator만 nested subagent로 격리해 구독 안전성을 얻는다 — anchor의
    지휘(orchestration)는 원래 main 컨텍스트에서 일어나므로 별도 operator subagent는 격리 이점 없이
    부채만 남겨 제거했다. main은 orchestrator다(launch rules가 세운다): 작업은 위임한 에이전트에서
-   소비되고 main 컨텍스트에는 지휘가 산다 — depth 0의 보장(PostCompact 확실 발화·동기
+   소비되고 main 컨텍스트에는 지휘만 남는다 — depth 0의 보장(PostCompact 확실 fire·동기
    Agent 호출·전체 훅 수명주기)이 작업이 아니라 지휘에 필요한 전부라 배치가 정확히 맞는다.
 2. **훅은 트리거, 실행은 Agent 툴.** Claude Code 훅은 stdout/stderr/exit code로만 통신해 tool call을
-   발화하지 못하므로, Stop이 `exit 2`+stderr로 main에게 advisor 호출을 **지시**하고 main(LLM)이 Agent 툴로
+   fire하지 못하므로, Stop이 `exit 2`+stderr로 main에게 advisor 호출을 **지시**하고 main(LLM)이 Agent 툴로
    실행한다. 이 간접 한 단계가 ploop 훅 설계의 본질이다. 자발 호출(경로 이탈)은 launch 스킬의 규칙 고지 + PreToolUse 토큰 게이팅(결정 9)으로 막는다.
 3. **loop 상태는 hook 단독 소유.** advisor는 advice(또는 종료 토큰)를 `advice.md`에 Write만 하고 hook이 그
    파일을 읽어 4필드 ledger를 기록한다(`{**ledger, ...}` 병합, 미언급 필드 보존). `advice.md`가 유일 채널이라
@@ -251,7 +251,7 @@ degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`
    advisor에 전달하며, steering은 라운드를 리셋하지 않는다.
 5. **활성화 게이트 + 의미론적 종료(숫자 상한 없음) + 수동 pause/resume.** `/ploop:launch`가 `active`를 써야
    Stop이 루프를 돌고, 종료는 라운드 상한 없이 advisor 종료 토큰·anomaly failsafe로만 일어난다(advice-history가
-   파일이라 컨텍스트를 안 잠식 — `/goal`도 동일). 이 자동 종료와 별개로 사용자는 `/ploop:off`로
+   파일이라 컨텍스트를 안 차지 — `/goal`도 동일). 이 자동 종료와 별개로 사용자는 `/ploop:off`로
    일시정지·`/ploop:on`으로 재개한다(위 활성화 lifecycle).
 6. **anchor 정박 — 메커니즘 1 + 2.** 외부 보존(`anchor.md`)으로 원문이 디스크에 영속하고, `PostCompact`
    마커를 소비한 Stop이 compacted 라운드의 트리거에 anchor 원문을 inline한다(메커니즘 2 — discrete
@@ -264,9 +264,9 @@ degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`
    계약 없는 사용)의 advisor 입력은 기억 도메인을 모른 채로 남는다. hook이 advisor를 직접 못 부르므로 같은 순서를 trigger로
    재현한다 — role은 시스템 프롬프트, anchor·advice-history·instructions는 파일, action-history는 advisor가
    inline된 narrator 호출을 실행해 얻은 `narration.md`다. **트리거는 advisor의 Agent 호출을(그 안에 narrator
-   호출을 inline해) 축자로 작성해 넘기고 main·advisor는 relay만 한다** — LLM이 구성할 게 없어 가장
+   호출을 inline해) verbatim으로 작성해 넘기고 main·advisor는 relay만 한다** — LLM이 구성할 게 없어 가장
    결정론적이다. 정박 대상은 세션 최초 프롬프트가 아닌 `/ploop:launch` 핸드오프(`anchor.md`)다 — launch 훅이
-   인자를 축자 캡처하므로 원문과 정확히 일치한다.
+   인자를 verbatim 캡처하므로 원문과 정확히 일치한다.
 8. **단일 모델 `opus[1m]`(main·advisor).** 추론 최대화와 compaction 빈도 감소가 같은 선택으로 수렴한다.
    narrator는 원본 슬라이스를 해석해 서술하므로 `sonnet[1m]`/`medium`이다(`[1m]`은 대형 라운드 슬라이스
    수용). main은 세션 모델이라 사용자가 `opus[1m]` 실행을 권장한다.
@@ -287,7 +287,7 @@ degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`
     이 로그가 턴의 유일한 완전 기록이라 launch가 anchor 원문(`[[ ANCHOR ]]` 헤더)으로 새로 시작해 한 anchor가
     로그 하나를 소유한다.
 12. **플러그인 영역만, `settings.json` 불간섭.** 활성화는 `/ploop:launch` 핸드오프이고 anchor 없이는 아무것도
-    발화하지 않는다. 프로젝트 CLAUDE.md·rules는 main·advisor·narrator가 모두 상속한다(차단이 all-or-nothing이라
+    fire하지 않는다. 프로젝트 CLAUDE.md·rules는 main·advisor·narrator가 모두 상속한다(차단이 all-or-nothing이라
     코드 작업에 규칙이 필요한 main을 우선; advisor·narrator 상속은 약한 오염 여지).
 13. **advisor in-flight 가드(background 전환 cascade 차단).** advisor를 `run_in_background=false`로 지시해도
     사용자가 실행 중 advisor를 background로 보낼 수 있고, 그때 그대로 재주입하면 advisor가 매 정지 **증식**한다.
@@ -317,13 +317,13 @@ degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`
     armed 루프는 다음 정지에서 재개되며 공식 일시정지는 ESC 후 `/ploop:off`다. 이 정책으로 UserPromptSubmit
     훅이 통째로 사라졌다.
 16. **advisor는 foreground·background가 모두 빈 정지에만 소집 — `background_tasks` 게이팅.** advisor 판정은
-    main이 라운드 작업을 완료한 뒤라야 유효하다. foreground가 비었다는 것은 Stop 발화 그 자체이고, background는
+    main이 라운드 작업을 완료한 뒤라야 유효하다. foreground가 비었다는 것은 Stop이 fire한 것 그 자체이고, background는
     Stop 입력의 공식 배열 **`background_tasks`**(v2.1.145+)로 읽는다 — 하네스는 background가 남아 있어도 세션을
     정지시키고 완료 이벤트로 다시 깨우므로, 게이트가 삼킨 정지는 반드시 되돌아온다. 게이트는 **완료가 세션을
     깨운다고 명세가 보장하는 타입**에만 건다: `subagent`·`workflow`(완료 알림)는 조용히 대기(exit 0),
     `shell`(exit 시 재호출)은 **집합당 1회 교정 지시** 후 조용히 대기 — 완료가 없는 ambient 프로세스(서버·워처)는
     shell 차선에 속하지 않으니 정리하거나 세션 수명 차선인 `Monitor`로 옮기라는 지시다(`gated_shells` 마커가
-    지시 중복을 막고 라운드 arm이 소거). `monitor`는 명세상 세션 수명 프로세스라 게이트하면 영구 교착 — 통과가
+    지시 중복을 막고 라운드 arm이 지움). `monitor`는 명세상 세션 수명 프로세스라 게이트하면 영구 교착 — 통과가
     정당한 라운드 종료다. 그 외 타입·미지 타입·필드 부재(task registry 도달 불가 — 명세상 이때만 배열이
     빠진다)는 게이팅하지 않는다: 실패 방향은 이른 advisor이지 루프 정지가 아니다. 완료를 기다려야 하는
     background는 게이팅 유형(shell·subagent·workflow)으로 두고, 서버 같은 ambient 프로세스는 `Monitor`(세션
@@ -353,7 +353,7 @@ degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`
    `subagent_type`은 scoped 정확 일치). 표류하면 in-flight 마커가 leak해 stuck-active가 되고
    `/ploop:on`이 복구한다(결정 13의 수용 트레이드오프와 동일 경로).
 
-loop main이 메인 세션(depth 0)이라 `PostCompact`는 확실히 발화하고, main이 foreground라 advisor·narrator
+loop main이 메인 세션(depth 0)이라 `PostCompact`는 확실히 fire하고, main이 foreground라 advisor·narrator
 동기 호출이 보장된다 — subagent tier에서라면 불확실했을 두 가정을 main 위치가 보장으로 만든다.
 
 ---
@@ -370,7 +370,7 @@ loop main이 메인 세션(depth 0)이라 `PostCompact`는 확실히 발화하�
 - **background가 상시 점유되면 advisor가 소집되지 않는다**(결정 16의 뒷면) — 위임 파도가 영원히
   비지 않는 운용에는 기계 보장이 없다. rules의 파도-정지 리듬이 자연 유도하는 것으로 수용한다.
 - **round 0에는 candidates 경로가 전달되지 않는다** — 경로의 유일 결정론 채널이 Stop 트리거라 첫
-  정지 전의 후보는 컨텍스트에만 산다. 첫 트리거에서 파일로 이동하는 self-healing으로 수용한다.
+  정지 전의 후보는 컨텍스트에만 존재한다. 첫 트리거에서 파일로 이동하는 self-healing으로 수용한다.
 - **candidates 라벨의 stale/growing 판정은 라운드 단면 스냅숏이다** — advisor는 큐의 추이를 갖지
   않는다. 표면화의 근거는 "쌓여 있고 처리되지 않았다"뿐이고 그 이상의 판단은 main 몫이다.
 - **worker 내부 행위는 advisor에 비가시다** — narrator는 메인 트랜스크립트(지휘·주장)만 서술한다.
@@ -382,7 +382,9 @@ loop main이 메인 세션(depth 0)이라 `PostCompact`는 확실히 발화하�
 
 언어 정책은 레포 전역 규약이다 — 정본은 루트 [ARCHITECTURE.md](../../ARCHITECTURE.md)의
 언어·프롬프트 정책 절. ploop 특이사항만 남는다: 에이전트·스킬 프롬프트와 advisor instruction은
-단일 `.md`이고, 훅 주입 메시지(advisor trigger)는 `prompt.py`가 조립한다.
+단일 `.md`이고, 훅 주입 메시지(advisor trigger)는 `prompt.py`가 조립한다. main이 조립하는 worker
+위임 prompt는 영어다(launch rules) — worker는 순수 추론이라 입력 언어로 돈다. advice·narration은
+한국어로 남는다: main·소유자가 `loop.log`로 읽고 narration은 사용자 발화를 원문 보존한다.
 
 ---
 

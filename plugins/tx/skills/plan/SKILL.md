@@ -6,7 +6,7 @@ effort: max
 ---
 
 변경의 의도·설계를 change 아티팩트로 기록한다. squash merge는 브랜치 히스토리를 지운다 —
-이 아티팩트의 archive만이 그 과정 기록을 생존시킨다.
+이 아티팩트의 archive만이 그 과정 기록을 보존한다.
 
 # 절차
 
@@ -23,7 +23,8 @@ effort: max
    uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec instructions <artifact> --change <change-id> --json
    ```
 
-   design은 그 지시가 명시한 포함 조건에 해당할 때만 작성한다.
+   design은 그 지시가 명시한 포함 조건에 해당할 때만 작성한다. 태스크는 이 트랜잭션 안에서
+   완결된다 — merge 이후의 행동(배포·운영 검증)은 태스크가 아니라 후속 change다.
 
 3. 검증한다:
 

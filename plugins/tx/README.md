@@ -76,9 +76,11 @@ claude plugin update tx@claude-automata
 - **`tx:apply`** — implements task by task, then must spawn **`tx:verify`** —
   an independent agent with a clean context that receives only the change-id
   and checks the implementation against the artifacts (completeness, accuracy,
-  coherence). Defects are repaired on the spot and verify is re-spawned until
-  it passes; there is no retry cap — a transaction simply cannot close before
-  it is integral.
+  coherence). The spawn is foreground: the verdict gates every next step, and
+  the repair must happen while the implementation context is still live.
+  Defects are repaired on the spot and verify is re-spawned until it passes;
+  there is no retry cap — a transaction simply cannot close before it is
+  integral.
 - **`/tx:close`** — re-verifies when needed, archives the change through
   `tx:archive` (incomplete tasks block the close), rebases onto the latest
   `origin/<base>` (the sync pause does not exempt this), runs the docs-surface

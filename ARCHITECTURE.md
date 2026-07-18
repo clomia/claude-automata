@@ -9,7 +9,7 @@
 **refine은 환경 청소기**(장기기억·코드·시스템의 유지보수 주기).
 
 이 문서는 생태계 정본이다 — 플러그인들이 어떻게 하나로 합성되는지, 그 접면과 횡단 정책만
-소유한다. 각 구성요소의 내부는 소유 정본이 담당한다 — 한 사실은 한 곳에만 산다.
+소유한다. 각 구성요소의 내부는 소유 정본이 담당한다 — 한 사실은 한 곳에만 존재한다.
 
 ## 진입점 지도
 
@@ -31,14 +31,14 @@ loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의
   않으므로, ploop이 정지를 막아 이어가는 라운드 체인의 **내부 정지**에는 rebase nudge가
   끼어들지 않는다 — 라운드 중의 rebase는 진행 중 분석을 무효화하기 때문이며, **이것은 우연이
   아니라 계약이다**(변경은 양쪽 정본의 동시 개정을 요구한다). 체인 **진입 정지**(launch 후 첫
-  정지·background 대기 후 재개 정지)에서는 두 훅이 함께 발화해 advisor 트리거와 rebase nudge가
+  정지·background 대기 후 재개 정지)에서는 두 훅이 함께 fire해 advisor 트리거와 rebase nudge가
   같이 주입되고 수행 순서는 main이 정한다. 장기 루프의 remote 정합 인지는 이 진입 정지들과
-  auto-compaction마다 발화하는 branch-state-warn(SessionStart `compact` matcher)이 유지하고,
+  auto-compaction마다 fire하는 branch-state-warn(SessionStart `compact` matcher)이 유지하고,
   정합의 보증 자체는 close의 강제 fetch·rebase·CI가 소유한다 — 루프 중 nudge는 신선도
   최적화이지 무결성 요건이 아니다.
 - **refine × tx — 청소도 관문을 지난다.** refine의 쓰기(재접지·강등·삭제)는 일반 작업과 같은
   tx를 통과한다(MEMORY 불변식 1 — 쓰기는 방향을 가리지 않는다).
-- **ploop × 기억 — 루프는 레포를 오염하지 않는다.** ploop의 모든 상태는 레포 밖에 산다. 레포로
+- **ploop × 기억 — 루프는 레포를 오염하지 않는다.** ploop의 모든 상태는 레포 밖에 있다. 레포로
   들어가는 유일한 경로는 응고(MEMORY 승격 라우팅)이며, launch rules의 응고 포인터가 그 관문으로
   tx를 명명한다 — tx 미설치 환경에서는 해석 불가능한 한 구절로 남을 뿐 루프는 무손상이다.
 - **멀티 인스턴스 — 동시성의 단위는 워크트리, 수렴 지점은 origin이다.** tx 상태는 워크트리 격리·
@@ -49,8 +49,13 @@ loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의
 ## 언어·프롬프트 정책 (레포 전역)
 
 단일 **"한국어 기반, 영어 활용"** — 산문은 한국어, 식별자·경로·도구 이름·역할 명칭은 영어,
-ASCII 다이어그램은 정렬을 위해 영어만. 프롬프트는 한국어 단일본이고, 사람이 읽는 문서(README)는
-한·영 쌍으로 관리한다. 플러그인 특이사항은 소유 정본에 남는다(예: ploop의 훅 주입 메시지 조립).
+ASCII 다이어그램은 정렬을 위해 영어만. **언어는 독자가 정한다**: 사람(소유자 감사·사용자 소통)이
+읽는 표면은 한국어(사용자 대면 출력은 사용자 언어), 순수 추론 에이전트만 읽는 표면은 영어다.
+그래서 정적 프롬프트(스킬·에이전트·instruction·워크플로우 미션)는 소유자 감사 대상이라 한국어
+단일본이고, README는 한·영 쌍이다. 영어 레인의 유일 사례는 런타임에 main이 조립하는 위임
+prompt다 — 감사 대상 정적 표면이 아니라 매 루프 생성되는 일회성이라 전환 비용이 shipped
+instruction 한 줄이다(ploop launch rules). 플러그인 특이사항은 소유 정본에 남는다(예: ploop의
+훅 주입 메시지 조립).
 
 ## 결정 기록 (배제 — YAGNI/오컴)
 
@@ -67,3 +72,7 @@ ASCII 다이어그램은 정렬을 위해 영어만. 프롬프트는 한국어 �
   스왑해 anchor에 정박된 루프의 행동을 운영자 모르게 바꾼다. version-up-alert의 alert-only가
   도구 교체를 인간 몫으로 유지한다. uv 부재 안내도 같은 곳으로 중앙화한다 — 래퍼들의 차단
   메시지는 기능적 사실만 나른다.
+- **소급 capability spec 전사 기각** — 기존 플러그인 behavior를 코드에서 spec으로 옮겨 적는
+  것은 불변식 3이 막는 changelog 퇴화이자 결정 시점 provenance의 조작이다(verify는 change의
+  delta를 읽지 main spec을 읽지 않는다). `openspec/specs/`는 첫 진짜 behavior delta의
+  ADDED에서 유기적으로 태어난다.
