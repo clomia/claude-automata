@@ -1,7 +1,7 @@
 # landing-page Specification
 
 ## Purpose
-TBD - created by archiving change landing-page. Update Purpose after archive.
+방문자 관문의 지속 계약 — 처음 방문자가 수 분 안에 "무엇인지 → 왜 가치 있는지 → 어떻게 시작하는지"를 얻도록, landing page(site/ 정적 산출물과 Pages 배포)와 README 쌍이 항구적으로 실어야 할 내용과 형태를 고정한다.
 ## Requirements
 ### Requirement: Site source — static, in `site/`
 landing page의 source는 `site/`에 있어야 하며(SHALL), build step 없이 그대로 serve 가능한
