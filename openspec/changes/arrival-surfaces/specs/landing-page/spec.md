@@ -1,0 +1,27 @@
+## MODIFIED Requirements
+
+### Requirement: Site 내용 계약
+사이트는 English 단일 page여야 하며(SHALL) 다음을 실어야 한다(SHALL): 기억 system 시각화
+(작업기억 → 응고 gate → 장기기억 → 재접지 주기), plugin 4종(ploop·refine·tx·version-up-alert)
+각각의 소개와 정본 link, `uvx claude-automata init` 단일 설치 경로와 init이 실제로 쓰는
+settings의 공개(`permissions.defaultMode="bypassPermissions"`·`model="opus[1m]"` 포함),
+Anthropic 비공식(unaffiliated) 고지. 기억 시각화는 hero의 서술 산문(thesis)에 선행해야
+한다(MUST) — text는 그래픽을 뒤따르는 보조다. 공유 link unfurl을 위한 Open Graph·Twitter
+Card metadata와 share image를 실어야 한다(SHALL). 반응형이어야 하고(MUST — viewport meta +
+소형 화면 대응), 정본 본문을 복제해서는 안 된다(MUST NOT) — 요약과 link만.
+
+#### Scenario: init 실동작 공개
+- **WHEN** 방문자가 getting-started 절을 읽으면
+- **THEN** init이 기록하는 settings 전제조건(bypassPermissions·model 고정 포함)이 명시되어 있다
+
+#### Scenario: 비공식 고지
+- **WHEN** page를 열면
+- **THEN** Anthropic과 무관한(unaffiliated) project임이 명시되어 있다
+
+#### Scenario: 그래픽 우선
+- **WHEN** page가 열리면
+- **THEN** 기억 시각화가 문서 순서상 thesis 산문보다 앞에 있다
+
+#### Scenario: 공유 unfurl
+- **WHEN** page URL이 OG를 소비하는 채널에 공유되면
+- **THEN** og:title·og:description·og:image가 해석 가능한 절대 URL로 존재한다
