@@ -34,7 +34,7 @@ jobs:
           pairs = [(key, rep(value)) for key, value in prereq.items()]
           pairs.append(("permissions.defaultMode", mode.group(1)))
 
-          surfaces = ["site/index.html", "README.md", "README.ko.md"]
+          surfaces = ["site/index.html", "site/ko/index.html", "README.md", "README.ko.md"]
           failures = []
           for surface in surfaces:
               text = re.sub(r"<[^>]+>", " ", pathlib.Path(surface).read_text())
@@ -64,8 +64,9 @@ jobs:
           # external links are deliberately unbound: network checks flake, and a red
           # on a domain this repo cannot write to is not actionable.
           pattern = re.compile(
-              r"github\.com/clomia/claude-automata/(?:blob|tree)/main/([^\s\"'#)&<]+)")
-          surfaces = ["site/index.html", "README.md", "README.ko.md"]
+              r"(?:github\.com/clomia/claude-automata/(?:blob|tree)/main"
+              r"|raw\.githubusercontent\.com/clomia/claude-automata/main)/([^\s\"'#)&<]+)")
+          surfaces = ["site/index.html", "site/ko/index.html", "README.md", "README.ko.md"]
           failures, total = [], 0
           for surface in surfaces:
               text = pathlib.Path(surface).read_text()
@@ -86,11 +87,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: og.png accompanies og-card.html changes
+      - name: generated images accompany their committed sources
         run: |
           CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...HEAD)
-          if echo "$CHANGED" | grep -q "^site/assets/og-card.html$" && ! echo "$CHANGED" | grep -q "^site/assets/og.png$"; then
-            echo "og-card.html changed without regenerating og.png — the share card would drift from its source"
-            exit 1
-          fi
-          echo "og source and artifact move together"
+          FAIL=0
+          for pair in "og-card.html:og.png" "banner-card.html:banner.png"; do
+            SRC="site/assets/${pair%%:*}"; OUT="site/assets/${pair##*:}"
+            if echo "$CHANGED" | grep -q "^$SRC$" && ! echo "$CHANGED" | grep -q "^$OUT$"; then
+              echo "$SRC changed without regenerating $OUT — the image would drift from its source"
+              FAIL=1
+            fi
+          done
+          [ "$FAIL" = "0" ] && echo "generated images move with their sources"
+          exit $FAIL

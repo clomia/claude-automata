@@ -3,13 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>claude-automata — an autonomous agent environment for Claude Code</title>
+<title>claude-automata — runs for days, remembers only what's verified</title>
 <meta name="description" content="An autonomous agent environment for Claude Code, modeled on human memory: an advisor loop as working memory, one verified consolidation gate, long-term memory as git-tracked text, and a re-grounding maintenance cycle. Independent open-source project, MIT.">
 <link rel="canonical" href="https://clomia.github.io/claude-automata/">
+<link rel="alternate" hreflang="en" href="https://clomia.github.io/claude-automata/">
+<link rel="alternate" hreflang="ko" href="https://clomia.github.io/claude-automata/ko/">
+<link rel="alternate" hreflang="x-default" href="https://clomia.github.io/claude-automata/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://clomia.github.io/claude-automata/">
 <meta property="og:site_name" content="claude-automata">
-<meta property="og:title" content="claude-automata — an autonomous agent environment for Claude Code">
+<meta property="og:title" content="claude-automata — runs for days, remembers only what's verified">
 <meta property="og:description" content="Human memory architecture mapped onto Claude Code: a working-memory loop, one verified consolidation gate, git-tracked long-term memory, and a re-grounding cycle. Independent open-source project.">
 <meta property="og:image" content="https://clomia.github.io/claude-automata/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -28,6 +31,7 @@
     <span class="tb-field"><span class="tb-k">LICENSE</span> MIT</span>
     <span class="tb-field tb-unaffiliated"><span class="tb-k">STATUS</span> NOT AFFILIATED WITH ANTHROPIC</span>
     <a class="tb-field tb-link" href="https://github.com/clomia/claude-automata"><span class="tb-k">SOURCE</span> GITHUB ↗</a>
+    <span class="tb-field tb-lang"><b>EN</b> · <a href="ko/">KO</a></span>
   </div>
 </header>
 
@@ -35,9 +39,9 @@
 
 <!-- ================================ HERO ================================ -->
 <section class="hero">
-  <p class="eyebrow">PLUGIN SUITE FOR CLAUDE CODE · ONE MEMORY SYSTEM</p>
-  <h1>An autonomous agent environment,<br>
-      modeled on human memory</h1>
+  <p class="eyebrow">AN AUTONOMOUS AGENT ENVIRONMENT FOR CLAUDE CODE, MODELED ON HUMAN MEMORY</p>
+  <h1>Runs for days.<br>
+      Remembers only what's verified.</h1>
 
   <figure class="schematic-figure">
     <div class="schematic" role="img"
@@ -148,10 +152,11 @@
   </figure>
 
   <p class="thesis">
-    claude‑automata turns Claude Code into a running system rather than a conversation:
-    a loop that holds the initiative around the clock, anchored to intent you write once;
-    a consolidation gate that verifies what may be remembered; and a long‑term memory
-    made entirely of git‑tracked text.
+    claude‑automata turns Claude Code into a running system rather than a conversation.
+    Write your intent once; a loop holds the initiative around the clock, an advisor
+    refuses to let it quit while work remains, and one consolidation gate decides what
+    may be remembered. Long‑term memory is nothing but the repository's git‑tracked
+    text — everything unverified dies with the loop, on purpose.
   </p>
 
   <div class="hero-actions">
@@ -160,19 +165,42 @@
   </div>
 </section>
 
-<!-- ============================ 01 PREMISE ============================== -->
+<!-- ============================ 01 THE ADVISOR ========================== -->
+<section class="section" id="advisor">
+  <h2><span class="sec-no">01</span>"DONE" GETS AUDITED</h2>
+  <p class="sec-lede">
+    Agents end their turn the moment they <em>believe</em> they're finished. Here the
+    stop itself is an event: a hook blocks it and summons an independent advisor with
+    a clean context — metacognition for the loop. After "done", something still asks:
+    <em>is it really done?</em>
+  </p>
+  <div class="exchange" role="img"
+       aria-label="An illustrative exchange: the agent declares the mission accomplished and tries to stop; the hook blocks the stop and summons the advisor; the advisor lists overlooked regions — unmeasured layouts, uncited claims, unpromoted facts; the agent resumes. Six rounds later the advisor writes: I have no further advice, ending the turn. Only then does the loop end.">
+    <div class="xc-line"><span class="xc-who xc-agent">agent</span><span class="xc-text">Mission accomplished. Stopping.</span></div>
+    <div class="xc-line"><span class="xc-who xc-hook">hook</span><span class="xc-text">Stop blocked — summoning the advisor.</span></div>
+    <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text">Not yet. The mobile layout was never measured. Two claims cite no source. The promotion queue still holds facts.</span></div>
+    <div class="xc-line"><span class="xc-who xc-agent">agent</span><span class="xc-text">…resuming.</span></div>
+    <div class="xc-gap">⟲ six rounds later</div>
+    <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text xc-end">I have no further advice. Ending the turn.</span></div>
+  </div>
+  <p class="xc-note">
+    An illustrative exchange — the mechanics are real: the stop‑blocking hook, the
+    clean‑context advisor, and the rule that only the advisor may end the loop. There
+    is no round cap; termination is a judgment, not a counter.
+  </p>
+</section>
+
+<!-- ============================ 02 PREMISE ============================== -->
 <section class="section" id="premise">
-  <h2><span class="sec-no">01</span>PREMISE</h2>
+  <h2><span class="sec-no">02</span>OPERATING PRINCIPLES</h2>
   <div class="claims">
     <article class="claim">
-      <h3>The loop owns the initiative</h3>
+      <h3>Intent survives anything</h3>
       <p>
-        Every time the agent tries to stop, a hook blocks the stop and summons an
-        independent advisor that inspects the round with a clean context and surfaces
-        what the main agent missed. There is no round cap — the loop ends when the
-        advisor judges there is nothing left to advise. Work spans days and survives
-        repeated auto‑compaction: the anchor — your intent, written once — is preserved
-        outside the transcript and re‑injected whenever context is rebuilt.
+        The anchor — your intent, written once — is preserved outside the transcript
+        and re‑injected whenever context is rebuilt, so work spans days and survives
+        repeated auto‑compaction. The advisor reads it fresh every round: the loop
+        stays anchored instead of drifting toward whatever it last said.
       </p>
     </article>
     <article class="claim">
@@ -198,14 +226,13 @@
   </div>
 </section>
 
-<!-- ========================= 02 MEMORY SYSTEM =========================== -->
+<!-- ========================= 03 MEMORY SYSTEM =========================== -->
 <section class="section" id="memory-system">
-  <h2><span class="sec-no">02</span>THE MEMORY SYSTEM</h2>
+  <h2><span class="sec-no">03</span>THE MEMORY SYSTEM</h2>
   <p class="sec-lede">
-    The circuit above is not a metaphor bolted on afterwards — it is the design canon:
-    three plugins drive its stages, the store is the repository's own git‑tracked text,
-    and the whole of it is specified in
-    <a href="https://github.com/clomia/claude-automata/blob/main/MEMORY.md">MEMORY.md <span class="lang-tag">KO</span></a>.
+    The circuit above is not a metaphor bolted on afterwards — it is the design itself:
+    three plugins drive its stages, and the store is the repository's own git‑tracked
+    text. No database, no vector index — files, admitted one verified merge at a time.
   </p>
   <ol class="stages">
     <li class="stage stage-copper">
@@ -252,9 +279,9 @@
   </ol>
 </section>
 
-<!-- ============================ 03 MODULES ============================== -->
+<!-- ============================ 04 MODULES ============================== -->
 <section class="section" id="modules">
-  <h2><span class="sec-no">03</span>MODULES</h2>
+  <h2><span class="sec-no">04</span>MODULES</h2>
   <div class="modules">
 
     <article class="module">
@@ -271,7 +298,7 @@
         your plan's quota, and multi‑day runs spend it accordingly. A read‑only docent
         answers your questions from the loop's records without touching it.
       </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/ploop/ARCHITECTURE.md">CANON — plugins/ploop/ARCHITECTURE.md <span class="lang-tag">KO</span></a>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/ploop/ARCHITECTURE.md">SOURCE — plugins/ploop/ARCHITECTURE.md <span class="lang-tag">KOREAN</span></a>
     </article>
 
     <article class="module">
@@ -281,12 +308,12 @@
       </div>
       <p>
         A Git workflow that treats change as a transaction — an integrity boundary, not
-        a unit of work. <code>/tx:open</code> cuts a branch off the base; plan, apply and
-        an independent verify stage drive the change; <code>/tx:close</code> squash‑merges
-        it back only when verification, a docs gate and CI all pass. Guard hooks keep the
-        base branch protected in between.
+        a unit of work. <code>/tx:open</code> cuts a branch off the base;
+        <code>tx:plan → tx:apply → tx:verify</code> drive the change with an independent
+        verify stage; <code>/tx:close</code> squash‑merges it back only when verification,
+        a docs gate and CI all pass. Guard hooks keep the base branch protected in between.
       </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/tx/README.md">CANON — plugins/tx/README.md</a>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/tx/README.md">SOURCE — plugins/tx/README.md</a>
     </article>
 
     <article class="module">
@@ -299,9 +326,11 @@
         debt: code architecture, documentation truth, and integrity boundaries. Regions
         are analyzed in parallel, findings settle through cross‑examination into
         consensus, and only the highest‑ROI plans are executed. In the docs pass, code
-        is never modified — code defects are reported, not fixed.
+        is never modified — code defects are reported, not fixed. Invoke with
+        <code>/refine:code</code> · <code>/refine:docs</code> · <code>/refine:integrity</code>,
+        an optional focus area as the argument.
       </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/refine">CANON — plugins/refine <span class="lang-tag">KO</span></a>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/refine">SOURCE — plugins/refine <span class="lang-tag">KOREAN</span></a>
     </article>
 
     <article class="module">
@@ -315,15 +344,15 @@
         never swaps a plugin under a running session; you choose when to update. Every
         other plugin installs it as a dependency, so there is nothing to install.
       </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/version-up-alert">SOURCE — plugins/version‑up‑alert</a>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/version-up-alert">SOURCE — plugins/version-up-alert</a>
     </article>
 
   </div>
 </section>
 
-<!-- ========================= 04 GETTING STARTED ========================= -->
+<!-- ========================= 05 GETTING STARTED ========================= -->
 <section class="section" id="getting-started">
-  <h2><span class="sec-no">04</span>GETTING STARTED</h2>
+  <h2><span class="sec-no">05</span>GETTING STARTED</h2>
   <p class="sec-lede">
     One command converges a repository to the environment's prerequisites.
     Requires <a href="https://claude.com/claude-code">Claude Code</a> and
@@ -367,10 +396,10 @@
 
 <span class="c-muted"># in a fresh session — hand the anchor text to the loop</span>
 /ploop:launch [anchor text]</code></pre>
-    <p class="disclosure-note">
-      Usage details live in the
-      <a href="https://github.com/clomia/claude-automata#readme">README</a>.
-    </p>
+    <pre class="code-block"><code><span class="c-muted"># operate the loop</span>
+/ploop:off      <span class="c-muted"># pause — the loop stops at its next stop</span>
+/ploop:on       <span class="c-muted"># resume — also wakes a loop stalled by ESC, API errors, session limits</span>
+/ploop:docent   <span class="c-muted"># ask questions in a separate session — read-only, never touches the loop</span></code></pre>
   </div>
 </section>
 

@@ -69,6 +69,10 @@ section[id] { scroll-margin-top: 1.5rem; }
 .tb-unaffiliated { color: var(--copper-deep); }
 .tb-link { text-decoration: none; }
 .tb-link:hover { color: var(--copper-deep); }
+.tb-lang { color: var(--muted); }
+.tb-lang b { color: var(--ink); font-weight: 500; }
+.tb-lang a { text-decoration: none; }
+.tb-lang a:hover { color: var(--copper-deep); }
 
 /* ---------------------------------------------------------------- hero */
 .hero {
@@ -81,7 +85,7 @@ section[id] { scroll-margin-top: 1.5rem; }
 }
 .hero h1 {
   font-family: var(--display); font-weight: 700; text-transform: uppercase;
-  font-size: clamp(2.1rem, 5vw, 3.4rem); line-height: 1.08; letter-spacing: 0.01em;
+  font-size: clamp(2.3rem, 5.7vw, 4.2rem); line-height: 1.04; letter-spacing: 0.01em;
   max-width: 36ch;
 }
 .thesis {
@@ -282,7 +286,26 @@ section[id] { scroll-margin-top: 1.5rem; }
 .sec-no { font-family: var(--mono); font-weight: 500; color: var(--copper); margin-right: 1rem; }
 .sec-lede { max-width: 68ch; margin: -1.2rem 0 2.4rem; color: var(--ink); }
 
-/* 01 premise */
+/* 01 the advisor — illustrative exchange */
+.exchange {
+  background: var(--panel); border: 1px solid var(--hairline-strong);
+  padding: 1.5rem 1.7rem; max-width: 72ch;
+  font-family: var(--mono); font-size: 0.88rem; line-height: 1.65;
+}
+.xc-line { display: flex; gap: 1.1rem; padding: 0.28rem 0; }
+.xc-who { flex: 0 0 4.5rem; text-align: right; font-weight: 500; font-size: 0.78rem;
+  letter-spacing: 0.04em; padding-top: 0.1rem; }
+.xc-who::after { content: " ›"; color: var(--hairline-strong); }
+.xc-agent { color: var(--ink); }
+.xc-hook { color: var(--muted); }
+.xc-advisor { color: var(--copper-deep); }
+.xc-text { flex: 1; }
+.xc-text.xc-end { color: var(--verdigris); }
+.xc-gap { text-align: center; color: var(--muted); font-size: 0.75rem;
+  letter-spacing: 0.08em; padding: 0.7rem 0; }
+.xc-note { max-width: 72ch; font-size: 0.88rem; color: var(--muted); margin-top: 1rem; }
+
+/* 02 premise */
 .claims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
 .claim h3 { font-weight: 600; font-size: 1.08rem; margin-bottom: 0.7rem; }
 .claim h3::before { content: "—"; color: var(--copper); margin-right: 0.55rem; }
@@ -307,10 +330,10 @@ section[id] { scroll-margin-top: 1.5rem; }
 .mod-name { font-family: var(--mono); font-weight: 500; font-size: 1.05rem; }
 .mod-role { font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.12em; color: var(--muted); white-space: nowrap; }
 .module p { font-size: 0.94rem; color: #33312a; flex-grow: 1; }
-.canon-link { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.05em;
-  color: var(--copper-deep); text-decoration: none; border-bottom: 1px solid var(--hairline-strong);
+.canon-link { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.05em;
+  color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--hairline);
   align-self: flex-start; padding-bottom: 0.15rem; }
-.canon-link:hover { border-color: var(--copper); }
+.canon-link:hover { color: var(--copper-deep); border-color: var(--copper); }
 .lang-tag { font-size: 0.58rem; border: 1px solid currentColor; padding: 0 0.25em;
   margin-left: 0.3em; vertical-align: 0.1em; }
 
@@ -387,6 +410,10 @@ section[id] { scroll-margin-top: 1.5rem; }
   .refine-label { position: static; transform: none; display: block; text-align: center;
     white-space: normal; padding: 0.55rem 0 0; }
   .refine-label::before { content: "↺ "; }
+
+  .exchange { padding: 1.1rem 1rem; font-size: 0.82rem; }
+  .xc-line { gap: 0.7rem; }
+  .xc-who { flex-basis: 3.6rem; }
 
   .stage { grid-template-columns: 1fr; gap: 0.35rem; padding: 1.15rem 0; }
   .spec-table th { white-space: normal; }
