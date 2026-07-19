@@ -50,7 +50,7 @@ const REGIONS_SCHEMA = {
         required: ['name', 'scope'],
         properties: {
           name: { type: 'string', description: 'English kebab-case identifier (becomes the Agora directory name)' },
-          scope: { type: 'string', description: '이 영역이 책임지는 범위 (경로·모듈)' },
+          scope: { type: 'string', description: '이 영역이 책임지는 범위 (경로·module)' },
         },
       },
     },
@@ -142,9 +142,9 @@ phase('Map')
 await synod(
   'cartographer',
   `# 임무: 분석 영역 정의
-코드베이스 전체 구조를 독립적으로 해석 가능한 분석 영역으로 나눠라.
-모든 영역은 모호한 경계 없이 나누어 떨어져야 하고, 에이전트 하나가 전수 분석할 수 있는 크기여야 한다.
-각 영역의 착수 컨텍스트(범위·진입점·경계 입력·핵심 파일)를 네 Agora에 기록하라.`,
+codebase 전체 구조를 독립적으로 해석 가능한 분석 영역으로 나눠라.
+모든 영역은 모호한 경계 없이 나누어 떨어져야 하고, agent 하나가 전수 분석할 수 있는 크기여야 한다.
+각 영역의 착수 context(범위·진입점·경계 입력·핵심 파일)를 네 Agora에 기록하라.`,
   { label: 'map:draft', schema: REGIONS_SCHEMA },
 )
 const mapping = await synod(
@@ -190,7 +190,7 @@ if (totalHazards === 0) return { status: 'no-hazards', agoraPath }
 log(`${totalHazards} hazards across ${regions.length} regions`)
 
 // 3. Deliberate — 비판·반박·합의 (barriers: 각 단계가 이전 단계 전체 산출물을 요구)
-// 영역이 하나면 독립 스켑틱이 비판을 맡아 교차검증을 보존한다
+// 영역이 하나면 독립 skeptic이 비판을 맡아 교차검증을 보존한다
 phase('Deliberate')
 const names = regions.map((r) => r.dir)
 const critics =
@@ -234,17 +234,17 @@ await parallel(
 await synod(
   'cartographer',
   `# 임무: 합의 도출 (회의 3/3)
-모든 hazard·비평·반박(${agoraPath}/ 전체)을 종합해서 합의된 hazard 리스트를
+모든 hazard·비평·반박(${agoraPath}/ 전체)을 종합해서 합의된 hazard list를
 ${consensusPath} 에 작성하라.
-모든 hazard를 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한 — 실재하고 도달 가능하며 경계 안으로 흡수할 가치가 있는 — hazard만 verdict와 함께 리스트에 남겨라.
-verdict가 keep인 것은 근거만 기록하고 리스트에서 제외한다.`,
+모든 hazard를 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한 — 실재하고 도달 가능하며 경계 안으로 흡수할 가치가 있는 — hazard만 verdict와 함께 list에 남겨라.
+verdict가 keep인 것은 근거만 기록하고 list에서 제외한다.`,
   { label: 'consensus:draft', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
 )
 const consensus = await synod(
   'cartographer',
   `# 임무: 합의 완전성 검수
 ${agoraPath}/ 전체를 consensus.md 와 대조해 판정이 누락된 hazard와 반영되지 않은 비평·반박을 찾아라.
-누락이 있으면 consensus.md 를 수정하고, 최종 리스트를 반환하라.`,
+누락이 있으면 consensus.md 를 수정하고, 최종 list를 반환하라.`,
   { label: 'consensus:review', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
 )
 if (!consensus?.count) return { status: 'no-consensus', agoraPath }
@@ -259,8 +259,8 @@ const planned = await synod(
 ${PRINCIPLE}
 - 전체 작업을 최대한 크게 쪼개서 계획 개수를 적게 유지하라.
 ## 계획 형식
-각 계획은 self-contained 마크다운으로 ${plansDir}/{순번}-{kebab-name}/proposal.md 에 작성한다.
-proposal.md는 다음을 포함한다: 대상 hazard와 verdict / 변경 내용 / 고정 테스트 / ROI 근거 / 예상 side-effect / 영향 범위.`,
+각 계획은 self-contained markdown으로 ${plansDir}/{순번}-{kebab-name}/proposal.md 에 작성한다.
+proposal.md는 다음을 포함한다: 대상 hazard와 verdict / 변경 내용 / 고정 test / ROI 근거 / 예상 side-effect / 영향 범위.`,
   { label: 'plan', schema: PLANS_SCHEMA },
 )
 const plans = (planned?.plans ?? []).map((p, i) => {
@@ -279,7 +279,7 @@ phase('Review')
 const LENSES = [
   { key: 'hazard-fit', charge: '계획이 hazard를 실제로 제거하는지, verdict에 맞는 최단 해법인지 따져라.' },
   { key: 'simplicity', charge: '계획이 새로운 hazard나 복잡성을 만들지 않는지 검증하라.' },
-  { key: 'test-pin', charge: '고정 테스트가 정의된 behavior를 정확히 고정하는지 확인하라.' },
+  { key: 'test-pin', charge: '고정 test가 정의된 behavior를 정확히 고정하는지 확인하라.' },
 ]
 await parallel(
   plans.flatMap((p) =>
@@ -289,7 +289,7 @@ await parallel(
         `# 임무: 강화 계획 검수 — '${p.name}' / ${l.key}
 합의된 hazard(${consensusPath})와 대상 계획(${p.proposal})을 읽어라.
 ${l.charge}
-이슈나 개선점을 네 Agora에 기록하라.`,
+issue나 개선점을 네 Agora에 기록하라.`,
         { label: `review:${p.label}:${l.key}`, phase: 'Review' },
       ),
     ),
@@ -301,7 +301,7 @@ phase('Refine')
 const refined = await synod(
   'integrity-manager',
   `# 임무: 강화 계획 개선 + 실행 순서 확정
-${agoraPath}/ 전체(계획들과 review-* 검수 기록)를 읽어 컨텍스트를 복원하라.
+${agoraPath}/ 전체(계획들과 review-* 검수 기록)를 읽어 context를 복원하라.
 검수 내용을 기반으로 각 계획을 개선하라.
 ${PRINCIPLE}
 계획들의 실행 순서를 확정해서 ${agoraPath}/integrity-manager/execution-order.md 에 기록하고,
@@ -324,8 +324,8 @@ for (const name of order) {
     `# 임무: 강화 수행 — '${name}'
 계획(${p.proposal})을 읽고 그대로 구현하라. 실행 가능한 코드를 실제로 수정한다.
 선행 적용 기록(${agoraPath}/apply-*)이 있으면 현재 상태 파악에 참고하라.
-**수정마다 새로 정의된 behavior를 고정하는 테스트를 추가하고**, 전체 테스트 스위트로 회귀가 없음을 확인하라.
-변경 요약과 테스트 결과를 네 Agora에 기록하고 반환하라.`,
+**수정마다 새로 정의된 behavior를 고정하는 test를 추가하고**, 전체 test suite로 회귀가 없음을 확인하라.
+변경 요약과 test 결과를 네 Agora에 기록하고 반환하라.`,
     { label: `apply:${p.label}`, phase: 'Apply', schema: APPLY_SCHEMA },
   )
   applied.push({ name, status: res?.status ?? 'unknown', testsPassed: res?.testsPassed ?? null })
@@ -336,7 +336,7 @@ const finalReview = await synod(
   'integrity-manager',
   `# 임무: 최종 검수
 적용된 모든 계획(${agoraPath}/apply-* 기록)과 실제 변경된 코드를 종합 검수하라.
-각 정의가 테스트로 고정되고 이유가 기록되었는지, 전체 테스트가 통과하는지 확인하고,
+각 정의가 test로 고정되고 이유가 기록되었는지, 전체 test가 통과하는지 확인하고,
 확정됐으나 흡수되지 않은 hazard를 unabsorbed로 수집해 함께 반환하라.`,
   { label: 'final-review', phase: 'Apply', schema: FINAL_SCHEMA },
 )
