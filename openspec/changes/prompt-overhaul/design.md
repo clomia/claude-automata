@@ -17,6 +17,10 @@ advisor.md의 턴·라운드 정의 이동에 대한 정본 개정(정본이 용
 - **refine:code의 결함 관심사는 axiom이 거처다**: README 주장(#21에서 삭제)이 아니라
   principles가 모든 worker에 주입되는 판단 기준이므로, 워크플로우 기계 재도입 없이 1행으로
   복원한다(integrity의 동형 패턴).
+- **verify는 delta가 소환한다**: 기억 정본의 이론(라우팅 표 — verify는 SHALL+Scenario 증거
+  탐색자, 불변식 3 — spec이 구현을 구속)과 실측이 일치 — delta 없는 change의 verify는
+  정박점 없는 재검토였다. 수용한 트레이드오프: 아티팩트 정밀도 결함은 이제 저자·CI 형식
+  검사만이 관문이다.
 - 정합 스캔 실측: 계약 결합(트리거 라벨 action-history·종료 토큰) 무손상, 구 문면 인용
   잔향은 README 라우팅 안내 1건뿐 — 새 정의 어휘로 동기화.
 

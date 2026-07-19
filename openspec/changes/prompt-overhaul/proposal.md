@@ -16,7 +16,11 @@ instruction의 Local Optimum 감지 지침, define-mission/purpose 정의 정밀
   정합 관심사를 axiom으로(#9의 omission-first 정신, integrity와 동형).
 - **정합 동기화**: README 한·영의 mission 라우팅 안내를 새 정의 어휘("완료 조건이 명확한
   목표")로.
-- 버전: ploop 0.46.0 · refine 0.9.0.
+- **verify 필요조건 재설계(소유자 지시)**: verify spawn은 spec delta를 가진 change에만 —
+  판정 3축은 Requirement·Scenario 증거에 정박하므로 delta-less에선 산문 재검토로 퇴화한다
+  (세션 실측: delta-less verify ~10회의 발견 전부 아티팩트 정밀도 minor, 구현 결함 0).
+  delta-less의 관문은 태스크 게이트·CI·docs 게이트. close·apply·tx README 동기 개정.
+- 버전: ploop 0.46.0 · refine 0.9.0 · tx 0.12.0.
 
 ## Capabilities
 

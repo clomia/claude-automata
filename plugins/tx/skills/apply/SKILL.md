@@ -25,7 +25,7 @@ effort: max
    spec wording이 구현을 구속한다 — 구현 중 spec이 틀렸음이 드러나면 `tx:plan`으로 delta를
    고친 뒤 계속한다.
 
-4. 모든 태스크가 완료되면 **verify 스테이지를 spawn한다** (필수):
+4. 모든 태스크가 완료되고 change에 spec delta가 있으면 **verify 스테이지를 spawn한다** (필수):
 
    ```
    Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
