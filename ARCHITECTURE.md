@@ -15,7 +15,7 @@
 
 | 정본 | 소유 |
 |---|---|
-| [MEMORY.md](MEMORY.md) | 기억 시스템 전체 — 작업기억/장기기억, 두 표면(spec·docs), 승격 라우팅, 불변식, OpenSpec seam, docs 표면 규약과 그 운반 |
+| [MEMORY.md](MEMORY.md) | 기억 system 전체 — 작업기억/장기기억, 두 표면(spec·docs), 승격 routing, 불변식, OpenSpec seam, docs 표면 규약과 그 운반 |
 | [plugins/ploop/ARCHITECTURE.md](plugins/ploop/ARCHITECTURE.md) | advisor loop 설계 결정 전체 (내부 용어 포함) |
 | [plugins/tx/README.md](plugins/tx/README.md) | 트랜잭션 모델 · base 해석 · 가드 훅 · 씨앗 · verify 스테이지 |
 | plugins/refine/skills/\*/principles.md | 각 정제 워크플로우의 판단 axiom |
@@ -39,7 +39,7 @@ loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의
   최적화이지 무결성 요건이 아니다.
 - **refine × tx — 청소도 관문을 지난다**(MEMORY 불변식 1).
 - **ploop × 기억 — 루프는 레포를 오염하지 않는다.** ploop의 모든 상태는 레포 밖에 있다. 레포로
-  들어가는 유일한 경로는 응고(MEMORY 승격 라우팅)이며, launch rules의 승격 문구는
+  들어가는 유일한 경로는 응고(MEMORY 승격 routing)이며, launch rules의 승격 문구는
   행선("repo로")만 지시하고 관문·도구·세계관 어휘를 싣지 않는다 — 관문의 정체는 tx
   자신의 가드 표면(쓰기 순간의 deny·SessionStart warn)이 가르치므로, tx 미설치 환경에 죽은
   구절도 미해결 어휘도 남지 않는다.
