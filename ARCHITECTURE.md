@@ -19,6 +19,7 @@
 | [plugins/ploop/ARCHITECTURE.md](plugins/ploop/ARCHITECTURE.md) | advisor loop 설계 결정 전체 (내부 용어 포함) |
 | [plugins/tx/README.md](plugins/tx/README.md) | 트랜잭션 모델 · base 해석 · 가드 훅 · 씨앗 · verify 스테이지 |
 | plugins/refine/skills/\*/principles.md | 각 정제 워크플로우의 판단 axiom |
+| [openspec/specs/init-cli/spec.md](openspec/specs/init-cli/spec.md) | init CLI — 전제조건 수렴(settings·marketplace·외부 CLI provisioning) 요구사항 |
 | [README.ko.md](README.ko.md) / [README.md](README.md) | 설치·사용 (사람 대상, 한·영 쌍) |
 
 기억 도메인 용어(작업기억·장기기억·응고·표면·정본)는 MEMORY.md가, ploop 내부 용어(advisor

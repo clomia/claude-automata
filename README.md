@@ -9,7 +9,15 @@ Plugins that amplify Claude Code's autonomy.
 **[`uv` is required. If you don't have it, install it first.](https://docs.astral.sh/uv/getting-started/installation/)**
 **Runs on POSIX (macOS / Linux / WSL).**
 
-Add this repository to the marketplace:
+Set everything up in one command from your project root — settings prerequisites, marketplace and plugin registration, and the external CLI dependencies (gh · Node.js · repomix):
+
+```
+uvx --from git+https://github.com/clomia/claude-automata claude-automata init
+```
+
+Re-running is safe (idempotent). To force the latest version, use `uvx --refresh --from …`.
+
+To only add the marketplace without registering plugins:
 
 ```
 claude plugin marketplace add clomia/claude-automata
