@@ -1,4 +1,4 @@
-정본: `clomia/claude-automata`의 MEMORY.md — 충돌 시 정본이 이긴다.
+정본: https://github.com/clomia/claude-automata/blob/main/MEMORY.md — 충돌 시 정본이 이긴다.
 
 # docs 표면 규약 — 자유 산문 장기기억의 쓰기 규칙
 
