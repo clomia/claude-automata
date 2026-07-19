@@ -1,18 +1,18 @@
 # init-cli Specification
 
 ## Purpose
-claude-automata 도입의 전제조건 전부를 한 커맨드로 수렴시키는 셋업 CLI — Claude Code settings, marketplace·plugin 등록, 외부 CLI provisioning.
+claude-automata 도입의 전제조건 전부를 한 command로 수렴시키는 setup CLI — Claude Code settings, marketplace·plugin 등록, 외부 CLI provisioning.
 ## Requirements
 ### Requirement: Zero-install entrypoint
-repo 루트는 Python package `claude-automata`여야 하며, `claude-automata` 실행 파일과 `init` 커맨드를 노출해야 한다(SHALL). package는 PyPI에 `claude-automata`로 발행되어야 하며(SHALL), uv만 설치된 머신에서 `uvx claude-automata init`으로 사전 설치 없이 실행되어야 한다(SHALL). git source 실행(`uvx --from git+https://github.com/clomia/claude-automata claude-automata init`)도 유효해야 한다(MUST).
+repo root는 Python package `claude-automata`여야 하며, `claude-automata` 실행 파일과 `init` command를 노출해야 한다(SHALL). package는 PyPI에 `claude-automata`로 발행되어야 하며(SHALL), uv만 설치된 machine에서 `uvx claude-automata init`으로 사전 설치 없이 실행되어야 한다(SHALL). git source 실행(`uvx --from git+https://github.com/clomia/claude-automata claude-automata init`)도 유효해야 한다(MUST).
 
 #### Scenario: uvx 단축형 실행
-- **WHEN** uv만 설치된 머신에서 `uvx claude-automata init`을 실행하면
-- **THEN** PyPI의 최신 발행 버전이 격리 환경에 resolve되고 `init` 커맨드가 실행된다
+- **WHEN** uv만 설치된 machine에서 `uvx claude-automata init`을 실행하면
+- **THEN** PyPI의 최신 발행 version이 격리 환경에 resolve되고 `init` command가 실행된다
 
 #### Scenario: uvx로 실행
 - **WHEN** `uvx --from git+<repo-url> claude-automata init`을 실행하면
-- **THEN** package가 격리 환경에 resolve되고 `init` 커맨드가 실행된다
+- **THEN** package가 격리 환경에 resolve되고 `init` command가 실행된다
 
 ### Requirement: Settings prerequisites
 `init`은 target repo의 `.claude/settings.json`에 다음 전제조건을 merge-write해야 한다(SHALL): `alwaysThinkingEnabled=true`, `autoMemoryEnabled=false`, `autoCompactEnabled=true`, `model="opus[1m]"`, `permissions.defaultMode="bypassPermissions"`. 기존 파일의 다른 키와 `permissions`의 다른 하위 키는 보존해야 한다(MUST). 재실행은 idempotent해야 한다(MUST).
@@ -37,7 +37,7 @@ repo 루트는 Python package `claude-automata`여야 하며, `claude-automata` 
 - **THEN** settings에 marketplace 항목과 manifest의 모든 plugin(`ploop`·`refine`·`tx`·`version-up-alert`)의 enabled 키가 존재한다
 
 ### Requirement: External CLI provisioning
-`init`은 `gh`, Node.js ≥ 20(`node`·`npm`·`npx`), `repomix`가 PATH에 있는지 검사하고, 없는 것은 sudo 없이 사용자 영역에 설치해야 한다(SHALL). 이미 있는 도구는 건너뛰어야 한다(MUST). `openspec`은 설치하지 않는다(MUST NOT) — tx plugin이 pin된 버전을 npx로 fetch하며 pin의 single home은 tx다. `gh` 인증은 자동화하지 않고, 미인증이면 `gh auth login` 안내를 출력해야 한다(SHALL).
+`init`은 `gh`, Node.js ≥ 20(`node`·`npm`·`npx`), `repomix`가 PATH에 있는지 검사하고, 없는 것은 sudo 없이 사용자 영역에 설치해야 한다(SHALL). 이미 있는 도구는 건너뛰어야 한다(MUST). `openspec`은 설치하지 않는다(MUST NOT) — tx plugin이 pin된 version을 npx로 fetch하며 pin의 single home은 tx다. `gh` 인증은 자동화하지 않고, 미인증이면 `gh auth login` 안내를 출력해야 한다(SHALL).
 
 #### Scenario: 도구가 이미 있음
 - **WHEN** `gh`가 PATH에 있으면
@@ -55,17 +55,17 @@ repo 루트는 Python package `claude-automata`여야 하며, `claude-automata` 
 `init`은 cwd의 git 최상위를 target repo로 해석해 그곳의 `.claude/settings.json`에 기록해야 한다(SHALL). git repo 밖에서 실행되면 아무것도 쓰지 않고 명확한 오류로 실패해야 한다(MUST). 모든 사용자 대면 출력은 English여야 한다(MUST).
 
 #### Scenario: git repo 밖 실행
-- **WHEN** git repo가 아닌 디렉토리에서 init을 실행하면
-- **THEN** 파일 변경 없이 오류 메시지와 함께 비정상 종료한다
+- **WHEN** git repo가 아닌 directory에서 init을 실행하면
+- **THEN** 파일 변경 없이 오류 message와 함께 비정상 종료한다
 
 ### Requirement: Release publishing
-main에 병합된 `pyproject.toml`의 version이 PyPI에 없으면, release workflow가 `uv build`로 산출물을 만들고 PyPI에 발행해야 한다(SHALL). 이미 발행된 버전은 재발행을 시도하지 않아야 한다(MUST NOT). 인증은 GitHub Actions OIDC 기반 Trusted Publishing이어야 하며(SHALL) 장기 토큰을 repo에 보관하지 않는다(MUST NOT).
+main에 병합된 `pyproject.toml`의 version이 PyPI에 없으면, release workflow가 `uv build`로 산출물을 만들고 PyPI에 발행해야 한다(SHALL). 이미 발행된 version은 재발행을 시도하지 않아야 한다(MUST NOT). 인증은 GitHub Actions OIDC 기반 Trusted Publishing이어야 하며(SHALL) 장기 token을 repo에 보관하지 않는다(MUST NOT).
 
-#### Scenario: 새 버전 병합
+#### Scenario: 새 version 병합
 - **WHEN** PyPI에 없는 version의 pyproject.toml이 main에 병합되면
-- **THEN** workflow가 build·publish를 수행해 해당 버전이 PyPI에 존재하게 된다
+- **THEN** workflow가 build·publish를 수행해 해당 version이 PyPI에 존재하게 된다
 
-#### Scenario: 기존 버전 재실행
+#### Scenario: 기존 version 재실행
 - **WHEN** 이미 PyPI에 존재하는 version으로 workflow가 실행되면
 - **THEN** publish를 건너뛰고 성공으로 종료한다
 
