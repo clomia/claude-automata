@@ -20,6 +20,14 @@
 - **README banner 이미지**: og-card 선례대로 committed source(`site/assets/banner-card.html`)
   에서 생성한 `site/assets/banner.png`, og-coupling CI를 banner 쌍까지 확장.
 - **root 0.1.5** — README 재발행.
+- **한국어 page** (소유자 추가 지시): `site/ko/index.html` — `/ko/` 경로로 즉시 접속,
+  titleblock의 EN·KO 언어 toggle, default는 영어(`/`) 유지. 한국어 기반 + native 영어
+  어휘 혼용(억지 번역 금지), 다이어그램 label은 English 유지(정렬·register). 한글은
+  per-glyph system-font fallback(자체 한글 font 동봉은 무게로 기각), hreflang alternate
+  상호 선언. CI의 두 checker(init-disclosure·canon-links) 표면 목록에 ko page 편입.
+- **디자인 심층 재고찰** (소유자 추가 지시): 7개 폭(344–1440) 실측으로 반응형 안정
+  확인, §02 제목을 PREMISE→OPERATING PRINCIPLES로(직관), eyebrow의 이름 중복 제거,
+  exchange panel의 소형 화면 여백 조정.
 
 ## Capabilities
 

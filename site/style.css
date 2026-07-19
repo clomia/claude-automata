@@ -69,6 +69,10 @@ section[id] { scroll-margin-top: 1.5rem; }
 .tb-unaffiliated { color: var(--copper-deep); }
 .tb-link { text-decoration: none; }
 .tb-link:hover { color: var(--copper-deep); }
+.tb-lang { color: var(--muted); }
+.tb-lang b { color: var(--ink); font-weight: 500; }
+.tb-lang a { text-decoration: none; }
+.tb-lang a:hover { color: var(--copper-deep); }
 
 /* ---------------------------------------------------------------- hero */
 .hero {
@@ -406,6 +410,10 @@ section[id] { scroll-margin-top: 1.5rem; }
   .refine-label { position: static; transform: none; display: block; text-align: center;
     white-space: normal; padding: 0.55rem 0 0; }
   .refine-label::before { content: "↺ "; }
+
+  .exchange { padding: 1.1rem 1rem; font-size: 0.82rem; }
+  .xc-line { gap: 0.7rem; }
+  .xc-who { flex-basis: 3.6rem; }
 
   .stage { grid-template-columns: 1fr; gap: 0.35rem; padding: 1.15rem 0; }
   .spec-table th { white-space: normal; }

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claude-automata — 며칠이고 돕니다. 검증된 것만 기억합니다.</title>
+<meta name="description" content="인간 기억 구조를 사상한 Claude Code 자율 agent 환경: 작업기억 advisor loop, 하나의 검증된 consolidation gate, git 추적 text 장기기억, 재접지 주기. Anthropic과 무관한 독립 open-source project, MIT.">
+<link rel="canonical" href="https://clomia.github.io/claude-automata/ko/">
+<link rel="alternate" hreflang="en" href="https://clomia.github.io/claude-automata/">
+<link rel="alternate" hreflang="ko" href="https://clomia.github.io/claude-automata/ko/">
+<link rel="alternate" hreflang="x-default" href="https://clomia.github.io/claude-automata/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://clomia.github.io/claude-automata/ko/">
+<meta property="og:site_name" content="claude-automata">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:title" content="claude-automata — 며칠이고 돕니다. 검증된 것만 기억합니다.">
+<meta property="og:description" content="인간 기억 구조를 Claude Code에 사상: 작업기억 loop, 하나의 검증된 consolidation gate, git 추적 장기기억, 재접지 주기. 독립 open-source project.">
+<meta property="og:image" content="https://clomia.github.io/claude-automata/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="claude-automata 기억 회로: event가 작업기억 loop로 들어와 하나의 consolidation gate를 통과해 git 추적 장기기억에 침전되고, 재접지 주기가 같은 gate로 되돌아온다.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../style.css">
+<style>
+  /* Hangul renders through per-glyph system-font fallback (Saira/Plex carry no Hangul);
+     wide caps tracking reads loose on Hangul, so ko headings track tighter, and
+     keep-all stops mid-word Hangul line breaks. */
+  body { word-break: keep-all; overflow-wrap: break-word; }
+  .hero h1 { letter-spacing: 0; }
+  .section h2, .st-name, .disclosure-title { letter-spacing: 0.02em; }
+</style>
+</head>
+<body>
+
+<header class="titleblock">
+  <div class="tb-name">CLAUDE‑AUTOMATA</div>
+  <div class="tb-fields">
+    <span class="tb-field"><span class="tb-k">DOC</span> LANDING</span>
+    <span class="tb-field"><span class="tb-k">LICENSE</span> MIT</span>
+    <span class="tb-field tb-unaffiliated"><span class="tb-k">STATUS</span> NOT AFFILIATED WITH ANTHROPIC</span>
+    <a class="tb-field tb-link" href="https://github.com/clomia/claude-automata"><span class="tb-k">SOURCE</span> GITHUB ↗</a>
+    <span class="tb-field tb-lang"><a href="../">EN</a> · <b>KO</b></span>
+  </div>
+</header>
+
+<main>
+
+<!-- ================================ HERO ================================ -->
+<section class="hero">
+  <p class="eyebrow">인간 기억 구조를 사상한 CLAUDE CODE 자율 AGENT 환경</p>
+  <h1>며칠이고 돕니다.<br>
+      검증된 것만 기억합니다.</h1>
+
+  <figure class="schematic-figure">
+    <div class="schematic" role="img"
+         aria-label="기억 회로 도해. 사용자 prompt·schedule·CI·notification — 모든 event가 동등하게 작업기억 loop(ploop plugin, 미추적·lossy·loop와 함께 소멸)로 들어온다. 작업이 loop를 떠나는 유일한 경로는 consolidation gate(tx plugin: 독립 verify·CI·squash merge)다. gate를 통과한 것은 장기기억 — repository의 git 추적 text — 에 침전된다. 승격되지 못한 흔적은 작업기억에서 소멸한다 — 망각은 설계다. 재접지 주기(refine plugin)가 장기기억을 같은 gate로 되돌려 코드와 참을 유지한다.">
+
+      <!-- input rail: the user is one event type among many -->
+      <div class="rail" aria-hidden="true">
+        <span class="rail-caption">EVENTS — ALL EQUAL</span>
+        <div class="rail-items">
+          <span class="event">user</span>
+          <span class="event">schedule</span>
+          <span class="event">ci</span>
+          <span class="event">notification</span>
+        </div>
+        <div class="rail-drop"><i class="arrowhead down"></i></div>
+      </div>
+
+      <div class="circuit">
+        <!-- station 1: working memory -->
+        <div class="station st-working">
+          <div class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 96 96">
+              <circle class="loop-track" cx="48" cy="48" r="34"/>
+              <g class="orbiter"><circle class="orbit-dot" cx="48" cy="14" r="4"/></g>
+              <g class="anchor-glyph">
+                <circle cx="48" cy="38" r="4.5"/>
+                <line x1="48" y1="42.5" x2="48" y2="62"/>
+                <path d="M 36 54 A 12 12 0 0 0 60 54"/>
+                <line x1="41" y1="49" x2="55" y2="49"/>
+              </g>
+            </svg>
+          </div>
+          <div class="st-name">WORKING MEMORY</div>
+          <div class="st-plugin plugin-copper">ploop — advisor loop</div>
+          <div class="st-props">untracked · lossy · dies with the loop</div>
+          <!-- discard drain: unpromoted work discharges to ground -->
+          <div class="drain" aria-hidden="true">
+            <div class="drain-stub"><i class="pulse p-drain"></i></div>
+            <svg class="ground" viewBox="0 0 28 14">
+              <line x1="2"  y1="2"  x2="26" y2="2"/>
+              <line x1="7"  y1="7"  x2="21" y2="7"/>
+              <line x1="11" y1="12" x2="17" y2="12"/>
+            </svg>
+            <span class="drain-label">discard</span>
+          </div>
+        </div>
+
+        <!-- connector 1 -->
+        <div class="conn c1" aria-hidden="true">
+          <i class="pulse p-pass"></i>
+          <i class="arrowhead right"></i>
+        </div>
+
+        <!-- station 2: consolidation gate -->
+        <div class="station st-gate">
+          <div class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 96 96">
+              <line class="gate-wall" x1="30" y1="12" x2="30" y2="36"/>
+              <line class="gate-wall" x1="30" y1="60" x2="30" y2="84"/>
+              <line class="gate-wall" x1="66" y1="12" x2="66" y2="36"/>
+              <line class="gate-wall" x1="66" y1="60" x2="66" y2="84"/>
+              <rect class="gate-core" x="34" y="34" width="28" height="28" transform="rotate(45 48 48)"/>
+              <path class="gate-check" d="M 41 48 l 5 6 l 10 -12"/>
+            </svg>
+          </div>
+          <div class="st-name">CONSOLIDATION</div>
+          <div class="st-plugin plugin-ink">tx — the only gate</div>
+          <div class="st-props">verify · CI · squash merge</div>
+        </div>
+
+        <!-- connector 2 (mobile adds a return riser alongside: down = promote, up = re-ground) -->
+        <div class="conn c2" aria-hidden="true">
+          <i class="pulse p-settle"></i>
+          <i class="arrowhead right verd"></i>
+          <span class="refine-riser"><i class="pulse p-refine-m"></i><i class="arrowhead up verd riser-head"></i></span>
+        </div>
+
+        <!-- station 3: long-term memory -->
+        <div class="station st-ltm">
+          <div class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 96 96">
+              <rect class="strata-frame" x="14" y="18" width="68" height="60"/>
+              <line class="stratum" x1="14" y1="33" x2="82" y2="33"/>
+              <line class="stratum" x1="14" y1="48" x2="82" y2="48"/>
+              <line class="stratum" x1="14" y1="63" x2="82" y2="63"/>
+              <line class="tick" x1="22" y1="25.5" x2="34" y2="25.5"/>
+              <line class="tick" x1="40" y1="40.5" x2="56" y2="40.5"/>
+              <line class="tick" x1="26" y1="55.5" x2="44" y2="55.5"/>
+              <line class="tick tick-new" x1="52" y1="70.5" x2="70" y2="70.5"/>
+            </svg>
+          </div>
+          <div class="st-name">LONG‑TERM MEMORY</div>
+          <div class="st-plugin plugin-verd">git‑tracked text</div>
+          <div class="st-props">specs · canons · rules · skills</div>
+        </div>
+      </div>
+
+      <!-- refine return path: ltm -> gate, through the same gate -->
+      <div class="refine-path" aria-hidden="true">
+        <div class="refine-line">
+          <i class="pulse p-refine"></i>
+          <i class="arrowhead up verd"></i>
+        </div>
+        <span class="refine-label">refine — re‑grounding cycle, through the same gate</span>
+      </div>
+    </div>
+    <figcaption class="fig-caption">FIG. 1 — THE MEMORY CIRCUIT · WORK IS LOSSY, MEMORY IS VERIFIED</figcaption>
+  </figure>
+
+  <p class="thesis">
+    claude‑automata는 Claude Code를 대화가 아니라 돌아가는 system으로 바꿉니다.
+    의도를 한 번 적어두면 loop가 24시간 주도권을 쥐고, advisor는 일이 남아 있는 한
+    끝내지 못하게 하며, 하나의 consolidation gate가 무엇을 기억할지 정합니다.
+    장기기억은 repository의 git 추적 text 그 자체입니다 — 검증되지 않은 것은
+    loop와 함께 사라집니다, 의도적으로.
+  </p>
+
+  <div class="hero-actions">
+    <a class="btn btn-solid" href="#getting-started">시작하기</a>
+    <a class="btn" href="https://github.com/clomia/claude-automata">VIEW SOURCE ↗</a>
+  </div>
+</section>
+
+<!-- ============================ 01 THE ADVISOR ========================== -->
+<section class="section" id="advisor">
+  <h2><span class="sec-no">01</span>"끝났다"는 선언도 감사받습니다</h2>
+  <p class="sec-lede">
+    agent는 끝났다고 <em>믿는</em> 순간 turn을 끝냅니다. 여기서는 그 정지 자체가
+    event입니다: hook이 정지를 막고 clean context의 독립 advisor를 소집합니다 —
+    loop의 메타인지입니다. "끝났다" 뒤에도 무언가가 계속 묻습니다:
+    <em>정말 끝났는가?</em>
+  </p>
+  <div class="exchange" role="img"
+       aria-label="연출된 교환: agent가 임무 완료를 선언하고 멈추려 하자 hook이 정지를 차단하고 advisor를 소집한다. advisor가 미고려 영역 — 측정되지 않은 layout, 출처 없는 주장, 승격 대기열의 사실 — 을 제시하고 agent가 재개한다. 여섯 round 뒤 advisor가 쓴다: 더 조언할 것이 없습니다, turn을 끝냅니다. 그때에야 loop가 끝난다.">
+    <div class="xc-line"><span class="xc-who xc-agent">agent</span><span class="xc-text">임무 완료. 종료합니다.</span></div>
+    <div class="xc-line"><span class="xc-who xc-hook">hook</span><span class="xc-text">정지 차단 — advisor를 소집합니다.</span></div>
+    <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text">아직입니다. mobile layout은 측정된 적이 없습니다. 출처 없는 주장이 둘 있습니다. 승격 대기열에 사실이 남아 있습니다.</span></div>
+    <div class="xc-line"><span class="xc-who xc-agent">agent</span><span class="xc-text">…재개합니다.</span></div>
+    <div class="xc-gap">⟲ 여섯 round 뒤</div>
+    <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text xc-end">더 조언할 것이 없습니다. turn을 끝냅니다.</span></div>
+  </div>
+  <p class="xc-note">
+    연출된 교환입니다 — 기제는 실제입니다: 정지를 차단하는 hook, clean context의
+    advisor, 그리고 loop를 끝낼 권한은 advisor에게만 있다는 규칙. round 상한은
+    없습니다 — 종료는 counter가 아니라 판단입니다.
+  </p>
+</section>
+
+<!-- ============================ 02 PRINCIPLES =========================== -->
+<section class="section" id="premise">
+  <h2><span class="sec-no">02</span>작동 원리</h2>
+  <div class="claims">
+    <article class="claim">
+      <h3>의도는 무엇에도 살아남습니다</h3>
+      <p>
+        anchor — 한 번 적어둔 당신의 의도 — 는 transcript 밖에 보존되고 context가
+        재구성될 때마다 다시 주입됩니다. 그래서 작업은 며칠을 넘기고 거듭되는
+        auto‑compaction에서도 살아남습니다. advisor는 매 round anchor를 새로
+        읽습니다 — loop는 마지막으로 한 말이 아니라 anchor에 정박합니다.
+      </p>
+    </article>
+    <article class="claim">
+      <h3>사용자는 event type 중 하나입니다</h3>
+      <p>
+        타이핑한 prompt, schedule 발화, CI 완료, task notification — 전부 정박된
+        loop에 도착하는 event일 뿐입니다. 어느 것도 loop를 멈추지 않습니다. 도중에
+        지시를 넣거나 read‑only docent session에 상황을 물어볼 수 있습니다 —
+        loop는 입력을 흡수하고 다음 정지에서 재개됩니다. 설계상 이 repository의
+        모든 기여는 Claude Code agent가 작성합니다 — 인간은 의도를 주고 관찰합니다.
+      </p>
+    </article>
+    <article class="claim">
+      <h3>기억은 하나의 gate만 통과합니다</h3>
+      <p>
+        transaction을 통하지 않고는 어떤 것도 장기기억이 되지 못합니다: 계획된
+        의도, 독립 verifier, CI, 그리고 squash merge. 그 밖의 모든 것 — loop 상태,
+        막다른 길, 시행착오 — 은 loop와 함께 사라집니다. 망각은 결함이 아니라
+        기능입니다: 남는 것은 정확히 검증된 것뿐입니다.
+      </p>
+    </article>
+  </div>
+</section>
+
+<!-- ========================= 03 MEMORY SYSTEM =========================== -->
+<section class="section" id="memory-system">
+  <h2><span class="sec-no">03</span>기억 SYSTEM</h2>
+  <p class="sec-lede">
+    위의 회로는 나중에 붙인 은유가 아니라 설계 그 자체입니다: 세 plugin이 단계를
+    구동하고, 저장소는 repository의 git 추적 text입니다. database도 vector index도
+    없습니다 — 검증된 merge 하나씩으로 쌓이는 파일들입니다.
+  </p>
+  <ol class="stages">
+    <li class="stage stage-copper">
+      <div class="stage-key">WORKING MEMORY</div>
+      <div class="stage-body">
+        <p>
+          ploop의 작업 공간: anchor, loop-local 상태, 승격을 기다리는 사실·용어
+          후보들. 의도적으로 미추적이고 lossy합니다 — round는 폐기되고, advisor
+          loop가 표류 대신 정박을 지킵니다.
+        </p>
+      </div>
+    </li>
+    <li class="stage stage-ink">
+      <div class="stage-key">CONSOLIDATION</div>
+      <div class="stage-body">
+        <p>
+          tx transaction은 기억에 무언가를 쓰는 유일한 방법입니다: change artifact가
+          의도를 기록하고, 독립 verifier가 구현을 그 의도와 대조하고, CI가 green이어야
+          하며, 결과는 하나의 squash merge로 안착합니다.
+        </p>
+      </div>
+    </li>
+    <li class="stage stage-verd">
+      <div class="stage-key">LONG‑TERM MEMORY</div>
+      <div class="stage-body">
+        <p>
+          repository의 git 추적되는 비실행 text 전부: 요구사항 spec(의미기억),
+          archive된 change(일화기억), 설계 정본과 조사 기록, 운영 규칙, 용어
+          (어휘기억), skill(절차기억). 회상은 grep입니다 — 이름은 찾히도록 짓습니다.
+        </p>
+      </div>
+    </li>
+    <li class="stage stage-verd">
+      <div class="stage-key">RE‑GROUNDING</div>
+      <div class="stage-body">
+        <p>
+          기억은 놓아두는 동안 부패합니다. refine workflow가 문서의 주장을 코드와
+          재대조하고, 더는 검증할 수 없는 것을 지우고, 중복을 수렴시킵니다 — 그
+          수정 역시 다른 모든 것과 같은 gate를 통과합니다.
+        </p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<!-- ============================ 04 MODULES ============================== -->
+<section class="section" id="modules">
+  <h2><span class="sec-no">04</span>MODULES</h2>
+  <div class="modules">
+
+    <article class="module">
+      <div class="mod-head">
+        <h3 class="mod-name">ploop</h3>
+        <span class="mod-role">ADVISOR LOOP</span>
+      </div>
+      <p>
+        며칠짜리 장기 작업을 위한 자율 loop입니다. anchor — 완료 조건이 있는 mission,
+        또는 끝이 없는 purpose — 를 적어 launch하면, 매 정지마다 독립 advisor가
+        미고려 영역을 표면화하고, 남은 것이 없어질 때까지 계속됩니다. 정식
+        nested‑subagent 경로만 사용하고 별도 session을 만들지 않아 구독 요금제에
+        안전합니다 — 안전은 기제이지 가격이 아닙니다: loop는 요금제 quota를
+        공유하며, 며칠짜리 실행은 그만큼 사용량을 씁니다. read‑only docent가
+        loop를 건드리지 않고 기록에서 질문에 답합니다.
+      </p>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/ploop/ARCHITECTURE.md">SOURCE — plugins/ploop/ARCHITECTURE.md <span class="lang-tag">KOREAN</span></a>
+    </article>
+
+    <article class="module">
+      <div class="mod-head">
+        <h3 class="mod-name">tx</h3>
+        <span class="mod-role">TRANSACTION GATE</span>
+      </div>
+      <p>
+        변경을 transaction — 작업 단위가 아니라 무결성 경계 — 으로 다루는 Git
+        workflow입니다. <code>/tx:open</code>이 base에서 branch를 자르고,
+        <code>tx:plan → tx:apply → tx:verify</code>가 독립 verify 단계와 함께 변경을
+        이끌며, <code>/tx:close</code>는 verification·docs gate·CI가 전부 통과했을
+        때만 squash merge합니다. 그 사이의 base branch는 guard hook들이 지킵니다.
+      </p>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/tx/README.md">SOURCE — plugins/tx/README.md</a>
+    </article>
+
+    <article class="module">
+      <div class="mod-head">
+        <h3 class="mod-name">refine</h3>
+        <span class="mod-role">MAINTENANCE WORKFLOWS</span>
+      </div>
+      <p>
+        쌓인 부채를 없애는 heavyweight multi‑agent workflow(한 번에 수 시간)입니다:
+        코드 architecture, 문서의 참, 무결성 경계. 영역을 나눠 병렬 분석하고,
+        발견은 교차검증 회의에서 합의로 걸러지며, 최고 ROI 계획만 실행됩니다.
+        docs pass는 코드를 절대 수정하지 않습니다 — 결함은 보고됩니다.
+        <code>/refine:code</code> · <code>/refine:docs</code> ·
+        <code>/refine:integrity</code>로 호출하고, 선택 인자로 영역을 좁힙니다.
+      </p>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/refine">SOURCE — plugins/refine <span class="lang-tag">KOREAN</span></a>
+    </article>
+
+    <article class="module">
+      <div class="mod-head">
+        <h3 class="mod-name">version‑up‑alert</h3>
+        <span class="mod-role">UPDATE NOTICE</span>
+      </div>
+      <p>
+        설치된 claude‑automata plugin에 새 release가 나오면 session 시작 시 뒤처진
+        plugin을 전부 담은 한 줄이 표시됩니다. 알림만 합니다 — 실행 중인 session
+        밑에서 plugin을 갈아끼우지 않으며, update 시점은 당신이 정합니다. 다른
+        모든 plugin이 의존성으로 함께 설치하므로 따로 설치할 것이 없습니다.
+      </p>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/version-up-alert">SOURCE — plugins/version-up-alert</a>
+    </article>
+
+  </div>
+</section>
+
+<!-- ========================= 05 GETTING STARTED ========================= -->
+<section class="section" id="getting-started">
+  <h2><span class="sec-no">05</span>시작하기</h2>
+  <p class="sec-lede">
+    한 command가 repository를 이 환경의 전제조건으로 수렴시킵니다.
+    <a href="https://claude.com/claude-code">Claude Code</a>와
+    <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>가 필요하고,
+    POSIX(macOS / Linux / WSL)에서 동작합니다. project root에서 실행하세요:
+  </p>
+
+  <pre class="code-block"><code>uvx claude-automata init</code></pre>
+
+  <div class="init-disclosure">
+    <h3 class="disclosure-title">INIT이 실제로 쓰는 것</h3>
+    <p class="disclosure-note">
+      전부 공개합니다 — 이 환경은 무인 운용을 전제하며 init은 Claude Code를 그에
+      맞게 설정합니다. <code>bypassPermissions</code>에서는 agent가 묻지 않고 이
+      machine에서 shell command를 실행합니다 — 신뢰의 범위는 repo가 아니라
+      host입니다. 그 방식을 수용할 machine에서 도입하고, commit 전에 diff를
+      확인하세요.
+    </p>
+    <table class="spec-table">
+      <caption class="sr-only">init이 .claude/settings.json에 merge-write하는 설정</caption>
+      <tbody>
+        <tr><th scope="row">permissions.defaultMode</th><td><code>"bypassPermissions"</code> — 승인 prompt 없음</td></tr>
+        <tr><th scope="row">model</th><td><code>"opus[1m]"</code> — model 고정, 1M‑token context</td></tr>
+        <tr><th scope="row">alwaysThinkingEnabled</th><td><code>true</code></td></tr>
+        <tr><th scope="row">autoCompactEnabled</th><td><code>true</code> — 장기 loop가 여기 의존합니다</td></tr>
+        <tr><th scope="row">autoMemoryEnabled</th><td><code>false</code> — 기억은 harness가 아니라 repo의 것</td></tr>
+        <tr><th scope="row">marketplace + plugins</th><td><code>clomia/claude-automata</code> 등록, plugin 4종 활성화</td></tr>
+        <tr><th scope="row">external CLIs</th><td>없는 <code>gh</code>·Node.js ≥ 20·<code>repomix</code>를 <code>~/.local</code>에 설치 — sudo 불필요, 있으면 건너뜀, <code>gh auth login</code>은 당신 몫</td></tr>
+      </tbody>
+    </table>
+    <p class="disclosure-note">
+      merge‑write입니다: <code>.claude/settings.json</code>의 무관한 key는 보존되고,
+      재실행은 idempotent합니다.
+    </p>
+  </div>
+
+  <div class="next-steps">
+    <h3 class="disclosure-title">그리고 LOOP를 돌리세요</h3>
+    <pre class="code-block"><code><span class="c-muted"># 한 session에서 — interview skill로 anchor를 작성</span>
+/ploop:define-mission
+
+<span class="c-muted"># 새 session에서 — anchor text를 loop에 전달</span>
+/ploop:launch [anchor text]</code></pre>
+    <pre class="code-block"><code><span class="c-muted"># loop 조작</span>
+/ploop:off      <span class="c-muted"># 일시정지 — loop는 다음 정지에서 멈춥니다</span>
+/ploop:on       <span class="c-muted"># 재개 — ESC·API error·session limit로 멈춘 loop도 깨웁니다</span>
+/ploop:docent   <span class="c-muted"># 별도 session에서 질문 — read-only, loop를 건드리지 않습니다</span></code></pre>
+  </div>
+</section>
+
+</main>
+
+<footer class="colophon">
+  <p class="unaffiliated">
+    claude‑automata는 독립 open‑source project입니다. Anthropic과 제휴·보증·후원
+    관계가 없습니다. Claude와 Claude Code는 Anthropic의 제품입니다.
+  </p>
+  <p class="colophon-meta">
+    MIT License · <a href="https://github.com/clomia/claude-automata">github.com/clomia/claude-automata</a>
+    · 설계상 이 repository의 모든 기여는 Claude Code agent가 작성합니다.
+  </p>
+</footer>
+
+</body>
+</html>

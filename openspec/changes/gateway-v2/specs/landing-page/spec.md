@@ -9,7 +9,9 @@ claude-automata init` 단일 설치 경로와 init이 실제로 쓰는 settings�
 비공식(unaffiliated) 고지. **사이트의 이해는 자체 완결이어야 한다(MUST)** — page를 떠나지
 않고 스크롤만으로 정체·기제·가치·시작법이 전달되며, repo 문서 link는 보조 SOURCE
 pointer로만 존재한다. 기억 시각화는 hero의 서술 산문에 선행해야 한다(MUST). 공유 link
-unfurl을 위한 Open Graph·Twitter Card metadata와 share image를 실어야 한다(SHALL). init
+unfurl을 위한 Open Graph·Twitter Card metadata와 share image를 실어야 한다(SHALL). 한국어 변형이 `/ko/` 경로에 존재해야 하며(SHALL — default는 English, 언어 toggle
+상호 연결, 한국어 기반 + native 영어 어휘), init 공개·link 결속 검증의 표면에
+포함되어야 한다(MUST). init
 공개의 값은 `claude_automata/settings.py`의 실값과 CI로 결속되어야 하며(SHALL), 생성
 image(og.png·banner.png)는 각자의 committed source(og-card.html·banner-card.html) 변경과
 동반이 강제되어야 한다(MUST). 방문자 표면(site·README 쌍)의 repo-내부 link(blob·tree
@@ -32,6 +34,11 @@ image(og.png·banner.png)는 각자의 committed source(og-card.html·banner-car
 #### Scenario: 자체 완결 이해
 - **WHEN** 방문자가 외부 link를 하나도 열지 않고 page를 끝까지 스크롤하면
 - **THEN** 무엇인지·advisor 기제·기억 구조·시작법이 전부 전달된다
+
+#### Scenario: 한국어 page
+- **WHEN** 방문자가 `/ko/` 경로에 접속하거나 언어 toggle로 KO를 선택하면
+- **THEN** 같은 구조의 한국어 기반 page가 표시되고, default 경로(`/`)는 English로
+  유지되며, 두 page가 hreflang으로 상호 선언된다
 
 #### Scenario: 공유 unfurl
 - **WHEN** page URL이 OG를 소비하는 채널에 공유되면

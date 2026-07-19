@@ -34,7 +34,7 @@ jobs:
           pairs = [(key, rep(value)) for key, value in prereq.items()]
           pairs.append(("permissions.defaultMode", mode.group(1)))
 
-          surfaces = ["site/index.html", "README.md", "README.ko.md"]
+          surfaces = ["site/index.html", "site/ko/index.html", "README.md", "README.ko.md"]
           failures = []
           for surface in surfaces:
               text = re.sub(r"<[^>]+>", " ", pathlib.Path(surface).read_text())
@@ -66,7 +66,7 @@ jobs:
           pattern = re.compile(
               r"(?:github\.com/clomia/claude-automata/(?:blob|tree)/main"
               r"|raw\.githubusercontent\.com/clomia/claude-automata/main)/([^\s\"'#)&<]+)")
-          surfaces = ["site/index.html", "README.md", "README.ko.md"]
+          surfaces = ["site/index.html", "site/ko/index.html", "README.md", "README.ko.md"]
           failures, total = [], 0
           for surface in surfaces:
               text = pathlib.Path(surface).read_text()
