@@ -19,9 +19,31 @@ plugin이다. 통합 지점은 Stop hook이고, loop의 main 역할은 session a
 - **advice** — advisor가 round마다 main에게 건네는 **미고려 영역들의 list**. action-history 요약을
   앞머리에 포함해, main이 스스로 떠올린 영역까지 advice-history에 남아 이미 고려된 영역이 재제시되지
   않는다(history 무결성).
+- **docent** — loop 기록을 소유자에게 해설하는 read-only 질의 표면. loop와 별도 session에서 돌며
+  loop 기계와 접점이 없다(세 표면 절).
 
 main은 advisor loop와 anchor 재주입으로 anchor에 **정박한다(anchored)** — 자기 확신으로
 표류(drift)하지도, compaction으로 anchor를 잃지도 않는다.
+
+---
+
+## 세 표면
+
+ploop의 사용자 대면은 세 표면으로 격리된다. 각 표면은 다른 session에서 돌고, loop 상태의 변이는
+loop 표면만 소유한다.
+
+| 표면 | 구성 | loop 상태 |
+|---|---|---|
+| **define** | define-mission·define-purpose — anchor를 정의하는 사용자 대화 | 접점 없음 — 산출물은 repo의 anchor 초안(수동 핸드오프) |
+| **loop** | launch·off·on + hooks + advisor·narrator — 작업 본선 | 단독 소유 (hook이 쓴다) |
+| **docent** | docent skill + resolver — launch 이후 사용자 질의 응답 | read-only (hook 0개·쓰기 0개) |
+
+격리의 근거는 두 갈래로 수렴한다. **context 순수성**: launch 후 사용자 개입의 다수는 질의인데,
+질의가 loop session에 들어가면 지휘와 Q&A가 섞이고 그 오염이 narration→advisor 입력→loop.log까지
+전파된다. 정작 main은 지난 round를 잊으므로(작업기억) 질의의 정답은 main이 아니라 기록에 있다 —
+기록의 독자는 hook(log)·advisor(입력)에 이어 docent(질의 응답)가 세 번째다. **보안**: docent
+session이 오염되어도 loop로의 쓰기 경로가 존재하지 않는다 — 개입은 인간 전용 경로(loop session
+직접 지시·`/ploop:off`)로만 들어간다.
 
 ---
 
@@ -328,6 +350,19 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     빠진다)는 gating하지 않는다: 실패 방향은 이른 advisor이지 loop 정지가 아니다. 완료를 기다려야 하는
     background는 gating 유형(shell·subagent·workflow)으로 두고, server 같은 ambient process는 `Monitor`(session
     수명 차선)로 돌린다.
+17. **docent 표면 — hook 0·쓰기 0, query-time 해석.** docent는 skill 본문(교리)과 read-only
+    resolver(`docent` console script)가 전부다: hooks.json에 등록하지 않아 loop 기계와 접점이 없고,
+    `disable-model-invocation: true`라 loop main이 스스로 교리를 주입해 orchestrator 정체성과
+    충돌할 수 없다(launch·off·on과 같은 explicit-only class — define 둘만 model-invocable로 남는다).
+    session 식별은 skill 인자가 아니라 resolver 해석이다 — 새 launch는 새 loop라 주입된 식별은 낡은
+    subject를 가리키게 된다. resolver 목록은 machine 전역이라 다른 directory·지난 loop가 함께 나오고,
+    docent의 subject는 이 directory의 loop 하나다(transcript project dir ↔ cwd 대응으로 고른다). data dir는 `--data-dir`(skill이 `"${CLAUDE_PLUGIN_DATA}"`를
+    관통시킨다)→env→`~/.claude/plugins/data/ploop-*` glob 순으로 해석한다 — placeholder의 skill 본문
+    치환과 data dir layout(`~/.claude/plugins/data/{id}/`)은 공식 문서화되어 있다. 관측 기반 의존은
+    transcript 쪽이다: `~/.claude/projects/*/{session}.jsonl` 위치와 `{session}/subagents/agent-*.jsonl`
+    worker 기록은 미문서 layout이라(실측 2026-07) 표류 시 "not found"/"(absent)"로 degrade한다.
+    resolver는 이 경로들을 출력해 worker 내부의 사후 판독을 연다 — advisor에 비가시인 worker 내부가
+    docent에는 보이되, 산출의 판정은 여전히 gate가 소유한다(신뢰 model 불변).
 
 ---
 
@@ -374,6 +409,11 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
   않는다. 표면화의 근거는 "쌓여 있고 처리되지 않았다"뿐이고 그 이상의 판단은 main 몫이다.
 - **worker 내부 행위는 advisor에 비가시다** — narrator는 main transcript(지휘·주장)만 서술한다.
   결함이 아니라 신뢰 model의 이동이다: 산출의 판정은 관측이 아니라 gate(독립 검증·CI)가 소유한다.
+- **docent의 해설은 기록 기반 추론이다** — 기록에 없는 "왜"의 재구성은 오귀속할 수 있다. 교리의
+  관측/추론 구분·round 인용이 그 경계를 표시하고, compaction 이후에는 main도 그 기억을 갖지 않으므로
+  기록이 최선의 증인이라는 전제는 advisor loop와 공유한다.
+- **docent resolver 목록은 무상한 성장한다** — 지난 session 기록에 GC가 없어 launch가 쌓일수록
+  열거가 길어진다. advice-history·loop.log와 같은 계열의 한계로, windowing은 관측 후 별도 작업이다.
 
 ---
 
@@ -398,6 +438,7 @@ ploop/
 ├── prompts/instruction.md            # advisor 분석·출력 지침
 ├── skills/define-mission/SKILL.md    # /ploop:define-mission — 목표(goal) anchor 작성 (loop와 비연결, 수동 handoff)
 ├── skills/define-purpose/SKILL.md    # /ploop:define-purpose — 목적(purpose) anchor 작성 (loop와 비연결, 수동 handoff)
+├── skills/docent/SKILL.md            # /ploop:docent — 기록 해설 교리 (read-only 질의 표면, 별도 session)
 ├── skills/launch/SKILL.md            # /ploop:launch — loop notice + orchestrator rules + 응고 계약 + anchor handoff (anchor 저장·활성화는 launch hook)
 ├── skills/off/SKILL.md               # /ploop:off — 일시정지 조용한 고지 (일시정지는 off_command hook)
 ├── skills/on/SKILL.md                # /ploop:on — 재개 확인 고지 (재개·정규화는 on_command hook)
@@ -405,6 +446,7 @@ ploop/
 ├── bin/ploop-hook                    # uv 가용성 check wrapper
 ├── src/                              # hook 구현 (runtime 의존성 없음)
 │   ├── main.py                       # hook entrypoint(stop·pre_tool_use·subagent_stop·mark_compaction·launch·off_command·on_command)
+│   ├── docent.py                     # docent resolver — session 열거·기록 경로 해석 (read-only, `docent` console script)
 │   ├── state.py                      # Workspace(session 파일 경로의 단일 창구) + 4field ledger(advice_history·round_start_line·anomalies·phase) + phase 상수 · preserve-by-default load/저장
 │   └── prompt.py                     # advice-history format + 5-section advisor trigger 조립(narrator slice 파일 경로 포함)
 └── tests/                            # 구현 독립 (stdin/stdout/disk 구동)

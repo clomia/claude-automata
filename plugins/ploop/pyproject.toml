@@ -1,6 +1,6 @@
 [project]
 name = "ploop"
-version = "0.46.5"
+version = "0.47.0"
 requires-python = ">=3.14"
 dependencies = []
 
@@ -12,6 +12,7 @@ mark-compaction = "src.main:mark_compaction"
 launch = "src.main:launch"
 off-command = "src.main:off_command"
 on-command = "src.main:on_command"
+docent = "src.docent:resolve"
 
 [build-system]
 requires = ["uv_build>=0.11.0,<0.12.0"]
