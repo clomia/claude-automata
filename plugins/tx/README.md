@@ -44,8 +44,8 @@ stay silent.
   `openspec init` by hand, no upstream prompts. `/tx:open` seeds a repository
   that lacks the scaffold.
 - **GitHub CLI (`gh`)** — `/tx:close` opens the PR and watches CI. The token
-  needs the `workflow` scope once per repository: the seed commits a CI
-  workflow file, and pushing it is rejected without that scope.
+  needs the `workflow` scope: the seed commits a CI workflow file (and
+  re-commits it on pin drift), and pushing it is rejected without that scope.
 
 ## Install
 
@@ -83,7 +83,7 @@ claude plugin update tx@claude-automata
   integral.
 - **`/tx:close`** — re-verifies when needed, archives the change through
   `tx:archive` (incomplete tasks block the close), rebases onto the latest
-  `origin/<base>` (the sync pause does not exempt this), runs the docs-surface
+  `origin/<base>`, runs the docs-surface
   gate with a post-rebase conflict scan, opens the PR, waits for CI, and
   squash-merges. Idempotent throughout.
 
@@ -95,9 +95,9 @@ they merge through the same gate:
 - `openspec/` scaffold (`init --tools none`; no upstream prompts, ever).
 - `.github/workflows/memory-check.yml` — CI that runs `openspec validate` and
   a docs-form-check (research filename years, provenance self-containment,
-  research headers). The checks are form-only: CI proves document form and test
-  greenness, never prose meaning — the verify stage and the close gate carry
-  the meaning.
+  research headers). The checks are form-only: CI proves document form, never prose meaning or
+  code semantics — the verify stage and the repository's own tests carry the
+  meaning.
 - A **best-effort** server-side branch-protection attempt (PRs required, the
   seeded checks required, no force-push or deletion). Failure is reported in
   one line and never blocks. Server-side rules make bypasses auditable rather

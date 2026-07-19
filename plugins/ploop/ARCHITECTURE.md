@@ -117,7 +117,7 @@ advisor에 닿아 타당한 거부는 advisor 종료 토큰으로 관철된다(�
 
 **모든 자동 종료 경로(advisor 종료 토큰 + malfunction·decline failsafe)는 main에게 정직한 사유와 함께
 종료 노티스를 보낸다**(`format_end_notice`) — advice를 하나라도 surface한 턴이면 `loop.log` recap 지시를
-덧붙인다(장기 anchor에서 main 컨텍스트는 여러 번 compaction되므로 로그가 턴의 유일한 완전 기록이다).
+덧붙인다.
 자연 종료는 종료 정지를 한 번 더 막아(exit 2) 노티스를 주입하고, 그 다음 정지는 `active`가 없어
 통과한다. **이 자동 종료 동작은 노출 계약이라 불변이다.** 끝내기와 별개로 사용자는 `/ploop:off`로
 일시정지·`/ploop:on`으로 재개하며(아래 활성화 lifecycle), off는 종료가 아니라 종료 노티스를 보내지
@@ -141,7 +141,7 @@ main에 전가하지 않는다.
 
 ## 상태와 anchor 보존
 
-상태는 사용자 레포 바깥에 둔다(레포 비오염) — 대부분 `CLAUDE_PLUGIN_DATA`, 단 `advice.md`만 비보호
+상태는 사용자 레포 바깥에 둔다(레포 비오염) — 대부분 `CLAUDE_PLUGIN_DATA`, advice·narration·candidates 셋만 비보호
 시스템 temp(위 근거). 한 세션에 하나의 anchor를 가정해 `session_id`로 키잉한다.
 
 | 파일 | 작성자 | 내용 |
@@ -167,7 +167,7 @@ advice(또는 종료 토큰)를 `advice.md`에 Write만 하고, hook이 다음 �
 `advice.md`를 읽어 그 advice로 작업하므로 이 파일이 advice/종료의 유일 채널이자 main·hook 공통 소스다 —
 단일 작성자(hook)가 ledger를 소유해 race가 없다.
 
-**활성화 lifecycle.** Stop 훅은 메인 세션 정지마다 fire하므로 `active` 마커가 루프를 게이트한다.
+**활성화 lifecycle.** `active` 마커가 루프를 게이트한다.
 
 1. **`/ploop:launch`** (UserPromptExpansion) — 직전 anchor의 라운드 상태를 리셋하고 `anchor.md`·`active`를
    쓴다. main이 anchor의 지휘(위임·검증)를 시작한다. `active`가 이미 있거나(중복 launch — 진행 중인 anchor를
@@ -182,7 +182,7 @@ advice(또는 종료 토큰)를 `advice.md`에 Write만 하고, hook이 다음 �
    in-flight 중에도 무조건 멈추도록 `advisor_running`도 지운다. 종료가 아니라 종료 노티스는 없다. `active`가
    없으면(미실행·이미 off) **차단**한다.
 5. **`/ploop:on`** (on_command) — **범용 wake 버튼**이다: stale handoff/gate transient(token·running·
-   advice·narration)를 지우고 `phase`를 `fresh`로 정규화(다음 정지가 advisor 미실행 라운드를 record하지
+   advice·narration·gated_shells)를 지우고 `phase`를 `fresh`로 정규화(다음 정지가 advisor 미실행 라운드를 record하지
    않게)하고 이상 카운터를 리셋하되 advice-history·round_start_line은 병합이 보존한 뒤 `active`를 다시
    쓴다. off·anomaly failsafe·예외(ESC·API 에러·세션 리밋)로 멈춘 stuck 루프까지 무엇이든 깨운다(active여도
    차단하지 않는다). 재개 불가는 딱 둘 — `anchor.md`/`loop.log` 부재(재개할 루프 없음)와 `phase ==
@@ -347,14 +347,13 @@ degrade를 한 지점에서 일원화한다. hooks.json은 exec form(`command`+`
    (in-band 사용자 지시를 근거로 정당하게 거부하는 사건 관측). 미호출 1회는 권한 고지로 합의 채널에
    재유도되고 2연속이면 failsafe가 무결하게 닫는다(결정 14).
 4. **PreToolUse 발동·session 일치** — 자발 호출 게이팅은 PreToolUse가 main의 Agent 호출에 발동하고
-   session_id가 Stop과 같아야 성립한다. 미발동 시 게이팅만 무효화되고 루프는 현행대로(graceful).
+   session_id가 Stop과 같아야 성립한다. 미발동이면 토큰이 소비되지 않아 매 정지가 decline으로
+   오판되고 2라운드 failsafe로 닫힌다 — 세션은 무손상, `/ploop:on`으로 재개 가능(graceful).
 5. **SubagentStop `agent_type`은 공식 문서상 플러그인 에이전트에 scoped(`ploop:advisor`)다** —
    이 레포의 실측은 bare(`advisor`)도 기록한 바 있어 2형 매칭으로 관용한다(PreToolUse의
    `subagent_type`은 scoped 정확 일치). 표류하면 in-flight 마커가 leak해 stuck-active가 되고
    `/ploop:on`이 복구한다(결정 13의 수용 트레이드오프와 동일 경로).
 
-loop main이 메인 세션(depth 0)이라 `PostCompact`는 확실히 fire하고, main이 foreground라 advisor·narrator
-동기 호출이 보장된다 — subagent tier에서라면 불확실했을 두 가정을 main 위치가 보장으로 만든다.
 
 ---
 
@@ -382,9 +381,9 @@ loop main이 메인 세션(depth 0)이라 `PostCompact`는 확실히 fire하고,
 
 언어 정책은 레포 전역 규약이다 — 정본은 루트 [ARCHITECTURE.md](../../ARCHITECTURE.md)의
 언어·프롬프트 정책 절. ploop 특이사항만 남는다: 에이전트·스킬 프롬프트와 advisor instruction은
-단일 `.md`이고, 훅 주입 메시지(advisor trigger)는 `prompt.py`가 조립한다. main이 조립하는 worker
-위임 prompt는 영어다(launch rules) — worker는 순수 추론이라 입력 언어로 돈다. advice·narration은
-한국어로 남는다: main·소유자가 `loop.log`로 읽고 narration은 사용자 발화를 원문 보존한다.
+단일 `.md`이고, 훅 주입 메시지(advisor trigger)는 `prompt.py`가 조립한다(영어 — 코드 발신 레인).
+worker 위임 prompt의 영어 규칙은 launch rules가 세운다. advice·narration은 한국어로 남는다:
+main·소유자가 `loop.log`로 읽고 narration은 사용자 발화를 원문 보존한다.
 
 ---
 

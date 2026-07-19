@@ -58,7 +58,7 @@ refine is a family of large-scale workflows that eliminate the debt a repository
 
 All three skills work the same way — split into regions for parallel analysis, settle findings through a cross-examination assembly, and execute only the highest-ROI plans. Each run is a heavyweight workflow taking hours (3–12h).
 
-- `/refine:code [focus]` — code architecture optimization. Filters antipatterns through consensus and applies only the highest-ROI refactors. The optimum presupposes correct code, so defects surfaced en route are repaired and docs invalidated by the changes are realigned.
+- `/refine:code [focus]` — code architecture optimization. Filters antipatterns through consensus and applies only the highest-ROI refactors.
 - `/refine:docs [focus]` — documentation architecture optimization. Every claim in every non-executable text (markdown, doc systems like openspec, comments and docstrings) is checked against the code and set right. Alignment is the precondition — converging duplicates, deleting dead docs, and keeping docs minimal is the optimum. Code is never modified — code defects are reported.
 - `/refine:integrity [focus]` — integrity-boundary optimization. Hunts the reachable states the existing boundary (types, invariants, error definitions, tests) fails to contain, digs in from **"should this be defined as an error?"**, absorbs them into the boundary, and pins every defined behavior with tests and its rationale in docs and comments.
 
@@ -71,12 +71,8 @@ Leave the focus empty to target the whole codebase. Watch progress with `/workfl
 
 tx is a Git workflow that manages change as transactions.
 
-- A transaction is not a unit of work — it is an **integrity boundary**. Everything from open to close is bound into one.
-- The base branch is **the repository's GitHub default branch**. There is nothing to configure — it is read automatically from `origin/HEAD`.
-- `/tx:open` cuts a `tx-*` branch off base, seeds the repo when needed (OpenSpec scaffold + CI workflow), then routes the change.
-- Planning and implementation run on tx's own skills — `tx:plan` (OpenSpec artifacts), `tx:apply` (implementation), and the independent `tx:verify` stage that checks the implementation against the artifacts in a clean context.
-- `/tx:close` archives the change and squash-merges to base once the docs gate and CI pass.
-- Four guard hooks keep edits and commits off the base branch, flag stale transactions, and stop out-of-sync branches.
+- A transaction is an **integrity boundary** — everything from open to close is bound into one, and it can only close once verified integral.
+- The whole path runs on tx's own skills: `/tx:open` cuts a `tx-*` branch off the base branch and seeds the repo, `tx:plan`·`tx:apply`·`tx:verify` drive the change, and `/tx:close` squash-merges to base behind the docs gate and CI. Guard hooks keep the base branch protected in between.
 
 Prerequisites: uv, Node.js >= 20 (drives the pinned [OpenSpec](https://github.com/Fission-AI/OpenSpec) CLI through npx — nothing to install), GitHub CLI (`gh`).
 
