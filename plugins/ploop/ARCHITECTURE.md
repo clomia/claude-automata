@@ -60,15 +60,15 @@ narrator  depth 2  Read Write  narrate          round slice file -> narration.md
 - **advisor는 `Write`로 advice(또는 종료 token)만 쓰고 나머지 부작용 도구는 막혀 있다(`disallowedTools:
   Bash, Edit, NotebookEdit, Artifact`).** subagent의 최종 message는 customizing 불가라 추론 prose가
   섞이므로(harness 한계), advice를 `advice.md`(비보호 system temp — 보호된 `~/.claude` 하위인
-  `CLAUDE_PLUGIN_DATA`는 auto 모드 Write가 classifier에 막힌다)에 Write해 채팅 channel과 격리한다. `Bash`
+  `CLAUDE_PLUGIN_DATA`는 auto mode Write가 classifier에 막힌다)에 Write해 chat channel과 격리한다. `Bash`
   차단은 임의 부작용(`rm`·test 실행) 방지고, `Write`만 좁게 연 것은 advice 출력 channel을 위한 의식적
-  완화다(전제: auto/bypass 권한 모드). 남은 read-only 도구(`Read·Glob·Grep·Web*`)로 영역을 근거 짓고
+  완화다(전제: auto/bypass 권한 mode). 남은 read-only 도구(`Read·Glob·Grep·Web*`)로 영역을 근거 짓고
   `Agent`로 narrator를 호출한다.
-- **narrator는 `Read`·`Write`만 가진 leaf** — `Agent`가 없어 트리가 그 아래로 자라지 않는다. hook이 잘라
+- **narrator는 `Read`·`Write`만 가진 leaf** — `Agent`가 없어 tree가 그 아래로 자라지 않는다. hook이 잘라
   준 round slice(`round.jsonl`)를 통째로 읽어 해석하고(hook 측 parsing 없음), narration을
   `narration.md`(advisor와 동일 temp channel)에 쓴다 — advisor가 분석 입력으로, hook이 round log로 읽는다.
   원본 slice를 해석하므로 `sonnet[1m]`/`medium`이다.
-- depth 2에서 트리를 닫아 depth-5 cap에 3단계 여유를 남긴다.
+- depth 2에서 tree를 닫아 depth-5 cap에 3단계 여유를 남긴다.
 
 ---
 
@@ -151,7 +151,7 @@ system temp(위 근거). 한 session에 하나의 anchor를 가정해 `session_i
 | `{session}_loop.json` | hook | 4field — `advice_history`(round 기록, 길이=round ordinal) · `round_start_line`(slice cut offset) · `anomalies`(연속 이상 counter, clean round에 0 reset) · `phase`(`fresh` 갓 launch/resume·record 스킵 → `advising` round 진행·record → `converged` 수렴 완료·`/ploop:on` 거부). `{**ledger, ...}` 병합이라 미언급 field 보존(preserve-by-default) |
 | `{session}_round.jsonl` | hook | 이번 round transcript slice `[round_start..end]` (narrator가 통째로 분석) — line cut이라 message parsing 없음 |
 | `{session}_advice_history.md` | hook | advisor 입력의 advice-history (XML) |
-| `advice.md` (temp) | advisor (`Write`) | advice 또는 종료 token (유일 channel) — 비보호 temp라 auto 모드 Write 승인 · main·hook이 읽음 · prose 격리 |
+| `advice.md` (temp) | advisor (`Write`) | advice 또는 종료 token (유일 channel) — 비보호 temp라 auto mode Write 승인 · main·hook이 읽음 · prose 격리 |
 | `narration.md` (temp) | narrator (`Write`) | action-history 서사 (advice와 동일 channel) — advisor가 분석 입력으로 · hook이 round log로 읽음 |
 | `candidates.md` (temp) | main | 승격 대기열 (자유 형식) — trigger가 경로를 상시 안내 · 비어있지 않으면 advisor 입력에 조건부 1행 · launch만 지움(off·on·종료는 보존) · 종료 notice가 잔량 drain을 지시 |
 | `{session}_loop.log` | hook | 완결 round log (서사 + 그 round의 advice) · launch가 `[[ ANCHOR ]]` 원문으로 새로 시작 · 종료 요약의 소스 |
@@ -293,7 +293,7 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     사용자가 실행 중 advisor를 background로 보낼 수 있고, 그때 그대로 재주입하면 advisor가 매 정지 **증식**한다.
     PreToolUse가 `advisor_running`을 set하고 cycle 안에서는 SubagentStop만 이를 clear하며, Stop은 marker가
     있으면 in-flight로 보고 `exit 0` 대기한다. background 전환된 advice는 유실될 수 있으나 cascade는 확실히
-    차단된다. **수용한 트레이드오프**: SubagentStop 누락 시 marker leak로 stuck-active가 되나 `/ploop:on`이
+    차단된다. **수용한 trade-off**: SubagentStop 누락 시 marker leak로 stuck-active가 되나 `/ploop:on`이
     정리·정규화해 복구한다.
 14. **이상 신호는 1회 교정 후 재발 시 정직한 사유로 종료(anomaly cap = 2).** loop의 두
     참여자(advisor·main)는 신뢰할 수 없는 LLM이라, 첫 이상엔 1회 교정 기회를 주고 **연속 2회면**(종류 무관)
@@ -333,7 +333,7 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
 
 ## 기술 risk
 
-설계는 성립하나 라이브 트리 없이 유닛 test할 수 없던 항목들이다. 모두 **graceful degrade**한다.
+설계는 성립하나 live tree 없이 unit test할 수 없던 항목들이다. 모두 **graceful degrade**한다.
 
 1. **Stop block cap.** Claude Code는 Stop hook이 **연속** N회 종료를 막으면 강제 종료하나
    (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, 기본 8), 이 counter는 생산적 작업(tool-use) turn마다 0으로 reset된다.
@@ -352,7 +352,7 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
 5. **SubagentStop `agent_type`은 공식 문서상 plugin agent에 scoped(`ploop:advisor`)다** —
    이 repo의 실측은 bare(`advisor`)도 기록한 바 있어 2형 matching으로 관용한다(PreToolUse의
    `subagent_type`은 scoped 정확 일치). 표류하면 in-flight marker가 leak해 stuck-active가 되고
-   `/ploop:on`이 복구한다(결정 13의 수용 트레이드오프와 동일 경로).
+   `/ploop:on`이 복구한다(결정 13의 수용 trade-off와 동일 경로).
 
 
 ---
