@@ -1,4 +1,4 @@
-정본: https://github.com/clomia/claude-automata/blob/main/MEMORY.md — 충돌 시 정본이 이긴다.
+출처: https://github.com/clomia/claude-automata — 배포 사본이다. 사본이 표류하면 출처가 이긴다.
 
 # docs 표면 규약 — 자유 산문 장기기억의 쓰기 규칙
 
@@ -10,7 +10,7 @@
 
 | 검증자 | 자리 |
 |---|---|
-| 구현 증거 탐색이 검증한다 (SHALL+Scenario로 무손실 번역 가능) | openspec spec |
+| 구현 증거 탐색이 검증한다 (SHALL+Scenario로 무손실 번역 가능) | spec 표면 — `openspec/` 스캐폴드가 있을 때. 없으면 소유 정본 |
 | 코드 구조와의 재접지가 검증한다 (형태·토폴로지의 현재) | 설계 정본 |
 | 소속 결정의 현존이 생사를 정한다 (이유·의도·배제) | 설계 정본, 그 결정 옆 |
 | 동반한 provenance 헤더가 검증을 대체한다 (과거의 측정) | `docs/research/` |
@@ -19,7 +19,7 @@
 litmus: **spec은 제품이 무엇을 하는가, 정본은 단위가 왜 이 모양인가.** behavior와 이유를
 겸한 문장은 분리한다(behavior→spec, 이유→정본, 상호 링크). 특정 변경 하나의 사유는 change
 proposal로. 쓰기 전 기존 home을 grep해 있으면 그 자리에서 갱신한다. 추적 텍스트는 어디서든 gitignored·
-미추적(시스템 temp 포함) 경로를 지시하지 않는다 — CI가 전 추적 `.md`에서 형식 검사한다.
+미추적(시스템 temp 포함) 경로를 지시하지 않는다.
 
 ## 설계 정본 (living — 제자리 재접지)
 
