@@ -37,3 +37,13 @@
   흡수. 내부 정본(ARCHITECTURE·MEMORY) 참조 0을 기계 grep으로 확인.
 - 3.1: 쌍 결합 shell 논리 4-case 실증(card-only red·pair green·og-only red·무관 green),
   init-disclosure·canon-links 재실행 GREEN(link 대상 10, raw banner 포함).
+
+## 5. 소유자 추가 지시 (mid-transaction)
+
+- [x] 5.1 디자인 심층 재고찰 — 7개 폭(344·390·600·704·768·1280·1440) 실측 전 안정,
+      PREMISE→OPERATING PRINCIPLES, eyebrow 이름 중복 제거, exchange panel mobile 여백
+- [x] 5.2 `site/ko/index.html` — /ko/ 즉시 접속, titleblock EN·KO toggle(default en),
+      hreflang 상호 선언, 한글 keep-all·tracking 조정(자체 한글 font 기각 — per-glyph fallback)
+- [x] 5.3 CI 표면 4종 확장(init-disclosure·canon-links에 ko page 편입) — GREEN 실측(14 link)
+- [x] 5.4 억지 번역 감사 — native 한국어 개발자 probe가 명백 결함 16건 + 경계선 5건 판정,
+      16건 전부와 경계선 3건(돌아갑니다·발동·기록하는) 반영, 수사 2건은 판정대로 유지
