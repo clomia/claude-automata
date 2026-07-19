@@ -1,0 +1,68 @@
+# Binds the visitor surfaces to the code they disclose. The gateway must never
+# publish a stale init disclosure: when settings.py values change, this check
+# goes red until site/ and the README pair change with them.
+name: site-truth-check
+
+on: pull_request
+
+jobs:
+  init-disclosure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: init disclosure matches settings.py
+        run: |
+          python3 - <<'PY'
+          import ast, pathlib, re, sys
+
+          src = pathlib.Path("claude_automata/settings.py").read_text()
+          tree = ast.parse(src)
+          prereq, marketplace_repo = None, None
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Assign):
+                  target = node.targets[0]
+                  if isinstance(target, ast.Name) and target.id == "PREREQUISITES":
+                      prereq = ast.literal_eval(node.value)
+                  if isinstance(target, ast.Name) and target.id == "MARKETPLACE_REPO":
+                      marketplace_repo = ast.literal_eval(node.value)
+          mode = re.search(r'"defaultMode"\]\s*=\s*"([^"]+)"', src)
+          assert prereq and marketplace_repo and mode, "settings.py shape changed — update this check"
+
+          def rep(value):
+              return {True: "true", False: "false"}.get(value, str(value))
+
+          pairs = [(key, rep(value)) for key, value in prereq.items()]
+          pairs.append(("permissions.defaultMode", mode.group(1)))
+
+          surfaces = ["site/index.html", "README.md", "README.ko.md"]
+          failures = []
+          for surface in surfaces:
+              text = re.sub(r"<[^>]+>", " ", pathlib.Path(surface).read_text())
+              for key, value in pairs:
+                  window = re.escape(key) + r"[^\n]{0,60}?" + re.escape(value)
+                  if not re.search(window, text):
+                      failures.append(f"{surface}: '{key}' with value '{value}' not disclosed")
+              if marketplace_repo not in text:
+                  failures.append(f"{surface}: marketplace repo '{marketplace_repo}' missing")
+
+          if failures:
+              print("init disclosure drifted from settings.py:")
+              print("\n".join(failures))
+              sys.exit(1)
+          print(f"init disclosure bound: {len(pairs)} value pairs + marketplace on {len(surfaces)} surfaces")
+          PY
+
+  og-coupling:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: og.png accompanies og-card.html changes
+        run: |
+          CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...HEAD)
+          if echo "$CHANGED" | grep -q "^site/assets/og-card.html$" && ! echo "$CHANGED" | grep -q "^site/assets/og.png$"; then
+            echo "og-card.html changed without regenerating og.png — the share card would drift from its source"
+            exit 1
+          fi
+          echo "og source and artifact move together"
