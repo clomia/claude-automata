@@ -52,6 +52,34 @@ jobs:
           print(f"init disclosure bound: {len(pairs)} value pairs + marketplace on {len(surfaces)} surfaces")
           PY
 
+  canon-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: repo-internal links resolve to existing paths
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, sys
+
+          # external links are deliberately unbound: network checks flake, and a red
+          # on a domain this repo cannot write to is not actionable.
+          pattern = re.compile(
+              r"github\.com/clomia/claude-automata/(?:blob|tree)/main/([^\s\"'#)&<]+)")
+          surfaces = ["site/index.html", "README.md", "README.ko.md"]
+          failures, total = [], 0
+          for surface in surfaces:
+              text = pathlib.Path(surface).read_text()
+              for path in sorted(set(pattern.findall(text))):
+                  total += 1
+                  if not pathlib.Path(path).exists():
+                      failures.append(f"{surface}: links to missing path '{path}'")
+          if failures:
+              print("gateway links point at paths that no longer exist:")
+              print("\n".join(failures))
+              sys.exit(1)
+          print(f"canon links bound: {total} repo-internal targets exist on {len(surfaces)} surfaces")
+          PY
+
   og-coupling:
     runs-on: ubuntu-latest
     steps:

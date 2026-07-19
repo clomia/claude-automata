@@ -28,7 +28,7 @@ uvx claude-automata init
 
 **init이 실제로 쓰는 설정** — 이 환경은 무인 운용을 전제하며, init은 `.claude/settings.json`에 다음을 merge-write합니다(무관한 key는 보존). commit 전에 diff를 확인하세요:
 
-- `permissions.defaultMode: "bypassPermissions"` — 승인 prompt 없음. agent가 묻지 않고 파일을 수정하고 command를 실행합니다 — 그 방식을 수용할 repo에 도입하세요.
+- `permissions.defaultMode: "bypassPermissions"` — 승인 prompt 없음. agent가 묻지 않고 이 machine에서 shell command를 실행합니다 — 신뢰의 범위는 repo가 아니라 host입니다. 그 방식을 수용할 machine에서 도입하세요.
 - `model: "opus[1m]"` — model 고정, 1M context
 - `alwaysThinkingEnabled: true` · `autoCompactEnabled: true` · `autoMemoryEnabled: false`
 - claude-automata marketplace 등록 + plugin 4종 활성화
