@@ -42,7 +42,7 @@ uvx claude-automata init
 - 독립된 advisor가 사용자를 대신해 매 round main agent가 놓친 영역을 찾아줍니다.
 - main agent는 orchestrator입니다 — 작업을 agent들에 위임하고 지휘합니다.
 - anchor는 여러 번의 auto compaction에도 살아남습니다 — transcript 밖에 보존되어 재주입되고, loop의 기록은 파일로 남아 advisor가 매 round 새로 읽습니다.
-- 별도 session을 만들지 않고 정식 subagent 경로만 사용합니다 — 구독 요금제에 안전합니다.
+- 별도 session을 만들지 않고 정식 subagent 경로만 사용합니다 — 구독 요금제에 안전합니다. 안전은 session 기제이지 비용이 아닙니다: loop는 요금제 quota를 공유하며, 며칠짜리 실행은 그만큼 사용량을 씁니다.
 
 **anchor**는 loop를 붙들어 매는 기준 파일입니다. 두 종류가 있습니다.
 
