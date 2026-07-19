@@ -15,8 +15,9 @@ BASE=$(uv run --project "${CLAUDE_PLUGIN_ROOT}" base)
 
 # 닫힌 상태 — 아래가 전부 참이면 트랜잭션은 닫힌 것이다
 
-- 트랜잭션의 change마다 verify 스테이지의 pass가 있고, 그 pass는 마지막 코드 변경 이후의 것이다.
-  검증자에게는 change-id 외에 아무것도 전달하지 않는다:
+- spec delta를 가진 change마다 verify 스테이지의 pass가 있고, 그 pass는 마지막 코드 변경
+  이후의 것이다 — delta 없는 change의 관문은 태스크 게이트와 CI다. 검증자에게는 change-id
+  외에 아무것도 전달하지 않는다:
 
   ```
   Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")

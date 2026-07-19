@@ -31,10 +31,16 @@ Advice:
 
 ## 2. history 분석
 
-action-history는 메인 에이전트가 마지막 advice를 받고 수행한 동작이다.
-1단계에서 떠올린 영역들 중에서 advice-history와 action-history에 없는 것이 고려되지 못한 영역이다.
+action-history는 메인 에이전트가 마지막 advice를 받고 수행한 동작이다.  
+advice-history는 지금까지 발생한 모든 advice round를 담은 기록이다.
 
-지금까지 고려되지 못한 영역들과 history들을 모두 종합해서 메인 에이전트가 **anchor를 위해 무엇을 더 생각해야 하는지, 무엇을 더 할 수 있는지**를 고찰하라.  
+advice-history에서 경향을 읽고 Local Optimum 함정들을 감지해라. 
+Local Optimum에 갇혀서 Global Optimum과 멀어지는 경향이 가장 치명적이다.  
+전체 advice-history를 처음부터 끝까지 편향없이 봐야 이 함정을 피할 수 있다.
+
+1단계에서 도출된 영역들 중 history에 언급되지 않은 것들을 선별해라.  
+advice-history 경향과 가장 거리가 먼 액션 아이템들을 찾아라. (Local Optimum 예방)  
+메인 에이전트가 **anchor를 위해 무엇을 더 생각해야 하는지, 무엇을 더 할 수 있는지**를 폭넓게 고찰하라.  
 
 ## 3. 판단
 

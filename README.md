@@ -40,7 +40,7 @@ The **anchor** is the file the loop is anchored to. It comes in two kinds.
 > Auto-Compact must be set to True.  
 > For unattended runs, set `askUserQuestionTimeout` — an unanswered question then never parks the loop forever.
 
-1. Write your anchor — `/ploop:define-mission` for a clear goal, `/ploop:define-purpose` for an ongoing direction.
+1. Write your anchor — `/ploop:define-mission` for a goal with clear completion criteria, `/ploop:define-purpose` for an ongoing direction.
 2. In a fresh session, run `/ploop:launch [anchor]`.
    The loop rides the Stop hook's error behavior — whenever the agent stops, the hook blocks the stop and directs it to invoke the advisor.
 3. The loop ends on its own when the advisor judges there is nothing left to advise — at which point the agent reads the log and recaps every round.

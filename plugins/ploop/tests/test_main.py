@@ -275,7 +275,7 @@ class TestStop:
         assert load_ledger(tmp_path / "s1_loop.json")["phase"] == ADVISING
         err = capsys.readouterr().err
         assert "advisor loop has ended" in err
-        assert "malfunctioned" in err
+        assert "finished without writing advice" in err
 
     def test_anomaly_end_preserves_round_start_line(self, tmp_path, monkeypatch):
         """P1, at the stop level: an anomaly end keeps the real slice offset (the
