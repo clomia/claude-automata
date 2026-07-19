@@ -85,10 +85,10 @@ section[id] { scroll-margin-top: 1.5rem; }
   max-width: 36ch;
 }
 .thesis {
-  max-width: 62ch; margin-top: 1.6rem;
+  max-width: 62ch; margin-top: 2.6rem;
   font-size: clamp(1rem, 1.4vw, 1.125rem); line-height: 1.75;
 }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: 2.4rem; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: 2.2rem; }
 .btn {
   font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase;
   text-decoration: none; border: 1px solid var(--ink); padding: 0.72rem 1.3rem;
@@ -99,7 +99,7 @@ section[id] { scroll-margin-top: 1.5rem; }
 .btn-solid:hover { background: var(--copper-deep); color: var(--paper); border-color: var(--copper-deep); }
 
 /* ---------------------------------------------------------------- schematic */
-.schematic-figure { position: relative; margin: clamp(2.5rem, 5vw, 3.75rem) 0 0; }
+.schematic-figure { position: relative; margin: clamp(1.6rem, 3.5vw, 2.6rem) 0 0; }
 .schematic-figure::before, .schematic-figure::after {
   content: "+"; position: absolute; font-family: var(--mono);
   font-size: 0.8rem; color: var(--hairline-strong); line-height: 1;
@@ -179,8 +179,22 @@ section[id] { scroll-margin-top: 1.5rem; }
 .pulse { position: absolute; top: -3.25px; left: 0; width: 6.5px; height: 6.5px;
   border-radius: 50%; background: var(--copper); opacity: 0; }
 .p-pass   { animation: pulse-pass var(--cycle) linear infinite; }
-.p-reject { animation: pulse-reject var(--cycle) linear infinite; }
 .p-settle { background: var(--verdigris); animation: pulse-settle var(--cycle) linear infinite; }
+
+/* discard drain: unpromoted traces discharge to ground below working memory */
+.drain {
+  grid-column: 1; grid-row: 3; position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding-top: 0;
+}
+.drain-stub { position: relative; width: 0; height: 22px;
+  border-left: 1.5px dashed var(--copper); opacity: 0.75; }
+.ground { width: 22px; height: 11px; }
+.ground line { stroke: var(--copper); stroke-width: 2; stroke-linecap: round; opacity: 0.75; }
+.drain-label { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.08em;
+  color: var(--muted); }
+.p-drain { background: var(--copper); left: -3.25px; top: 0;
+  animation: pulse-drain var(--cycle) linear infinite; }
 
 /* refine return path: LTM -> down -> across -> up -> gate */
 .refine-path {
@@ -239,11 +253,11 @@ section[id] { scroll-margin-top: 1.5rem; }
   70%, 96% { opacity: 1; }
   100% { opacity: 0; }
 }
-@keyframes pulse-reject {   /* never promoted: dies before the gate */
-  0%, 74% { opacity: 0; left: 0; transform: scale(1); }
-  76%     { opacity: 1; }
-  84%     { opacity: 1; left: 55%; transform: scale(1); }
-  88%, 100% { opacity: 0; left: 60%; transform: scale(0.2); }
+@keyframes pulse-drain {   /* never promoted: discharges to ground */
+  0%, 76% { opacity: 0; top: 0; transform: scale(1); }
+  78%     { opacity: 1; }
+  86%     { opacity: 1; top: calc(100% - 6px); transform: scale(1); }
+  90%, 100% { opacity: 0; top: calc(100% - 4px); transform: scale(0.2); }
 }
 @keyframes pulse-refine {   /* travels the U: down the right edge, across, up the left edge */
   0%, 8% { opacity: 0; top: -3px; left: calc(100% - 3.25px); }
@@ -353,7 +367,7 @@ section[id] { scroll-margin-top: 1.5rem; }
   .pulse { left: -3.25px; top: 0; }
   .p-pass   { animation-name: pulse-pass-y; }
   .p-settle { animation-name: pulse-settle-y; }
-  .p-reject { animation-name: pulse-reject-y; }
+  .drain { display: none; }   /* the stacked column reads the stub as main flow; props text carries the loss */
 
   /* the return cycle collapses to a labeled loop indicator */
   .refine-path { margin: 0.4rem 0 0; height: auto; position: static; }
@@ -382,12 +396,6 @@ section[id] { scroll-margin-top: 1.5rem; }
   58%     { opacity: 1; }
   66%     { opacity: 1; top: calc(100% - 7px); }
   68%, 100% { opacity: 0; top: calc(100% - 7px); }
-}
-@keyframes pulse-reject-y {
-  0%, 74% { opacity: 0; top: 0; transform: scale(1); }
-  76%     { opacity: 1; }
-  84%     { opacity: 1; top: 55%; transform: scale(1); }
-  88%, 100% { opacity: 0; top: 60%; transform: scale(0.2); }
 }
 
 /* ---------------------------------------------------------------- motion */

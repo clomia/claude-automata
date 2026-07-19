@@ -6,6 +6,16 @@
 <title>claude-automata — an autonomous agent environment for Claude Code</title>
 <meta name="description" content="Four plugins that map human memory architecture onto Claude Code: an advisor loop as working memory, a transaction gate as consolidation, git-tracked text as long-term memory, and re-grounding workflows as maintenance. Independent open-source project, MIT.">
 <link rel="canonical" href="https://clomia.github.io/claude-automata/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://clomia.github.io/claude-automata/">
+<meta property="og:site_name" content="claude-automata">
+<meta property="og:title" content="claude-automata — an autonomous agent environment for Claude Code">
+<meta property="og:description" content="Human memory architecture mapped onto Claude Code: a working-memory loop, one verified consolidation gate, git-tracked long-term memory, and a re-grounding cycle. Independent open-source project.">
+<meta property="og:image" content="https://clomia.github.io/claude-automata/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="claude-automata memory circuit: events enter a working-memory loop, pass one consolidation gate, settle into git-tracked long-term memory, with a re-grounding cycle returning through the same gate.">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -28,12 +38,6 @@
   <p class="eyebrow">PLUGIN SUITE FOR CLAUDE CODE · FOUR MODULES · ONE MEMORY SYSTEM</p>
   <h1>An autonomous agent environment,<br>
       modeled on human memory</h1>
-  <p class="thesis">
-    claude‑automata turns Claude Code into a running system rather than a conversation:
-    a loop that holds the initiative around the clock, anchored to intent you write once;
-    a consolidation gate that verifies what may be remembered; and a long‑term memory
-    made entirely of git‑tracked text.
-  </p>
 
   <figure class="schematic-figure">
     <div class="schematic" role="img"
@@ -74,7 +78,6 @@
         <!-- connector 1 -->
         <div class="conn c1" aria-hidden="true">
           <i class="pulse p-pass"></i>
-          <i class="pulse p-reject"></i>
           <i class="arrowhead right"></i>
         </div>
 
@@ -121,6 +124,17 @@
         </div>
       </div>
 
+      <!-- discard drain: unpromoted work discharges to ground -->
+      <div class="drain" aria-hidden="true">
+        <div class="drain-stub"><i class="pulse p-drain"></i></div>
+        <svg class="ground" viewBox="0 0 28 14">
+          <line x1="2"  y1="2"  x2="26" y2="2"/>
+          <line x1="7"  y1="7"  x2="21" y2="7"/>
+          <line x1="11" y1="12" x2="17" y2="12"/>
+        </svg>
+        <span class="drain-label">discard</span>
+      </div>
+
       <!-- refine return path: ltm -> gate, through the same gate -->
       <div class="refine-path" aria-hidden="true">
         <div class="refine-line">
@@ -132,6 +146,13 @@
     </div>
     <figcaption class="fig-caption">FIG. 1 — THE MEMORY CIRCUIT · WORK IS LOSSY, MEMORY IS VERIFIED</figcaption>
   </figure>
+
+  <p class="thesis">
+    claude‑automata turns Claude Code into a running system rather than a conversation:
+    a loop that holds the initiative around the clock, anchored to intent you write once;
+    a consolidation gate that verifies what may be remembered; and a long‑term memory
+    made entirely of git‑tracked text.
+  </p>
 
   <div class="hero-actions">
     <a class="btn btn-solid" href="#getting-started">Get started</a>
