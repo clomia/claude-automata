@@ -1,0 +1,8 @@
+The fonts in this directory are redistributed under the SIL Open Font License, Version 1.1.
+Subset (latin) woff2 builds obtained from Google Fonts.
+
+- Saira SemiCondensed — Copyright 2020 The Saira Project Authors (https://github.com/Omnibus-Type/Saira)
+- IBM Plex Sans, IBM Plex Mono — Copyright 2017 IBM Corp. (https://github.com/IBM/plex)
+
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+Full text: https://openfontlicense.org/open-font-license-official-text/

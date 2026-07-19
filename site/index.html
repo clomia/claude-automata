@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claude-automata — an autonomous agent environment for Claude Code</title>
+<meta name="description" content="Four plugins that map human memory architecture onto Claude Code: an advisor loop as working memory, a transaction gate as consolidation, git-tracked text as long-term memory, and re-grounding workflows as maintenance. Independent open-source project, MIT.">
+<link rel="canonical" href="https://clomia.github.io/claude-automata/">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="titleblock">
+  <div class="tb-name">CLAUDE‑AUTOMATA</div>
+  <div class="tb-fields">
+    <span class="tb-field"><span class="tb-k">DOC</span> LANDING</span>
+    <span class="tb-field"><span class="tb-k">LICENSE</span> MIT</span>
+    <span class="tb-field tb-unaffiliated"><span class="tb-k">STATUS</span> NOT AFFILIATED WITH ANTHROPIC</span>
+    <a class="tb-field tb-link" href="https://github.com/clomia/claude-automata"><span class="tb-k">SOURCE</span> GITHUB ↗</a>
+  </div>
+</header>
+
+<main>
+
+<!-- ================================ HERO ================================ -->
+<section class="hero">
+  <p class="eyebrow">PLUGIN SUITE FOR CLAUDE CODE · FOUR MODULES · ONE MEMORY SYSTEM</p>
+  <h1>An autonomous agent environment,<br>
+      modeled on human memory</h1>
+  <p class="thesis">
+    claude‑automata turns Claude Code into a running system rather than a conversation:
+    a loop that holds the initiative around the clock, anchored to intent you write once;
+    a consolidation gate that verifies what may be remembered; and a long‑term memory
+    made entirely of git‑tracked text.
+  </p>
+
+  <figure class="schematic-figure">
+    <div class="schematic" role="img"
+         aria-label="Memory circuit diagram. Events — a user prompt, a schedule, CI, a notification — all enter a working-memory loop (the ploop plugin, untracked and lossy, it dies with the loop). Work leaves the loop only through a consolidation gate (the tx plugin: independent verify, CI, squash merge). What passes the gate settles into long-term memory: the repository's git-tracked text. Traces that are never promoted die in working memory — forgetting is designed in. A re-grounding cycle (the refine plugin) carries long-term memory back through the same gate, keeping it true against the code.">
+
+      <!-- input rail: the user is one event type among many -->
+      <div class="rail" aria-hidden="true">
+        <span class="rail-caption">EVENTS — ALL EQUAL</span>
+        <div class="rail-items">
+          <span class="event">user</span>
+          <span class="event">schedule</span>
+          <span class="event">ci</span>
+          <span class="event">notification</span>
+        </div>
+        <div class="rail-drop"><i class="arrowhead down"></i></div>
+      </div>
+
+      <div class="circuit">
+        <!-- station 1: working memory -->
+        <div class="station st-working">
+          <div class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 96 96">
+              <circle class="loop-track" cx="48" cy="48" r="34"/>
+              <g class="orbiter"><circle class="orbit-dot" cx="48" cy="14" r="4"/></g>
+              <g class="anchor-glyph">
+                <circle cx="48" cy="38" r="4.5"/>
+                <line x1="48" y1="42.5" x2="48" y2="62"/>
+                <path d="M 36 54 A 12 12 0 0 0 60 54"/>
+                <line x1="41" y1="49" x2="55" y2="49"/>
+              </g>
+            </svg>
+          </div>
+          <div class="st-name">WORKING MEMORY</div>
+          <div class="st-plugin plugin-copper">ploop — advisor loop</div>
+          <div class="st-props">untracked · lossy · dies with the loop</div>
+        </div>
+
+        <!-- connector 1 -->
+        <div class="conn c1" aria-hidden="true">
+          <i class="pulse p-pass"></i>
+          <i class="pulse p-reject"></i>
+          <i class="arrowhead right"></i>
+        </div>
+
+        <!-- station 2: consolidation gate -->
+        <div class="station st-gate">
+          <div class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 96 96">
+              <line class="gate-wall" x1="30" y1="12" x2="30" y2="36"/>
+              <line class="gate-wall" x1="30" y1="60" x2="30" y2="84"/>
+              <line class="gate-wall" x1="66" y1="12" x2="66" y2="36"/>
+              <line class="gate-wall" x1="66" y1="60" x2="66" y2="84"/>
+              <rect class="gate-core" x="34" y="34" width="28" height="28" transform="rotate(45 48 48)"/>
+              <path class="gate-check" d="M 41 48 l 5 6 l 10 -12"/>
+            </svg>
+          </div>
+          <div class="st-name">CONSOLIDATION</div>
+          <div class="st-plugin plugin-ink">tx — the only gate</div>
+          <div class="st-props">verify · CI · squash merge</div>
+        </div>
+
+        <!-- connector 2 -->
+        <div class="conn c2" aria-hidden="true">
+          <i class="pulse p-settle"></i>
+          <i class="arrowhead right verd"></i>
+        </div>
+
+        <!-- station 3: long-term memory -->
+        <div class="station st-ltm">
+          <div class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 96 96">
+              <rect class="strata-frame" x="14" y="18" width="68" height="60"/>
+              <line class="stratum" x1="14" y1="33" x2="82" y2="33"/>
+              <line class="stratum" x1="14" y1="48" x2="82" y2="48"/>
+              <line class="stratum" x1="14" y1="63" x2="82" y2="63"/>
+              <line class="tick" x1="22" y1="25.5" x2="34" y2="25.5"/>
+              <line class="tick" x1="40" y1="40.5" x2="56" y2="40.5"/>
+              <line class="tick" x1="26" y1="55.5" x2="44" y2="55.5"/>
+              <line class="tick tick-new" x1="52" y1="70.5" x2="70" y2="70.5"/>
+            </svg>
+          </div>
+          <div class="st-name">LONG‑TERM MEMORY</div>
+          <div class="st-plugin plugin-verd">git‑tracked text</div>
+          <div class="st-props">specs · canons · rules · skills</div>
+        </div>
+      </div>
+
+      <!-- refine return path: ltm -> gate, through the same gate -->
+      <div class="refine-path" aria-hidden="true">
+        <div class="refine-line">
+          <i class="pulse p-refine"></i>
+          <i class="arrowhead up verd"></i>
+        </div>
+        <span class="refine-label">refine — re‑grounding cycle, through the same gate</span>
+      </div>
+    </div>
+    <figcaption class="fig-caption">FIG. 1 — THE MEMORY CIRCUIT · WORK IS LOSSY, MEMORY IS VERIFIED</figcaption>
+  </figure>
+
+  <div class="hero-actions">
+    <a class="btn btn-solid" href="#getting-started">Get started</a>
+    <a class="btn" href="https://github.com/clomia/claude-automata">View source ↗</a>
+  </div>
+</section>
+
+<!-- ============================ 01 PREMISE ============================== -->
+<section class="section" id="premise">
+  <h2><span class="sec-no">01</span>PREMISE</h2>
+  <div class="claims">
+    <article class="claim">
+      <h3>The loop owns the initiative</h3>
+      <p>
+        Every time the agent tries to stop, a hook blocks the stop and summons an
+        independent advisor that inspects the round with a clean context and surfaces
+        what the main agent missed. There is no round cap — the loop ends when the
+        advisor judges there is nothing left to advise. Work spans days and survives
+        repeated auto‑compaction: the anchor — your intent, written once — is preserved
+        outside the transcript and re‑injected whenever context is rebuilt.
+      </p>
+    </article>
+    <article class="claim">
+      <h3>The user is one event type</h3>
+      <p>
+        A typed prompt, a schedule firing, CI finishing, a task notification — all of
+        them are just events arriving at an anchored loop. None of them stops it.
+        You can steer mid‑flight or ask a read‑only docent session what is going on;
+        the loop absorbs the input and resumes at the next stop. By design, every
+        contribution to the repository is made by Claude Code agents — humans provide
+        intent and observe.
+      </p>
+    </article>
+    <article class="claim">
+      <h3>Memory passes through one gate</h3>
+      <p>
+        Nothing becomes long‑term memory except through a transaction: planned intent,
+        an independent verifier, CI, then a squash merge. Everything else — loop state,
+        dead ends, trial and error — dies with the loop. Forgetting is a feature, not
+        a failure: what remains is exactly what was verified.
+      </p>
+    </article>
+  </div>
+</section>
+
+<!-- ========================= 02 MEMORY SYSTEM =========================== -->
+<section class="section" id="memory-system">
+  <h2><span class="sec-no">02</span>THE MEMORY SYSTEM</h2>
+  <p class="sec-lede">
+    The circuit above is not a metaphor bolted on afterwards — it is the design canon.
+    Each stage is one plugin's domain, and the whole of it is specified in
+    <a href="https://github.com/clomia/claude-automata/blob/main/MEMORY.md">MEMORY.md <span class="lang-tag">KO</span></a>.
+  </p>
+  <ol class="stages">
+    <li class="stage stage-copper">
+      <div class="stage-key">WORKING MEMORY</div>
+      <div class="stage-body">
+        <p>
+          The ploop workspace: the anchor, loop‑local state, candidate facts and terms
+          awaiting promotion. It is untracked and lossy on purpose — rounds are
+          discarded, and an advisor loop keeps the work anchored instead of drifting.
+        </p>
+      </div>
+    </li>
+    <li class="stage stage-ink">
+      <div class="stage-key">CONSOLIDATION</div>
+      <div class="stage-body">
+        <p>
+          A tx transaction is the only way anything is written into memory: change
+          artifacts record the intent, an independent verifier checks the implementation
+          against it, CI must be green, and the result lands as a single squash merge.
+        </p>
+      </div>
+    </li>
+    <li class="stage stage-verd">
+      <div class="stage-key">LONG‑TERM MEMORY</div>
+      <div class="stage-body">
+        <p>
+          All of the repository's git‑tracked, non‑executable text: requirement specs
+          (semantic), archived changes (episodic), design canons and research records,
+          operating rules, glossary terms (lexical), skills (procedural). Recall is grep —
+          names are chosen to be found.
+        </p>
+      </div>
+    </li>
+    <li class="stage stage-verd">
+      <div class="stage-key">RE‑GROUNDING</div>
+      <div class="stage-body">
+        <p>
+          Memory decays while it sits. The refine workflows re‑verify documented claims
+          against the code, prune what can no longer be verified, and converge
+          duplicates — and their fixes pass through the same gate as everything else.
+        </p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<!-- ============================ 03 MODULES ============================== -->
+<section class="section" id="modules">
+  <h2><span class="sec-no">03</span>MODULES</h2>
+  <div class="modules">
+
+    <article class="module">
+      <div class="mod-head">
+        <h3 class="mod-name">ploop</h3>
+        <span class="mod-role">ADVISOR LOOP</span>
+      </div>
+      <p>
+        An autonomous loop for long, multi‑day work. Write an anchor — a mission with
+        completion criteria, or an open‑ended purpose — and launch; on every stop an
+        independent advisor surfaces overlooked regions until nothing remains. It runs
+        on the official nested‑subagent path only, creating no separate sessions, so it
+        is safe on subscription plans. A read‑only docent answers your questions from
+        the loop's records without touching it.
+      </p>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/ploop/ARCHITECTURE.md">CANON — plugins/ploop/ARCHITECTURE.md <span class="lang-tag">KO</span></a>
+    </article>
+
+    <article class="module">
+      <div class="mod-head">
+        <h3 class="mod-name">tx</h3>
+        <span class="mod-role">TRANSACTION GATE</span>
+      </div>
+      <p>
+        A Git workflow that treats change as a transaction — an integrity boundary, not
+        a unit of work. <code>/tx:open</code> cuts a branch off the base; plan, apply and
+        an independent verify stage drive the change; <code>/tx:close</code> squash‑merges
+        it back only when verification, a docs gate and CI all pass. Guard hooks keep the
+        base branch protected in between.
+      </p>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/tx/README.md">CANON — plugins/tx/README.md</a>
+    </article>
+
+    <article class="module">
+      <div class="mod-head">
+        <h3 class="mod-name">refine</h3>
+        <span class="mod-role">MAINTENANCE WORKFLOWS</span>
+      </div>
+      <p>
+        Heavyweight multi‑agent workflows (hours per run) that eliminate accumulated
+        debt: code architecture, documentation truth, and integrity boundaries. Regions
+        are analyzed in parallel, findings settle through cross‑examination into
+        consensus, and only the highest‑ROI plans are executed. In the docs pass, code
+        is never modified — code defects are reported, not fixed.
+      </p>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/refine">CANON — plugins/refine <span class="lang-tag">KO</span></a>
+    </article>
+
+    <article class="module">
+      <div class="mod-head">
+        <h3 class="mod-name">version‑up‑alert</h3>
+        <span class="mod-role">UPDATE NOTICE</span>
+      </div>
+      <p>
+        When a newer release of any installed claude‑automata plugin ships, one line
+        appears at session start naming every plugin that is behind. Alert‑only — it
+        never swaps a plugin under a running session; you choose when to update. Every
+        other plugin installs it as a dependency, so there is nothing to install.
+      </p>
+      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/version-up-alert">SOURCE — plugins/version‑up‑alert</a>
+    </article>
+
+  </div>
+</section>
+
+<!-- ========================= 04 GETTING STARTED ========================= -->
+<section class="section" id="getting-started">
+  <h2><span class="sec-no">04</span>GETTING STARTED</h2>
+  <p class="sec-lede">
+    One command converges a repository to the environment's prerequisites.
+    Requires <a href="https://claude.com/claude-code">Claude Code</a> and
+    <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> on a
+    POSIX system (macOS / Linux / WSL). Run it at your project root:
+  </p>
+
+  <pre class="code-block"><code>uvx claude-automata init</code></pre>
+
+  <div class="init-disclosure">
+    <h3 class="disclosure-title">WHAT INIT ACTUALLY WRITES</h3>
+    <p class="disclosure-note">
+      Full disclosure — this environment assumes unattended operation, and init
+      configures Claude Code accordingly. With <code>bypassPermissions</code> the agent
+      edits files and runs commands without asking first; adopt this in a repository
+      where you accept that mode. Review the diff before you commit it.
+    </p>
+    <table class="spec-table">
+      <caption class="sr-only">Settings that init merge-writes into .claude/settings.json</caption>
+      <tbody>
+        <tr><th scope="row">permissions.defaultMode</th><td><code>"bypassPermissions"</code> — no approval prompts</td></tr>
+        <tr><th scope="row">model</th><td><code>"opus[1m]"</code> — pinned, 1M‑token context</td></tr>
+        <tr><th scope="row">alwaysThinkingEnabled</th><td><code>true</code></td></tr>
+        <tr><th scope="row">autoCompactEnabled</th><td><code>true</code> — long loops depend on it</td></tr>
+        <tr><th scope="row">autoMemoryEnabled</th><td><code>false</code> — memory belongs to the repo, not the harness</td></tr>
+        <tr><th scope="row">marketplace + plugins</th><td>registers <code>clomia/claude-automata</code>, enables all four plugins</td></tr>
+        <tr><th scope="row">external CLIs</th><td>installs missing <code>gh</code>, Node.js ≥ 20, <code>repomix</code> into <code>~/.local</code> — no sudo, present tools skipped, <code>gh auth login</code> stays yours</td></tr>
+      </tbody>
+    </table>
+    <p class="disclosure-note">
+      Merge‑write: unrelated keys in <code>.claude/settings.json</code> are preserved,
+      and re‑running is idempotent.
+    </p>
+  </div>
+
+  <div class="next-steps">
+    <h3 class="disclosure-title">THEN LAUNCH A LOOP</h3>
+    <pre class="code-block"><code><span class="c-muted"># in one session — write the anchor with the interview skill</span>
+/ploop:define-mission
+
+<span class="c-muted"># in a fresh session — hand the anchor text to the loop</span>
+/ploop:launch [anchor text]</code></pre>
+    <p class="disclosure-note">
+      Usage details live in the
+      <a href="https://github.com/clomia/claude-automata#readme">README</a>.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer class="colophon">
+  <p class="unaffiliated">
+    claude‑automata is an independent open‑source project. It is not affiliated with,
+    endorsed by, or sponsored by Anthropic. Claude and Claude Code are products of Anthropic.
+  </p>
+  <p class="colophon-meta">
+    MIT License · <a href="https://github.com/clomia/claude-automata">github.com/clomia/claude-automata</a>
+    · By design, every contribution to this repository is authored by Claude Code agents.
+  </p>
+</footer>
+
+</body>
+</html>
