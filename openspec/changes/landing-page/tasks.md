@@ -29,8 +29,13 @@
 
 ## 4. 검증
 
-- [ ] 4.1 fresh-context 재구성 probe — 사전 맥락 0 agent가 (a) 사이트만, (b) README만 보고
+- [x] 4.1 fresh-context 재구성 probe — 사전 맥락 0 agent가 (a) 사이트만, (b) README만 보고
       "무엇/왜/어떻게"를 재구성, ground-truth 사실 목록과 대조
-- [ ] 4.2 claim audit — 사이트·README의 전 사실 주장을 코드·정본과 대조 (과장=결함)
-- [ ] 4.3 반응형 실측 — headless browser 가용 시 desktop·mobile viewport 실측, 불가 시
-      media query·layout 감사로 대체하고 그 사실을 기록
+      (양쪽 모두 정확 재구성. 지적 3건 — Claude Code 전제 미명시·bypassPermissions 의미
+      한 문장 부재·README 문제 서술 부재 — 즉시 수리 반영)
+- [x] 4.2 claim audit — 사이트·README의 전 사실 주장을 코드·정본과 대조 (과장=결함)
+      (77건 판정: 70 OK · 5 EXAGGERATED · 2 UNVERIFIED(live URL, merge 후 해소) · 0 WRONG.
+      EXAGGERATED 전건 수리: README 쌍의 "never loses context"→anchor 생존+기록 파일 정확
+      서술, recap 조건 명시, site aria-label·reject pulse를 "gate 거부"에서 "작업기억 폐기"로)
+- [x] 4.3 반응형 실측 — headless Chrome으로 desktop 1440·mobile 390 viewport 실측
+      (schematic 양방향 성립, animation은 virtual-time으로 중간 시점 실측)

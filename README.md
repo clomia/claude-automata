@@ -41,7 +41,7 @@ ploop is an advisor loop built for long-running work that spans days.
 
 - An independent advisor finds, on the user's behalf, what the main agent missed in every round.
 - The main agent is an orchestrator — it delegates work to agents and stays in command.
-- It never loses context across repeated auto-compactions — the anchor is re-injected, and the advisor keeps the full context in files.
+- The anchor survives repeated auto-compactions — preserved outside the transcript and re-injected, while the loop's records live in files the advisor reads fresh every round.
 - It creates no separate sessions and uses only the official subagent path — safe on subscription plans.
 
 The **anchor** is the file the loop is anchored to. It comes in two kinds.
@@ -56,7 +56,7 @@ The **anchor** is the file the loop is anchored to. It comes in two kinds.
 
 1. Write your anchor — `/ploop:define-mission` or `/ploop:define-purpose`.
 2. In a fresh session, run `/ploop:launch [anchor]`. The loop rides the Stop hook — whenever the agent stops, the hook blocks the stop and has the advisor summoned.
-3. The loop ends on its own when the advisor judges there is nothing left to advise, and the agent recaps every round.
+3. The loop ends on its own when the advisor judges there is nothing left to advise; if any advice was surfaced along the way, the agent recaps the run.
    To pause, run `/ploop:off`; to pick it back up, `/ploop:on` (interrupt with ESC first if a turn is running). `on` is a universal wake button — it revives a loop stalled by an accidental ESC, an API error, or a subscription session limit, and always resumes except when the advisor ended the loop itself. Nothing else — mid-run instructions, answered questions, background-task notifications — stops the loop.
 4. To check on progress, run `/ploop:docent` in a **separate session in the same directory** — a read-only guide that answers from the loop's records and never touches the loop. Questions go to the docent; interventions (instructions, stopping) go straight to the loop session.
 

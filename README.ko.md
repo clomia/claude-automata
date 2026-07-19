@@ -41,7 +41,7 @@ uvx claude-automata init
 
 - 독립된 advisor가 사용자를 대신해 매 round main agent가 놓친 영역을 찾아줍니다.
 - main agent는 orchestrator입니다 — 작업을 agent들에 위임하고 지휘합니다.
-- 여러 번의 auto compaction에도 맥락을 잃지 않습니다 — anchor가 재주입되고, 전체 맥락은 advisor가 파일로 관리합니다.
+- anchor는 여러 번의 auto compaction에도 살아남습니다 — transcript 밖에 보존되어 재주입되고, loop의 기록은 파일로 남아 advisor가 매 round 새로 읽습니다.
 - 별도 session을 만들지 않고 정식 subagent 경로만 사용합니다 — 구독 요금제에 안전합니다.
 
 **anchor**는 loop를 붙들어 매는 기준 파일입니다. 두 종류가 있습니다.
@@ -56,7 +56,7 @@ uvx claude-automata init
 
 1. anchor를 작성하세요 — `/ploop:define-mission` 또는 `/ploop:define-purpose`.
 2. 새로운 session에서 `/ploop:launch [anchor 내용]`을 실행하세요. loop는 Stop hook을 탑니다 — agent가 멈출 때마다 hook이 정지를 막고 advisor를 소집시킵니다.
-3. loop는 advisor가 더 이상 조언할 것이 없다고 판단하면 자동으로 끝나며, agent가 전체 round를 요약합니다.
+3. loop는 advisor가 더 이상 조언할 것이 없다고 판단하면 자동으로 끝나며, advice가 하나라도 있었던 loop면 agent가 전체 기록을 요약합니다.
    잠시 멈추려면 `/ploop:off`, 이어가려면 `/ploop:on` (turn이 돌고 있으면 ESC로 끊은 뒤 실행). `on`은 실수로 누른 ESC·API error·구독 session limit로 멈춘 loop까지 깨우는 범용 wake button입니다 — advisor가 스스로 종료한 경우만 빼고 언제나 재개합니다. 그 밖의 어떤 것도 — 중간 지시, 질문 응답, background 작업 알림 — loop를 멈추지 않습니다.
 4. 진행 상황이 궁금하면 **같은 directory의 별도 session**에서 `/ploop:docent`를 실행하세요 — loop의 기록을 읽어 답하는 read-only 해설자로, loop에는 어떤 영향도 주지 않습니다. 질문은 docent에게, 개입(지시·중단)은 loop session에 직접 하세요.
 

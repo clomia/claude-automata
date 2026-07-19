@@ -37,7 +37,7 @@
 
   <figure class="schematic-figure">
     <div class="schematic" role="img"
-         aria-label="Memory circuit diagram. Events — a user prompt, a schedule, CI, a notification — all enter a working-memory loop (the ploop plugin, untracked and lossy, it dies with the loop). Work leaves the loop only through a consolidation gate (the tx plugin: independent verify, CI, squash merge). What passes the gate settles into long-term memory: the repository's git-tracked text. A re-grounding cycle (the refine plugin) carries long-term memory back through the same gate, keeping it true against the code. Some traces are rejected at the gate and forgotten — by design.">
+         aria-label="Memory circuit diagram. Events — a user prompt, a schedule, CI, a notification — all enter a working-memory loop (the ploop plugin, untracked and lossy, it dies with the loop). Work leaves the loop only through a consolidation gate (the tx plugin: independent verify, CI, squash merge). What passes the gate settles into long-term memory: the repository's git-tracked text. Traces that are never promoted die in working memory — forgetting is designed in. A re-grounding cycle (the refine plugin) carries long-term memory back through the same gate, keeping it true against the code.">
 
       <!-- input rail: the user is one event type among many -->
       <div class="rail" aria-hidden="true">
