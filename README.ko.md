@@ -2,7 +2,7 @@
 
 [English](https://github.com/clomia/claude-automata/blob/main/README.md) | 한국어
 
-**인간 기억 구조를 사상한 Claude Code 자율 agent 환경.** loop는 24시간 주도권을 갖고, 사용자는 event type 중 하나이며, 기억은 검증을 통과한 git 추적 text로만 남습니다.
+**인간 기억 구조를 사상한 Claude Code 자율 agent 환경.** loop는 24시간 주도권을 갖고, 사용자는 event type 중 하나이며, 기억은 검증을 통과한 git 추적 text로만 남습니다. 며칠짜리 무인 작업이 의도를 잃지 않고, 검증되지 않은 변경이 repo를 오염시키지 않게 하기 위한 구조입니다.
 
 **[Landing page](https://clomia.github.io/claude-automata/)** — 기억 system 시각화와 전체 그림을 수 분 안에 볼 수 있습니다. 설계 정본은 [ARCHITECTURE.md](https://github.com/clomia/claude-automata/blob/main/ARCHITECTURE.md)(생태계)와 [MEMORY.md](https://github.com/clomia/claude-automata/blob/main/MEMORY.md)(기억 system)입니다.
 
@@ -15,7 +15,7 @@
 
 ## Getting Started
 
-**[`uv`가 필요합니다. 없다면 먼저 설치하세요.](https://docs.astral.sh/uv/getting-started/installation/)**
+**[Claude Code](https://claude.com/claude-code)와 [`uv`](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다.**
 **POSIX 환경(macOS / Linux / WSL)에서 동작합니다.**
 
 project root에서:
@@ -28,7 +28,7 @@ uvx claude-automata init
 
 **init이 실제로 쓰는 설정** — 이 환경은 무인 운용을 전제하며, init은 `.claude/settings.json`에 다음을 merge-write합니다(무관한 key는 보존). commit 전에 diff를 확인하세요:
 
-- `permissions.defaultMode: "bypassPermissions"` — 승인 prompt 없음
+- `permissions.defaultMode: "bypassPermissions"` — 승인 prompt 없음. agent가 묻지 않고 파일을 수정하고 command를 실행합니다 — 그 방식을 수용할 repo에 도입하세요.
 - `model: "opus[1m]"` — model 고정, 1M context
 - `alwaysThinkingEnabled: true` · `autoCompactEnabled: true` · `autoMemoryEnabled: false`
 - claude-automata marketplace 등록 + plugin 4종 활성화
@@ -91,3 +91,7 @@ transaction 정의·guard hook·base branch 해석 등 자세한 내용은 [plug
 ## version-up-alert
 
 설치된 claude-automata plugin에 새 version이 배포되면 session 시작 시 한 줄로 알립니다. 알림만 합니다 — 실행 중인 session 밑에서 plugin을 갈아끼우지 않으며, 적용 시점은 사용자가 정합니다. 모든 claude-automata plugin이 의존성으로 함께 설치하므로 따로 설치할 것이 없습니다.
+
+---
+
+MIT License · Anthropic과 무관한 독립 open-source project입니다.

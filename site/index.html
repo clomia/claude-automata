@@ -303,7 +303,8 @@
   <h2><span class="sec-no">04</span>GETTING STARTED</h2>
   <p class="sec-lede">
     One command converges a repository to the environment's prerequisites.
-    Requires <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> on a
+    Requires <a href="https://claude.com/claude-code">Claude Code</a> and
+    <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> on a
     POSIX system (macOS / Linux / WSL). Run it at your project root:
   </p>
 
@@ -313,7 +314,9 @@
     <h3 class="disclosure-title">WHAT INIT ACTUALLY WRITES</h3>
     <p class="disclosure-note">
       Full disclosure — this environment assumes unattended operation, and init
-      configures Claude Code accordingly. Review the diff before you commit it.
+      configures Claude Code accordingly. With <code>bypassPermissions</code> the agent
+      edits files and runs commands without asking first; adopt this in a repository
+      where you accept that mode. Review the diff before you commit it.
     </p>
     <table class="spec-table">
       <caption class="sr-only">Settings that init merge-writes into .claude/settings.json</caption>

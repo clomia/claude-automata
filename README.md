@@ -2,7 +2,7 @@
 
 English | [한국어](https://github.com/clomia/claude-automata/blob/main/README.ko.md)
 
-**An autonomous agent environment for Claude Code, modeled on human memory.** The loop holds the initiative around the clock, the user is one event type among many, and nothing is remembered except verified, git-tracked text.
+**An autonomous agent environment for Claude Code, modeled on human memory.** The loop holds the initiative around the clock, the user is one event type among many, and nothing is remembered except verified, git-tracked text. The structure exists so that days-long unattended work neither loses its intent nor lets unverified change contaminate the repository.
 
 **[Landing page](https://clomia.github.io/claude-automata/)** — the memory-system visualization and the whole picture, in minutes. The design canons are [ARCHITECTURE.md](https://github.com/clomia/claude-automata/blob/main/ARCHITECTURE.md) (the ecosystem) and [MEMORY.md](https://github.com/clomia/claude-automata/blob/main/MEMORY.md) (the memory system).
 
@@ -15,7 +15,7 @@ English | [한국어](https://github.com/clomia/claude-automata/blob/main/README
 
 ## Getting Started
 
-**[`uv` is required. If you don't have it, install it first.](https://docs.astral.sh/uv/getting-started/installation/)**
+**[Claude Code](https://claude.com/claude-code) and [`uv`](https://docs.astral.sh/uv/getting-started/installation/) are required.**
 **Runs on POSIX (macOS / Linux / WSL).**
 
 From your project root:
@@ -28,7 +28,7 @@ One command converges everything — the settings prerequisites, marketplace reg
 
 **What init actually writes** — this environment assumes unattended operation, and init merge-writes the following into `.claude/settings.json` (unrelated keys are preserved). Review the diff before you commit it:
 
-- `permissions.defaultMode: "bypassPermissions"` — no approval prompts
+- `permissions.defaultMode: "bypassPermissions"` — no approval prompts. The agent edits files and runs commands without asking first — adopt this in a repository where you accept that mode.
 - `model: "opus[1m]"` — pinned model, 1M context
 - `alwaysThinkingEnabled: true` · `autoCompactEnabled: true` · `autoMemoryEnabled: false`
 - registers the claude-automata marketplace and enables all four plugins
@@ -91,3 +91,7 @@ For the full details — the transaction model, guard hooks, base-branch resolut
 ## version-up-alert
 
 When a newer release of any installed claude-automata plugin ships, a one-line notice appears at session start. Alert-only — it never swaps plugins out from under a running session; you choose when to update. Every claude-automata plugin installs it as a dependency, so there is nothing to install.
+
+---
+
+MIT License · An independent open-source project, unaffiliated with Anthropic.
