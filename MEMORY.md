@@ -154,12 +154,12 @@ tx의 OpenSpec 의존은 다음이 전부다:
 spec 표면과 달리 docs 표면에는 문법·validate·상태기계가 없다 — 규약과 그 운반이 전부이고
 전용 도구는 0이다.
 
-### geometry — living/dated는 유지보수 모드다
+### geometry — living/dated는 유지보수 mode다
 
 home은 session마다 지불하는 비용의 사다리를 이룬다: 폐기 < dated 기록 < 사용 지점 주석 < living 정본 < 상주.
 위로 갈수록 회상 비용이 0에 가까워지고 유지 비용이 커지므로 입장 시험이 엄격해진다. living은
 재접지 대상(수렴하며 권위를 보유), dated는 동결 대상(축적하며 권위를 banner로 양도) — directory도
-기억 유형도 아닌 **유지보수 모드**의 이분이며, spec 표면(`specs/` ↔ `changes/archive/`)과
+기억 유형도 아닌 **유지보수 mode**의 이분이며, spec 표면(`specs/` ↔ `changes/archive/`)과
 대칭이다. dated 지위는 흡수 시점이 아니라 **탄생 시점**에 파일명·header로 획득하고, banner는 강등
 event가 아니라 **권위 양도 선언**이다. 흐름: dated(측정) → living(결정 증류) → banner의 정본
 pointer.
