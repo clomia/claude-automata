@@ -12,10 +12,10 @@ Plugins that amplify Claude Code's autonomy.
 Set everything up in one command from your project root — settings prerequisites, marketplace and plugin registration, and the external CLI dependencies (gh · Node.js · repomix):
 
 ```
-uvx --from git+https://github.com/clomia/claude-automata claude-automata init
+uvx claude-automata init
 ```
 
-Re-running is safe (idempotent). To force the latest version, use `uvx --refresh --from …`.
+Re-running is safe (idempotent). To force the latest version, use `uvx claude-automata@latest init`.
 
 To only add the marketplace without registering plugins:
 

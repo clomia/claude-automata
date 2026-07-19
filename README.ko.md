@@ -12,10 +12,10 @@
 프로젝트 루트에서 한 번에 셋업하세요 — settings 전제조건, 마켓플레이스·플러그인 등록, 외부 CLI 의존성(gh · Node.js · repomix)까지:
 
 ```
-uvx --from git+https://github.com/clomia/claude-automata claude-automata init
+uvx claude-automata init
 ```
 
-재실행해도 안전합니다(idempotent). 최신 버전을 강제하려면 `uvx --refresh --from …`을 사용하세요.
+재실행해도 안전합니다(idempotent). 최신 버전을 강제하려면 `uvx claude-automata@latest init`을 사용하세요.
 
 플러그인 등록 없이 마켓플레이스만 추가하려면:
 
