@@ -552,7 +552,7 @@ def on_command() -> None:
 
     The resume normalizes the round state to a clean arming point regardless of
     how the loop stalled: the stale handoff/gate transients (token, running
-    marker, advice, narration) are cleared so the first resumed stop arms cleanly,
+    marker, advice, narration, gated shells) are cleared so the first resumed stop arms cleanly,
     and the ledger's phase is reset to fresh (so the next stop skips recording a
     round no advisor ran) with the anomaly streak cleared, while advice-history
     and round_start_line are preserved by the merge (the resumed round's slice
