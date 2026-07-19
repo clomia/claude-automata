@@ -15,7 +15,7 @@
 
 | 정본 | 소유 |
 |---|---|
-| [MEMORY.md](MEMORY.md) | 기억 시스템 전체 — 작업기억/장기기억, 두 표면(spec·docs), 승격 라우팅, 불변식, OpenSpec seam, docs 표면 규약과 그 운반 |
+| [MEMORY.md](MEMORY.md) | 기억 system 전체 — 작업기억/장기기억, 두 표면(spec·docs), 승격 routing, 불변식, OpenSpec seam, docs 표면 규약과 그 운반 |
 | [plugins/ploop/ARCHITECTURE.md](plugins/ploop/ARCHITECTURE.md) | advisor loop 설계 결정 전체 (내부 용어 포함) |
 | [plugins/tx/README.md](plugins/tx/README.md) | 트랜잭션 모델 · base 해석 · 가드 훅 · 씨앗 · verify 스테이지 |
 | plugins/refine/skills/\*/principles.md | 각 정제 워크플로우의 판단 axiom |
