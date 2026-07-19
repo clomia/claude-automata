@@ -1,6 +1,6 @@
 # claude-automata
 
-English | [한국어](README.ko.md)
+English | [한국어](https://github.com/clomia/claude-automata/blob/main/README.ko.md)
 
 Plugins that amplify Claude Code's autonomy.
 
@@ -92,7 +92,7 @@ Prerequisites: uv, Node.js >= 20 (drives the pinned [OpenSpec](https://github.co
 /tx:close                        # verify, archive, docs gate, then squash-merge to base
 ```
 
-For the full details — the transaction model, guard hooks, base-branch resolution, pausing sync — see the [plugin README](plugins/tx/README.md).
+For the full details — the transaction model, guard hooks, base-branch resolution, pausing sync — see the [plugin README](https://github.com/clomia/claude-automata/blob/main/plugins/tx/README.md).
 
 # version-up-alert
 

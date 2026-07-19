@@ -1,0 +1,38 @@
+# Publishes the root package to PyPI when main carries a version PyPI lacks.
+# Auth is Trusted Publishing (OIDC) — register the publisher once in the PyPI
+# project settings: owner clomia / repository claude-automata / workflow
+# publish.yml / environment blank.
+name: publish
+
+on:
+  push:
+    branches: [main]
+    paths: [pyproject.toml]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: version gate — skip if already on PyPI
+        id: gate
+        run: |
+          VERSION=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/claude-automata/${VERSION}/json")
+          case "$STATUS" in
+            404) echo "publish=true" >> "$GITHUB_OUTPUT" ;;
+            200) echo "publish=false" >> "$GITHUB_OUTPUT" ;;
+            *) echo "PyPI query failed with HTTP $STATUS — refusing to guess (fail-closed)"; exit 1 ;;
+          esac
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - if: steps.gate.outputs.publish == 'true'
+        run: uv build
+      - if: steps.gate.outputs.publish == 'true'
+        run: uv publish
+      - if: steps.gate.outputs.publish == 'false'
+        run: echo "version ${{ steps.gate.outputs.version }} already on PyPI — skipping"

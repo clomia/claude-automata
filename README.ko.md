@@ -1,6 +1,6 @@
 # claude-automata
 
-[English](README.md) | 한국어
+[English](https://github.com/clomia/claude-automata/blob/main/README.md) | 한국어
 
 클로드 코드의 자율성을 증폭시키는 플러그인들
 
@@ -92,7 +92,7 @@ tx는 변경을 트랜잭션 단위로 관리하는 Git 워크플로우입니다
 /tx:close               # verify·archive·docs 게이트 후 base로 squash merge
 ```
 
-트랜잭션 정의·가드 훅·base 브랜치 해석·sync 일시정지 등 자세한 내용은 [플러그인 README](plugins/tx/README.md)를 참고하세요.
+트랜잭션 정의·가드 훅·base 브랜치 해석·sync 일시정지 등 자세한 내용은 [플러그인 README](https://github.com/clomia/claude-automata/blob/main/plugins/tx/README.md)를 참고하세요.
 
 # version-up-alert
 
