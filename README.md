@@ -42,7 +42,7 @@ ploop is an advisor loop built for long-running work that spans days.
 - An independent advisor finds, on the user's behalf, what the main agent missed in every round.
 - The main agent is an orchestrator — it delegates work to agents and stays in command.
 - The anchor survives repeated auto-compactions — preserved outside the transcript and re-injected, while the loop's records live in files the advisor reads fresh every round.
-- It creates no separate sessions and uses only the official subagent path — safe on subscription plans.
+- It creates no separate sessions and uses only the official subagent path — safe on subscription plans. Safe in mechanism, not in price: the loop shares your plan's quota, and multi-day runs spend it accordingly.
 
 The **anchor** is the file the loop is anchored to. It comes in two kinds.
 
