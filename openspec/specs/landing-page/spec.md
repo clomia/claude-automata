@@ -29,8 +29,10 @@ push에는 발행이 불필요하므로 `site/`·workflow 자신으로 path filt
 settings의 공개(`permissions.defaultMode="bypassPermissions"`·`model="opus[1m]"` 포함),
 Anthropic 비공식(unaffiliated) 고지. 기억 시각화는 hero의 서술 산문(thesis)에 선행해야
 한다(MUST) — text는 그래픽을 뒤따르는 보조다. 공유 link unfurl을 위한 Open Graph·Twitter
-Card metadata와 share image를 실어야 한다(SHALL). 반응형이어야 하고(MUST — viewport meta +
-소형 화면 대응), 정본 본문을 복제해서는 안 된다(MUST NOT) — 요약과 link만.
+Card metadata와 share image를 실어야 한다(SHALL). init 공개의 값은 `claude_automata/settings.py`의
+실값과 CI로 결속되어야 하며(SHALL — 값 표류 시 PR이 실패한다), share image(og.png)는 그
+source(og-card.html)의 변경과 동반이 강제되어야 한다(MUST). 반응형이어야 하고(MUST —
+viewport meta + 소형 화면 대응), 정본 본문을 복제해서는 안 된다(MUST NOT) — 요약과 link만.
 
 #### Scenario: init 실동작 공개
 - **WHEN** 방문자가 getting-started 절을 읽으면
@@ -47,6 +49,14 @@ Card metadata와 share image를 실어야 한다(SHALL). 반응형이어야 하�
 #### Scenario: 공유 unfurl
 - **WHEN** page URL이 OG를 소비하는 채널에 공유되면
 - **THEN** og:title·og:description·og:image가 해석 가능한 절대 URL로 존재한다
+
+#### Scenario: init 공개 값 표류 차단
+- **WHEN** `settings.py`의 전제조건 값이 바뀌고 방문자 표면(site·README 쌍)이 그대로인 PR이 열리면
+- **THEN** CI가 실패해 관문이 거짓 공개를 게시하기 전에 차단한다
+
+#### Scenario: share image 결속
+- **WHEN** og-card.html을 수정하고 og.png를 재생성하지 않은 PR이 열리면
+- **THEN** CI가 실패한다
 
 ### Requirement: README 관문화
 `README.md`·`README.ko.md`는 쌍으로 유지되어야 하며(MUST), 각각 정체 한 줄 + plugin
