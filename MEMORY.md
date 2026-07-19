@@ -6,7 +6,7 @@ OpenSpec 의존의 경계와 docs 표면의 규약이 무엇인지. 생태계의
 
 ---
 
-## 기억 모델
+## 기억 model
 
 ```
 WORKING MEMORY                CONSOLIDATION           LONG-TERM MEMORY
