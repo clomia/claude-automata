@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 
 from claude_automata import provision
@@ -27,10 +29,11 @@ def test_npm_env_prefers_local_bin():
 
 
 def test_repomix_installs_into_user_area_prefix(monkeypatch):
+    # npm must be a path that exists on any machine — the implementation checks it.
     monkeypatch.setattr(
         provision.shutil,
         "which",
-        lambda name: None if name == "repomix" else f"/usr/bin/{name}",
+        lambda name: None if name == "repomix" else sys.executable,
     )
     commands = []
 
