@@ -124,10 +124,12 @@ tx의 OpenSpec 의존은 다음이 전부다:
 - **파일 포맷** — 핀 버전 기준으로 동결: `specs/`·`changes/`·`changes/archive/` 레이아웃,
   delta 대수(ADDED/MODIFIED/REMOVED/RENAMED), 요구사항 문법.
 - **CLI 커맨드** — 판정 입력은 `--json`으로, 액션(init·new·archive)은 exit code로만 소비한다.
-  사용 커맨드는 tx 스킬 본문에 열거된 것이 전부여야 한다. 미완 상태의 `instructions apply`는
-  소비하지 않는다 — 그 출력의 업스트림 스킬 참조 문자열은 CLI 소유라 schema fork로도 지워지지
-  않는다(핀 실측). **schema fork 기각**이 이 실측의 배제 기록이다: artifact instructions
-  4종에 개입 유도 0, 유일한 오염 문자열은 커맨드 표면 선택으로 회피된다.
+  사용 커맨드는 tx 스킬 본문에 열거된 것이 전부여야 한다. `instructions apply`는 **change가
+  미완인 상태로 소비하지 않는다** — 미완 분기의 출력만 업스트림 스킬 참조 문자열을 싣고(핀 실측:
+  ready 상태 출력은 청정), 그 문자열은 CLI 소유라 schema fork로도 지워지지 않는다. apply 스킬의
+  게이트(artifacts 전부 done 후 소비)가 오염 분기를 차단한다. **schema fork 기각**이 이 실측의
+  배제 기록이다: artifact instructions 4종에 개입 유도 0, 유일한 오염 문자열은 게이트 순서로
+  회피된다.
 - **validate의 1차 소비자는 CI다** — 각 레포의 required check로 실행해 tx:close의 CI 대기가
   문서 무결성까지 지키게 한다. 에이전트 측 CLI 표면은 최소로 유지한다.
 - **결합은 `npx --yes @fission-ai/openspec@<pin>` 호출이다** — 설치가 아니다. 핀의 정본은 tx이고
@@ -288,6 +290,3 @@ diff 핵심 어휘로 장기기억 표면 전체(추적 텍스트 전부)를 gre
 
 - cron 류 외부 ping이 죽은 프로세스의 루프를 부활시키는지 — 프로세스 사망은 인간 몫으로
   남는 마지막 예외 클래스다.
-
-(해소: 무인 환경의 AskUserQuestion — 공식 문서가 답했다. 기본은 무한 대기,
-`askUserQuestionTimeout` 설정 시 자동 진행. 무인 운용 권장 설정은 README ploop 절이 나른다.)
