@@ -9,7 +9,15 @@
 **[`uv`가 필요합니다. 없다면 먼저 설치하세요.](https://docs.astral.sh/uv/getting-started/installation/)**
 **POSIX 환경(macOS / Linux / WSL)에서 동작합니다.**
 
-이 레포지토리를 마켓플레이스에 추가하세요
+프로젝트 루트에서 한 번에 셋업하세요 — settings 전제조건, 마켓플레이스·플러그인 등록, 외부 CLI 의존성(gh · Node.js · repomix)까지:
+
+```
+uvx --from git+https://github.com/clomia/claude-automata claude-automata init
+```
+
+재실행해도 안전합니다(idempotent). 최신 버전을 강제하려면 `uvx --refresh --from …`을 사용하세요.
+
+플러그인 등록 없이 마켓플레이스만 추가하려면:
 
 ```
 claude plugin marketplace add clomia/claude-automata

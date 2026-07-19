@@ -1,0 +1,28 @@
+[project]
+name = "claude-automata"
+version = "0.1.0"
+description = "One-command setup for the claude-automata ecosystem — Claude Code settings, marketplace, plugins, external CLIs"
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+claude-automata = "claude_automata.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["claude_automata"]
+
+[tool.hatch.build.targets.wheel.force-include]
+".claude-plugin/marketplace.json" = "claude_automata/marketplace.json"
+
+[tool.hatch.build.targets.sdist]
+include = ["claude_automata", ".claude-plugin/marketplace.json"]
+
+[dependency-groups]
+dev = ["pytest>=9.0.2", "ruff>=0.15.9"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
