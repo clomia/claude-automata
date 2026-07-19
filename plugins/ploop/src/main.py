@@ -328,7 +328,7 @@ def stop() -> None:
             end_loop(
                 ws,
                 ledger,
-                "the advisor went uninvoked for two consecutive rounds",
+                "two consecutive anomalous rounds (in this one the advisor went uninvoked)",
                 converged=False,
             )
 
@@ -349,8 +349,8 @@ def stop() -> None:
                 end_loop(
                     ws,
                     ledger,
-                    "the advisor malfunctioned twice in a row"
-                    " (it finished without writing advice)",
+                    "two consecutive anomalous rounds (in this one the advisor"
+                    " finished without writing advice)",
                     converged=False,
                 )
             save_ledger(ws.ledger_path, {**ledger, "anomalies": anomalies})
