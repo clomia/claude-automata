@@ -14,6 +14,6 @@
 
 ## 실측 기록
 
-- 1.3: checker를 현행 tree에 실행 → GREEN(값쌍 6종 + marketplace, 표면 3종). settings.py
+- 1.3: checker를 현행 tree에 실행 → GREEN(값쌍 5종 + marketplace, 표면 3종). settings.py
   사본의 model pin을 sonnet[1m]으로 변조 후 실행 → 표면 3종 전부 model 불일치로 RED —
   결속이 실제로 문다.
