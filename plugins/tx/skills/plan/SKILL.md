@@ -23,8 +23,8 @@ effort: max
    uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec instructions <artifact> --change <change-id> --json
    ```
 
-   태스크는 이 트랜잭션 안에서 완결된다 — merge 이후의 행동(배포·운영 검증)은 태스크가
-   아니라 후속 change다.
+   태스크에는 close 전에 done이 되는 작업만 적는다 — 트랜잭션의 종결(close·archive·merge)과
+   merge 이후의 행동(배포·운영 검증)은 태스크가 될 수 없다. 후자는 후속 change다.
 
 3. 검증한다:
 
