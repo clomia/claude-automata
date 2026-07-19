@@ -139,7 +139,7 @@ section[id] { scroll-margin-top: 1.5rem; }
   padding: 1.15rem 1rem 1.05rem; text-align: center;
   display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
 }
-.st-working { grid-column: 1; border-style: dashed; }   /* impermanent by drawing convention */
+.st-working { grid-column: 1; border-style: dashed; position: relative; }   /* impermanent by drawing convention; anchors the drain */
 .st-gate    { grid-column: 3; }
 .st-ltm     { grid-column: 5; border-color: var(--verdigris); box-shadow: 3px 3px 0 rgba(62, 111, 94, 0.18); }
 .glyph { width: 84px; height: 84px; margin-bottom: 0.35rem; }
@@ -180,12 +180,12 @@ section[id] { scroll-margin-top: 1.5rem; }
   border-radius: 50%; background: var(--copper); opacity: 0; }
 .p-pass   { animation: pulse-pass var(--cycle) linear infinite; }
 .p-settle { background: var(--verdigris); animation: pulse-settle var(--cycle) linear infinite; }
+.refine-riser { display: none; }   /* mobile-only: the return route rides beside c2 */
 
 /* discard drain: unpromoted traces discharge to ground below working memory */
 .drain {
-  grid-column: 1; grid-row: 3; position: relative;
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding-top: 0;
 }
 .drain-stub { position: relative; width: 0; height: 22px;
   border-left: 1.5px dashed var(--copper); opacity: 0.75; }
@@ -361,15 +361,25 @@ section[id] { scroll-margin-top: 1.5rem; }
   .st-ltm { order: 5; }
   .refine-path { order: 6; }
 
-  .conn { align-self: center; height: 46px; width: 0;
+  .conn { align-self: center; height: 58px; width: 0;
     border-top: none; border-left: 1.5px solid var(--hairline-strong); }
   .arrowhead.right { right: auto; left: -4.25px; top: auto; bottom: 1px; transform: rotate(135deg); }
   .pulse { left: -3.25px; top: 0; }
   .p-pass   { animation-name: pulse-pass-y; }
   .p-settle { animation-name: pulse-settle-y; }
-  .drain { display: none; }   /* the stacked column reads the stub as main flow; props text carries the loss */
+  .drain { left: 22%; gap: 1px; }   /* beside the descending main flow: center = promotion, side = discharge */
+  .drain-stub { height: 13px; }
+  .drain-label { font-size: 0.56rem; }
 
-  /* the return cycle collapses to a labeled loop indicator */
+  /* the return route is drawn as a riser beside c2; the label stays below the stack */
+  .refine-riser { display: block; position: absolute; left: 30px; top: 0; height: 100%;
+    border-left: 1.5px dashed var(--verdigris); }
+  .refine-riser::after { content: "↺"; position: absolute; left: 6px; top: 50%;
+    transform: translateY(-50%); font-family: var(--mono); font-size: 0.72rem;
+    color: var(--verdigris); }
+  .refine-riser .riser-head { left: -4.25px; top: -1px; }
+  .p-refine-m { background: var(--verdigris); left: -3.25px; top: 0;
+    animation: pulse-refine-m var(--cycle) linear infinite; }
   .refine-path { margin: 0.4rem 0 0; height: auto; position: static; }
   .refine-line { position: static; height: auto; border: none; text-align: center; }
   .refine-line .arrowhead.up { display: none; }
@@ -396,6 +406,12 @@ section[id] { scroll-margin-top: 1.5rem; }
   58%     { opacity: 1; }
   66%     { opacity: 1; top: calc(100% - 7px); }
   68%, 100% { opacity: 0; top: calc(100% - 7px); }
+}
+@keyframes pulse-refine-m {   /* re-grounding trace climbs back into the gate */
+  0%, 10% { opacity: 0; top: calc(100% - 7px); }
+  12%     { opacity: 1; }
+  26%     { opacity: 1; top: 0; }
+  30%, 100% { opacity: 0; top: 0; }
 }
 
 /* ---------------------------------------------------------------- motion */
