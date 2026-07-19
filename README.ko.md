@@ -1,97 +1,93 @@
-# claude-automata
+<p align="center">
+  <a href="https://clomia.github.io/claude-automata/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata — runs for days, remembers only what's verified" width="840"></a>
+</p>
+
+<p align="center"><strong>agent는 끝났다고 <em>생각하는</em> 순간 멈춥니다. 이것은 정말로 끝났을 때 멈춥니다.</strong></p>
+
+<p align="center">
+  인간 기억 구조를 사상한 Claude Code 자율 agent 환경.<br>
+  advisor가 모든 정지를 감사하고, 검증된 gate 하나가 무엇을 기억할지 정합니다.
+</p>
+
+<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ 기억 회로가 도는 것을 보세요</strong></a></p>
 
 [English](https://github.com/clomia/claude-automata/blob/main/README.md) | 한국어
 
-**인간 기억 구조를 사상한 Claude Code 자율 agent 환경.** loop는 24시간 주도권을 갖고, 사용자는 event type 중 하나이며, 기억은 검증을 통과한 git 추적 text로만 남습니다. 며칠짜리 무인 작업이 의도를 잃지 않고, 검증되지 않은 변경이 repo를 오염시키지 않게 하기 위한 구조입니다.
+---
 
-**[Landing page](https://clomia.github.io/claude-automata/)** — 기억 system 시각화와 전체 그림을 수 분 안에 볼 수 있습니다. 설계 정본은 [ARCHITECTURE.md](https://github.com/clomia/claude-automata/blob/main/ARCHITECTURE.md)(생태계)와 [MEMORY.md](https://github.com/clomia/claude-automata/blob/main/MEMORY.md)(기억 system)입니다.
+Claude Code는 끝났다고 믿는 순간 turn을 끝내고, 다음 compaction에서 전부 잊습니다. claude-automata는 그것을 기억이 실제로 작동하는 방식으로 재구성합니다:
 
-| Plugin | 역할 |
+| Plugin | 기억 역할 |
 |---|---|
-| **ploop** | advisor loop — 며칠씩 걸리는 장기 작업의 자율 loop (작업기억) |
-| **tx** | Git transaction workflow — 장기기억으로 들어가는 유일한 응고 gate |
-| **refine** | repo 부채를 없애는 수 시간짜리 대규모 workflow 모음 (재접지 주기) |
-| **version-up-alert** | 새 version 알림 — 모든 plugin의 공통 의존성 |
+| **ploop** | 작업기억 — 며칠짜리 작업의 loop; 모든 정지를 독립 advisor가 감사하며, 더 표면화할 것이 없을 때까지 계속됩니다 |
+| **tx** | 응고 — 기억으로 들어가는 유일한 gate: plan, 독립 verify, CI, squash merge |
+| **refine** | 재접지 — 오래된 기억을 코드와 재대조하는 수 시간짜리 workflow |
+| **version-up-alert** | update 알림 — 뒤처진 plugin이 있으면 session 시작 시 한 줄; 다른 plugin과 함께 설치됩니다 |
 
-## Getting Started
+장기기억은 database가 아닙니다. repository의 git 추적 text 그 자체입니다 — 회상은 grep입니다. gate를 통과하지 못한 것은 loop와 함께 죽습니다, 의도적으로.
 
-**[Claude Code](https://claude.com/claude-code)와 [`uv`](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다.**
-**POSIX 환경(macOS / Linux / WSL)에서 동작합니다.**
+## Install
 
-project root에서:
+[Claude Code](https://claude.com/claude-code)와 [uv](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다. POSIX(macOS / Linux / WSL). project root에서 한 command:
 
 ```
 uvx claude-automata init
 ```
 
-한 command가 전부를 수렴시킵니다 — settings 전제조건, marketplace·plugin 4종 등록, 외부 CLI 의존성(gh · Node.js ≥ 20 · repomix)의 사용자 영역 설치(sudo 불필요, 이미 있으면 건너뜀). 재실행해도 안전합니다(idempotent). 최신 version을 강제하려면 `uvx claude-automata@latest init`.
+재실행해도 안전합니다(idempotent). 최신 version 강제는 `uvx claude-automata@latest init`.
 
-**init이 실제로 쓰는 설정** — 이 환경은 무인 운용을 전제하며, init은 `.claude/settings.json`에 다음을 merge-write합니다(무관한 key는 보존). commit 전에 diff를 확인하세요:
+**init이 실제로 쓰는 설정** — 이 환경은 무인 운용을 전제합니다. commit 전에 diff를 확인하세요:
 
-- `permissions.defaultMode: "bypassPermissions"` — 승인 prompt 없음. agent가 묻지 않고 이 machine에서 shell command를 실행합니다 — 신뢰의 범위는 repo가 아니라 host입니다. 그 방식을 수용할 machine에서 도입하세요.
+- `permissions.defaultMode: "bypassPermissions"` — 승인 prompt 없음. agent가 묻지 않고 이 machine에서 shell command를 실행합니다 — 신뢰의 범위는 repo가 아니라 host입니다.
 - `model: "opus[1m]"` — model 고정, 1M context
 - `alwaysThinkingEnabled: true` · `autoCompactEnabled: true` · `autoMemoryEnabled: false`
-- claude-automata marketplace 등록 + plugin 4종 활성화
+- `clomia/claude-automata` marketplace 등록 + plugin 4종 활성화
+- 없는 `gh`·Node.js ≥ 20·`repomix`를 사용자 영역에 설치 — sudo 불필요, 있으면 건너뜀, `gh auth login`은 사용자 몫
 
-`gh` 인증은 자동화하지 않습니다 — 미인증이면 `gh auth login` 안내가 출력됩니다.
-
-## ploop — Advisor Loop
-
-며칠씩 걸리는 장기 작업을 위한 advisor loop입니다.
-
-- 독립된 advisor가 사용자를 대신해 매 round main agent가 놓친 영역을 찾아줍니다.
-- main agent는 orchestrator입니다 — 작업을 agent들에 위임하고 지휘합니다.
-- anchor는 여러 번의 auto compaction에도 살아남습니다 — transcript 밖에 보존되어 재주입되고, loop의 기록은 파일로 남아 advisor가 매 round 새로 읽습니다.
-- 별도 session을 만들지 않고 정식 subagent 경로만 사용합니다 — 구독 요금제에 안전합니다. 안전은 session 기제이지 비용이 아닙니다: loop는 요금제 quota를 공유하며, 며칠짜리 실행은 그만큼 사용량을 씁니다.
-
-**anchor**는 loop를 붙들어 매는 기준 파일입니다. 두 종류가 있습니다.
-
-- **Mission** (목표) — 요구사항을 받아서 처리하고, 목표를 모두 달성하면 끝납니다. `/ploop:define-mission`으로 작성하세요.
-- **Purpose** (목적) — 요구사항을 만들며 계속 나아가고, 정해진 끝이 없습니다. `/ploop:define-purpose`로 작성하세요.
-
-### 사용 방법
-
-> Auto-Compact가 True로 설정되어 있어야 합니다.
-> 무인 운용에는 `askUserQuestionTimeout` 설정을 권장합니다 — 응답 없는 질문에서 loop가 영구 대기하지 않습니다.
-
-1. anchor를 작성하세요 — `/ploop:define-mission` 또는 `/ploop:define-purpose`.
-2. 새로운 session에서 `/ploop:launch [anchor 내용]`을 실행하세요. loop는 Stop hook을 탑니다 — agent가 멈출 때마다 hook이 정지를 막고 advisor를 소집시킵니다.
-3. loop는 advisor가 더 이상 조언할 것이 없다고 판단하면 자동으로 끝나며, advice가 하나라도 있었던 loop면 agent가 전체 기록을 요약합니다.
-   잠시 멈추려면 `/ploop:off`, 이어가려면 `/ploop:on` (turn이 돌고 있으면 ESC로 끊은 뒤 실행). `on`은 실수로 누른 ESC·API error·구독 session limit로 멈춘 loop까지 깨우는 범용 wake button입니다 — advisor가 스스로 종료한 경우만 빼고 언제나 재개합니다. 그 밖의 어떤 것도 — 중간 지시, 질문 응답, background 작업 알림 — loop를 멈추지 않습니다.
-4. 진행 상황이 궁금하면 **같은 directory의 별도 session**에서 `/ploop:docent`를 실행하세요 — loop의 기록을 읽어 답하는 read-only 해설자로, loop에는 어떤 영향도 주지 않습니다. 질문은 docent에게, 개입(지시·중단)은 loop session에 직접 하세요.
-
-자세한 설계: [plugins/ploop/ARCHITECTURE.md](https://github.com/clomia/claude-automata/blob/main/plugins/ploop/ARCHITECTURE.md)
-
-## refine
-
-repo에 쌓이는 부채를 없애는 대규모 workflow 모음입니다.
-
-세 skill은 같은 방식으로 동작합니다 — 영역을 나눠 병렬 분석하고, 발견을 교차검증 회의로 합의시키고, ROI가 높은 계획만 실행합니다. 한 번의 실행이 수 시간(3–12시간) 걸리는 heavyweight workflow입니다.
-
-- `/refine:code [영역]` — 코드 architecture 최적화. antipattern을 합의로 걸러내고 최고 ROI refactoring만 적용합니다.
-- `/refine:docs [영역]` — 문서 architecture 최적화. 실행시킬 수 없는 text의 모든 주장을 코드와 대조해 바로잡습니다. 코드는 수정하지 않습니다 — 코드 결함은 보고합니다.
-- `/refine:integrity [영역]` — 무결성 경계 최적화. 경계가 포함하지 못하는 도달 가능한 상태를 **"이걸 error로 정의할 것인가?"** 부터 파고들어 흡수하고, test와 문서로 고정합니다.
-
-영역을 비우면 codebase 전체가 대상입니다. 진행 상황은 `/workflows`에서 확인할 수 있습니다.
-
-## tx — Git Transaction Workflow
-
-변경을 transaction 단위로 관리하는 Git workflow입니다.
-
-transaction은 **무결성 경계**입니다 — open부터 close까지가 하나로 묶이고, 무결성이 검증되어야만 닫힙니다. 그 사이의 base branch는 guard hook들이 지킵니다.
+## Loop 돌리기
 
 ```
-/tx:open  [변경 설명]   # base에서 tx-* 분기 + seed + 경로 선택
+/ploop:define-mission          # 한 session에서 anchor 작성
+/ploop:launch [anchor 내용]    # 새 session에서 loop에 전달
+```
+
+loop는 Stop hook을 탑니다: agent가 멈출 때마다 clean context의 독립 advisor가 round를 검사하고 놓친 것을 표면화합니다. loop는 agent가 끝났다고 느낄 때가 아니라 **advisor가 더 말할 것이 없을 때** 끝납니다. anchor는 모든 auto-compaction에서 살아남습니다. 구독 요금제에 안전합니다 — 안전은 session 기제이지 비용이 아닙니다: loop는 요금제 quota를 공유하며, 며칠짜리 실행은 그만큼 사용량을 씁니다.
+
+<details>
+<summary><strong>일시정지 · 재개 · 관찰</strong></summary>
+
+<br>
+
+- Auto-Compact가 True여야 합니다. 무인 운용에는 `askUserQuestionTimeout` 설정을 권장합니다 — 응답 없는 질문에서 loop가 영구 대기하지 않습니다.
+- `/ploop:off`로 일시정지, `/ploop:on`으로 재개 — `on`은 실수로 누른 ESC·API error·session limit로 멈춘 loop까지 깨우는 범용 wake button입니다 (turn이 돌고 있으면 ESC로 끊은 뒤). 그 밖의 어떤 것도 loop를 멈추지 않습니다.
+- **같은 directory의 별도 session**에서 `/ploop:docent`가 loop 기록을 읽어 질문에 답합니다 — loop에는 어떤 영향도 없습니다. 질문은 docent에게, 개입은 loop session에 직접.
+
+</details>
+
+## 변경을 transaction으로
+
+```
+/tx:open  [변경 설명]   # base에서 tx-* 분기
 ...작업...              # tx:plan → tx:apply → tx:verify
-/tx:close               # verify·archive·docs gate 후 base로 squash merge
+/tx:close               # verify·docs gate·CI 후 squash merge
 ```
 
-transaction 정의·guard hook·base branch 해석 등 자세한 내용은 [plugin README](https://github.com/clomia/claude-automata/blob/main/plugins/tx/README.md)를 참고하세요.
+transaction은 무결성 경계입니다 — 구현과 기록된 의도가 모두 검증되어야만 닫힙니다. 그 사이의 base branch는 guard hook들이 지킵니다. 위의 모든 것이 이 gate를 통과합니다.
+
+## 기억을 참으로 유지하기
+
+```
+/refine:code [영역] · /refine:docs [영역] · /refine:integrity [영역]
+```
+
+쌓인 부채를 없애는 heavyweight multi-agent workflow(한 번에 수 시간, 3–12h): 코드 architecture, 문서의 참, 무결성 경계. 발견은 교차검증 회의로 합의되고 최고 ROI 계획만 실행됩니다. docs pass는 코드를 수정하지 않습니다 — 결함은 보고됩니다. 영역을 비우면 codebase 전체가 대상, 진행은 `/workflows`에서.
 
 ## version-up-alert
 
-설치된 claude-automata plugin에 새 version이 배포되면 session 시작 시 한 줄로 알립니다. 알림만 합니다 — 실행 중인 session 밑에서 plugin을 갈아끼우지 않으며, 적용 시점은 사용자가 정합니다. 모든 claude-automata plugin이 의존성으로 함께 설치하므로 따로 설치할 것이 없습니다.
+설치된 claude-automata plugin에 새 version이 배포되면 session 시작 시 한 줄로 알립니다. 알림만 합니다 — 실행 중인 session 밑에서 plugin을 갈아끼우지 않습니다. 모든 plugin이 의존성으로 함께 설치하므로 따로 설치할 것이 없습니다.
 
 ---
 
-MIT License · Anthropic과 무관한 독립 open-source project입니다.
+<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ 기억 회로가 도는 것을 보세요</strong></a></p>
+
+MIT License · Anthropic과 무관한 독립 open-source project입니다. 설계상 이 repository의 모든 기여는 Claude Code agent가 작성합니다.

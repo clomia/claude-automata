@@ -1,97 +1,93 @@
-# claude-automata
+<p align="center">
+  <a href="https://clomia.github.io/claude-automata/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata — runs for days, remembers only what's verified" width="840"></a>
+</p>
+
+<p align="center"><strong>Your agent stops when it <em>thinks</em> it's done. This one stops when it's actually done.</strong></p>
+
+<p align="center">
+  An autonomous agent environment for Claude Code, modeled on human memory.<br>
+  An advisor audits every stop; one verified gate decides what gets remembered.
+</p>
+
+<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ Watch the memory circuit run</strong></a></p>
 
 English | [한국어](https://github.com/clomia/claude-automata/blob/main/README.ko.md)
 
-**An autonomous agent environment for Claude Code, modeled on human memory.** The loop holds the initiative around the clock, the user is one event type among many, and nothing is remembered except verified, git-tracked text. The structure exists so that days-long unattended work neither loses its intent nor lets unverified change contaminate the repository.
+---
 
-**[Landing page](https://clomia.github.io/claude-automata/)** — the memory-system visualization and the whole picture, in minutes. The design canons are [ARCHITECTURE.md](https://github.com/clomia/claude-automata/blob/main/ARCHITECTURE.md) (the ecosystem) and [MEMORY.md](https://github.com/clomia/claude-automata/blob/main/MEMORY.md) (the memory system).
+Claude Code ends its turn the moment it believes it's finished, and forgets everything at the next compaction. claude-automata rebuilds it around the way memory actually works:
 
-| Plugin | Role |
+| Plugin | Memory role |
 |---|---|
-| **ploop** | advisor loop — an autonomous loop for long work spanning days (working memory) |
-| **tx** | Git transaction workflow — the only consolidation gate into long-term memory |
-| **refine** | hours-long heavyweight workflows that eliminate repository debt (the re-grounding cycle) |
-| **version-up-alert** | new-release notice — a shared dependency of every plugin |
+| **ploop** | working memory — a loop for work spanning days; every stop is audited by an independent advisor until nothing is left to surface |
+| **tx** | consolidation — the only gate into memory: plan, independent verify, CI, squash merge |
+| **refine** | re-grounding — hours-long workflows that re-verify old memory against the code |
+| **version-up-alert** | update notice — one line at session start when a plugin is behind; ships with the others |
 
-## Getting Started
+Long-term memory isn't a database. It's the repository's own git-tracked text — recall is grep. Whatever never passes the gate dies with the loop, on purpose.
 
-**[Claude Code](https://claude.com/claude-code) and [`uv`](https://docs.astral.sh/uv/getting-started/installation/) are required.**
-**Runs on POSIX (macOS / Linux / WSL).**
+## Install
 
-From your project root:
+Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/), on POSIX (macOS / Linux / WSL). One command, from your project root:
 
 ```
 uvx claude-automata init
 ```
 
-One command converges everything — the settings prerequisites, marketplace registration with all four plugins, and the external CLI dependencies (gh · Node.js ≥ 20 · repomix) installed into your user area (no sudo, present tools skipped). Re-running is safe (idempotent). To force the latest version, use `uvx claude-automata@latest init`.
+Re-running is safe (idempotent). `uvx claude-automata@latest init` forces the newest release.
 
-**What init actually writes** — this environment assumes unattended operation, and init merge-writes the following into `.claude/settings.json` (unrelated keys are preserved). Review the diff before you commit it:
+**What init actually writes** — this environment assumes unattended operation. Review the diff before you commit it:
 
-- `permissions.defaultMode: "bypassPermissions"` — no approval prompts. The agent runs shell commands on your machine without asking first — the trust is host-level, not repo-level; adopt this on a machine where you accept that mode.
+- `permissions.defaultMode: "bypassPermissions"` — no approval prompts. The agent runs shell commands on your machine without asking first; the trust is host-level, not repo-level.
 - `model: "opus[1m]"` — pinned model, 1M context
 - `alwaysThinkingEnabled: true` · `autoCompactEnabled: true` · `autoMemoryEnabled: false`
-- registers the claude-automata marketplace and enables all four plugins
+- registers the `clomia/claude-automata` marketplace and enables all four plugins
+- installs missing `gh`, Node.js ≥ 20, `repomix` into your user area — no sudo, present tools skipped, `gh auth login` stays yours
 
-`gh` authentication is never automated — if you are not logged in, init prints a `gh auth login` reminder.
-
-## ploop — Advisor Loop
-
-ploop is an advisor loop built for long-running work that spans days.
-
-- An independent advisor finds, on the user's behalf, what the main agent missed in every round.
-- The main agent is an orchestrator — it delegates work to agents and stays in command.
-- The anchor survives repeated auto-compactions — preserved outside the transcript and re-injected, while the loop's records live in files the advisor reads fresh every round.
-- It creates no separate sessions and uses only the official subagent path — safe on subscription plans. Safe in mechanism, not in price: the loop shares your plan's quota, and multi-day runs spend it accordingly.
-
-The **anchor** is the file the loop is anchored to. It comes in two kinds.
-
-- **Mission** (a goal) — receive requirements, process them, and finish once the goal is fully met. Write one with `/ploop:define-mission`.
-- **Purpose** (a direction) — create requirements as you go and keep advancing, with no fixed end. Write one with `/ploop:define-purpose`.
-
-### Usage
-
-> Auto-Compact must be set to True.
-> For unattended runs, set `askUserQuestionTimeout` — an unanswered question then never parks the loop forever.
-
-1. Write your anchor — `/ploop:define-mission` or `/ploop:define-purpose`.
-2. In a fresh session, run `/ploop:launch [anchor]`. The loop rides the Stop hook — whenever the agent stops, the hook blocks the stop and has the advisor summoned.
-3. The loop ends on its own when the advisor judges there is nothing left to advise; if any advice was surfaced along the way, the agent recaps the run.
-   To pause, run `/ploop:off`; to pick it back up, `/ploop:on` (interrupt with ESC first if a turn is running). `on` is a universal wake button — it revives a loop stalled by an accidental ESC, an API error, or a subscription session limit, and always resumes except when the advisor ended the loop itself. Nothing else — mid-run instructions, answered questions, background-task notifications — stops the loop.
-4. To check on progress, run `/ploop:docent` in a **separate session in the same directory** — a read-only guide that answers from the loop's records and never touches the loop. Questions go to the docent; interventions (instructions, stopping) go straight to the loop session.
-
-Design details: [plugins/ploop/ARCHITECTURE.md](https://github.com/clomia/claude-automata/blob/main/plugins/ploop/ARCHITECTURE.md)
-
-## refine
-
-refine is a family of large-scale workflows that eliminate the debt a repository accumulates.
-
-All three skills work the same way — split into regions for parallel analysis, settle findings through a cross-examination assembly, and execute only the highest-ROI plans. Each run is a heavyweight workflow taking hours (3–12h).
-
-- `/refine:code [focus]` — code architecture optimization. Filters antipatterns through consensus and applies only the highest-ROI refactors.
-- `/refine:docs [focus]` — documentation architecture optimization. Every claim in every non-executable text is checked against the code and set right. Code is never modified — code defects are reported.
-- `/refine:integrity [focus]` — integrity-boundary optimization. Hunts the reachable states the boundary fails to contain, digs in from **"should this be defined as an error?"**, absorbs them, and pins the result with tests and docs.
-
-Leave the focus empty to target the whole codebase. Watch progress with `/workflows`.
-
-## tx — Git Transaction Workflow
-
-tx is a Git workflow that manages change as transactions.
-
-A transaction is an **integrity boundary** — everything from open to close is bound into one, and it can only close once verified integral. Guard hooks keep the base branch protected in between.
+## Run a loop
 
 ```
-/tx:open  [change description]   # cut a tx-* branch off base, seed, route the change
-...work...                       # tx:plan → tx:apply → tx:verify
-/tx:close                        # verify, archive, docs gate, then squash-merge to base
+/ploop:define-mission          # write the anchor in one session
+/ploop:launch [anchor text]    # hand it to the loop in a fresh session
 ```
 
-For the full details — the transaction model, guard hooks, base-branch resolution — see the [plugin README](https://github.com/clomia/claude-automata/blob/main/plugins/tx/README.md).
+The loop rides the Stop hook: whenever the agent stops, an independent advisor with a clean context inspects the round and surfaces what was missed. It ends only when the advisor has nothing left to say — not when the agent feels finished. The anchor survives every auto-compaction. Safe on subscription plans — safe in mechanism, not in price: the loop shares your plan's quota, and multi-day runs spend it accordingly.
+
+<details>
+<summary><strong>Pause, resume, observe</strong></summary>
+
+<br>
+
+- Auto-Compact must be set to True. For unattended runs, set `askUserQuestionTimeout` — an unanswered question then never parks the loop forever.
+- `/ploop:off` pauses; `/ploop:on` resumes — a universal wake button that also revives a loop stalled by an accidental ESC, an API error, or a session limit (interrupt with ESC first if a turn is running). Nothing else stops the loop.
+- `/ploop:docent` in a **separate session, same directory** answers your questions from the loop's records without touching the loop. Questions go to the docent; interventions go straight to the loop session.
+
+</details>
+
+## Change as transactions
+
+```
+/tx:open  [description]   # cut a tx-* branch off base
+...work...                # tx:plan → tx:apply → tx:verify
+/tx:close                 # verify, docs gate, CI, then squash-merge
+```
+
+A transaction is an integrity boundary — it can only close once the implementation and its recorded intent are both verified. Guard hooks keep the base branch protected in between. This is the gate everything above flows through.
+
+## Keep memory true
+
+```
+/refine:code [focus] · /refine:docs [focus] · /refine:integrity [focus]
+```
+
+Heavyweight multi-agent workflows (hours per run, 3–12h) that eliminate accumulated debt: code architecture, documentation truth, integrity boundaries. Findings settle through cross-examination into consensus; only the highest-ROI plans execute. The docs pass never modifies code — defects are reported. Empty focus targets the whole codebase; watch with `/workflows`.
 
 ## version-up-alert
 
-When a newer release of any installed claude-automata plugin ships, a one-line notice appears at session start. Alert-only — it never swaps plugins out from under a running session; you choose when to update. Every claude-automata plugin installs it as a dependency, so there is nothing to install.
+When a newer release of any installed claude-automata plugin ships, one line appears at session start. Alert-only — it never swaps plugins under a running session. Every plugin installs it as a dependency; there is nothing to install.
 
 ---
 
-MIT License · An independent open-source project, unaffiliated with Anthropic.
+<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ Watch the memory circuit run</strong></a></p>
+
+MIT License · An independent open-source project, unaffiliated with Anthropic. By design, every contribution to this repository is authored by Claude Code agents.

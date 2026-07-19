@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<!-- Source of assets/banner.png (the README banner). Regenerate after editing:
+     google-chrome --headless=new --disable-gpu --hide-scrollbars \
+       --window-size=1280,400 --screenshot=banner.png "file://$(pwd)/banner-card.html"
+     (run inside site/assets/; fonts resolve relatively from ./fonts/) -->
+<html><head><meta charset="utf-8"><style>
+@font-face { font-family: "Saira SemiCondensed"; font-weight: 700;
+  src: url("fonts/saira-semi-condensed-700.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 400;
+  src: url("fonts/ibm-plex-mono-400.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 500;
+  src: url("fonts/ibm-plex-mono-500.woff2") format("woff2"); }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:1280px; height:400px; background:#f5f4ef; color:#191813; overflow:hidden;
+  font-family:"IBM Plex Mono", monospace; position:relative; }
+.rule { position:absolute; left:56px; right:56px; border-top:3px double #b9b5a4; }
+.rule.top { top:40px; } .rule.bottom { bottom:40px; }
+.head { position:absolute; top:52px; left:56px; right:56px; display:flex; justify-content:space-between;
+  font-size:14px; letter-spacing:.08em; color:#63604f; }
+.head b { color:#94481c; font-weight:500; }
+h1 { position:absolute; top:92px; left:56px; width:580px; font-family:"Saira SemiCondensed";
+  font-weight:700; font-size:46px; letter-spacing:.02em; text-transform:uppercase; line-height:1.06; }
+h1 .verd { color:#3e6f5e; }
+.sub { position:absolute; top:266px; left:56px; width:560px; font-size:18px; color:#63604f;
+  letter-spacing:.01em; line-height:1.5; }
+.circuit { position:absolute; top:112px; right:56px; width:520px; display:grid;
+  grid-template-columns:1fr 44px 1fr 44px 1fr; align-items:stretch; }
+.st { border:2px solid #191813; background:#fdfdfa; text-align:center; padding:16px 8px 12px; position:relative; }
+.st .nm { font-family:"Saira SemiCondensed"; font-weight:700; font-size:12px; letter-spacing:.05em; white-space:nowrap; }
+.st.wm { border-style:dashed; }
+.st.lt { border-color:#3e6f5e; box-shadow:4px 4px 0 rgba(62,111,94,.18); }
+.glyph { height:52px; margin-bottom:8px; }
+svg { height:100%; overflow:visible; }
+svg * { fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.conn { align-self:center; height:0; border-top:2px solid #b9b5a4; position:relative; }
+.conn i { position:absolute; right:0; top:-5px; width:9px; height:9px; border-top:2px solid #b9b5a4;
+  border-right:2px solid #b9b5a4; transform:rotate(45deg); }
+.conn .dot { position:absolute; top:-4px; left:38%; width:8px; height:8px; border-radius:50%;
+  background:#b25c28; border:0; transform:none; }
+.conn.c2 .dot { background:#3e6f5e; left:52%; }
+.drain { position:absolute; top:100%; left:50%; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:2px; }
+.drain .stub { width:0; height:13px; border-left:2px dashed #b25c28; opacity:.8; }
+.drain svg.gnd { width:20px; height:10px; }
+.drain svg.gnd line { stroke:#b25c28; stroke-width:2; opacity:.8; }
+.url { position:absolute; bottom:52px; right:56px; font-size:15px; color:#63604f; letter-spacing:.04em; }
+</style></head>
+<body>
+  <div class="rule top"></div>
+  <div class="head"><span>CLAUDE‑AUTOMATA</span><b>NOT AFFILIATED WITH ANTHROPIC</b></div>
+  <h1>Runs for days.<br><span class="verd">Remembers only what's verified.</span></h1>
+  <p class="sub">An autonomous agent environment for Claude Code, modeled on human memory.</p>
+
+  <div class="circuit">
+    <div class="st wm">
+      <div class="glyph"><svg viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r="34" stroke="#b25c28" stroke-width="3" stroke-dasharray="5 6"/>
+        <circle cx="48" cy="14" r="6" fill="#b25c28" stroke="none"/>
+        <circle cx="48" cy="38" r="5" stroke="#191813" stroke-width="3"/>
+        <line x1="48" y1="43" x2="48" y2="62" stroke="#191813" stroke-width="3"/>
+        <path d="M 36 54 A 12 12 0 0 0 60 54" stroke="#191813" stroke-width="3"/>
+        <line x1="41" y1="49" x2="55" y2="49" stroke="#191813" stroke-width="3"/>
+      </svg></div>
+      <div class="nm">WORKING MEMORY</div>
+      <div class="drain">
+        <div class="stub"></div>
+        <svg class="gnd" viewBox="0 0 28 14">
+          <line x1="2" y1="2" x2="26" y2="2"/><line x1="7" y1="7" x2="21" y2="7"/><line x1="11" y1="12" x2="17" y2="12"/>
+        </svg>
+      </div>
+    </div>
+    <div class="conn"><i></i><b class="dot"></b></div>
+    <div class="st">
+      <div class="glyph"><svg viewBox="0 0 96 96">
+        <line x1="30" y1="12" x2="30" y2="36" stroke="#191813" stroke-width="3.5"/>
+        <line x1="30" y1="60" x2="30" y2="84" stroke="#191813" stroke-width="3.5"/>
+        <line x1="66" y1="12" x2="66" y2="36" stroke="#191813" stroke-width="3.5"/>
+        <line x1="66" y1="60" x2="66" y2="84" stroke="#191813" stroke-width="3.5"/>
+        <rect x="34" y="34" width="28" height="28" transform="rotate(45 48 48)" stroke="#191813" stroke-width="3"/>
+        <path d="M 41 48 l 5 6 l 10 -12" stroke="#3e6f5e" stroke-width="3.5" opacity=".9"/>
+      </svg></div>
+      <div class="nm">CONSOLIDATION</div>
+    </div>
+    <div class="conn c2"><i style="border-color:#3e6f5e"></i><b class="dot"></b></div>
+    <div class="st lt">
+      <div class="glyph"><svg viewBox="0 0 96 96">
+        <rect x="14" y="18" width="68" height="60" stroke="#3e6f5e" stroke-width="3"/>
+        <line x1="14" y1="33" x2="82" y2="33" stroke="#3e6f5e" stroke-width="1.5" opacity=".6"/>
+        <line x1="14" y1="48" x2="82" y2="48" stroke="#3e6f5e" stroke-width="1.5" opacity=".6"/>
+        <line x1="14" y1="63" x2="82" y2="63" stroke="#3e6f5e" stroke-width="1.5" opacity=".6"/>
+        <line x1="22" y1="25.5" x2="34" y2="25.5" stroke="#3e6f5e" stroke-width="3.5"/>
+        <line x1="40" y1="40.5" x2="56" y2="40.5" stroke="#3e6f5e" stroke-width="3.5"/>
+        <line x1="26" y1="55.5" x2="44" y2="55.5" stroke="#3e6f5e" stroke-width="3.5"/>
+      </svg></div>
+      <div class="nm">LONG‑TERM MEMORY</div>
+    </div>
+  </div>
+
+  <div class="url">clomia.github.io/claude-automata</div>
+  <div class="rule bottom"></div>
+</body></html>
