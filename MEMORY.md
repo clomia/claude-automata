@@ -19,17 +19,19 @@ ploop workspace               tx transaction
   facts: candidates             tasks/delta)            archive/
   terms: candidates             + CI + verify         docs, ARCHITECTURE     semantic: design, research
   rounds: discard               + squash merge        CLAUDE.md, rules       operating rules
-                                                      glossary               lexical
+                                                      glossary sections      lexical
                                                       comments, docstrings   in-code constraints
                                                       .claude/skills         procedural
                                       ^                         ^
                                       |                         |
-                               refine workflows: re-ground docs against code,
-                               prune stale claims, dedup (maintenance cycle)
+                               refine workflows (via tx): re-ground docs against
+                               code, prune stale claims, dedup (maintenance cycle)
 ```
 
 장기기억의 외연은 refine:docs의 도메인 정의와 일치한다 — **git 추적되는, 실행시킬 수 없는 모든
-텍스트**. 쉬운 구분으로 **docs + openspec**이고, 엄밀히는 주석·docstring까지다. openspec은 그중
+텍스트**. 쉬운 구분으로 **docs + openspec**이고, 엄밀히는 주석·docstring·설정의 설명 텍스트까지다.
+기계가 값으로 소비하는 설정 텍스트(settings·CI yml의 값)는 실행 표면이지 기억이 아니다 —
+불변식 1의 관할도 기억 표면까지다. openspec은 그중
 문법과 validate를 가진 구조화된 부분집합으로, 구조화가 이득인 기억 — 요구사항의 현재 상태와
 변경의 역사 — 만 담는다. 나머지 semantic(설계 정본·조사 기록)은 자유 산문인 docs가 담는다.
 openspec을 써도 docs는 반드시 생긴다.
@@ -58,6 +60,7 @@ openspec을 써도 docs는 반드시 생긴다.
 | 외부 세계의 측정 사실 | 조사 문서 (`docs/research/` 류) |
 | 세션마다 참이어야 할 운영 규칙 | CLAUDE.md·rules — 비싼 자리, 최소로 |
 | 채택된 용어 | 소유 정본의 `## 용어` — 용어당 home 하나, 횡단 용어는 루트 정본 |
+| 반복이 입증된 절차 | `.claude/skills` — 스킬 문서, 이름이 호출 키 |
 | 루프 상태·막다른 길·시행착오 | 폐기 — 망각이 기능이다 |
 
 glossary는 장기기억 소속이다. ubiquitous language는 모든 에이전트와 미래 기여자가 공유해야
@@ -73,9 +76,10 @@ glossary는 장기기억 소속이다. ubiquitous language는 모든 에이전�
 2. **provenance 없는 사실은 승격 금지.** 장기기억에 들어가는 사실은 측정 방법을 동반한다.
    사용자 발화는 사실이 아니라 의도로 기록된다(define-mission의 CRITICAL 규칙을 기억 전체로
    확장) — 의도의 자리는 proposal이다.
-3. **spec의 권위는 방향이 있다.** 트랜잭션 안에서는 spec이 구현을 구속하고(close의 verify
-   게이트), 트랜잭션 밖에서는 코드가 ground truth다(refine:docs — 단 코드 결함이 드러나면
-   보고 대상이지 정합 대상이 아니다). 이 두 방향이 있어야 spec이 changelog로 전락하지 않는다.
+3. **spec의 권위는 방향이 있다.** 경계는 트랜잭션이 아니라 활동이다 — 재접지도 트랜잭션 안에서
+   일어난다(불변식 1). 구현에서는 spec이 구현을 구속하고(close의 verify 게이트), 재접지에서는
+   코드가 ground truth다(refine:docs — 단 코드 결함이 드러나면 보고 대상이지 정합 대상이
+   아니다). 이 두 방향이 있어야 spec이 changelog로 전락하지 않는다.
 4. **재접지는 주기이지 이벤트가 아니다.** 장기기억은 유지되는 동안 부패한다. refine:docs가
    그 주기다. 코드로도 재측정으로도 검증 불가능해진 주장은 삭제한다. 이 불변식의 "주장"은
    현재 시제의 living 주장이다 — 자기완결 헤더·배너를 갖춘 dated 문서의 본문은 인용된 과거라
