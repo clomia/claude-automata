@@ -83,7 +83,7 @@ const CONSENSUS_SCHEMA = {
   properties: {
     count: { type: 'integer', description: '합의된 발견 수' },
     titles: { type: 'array', items: { type: 'string' } },
-    codeDefects: { type: 'array', items: { type: 'string' }, description: 'consensus.md의 code-defect 섹션 제목들' },
+    codeDefects: { type: 'array', items: { type: 'string' }, description: 'consensus.md의 code-defect section 제목들' },
   },
 }
 
@@ -144,15 +144,15 @@ phase('Census')
 await synod(
   'cartographer',
   `# 임무: 문서 전수조사와 검증 영역 정의
-레포지토리의 문서를 하나도 빠짐없이 목록화하고, 독립적으로 검증 가능한 영역으로 나눠라.
-영역은 겹침 없이 나누어 떨어지고, 에이전트 하나가 전수 검증할 수 있는 크기여야 한다.
-영역별 문서 인벤토리와 착수 컨텍스트를 네 Agora에 기록하라.`,
+repository의 문서를 하나도 빠짐없이 목록화하고, 독립적으로 검증 가능한 영역으로 나눠라.
+영역은 겹침 없이 나누어 떨어지고, agent 하나가 전수 검증할 수 있는 크기여야 한다.
+영역별 문서 inventory와 착수 context를 네 Agora에 기록하라.`,
   { label: 'census:draft', schema: REGIONS_SCHEMA },
 )
 const mapping = await synod(
   'cartographer',
   `# 임무: 전수조사 완전성 검수
-인벤토리를 실제 파일 시스템과 대조해 누락된 문서를 찾고, 영역 간 책임이 나누어 떨어지는지 검수하라.
+inventory를 실제 file system과 대조해 누락된 문서를 찾고, 영역 간 책임이 나누어 떨어지는지 검수하라.
 누락이 있거나 경계가 모호하면 수정해서 네 Agora에 반영하고, 최종 영역 목록을 반환하라.`,
   { label: 'census:review', schema: REGIONS_SCHEMA },
 )
@@ -175,7 +175,7 @@ async function verifyRegion(r) {
     const res = await synod(
       r.dir,
       `# 임무: 주장 검증 — 영역 '${r.dir}' (${r.scope})
-인벤토리의 모든 문서를 읽고, 문서의 모든 주장을 코드와 대조해 검증하라.
+inventory의 모든 문서를 읽고, 문서의 모든 주장을 코드와 대조해 검증하라.
 발견은 다음으로 분류한다: mismatch(코드와 다른 주장) / duplication(같은 정보의 다중 서술 — 다른 영역 문서와의 중복 포함) / dead-doc(대상이 사라진 문서) / restating-comment(코드를 재언하는 주석) / code-defect(문서가 의도를 담고 코드가 결함인 충돌 — 수정 말고 보고) / convention(convention 파일이 정한 규약 위반).
 발견마다 근거(문서 위치·코드 위치)를 함께 기록하라.
 네 Agora에 이미 발견이 기록되어 있다면 그 너머의 새 발견만 기록·반환하라. 새 발견이 없으면 빈 배열을 반환하라.`,
@@ -193,7 +193,7 @@ if (totalFindings === 0) return { status: 'no-findings', agoraPath }
 log(`${totalFindings} findings across ${regions.length} regions`)
 
 // 3. Deliberate — 비판·반박·합의 (barriers: 각 단계가 이전 단계 전체 산출물을 요구)
-// 영역이 하나면 독립 스켑틱이 비판을 맡아 교차검증을 보존한다
+// 영역이 하나면 독립 skeptic이 비판을 맡아 교차검증을 보존한다
 phase('Deliberate')
 const names = regions.map((r) => r.dir)
 const critics =
@@ -236,17 +236,17 @@ await parallel(
 await synod(
   'cartographer',
   `# 임무: 합의 도출 (회의 3/3)
-모든 발견·비평·반박(${agoraPath}/ 전체)을 종합해서 합의된 발견 리스트를
+모든 발견·비평·반박(${agoraPath}/ 전체)을 종합해서 합의된 발견 list를
 ${agoraPath}/cartographer/consensus.md 에 작성하라.
 모든 발견을 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 실재하고 정합 가치가 있는 발견만 남겨라.
-code-defect 발견은 별도 섹션으로 모으고 codeDefects로 반환하라.`,
+code-defect 발견은 별도 section으로 모으고 codeDefects로 반환하라.`,
   { label: 'consensus:draft', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
 )
 const consensus = await synod(
   'cartographer',
   `# 임무: 합의 완전성 검수
 ${agoraPath}/ 전체를 consensus.md 와 대조해 판정이 누락된 발견과 반영되지 않은 비평·반박을 찾아라.
-누락이 있으면 consensus.md 를 수정하고, 최종 리스트를 codeDefects와 함께 반환하라.`,
+누락이 있으면 consensus.md 를 수정하고, 최종 list를 codeDefects와 함께 반환하라.`,
   { label: 'consensus:review', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
 )
 if (!consensus?.count) return { status: 'no-consensus', codeFindings: consensus?.codeDefects ?? [], agoraPath }
@@ -261,7 +261,7 @@ const planned = await synod(
 ${PRINCIPLE}
 - 작업을 크게 묶어 계획 개수를 적게 유지하라.
 ## 계획 형식
-각 계획은 self-contained 마크다운으로 ${plansDir}/{순번}-{kebab-name}/proposal.md 에 작성한다.
+각 계획은 self-contained markdown으로 ${plansDir}/{순번}-{kebab-name}/proposal.md 에 작성한다.
 proposal.md는 다음을 포함한다: 대상 발견 / 변경 내용 / ROI 근거 / 예상 side-effect / 영향 범위.`,
   { label: 'plan', schema: PLANS_SCHEMA },
 )
@@ -279,7 +279,7 @@ log(`${plans.length} alignment plans`)
 // 5. Review — 계획별 · 렌즈별 독립 검수 (parallel)
 phase('Review')
 const LENSES = [
-  { key: 'claims', charge: '계획의 새 텍스트가 코드와 어긋나는 새 주장을 만들지 않는지 검증하라.' },
+  { key: 'claims', charge: '계획의 새 text가 코드와 어긋나는 새 주장을 만들지 않는지 검증하라.' },
   { key: 'reduction', charge: '계획이 irreducible한지 — 더 삭제·축약할 수 있는지 — 고찰하라.' },
   { key: 'side-effects', charge: '계획이 고려하지 못한 side-effect를 탐색하라.' },
 ]
@@ -291,7 +291,7 @@ await parallel(
         `# 임무: 정합 계획 검수 — '${p.name}' / ${l.key}
 합의된 발견(${agoraPath}/cartographer/consensus.md)과 대상 계획(${p.proposal})을 읽어라.
 ${l.charge}
-이슈나 개선점을 네 Agora에 기록하라.`,
+issue나 개선점을 네 Agora에 기록하라.`,
         { label: `review:${p.label}:${l.key}`, phase: 'Review' },
       ),
     ),
@@ -303,7 +303,7 @@ phase('Refine')
 const refined = await synod(
   'doc-manager',
   `# 임무: 정합 계획 개선 + 실행 순서 확정
-${agoraPath}/ 전체(계획들과 review-* 검수 기록)를 읽어 컨텍스트를 복원하라.
+${agoraPath}/ 전체(계획들과 review-* 검수 기록)를 읽어 context를 복원하라.
 검수 내용을 기반으로 각 계획을 개선하라.
 ${PRINCIPLE}
 개선이 끝나면 계획들의 실행 순서를 ${agoraPath}/doc-manager/execution-order.md 에 기록하고, 그 순서를 계획 name 배열로 반환하라.`,
@@ -323,9 +323,9 @@ for (const name of order) {
   const res = await synod(
     `apply-${name}`,
     `# 임무: 정합 수행 — '${name}'
-계획(${p.proposal})을 읽고 그대로 구현하라. **실행되지 않는 텍스트만 수정한다.**
+계획(${p.proposal})을 읽고 그대로 구현하라. **실행되지 않는 text만 수정한다.**
 선행 적용 기록(${agoraPath}/apply-*)이 있으면 현재 상태 파악에 참고하라.
-주석·docstring 수정으로 코드 파일을 건드렸다면 테스트 스위트로 behavior 불변을 확인하라.
+주석·docstring 수정으로 코드 파일을 건드렸다면 test suite로 behavior 불변을 확인하라.
 변경 요약과 확인 결과를 네 Agora에 기록하고 반환하라.`,
     { label: `apply:${p.label}`, phase: 'Apply', schema: APPLY_SCHEMA },
   )
@@ -338,7 +338,7 @@ const finalReview = await synod(
   `# 임무: 최종 검수
 적용된 모든 계획(${agoraPath}/apply-* 기록)과 실제 변경된 문서를 종합 검수하라.
 변경된 모든 문서를 코드와 재대조해 남은 불일치가 없는지, 실행되는 behavior가 불변인지 확인하라.
-consensus.md의 code-defect 섹션을 codeFindings 로 수집해 함께 반환하라.`,
+consensus.md의 code-defect section을 codeFindings 로 수집해 함께 반환하라.`,
   { label: 'final-review', phase: 'Apply', schema: FINAL_SCHEMA },
 )
 
