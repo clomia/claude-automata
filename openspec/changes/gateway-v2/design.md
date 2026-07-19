@@ -20,14 +20,16 @@ caveman.so는 거대 활자 단일 주장 + 즉시 증명 그래픽 하나 + 단
   정본 전문 이식은 여전히 금지(복제는 표류) — 요약의 밀도만 올린다.
 - **README hook 명명**: "Watch the memory circuit run →" — 명칭(Landing page)이 아니라
   내용의 초대. banner 직하단과 문서 말미 두 곳.
-- **README 절반화**: 사용 절차·제어(off/on/docent)·refine skill 상세는 `<details>`로.
+- **README 절반화**: 제어(off/on/docent)는 `<details>`로 접고, 사용 절차·refine은
+  요약으로 압축해 연 채 둔다(출하본 기준 — 접기는 SHOULD).
   ARCHITECTURE·MEMORY 참조 전면 제거 — 깊이는 사이트가, 사이트가 다시 필요 시 정본을
   가리킨다(위임 사슬).
 - **banner**: og-card 선례 그대로 — committed source에서 생성(1280×400), 어두운 GitHub
   README 배경 위에서도 성립하도록 paper 색 card에 회로 축약. og-coupling job을 쌍 목록
   순회로 일반화.
-- **한 층 더 큰 활자 허용**: H1 clamp 상한 3.4rem→5rem(두 줄 lockup). caveman 스케일은
-  register가 다르므로 그대로 복제하지 않는다.
+- **한 층 더 큰 활자 허용**: H1 clamp 상한 3.4rem→4.2rem — 구현 중 5rem·4.6rem을
+  실측으로 기각(두 번째 문장의 wrap이 어색). 1440에서 3줄 poster lockup으로 안착했고
+  회로 전체가 fold 안에 남는다. caveman 스케일은 register가 다르므로 복제하지 않는다.
 
 ## Risks / Trade-offs
 

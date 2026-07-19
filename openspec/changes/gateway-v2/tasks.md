@@ -1,6 +1,6 @@
 ## 1. Site v2
 
-- [x] 1.1 hero 재구성 — eyebrow=정체, H1=주장(5rem lockup), 회로는 그래픽 우선 유지
+- [x] 1.1 hero 재구성 — eyebrow=정체, H1=주장(4.2rem lockup), 회로는 그래픽 우선 유지
 - [x] 1.2 advisor exchange panel 신설 — terminal 풍, illustrative label, 기제 사실만
 - [x] 1.3 절 산문 자체 완결 보강 + KO 정본 link를 SOURCE 행으로 강등
 - [x] 1.4 title·meta·og description을 새 주장과 정합
