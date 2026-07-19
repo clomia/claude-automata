@@ -56,6 +56,10 @@ The **anchor** is the file the loop is anchored to. It comes in two kinds.
    `off` halts the loop quietly and preserves its state; `on` resumes the loop from that state.
    `on` is also a universal wake button for a long-running loop stalled by a mishap — an accidental ESC, an API error, a subscription session limit: it always resumes cleanly, except when the advisor ended the loop itself.
    Nothing else — mid-run instructions, answered questions, background-task notifications, ESC itself — stops the loop.
+4. To check on progress, run `/ploop:docent` in a **separate session in the same directory**.
+   The docent is a read-only session that answers your questions from the loop's records (anchor, round log, advice history, worker records) — it never touches the loop.
+   Questions thrown at the loop session pollute its orchestration context, so ask the docent instead (on mobile, attach remote-control to the docent session).
+   Interventions — instructions, stopping — go the other way: straight to the loop session, not the docent.
 
 # Refine
 

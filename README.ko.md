@@ -56,6 +56,10 @@ ploop은 며칠씩 걸리는 장기 작업을 위해 설계된 advisor loop입�
    `off`는 조용히 loop를 멈추고 상태를 보존하며, `on`은 그 상태에서 loop를 재개합니다.
    `on`은 실수로 누른 ESC·API error·구독 session limit 등으로 멈춘 장기 loop까지 깨우는 범용 wake button입니다 — advisor가 스스로 loop를 종료한 경우만 빼고 언제나 정상 재개합니다.
    그 밖의 어떤 것도 — 중간 지시, 질문 응답, background 작업 알림, ESC 자체 — loop를 멈추지 않습니다.
+4. 진행 상황이 궁금하면 **같은 directory의 별도 session**에서 `/ploop:docent`를 실행하세요.
+   docent는 loop의 기록(anchor·round log·advice history·worker 기록)을 읽어 질문에 답하는 read-only session입니다 — loop에는 어떤 영향도 주지 않습니다.
+   질의를 loop session에 던지면 지휘 context가 오염되므로, 질문은 docent에게 하세요 (mobile에서는 docent session에 remote-control로 접속).
+   지시·중단 같은 개입은 반대로 docent가 아니라 loop session에 직접 하세요.
 
 # Refine
 
