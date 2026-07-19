@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Site 내용 계약
-사이트는 English 단일 page여야 하며(SHALL) 다음을 실어야 한다(SHALL): 기억 system 시각화
+사이트의 default page(`/`)는 English 단일 서사여야 하며(SHALL) 다음을 실어야 한다(SHALL): 기억 system 시각화
 (작업기억 → 응고 gate → 장기기억 → 재접지 주기), advisor의 정지-차단·재소집 기제를 보여주는
 show-don't-tell 표현, plugin 4종(ploop·refine·tx·version-up-alert) 각각의 소개, `uvx
 claude-automata init` 단일 설치 경로와 init이 실제로 쓰는 settings의 공개
@@ -48,7 +48,7 @@ image(og.png·banner.png)는 각자의 committed source(og-card.html·banner-car
 - **WHEN** `settings.py`의 전제조건 값이 바뀌고 방문자 표면(site·README 쌍)이 그대로인 PR이 열리면
 - **THEN** CI가 실패해 관문이 거짓 공개를 게시하기 전에 차단한다
 
-#### Scenario: 생성 image 결속
+#### Scenario: share image 결속
 - **WHEN** og-card.html 또는 banner-card.html을 수정하고 대응 PNG를 재생성하지 않은 PR이 열리면
 - **THEN** CI가 실패한다
 
