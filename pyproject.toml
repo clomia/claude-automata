@@ -2,8 +2,25 @@
 name = "claude-automata"
 version = "0.1.0"
 description = "One-command setup for the claude-automata ecosystem — Claude Code settings, marketplace, plugins, external CLIs"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "clomia", email = "clomia.sig@gmail.com" }]
+keywords = ["claude", "claude-code", "setup", "plugins", "marketplace"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3.14",
+]
 requires-python = ">=3.14"
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/clomia/claude-automata"
+Repository = "https://github.com/clomia/claude-automata"
 
 [project.scripts]
 claude-automata = "claude_automata.cli:main"
