@@ -28,7 +28,7 @@ One command converges everything — the settings prerequisites, marketplace reg
 
 **What init actually writes** — this environment assumes unattended operation, and init merge-writes the following into `.claude/settings.json` (unrelated keys are preserved). Review the diff before you commit it:
 
-- `permissions.defaultMode: "bypassPermissions"` — no approval prompts. The agent edits files and runs commands without asking first — adopt this in a repository where you accept that mode.
+- `permissions.defaultMode: "bypassPermissions"` — no approval prompts. The agent runs shell commands on your machine without asking first — the trust is host-level, not repo-level; adopt this on a machine where you accept that mode.
 - `model: "opus[1m]"` — pinned model, 1M context
 - `alwaysThinkingEnabled: true` · `autoCompactEnabled: true` · `autoMemoryEnabled: false`
 - registers the claude-automata marketplace and enables all four plugins
