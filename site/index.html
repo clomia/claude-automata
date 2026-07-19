@@ -73,6 +73,16 @@
           <div class="st-name">WORKING MEMORY</div>
           <div class="st-plugin plugin-copper">ploop — advisor loop</div>
           <div class="st-props">untracked · lossy · dies with the loop</div>
+          <!-- discard drain: unpromoted work discharges to ground -->
+          <div class="drain" aria-hidden="true">
+            <div class="drain-stub"><i class="pulse p-drain"></i></div>
+            <svg class="ground" viewBox="0 0 28 14">
+              <line x1="2"  y1="2"  x2="26" y2="2"/>
+              <line x1="7"  y1="7"  x2="21" y2="7"/>
+              <line x1="11" y1="12" x2="17" y2="12"/>
+            </svg>
+            <span class="drain-label">discard</span>
+          </div>
         </div>
 
         <!-- connector 1 -->
@@ -98,10 +108,11 @@
           <div class="st-props">verify · CI · squash merge</div>
         </div>
 
-        <!-- connector 2 -->
+        <!-- connector 2 (mobile adds a return riser alongside: down = promote, up = re-ground) -->
         <div class="conn c2" aria-hidden="true">
           <i class="pulse p-settle"></i>
           <i class="arrowhead right verd"></i>
+          <span class="refine-riser"><i class="pulse p-refine-m"></i><i class="arrowhead up verd riser-head"></i></span>
         </div>
 
         <!-- station 3: long-term memory -->
@@ -122,17 +133,6 @@
           <div class="st-plugin plugin-verd">git‑tracked text</div>
           <div class="st-props">specs · canons · rules · skills</div>
         </div>
-      </div>
-
-      <!-- discard drain: unpromoted work discharges to ground -->
-      <div class="drain" aria-hidden="true">
-        <div class="drain-stub"><i class="pulse p-drain"></i></div>
-        <svg class="ground" viewBox="0 0 28 14">
-          <line x1="2"  y1="2"  x2="26" y2="2"/>
-          <line x1="7"  y1="7"  x2="21" y2="7"/>
-          <line x1="11" y1="12" x2="17" y2="12"/>
-        </svg>
-        <span class="drain-label">discard</span>
       </div>
 
       <!-- refine return path: ltm -> gate, through the same gate -->
