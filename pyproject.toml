@@ -1,6 +1,6 @@
 [project]
 name = "claude-automata"
-version = "0.1.0"
+version = "0.1.1"
 description = "One-command setup for the claude-automata ecosystem — Claude Code settings, marketplace, plugins, external CLIs"
 readme = "README.md"
 license = "MIT"
