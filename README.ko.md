@@ -11,6 +11,11 @@
 
 <p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ 기억 회로가 도는 것을 보세요</strong></a></p>
 
+<p align="center">
+  <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=b25c28" alt="PyPI"></a>
+  <a href="https://github.com/clomia/claude-automata/blob/main/LICENSE"><img src="https://img.shields.io/github/license/clomia/claude-automata?style=flat&color=3e6f5e" alt="MIT"></a>
+</p>
+
 [English](https://github.com/clomia/claude-automata/blob/main/README.md) | 한국어
 
 ---
@@ -22,7 +27,7 @@ Claude Code는 끝났다고 믿는 순간 turn을 끝내고, 다음 compaction�
 | **ploop** | 작업기억 — 며칠짜리 작업의 loop; 모든 정지를 독립 advisor가 감사하며, 더 표면화할 것이 없을 때까지 계속됩니다 |
 | **tx** | 응고 — 기억으로 들어가는 유일한 gate: plan, 독립 verify, CI, squash merge |
 | **refine** | 재접지 — 오래된 기억을 코드와 재대조하는 수 시간짜리 workflow |
-| **version-up-alert** | update 알림 — 뒤처진 plugin이 있으면 session 시작 시 한 줄; 다른 plugin과 함께 설치됩니다 |
+| **version-up-alert** | update 알림 — 뒤처진 plugin이 있으면 session 시작 시 한 줄; 알림만 하고 실행 중인 plugin을 갈아끼우지 않으며, 다른 plugin과 함께 설치됩니다 |
 
 장기기억은 database가 아닙니다. repository의 git 추적 text 그 자체입니다 — 회상은 grep입니다. gate를 통과하지 못한 것은 loop와 함께 죽습니다, 의도적으로.
 
@@ -47,11 +52,22 @@ uvx claude-automata init
 ## Loop 돌리기
 
 ```
-/ploop:define-mission          # 한 session에서 anchor 작성
+/ploop:define-mission          # anchor 작성 — interview로 뽑아낸 당신의 의도
 /ploop:launch [anchor 내용]    # 새 session에서 loop에 전달
 ```
 
-loop는 Stop hook을 탑니다: agent가 멈출 때마다 clean context의 독립 advisor가 round를 검사하고 놓친 것을 표면화합니다. loop는 agent가 끝났다고 느낄 때가 아니라 **advisor가 더 말할 것이 없을 때** 끝납니다. anchor는 모든 auto-compaction에서 살아남습니다. 구독 요금제에 안전합니다 — 안전은 session 기제이지 비용이 아닙니다: loop는 요금제 quota를 공유하며, 며칠짜리 실행은 그만큼 사용량을 씁니다.
+loop는 Stop hook을 탑니다: agent가 멈출 때마다 clean context의 독립 advisor가 round를 검사하고 놓친 것을 표면화합니다. loop는 agent가 끝났다고 느낄 때가 아니라 **advisor가 더 말할 것이 없을 때** 끝납니다.
+
+```
+agent   › Mission accomplished. Stopping.
+hook    › Stop blocked — summoning the advisor.
+advisor › Not yet. The mobile layout was never measured. Two claims cite no source.
+agent   › …resuming.
+        ⟲ six rounds later
+advisor › I have no further advice. Ending the turn.
+```
+
+*연출된 교환입니다 — 기제는 실제입니다.* anchor는 모든 auto-compaction에서 살아남습니다. 구독 요금제에 안전합니다 — 안전은 session 기제이지 비용이 아닙니다: loop는 요금제 quota를 공유하며, 며칠짜리 실행은 그만큼 사용량을 씁니다.
 
 <details>
 <summary><strong>일시정지 · 재개 · 관찰</strong></summary>
@@ -81,10 +97,6 @@ transaction은 무결성 경계입니다 — 구현과 기록된 의도가 모�
 ```
 
 쌓인 부채를 없애는 heavyweight multi-agent workflow(한 번에 수 시간, 3–12h): 코드 architecture, 문서의 참, 무결성 경계. 발견은 교차검증 회의로 합의되고 최고 ROI 계획만 실행됩니다. docs pass는 코드를 수정하지 않습니다 — 결함은 보고됩니다. 영역을 비우면 codebase 전체가 대상, 진행은 `/workflows`에서.
-
-## version-up-alert
-
-설치된 claude-automata plugin에 새 version이 배포되면 session 시작 시 한 줄로 알립니다. 알림만 합니다 — 실행 중인 session 밑에서 plugin을 갈아끼우지 않습니다. 모든 plugin이 의존성으로 함께 설치하므로 따로 설치할 것이 없습니다.
 
 ---
 

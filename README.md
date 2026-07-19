@@ -11,6 +11,11 @@
 
 <p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ Watch the memory circuit run</strong></a></p>
 
+<p align="center">
+  <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=b25c28" alt="PyPI"></a>
+  <a href="https://github.com/clomia/claude-automata/blob/main/LICENSE"><img src="https://img.shields.io/github/license/clomia/claude-automata?style=flat&color=3e6f5e" alt="MIT"></a>
+</p>
+
 English | [한국어](https://github.com/clomia/claude-automata/blob/main/README.ko.md)
 
 ---
@@ -22,7 +27,7 @@ Claude Code ends its turn the moment it believes it's finished, and forgets ever
 | **ploop** | working memory — a loop for work spanning days; every stop is audited by an independent advisor until nothing is left to surface |
 | **tx** | consolidation — the only gate into memory: plan, independent verify, CI, squash merge |
 | **refine** | re-grounding — hours-long workflows that re-verify old memory against the code |
-| **version-up-alert** | update notice — one line at session start when a plugin is behind; ships with the others |
+| **version-up-alert** | update notice — one line at session start when a plugin is behind; alert-only, never swaps a running plugin; ships with the others |
 
 Long-term memory isn't a database. It's the repository's own git-tracked text — recall is grep. Whatever never passes the gate dies with the loop, on purpose.
 
@@ -47,11 +52,22 @@ Re-running is safe (idempotent). `uvx claude-automata@latest init` forces the ne
 ## Run a loop
 
 ```
-/ploop:define-mission          # write the anchor in one session
+/ploop:define-mission          # write the anchor — your intent, interviewed out of you
 /ploop:launch [anchor text]    # hand it to the loop in a fresh session
 ```
 
-The loop rides the Stop hook: whenever the agent stops, an independent advisor with a clean context inspects the round and surfaces what was missed. It ends only when the advisor has nothing left to say — not when the agent feels finished. The anchor survives every auto-compaction. Safe on subscription plans — safe in mechanism, not in price: the loop shares your plan's quota, and multi-day runs spend it accordingly.
+The loop rides the Stop hook: whenever the agent stops, an independent advisor with a clean context inspects the round and surfaces what was missed. It ends only when the advisor has nothing left to say — not when the agent feels finished.
+
+```
+agent   › Mission accomplished. Stopping.
+hook    › Stop blocked — summoning the advisor.
+advisor › Not yet. The mobile layout was never measured. Two claims cite no source.
+agent   › …resuming.
+        ⟲ six rounds later
+advisor › I have no further advice. Ending the turn.
+```
+
+*An illustrative exchange — the mechanics are real.* The anchor survives every auto-compaction. Safe on subscription plans — safe in mechanism, not in price: the loop shares your plan's quota, and multi-day runs spend it accordingly.
 
 <details>
 <summary><strong>Pause, resume, observe</strong></summary>
@@ -81,10 +97,6 @@ A transaction is an integrity boundary — it can only close once the implementa
 ```
 
 Heavyweight multi-agent workflows (hours per run, 3–12h) that eliminate accumulated debt: code architecture, documentation truth, integrity boundaries. Findings settle through cross-examination into consensus; only the highest-ROI plans execute. The docs pass never modifies code — defects are reported. Empty focus targets the whole codebase; watch with `/workflows`.
-
-## version-up-alert
-
-When a newer release of any installed claude-automata plugin ships, one line appears at session start. Alert-only — it never swaps plugins under a running session. Every plugin installs it as a dependency; there is nothing to install.
 
 ---
 

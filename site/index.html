@@ -304,10 +304,10 @@
       </div>
       <p>
         A Git workflow that treats change as a transaction — an integrity boundary, not
-        a unit of work. <code>/tx:open</code> cuts a branch off the base; plan, apply and
-        an independent verify stage drive the change; <code>/tx:close</code> squash‑merges
-        it back only when verification, a docs gate and CI all pass. Guard hooks keep the
-        base branch protected in between.
+        a unit of work. <code>/tx:open</code> cuts a branch off the base;
+        <code>tx:plan → tx:apply → tx:verify</code> drive the change with an independent
+        verify stage; <code>/tx:close</code> squash‑merges it back only when verification,
+        a docs gate and CI all pass. Guard hooks keep the base branch protected in between.
       </p>
       <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/tx/README.md">SOURCE — plugins/tx/README.md</a>
     </article>
@@ -322,7 +322,9 @@
         debt: code architecture, documentation truth, and integrity boundaries. Regions
         are analyzed in parallel, findings settle through cross‑examination into
         consensus, and only the highest‑ROI plans are executed. In the docs pass, code
-        is never modified — code defects are reported, not fixed.
+        is never modified — code defects are reported, not fixed. Invoke with
+        <code>/refine:code</code> · <code>/refine:docs</code> · <code>/refine:integrity</code>,
+        an optional focus area as the argument.
       </p>
       <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/refine">SOURCE — plugins/refine <span class="lang-tag">KOREAN</span></a>
     </article>
@@ -390,10 +392,10 @@
 
 <span class="c-muted"># in a fresh session — hand the anchor text to the loop</span>
 /ploop:launch [anchor text]</code></pre>
-    <p class="disclosure-note">
-      Usage details live in the
-      <a href="https://github.com/clomia/claude-automata#readme">README</a>.
-    </p>
+    <pre class="code-block"><code><span class="c-muted"># operate the loop</span>
+/ploop:off      <span class="c-muted"># pause — the loop stops at its next stop</span>
+/ploop:on       <span class="c-muted"># resume — also wakes a loop stalled by ESC, API errors, session limits</span>
+/ploop:docent   <span class="c-muted"># ask questions in a separate session — read-only, never touches the loop</span></code></pre>
   </div>
 </section>
 

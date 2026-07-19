@@ -54,9 +54,10 @@ image(og.png·banner.png)는 각자의 committed source(og-card.html·banner-car
 tagline + plugin 인벤토리 + 설치(init 단일 경로, 실동작 공개) + 사이트로의 초대 hook으로
 열어야 한다(SHALL). 사이트 hook은 "Landing page" 같은 일반 명칭이 아니라 내용을 예고하는
 초대 문구여야 한다(MUST). README는 내부 개발 정본(ARCHITECTURE.md·MEMORY.md)을 참조해서는
-안 된다(MUST NOT) — 방문자의 이해 경로는 README와 사이트로 완결된다. plugin 섹션 heading은
-문서 title(h1) 아래 h2여야 하고(MUST), plugin별 개별 Install·Update 안내를 포함해서는 안
-되며(MUST NOT), 상세 사용법은 접힘(`<details>`)으로 점진 공개한다(SHOULD).
+안 된다(MUST NOT) — 방문자의 이해 경로는 README와 사이트로 완결된다. 섹션 heading은 h2
+이하여야 하고(MUST — 문서 최상위 자리는 banner·tagline이 대신하며 h1을 두지 않는다),
+plugin별 개별 Install·Update 안내를 포함해서는 안 되며(MUST NOT), 상세 사용법은
+접힘(`<details>`)으로 점진 공개한다(SHOULD).
 
 #### Scenario: 관문 구조
 - **WHEN** 방문자가 README 상단만 읽으면
