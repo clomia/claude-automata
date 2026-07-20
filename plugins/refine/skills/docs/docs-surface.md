@@ -29,17 +29,17 @@ proposal로. 쓰기 전 기존 home을 grep해 있으면 그 자리에서 갱신
 의무다**(구현 상태 범례). 신생 repo의 정본은 첫 구조적 결정과 함께 생성한다 — 빈 scaffold는
 부채다. 생성 시 CLAUDE.md에 정본 pointer 1행(진입점)을 함께 둔다.
 
-## 용어
+## Glossary
 
-소유 정본의 `## 용어` section, 용어당 home 하나(단위 용어는 단위 정본, 횡단 용어는 root 정본).
+소유 정본의 `## Glossary` section, 용어당 home 하나(단위 용어는 단위 정본, 횡단 용어는 root 정본).
 형식: `**term** — 1~2문장 정의 + referent`. 입장(모두 충족): 이름만으로 오독된다 / 산문이
 아직 정의를 운반하지 않는다 / referent가 이미 일한다. 퇴거(하나면): referent home 소멸 /
 산문이 정의를 흡수.
 
 ## 조사 기록 (dated — 의미 동결·축적)
 
-`docs/research/<topic>-<yyyy>.md`, 동년 재측정은 `-<yyyy>-<mm>`. header 의무: 작성일·질문·방법
-+ 신뢰도 4등급(✅ 검증됨 · 🔶 판단 · ❓ 미검증 · ❌ 반박됨). **자기완결 의무**: gitignored·
+`docs/research/<topic>-<yyyy>.md`, 동년 재측정은 `-<yyyy>-<mm>`. header 의무: `Date:`·`Question:`·`Method:`
++ 신뢰도 4등급(✅ verified · 🔶 judgment · ❓ unverified · ❌ refuted). **자기완결 의무**: gitignored·
 미추적 경로를 provenance로 지시하지 않는다 — 산출 session이 죽으면 사슬이 끊긴다. 본문 의미는 동결
 — 산출 mission의 재승격만 제자리 개정 가능, 그 외 같은 질문의 새 측정은 새 문서, 구 문서에는
 banner `[ARCHIVE YYYY-MM]` + 정본/계승 pointer.

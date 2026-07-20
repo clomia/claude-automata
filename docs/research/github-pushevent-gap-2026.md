@@ -1,9 +1,9 @@
 # GitHub squash-merge push의 PushEvent 결락 — post-merge workflow 침묵
 
-- 작성일: 2026-07-20
-- 질문: base로의 squash merge push가 push-trigger workflow들을 발화시키지 않을 수 있는가?
+- Date: 2026-07-20
+- Question: base로의 squash merge push가 push-trigger workflow들을 발화시키지 않을 수 있는가?
   그 경우 post-merge 배포(pages·publish)는 어떻게 복구하는가?
-- 방법: landing-page mission 중 연속 3회의 PR squash merge에서 `gh api`로
+- Method: landing-page mission 중 연속 3회의 PR squash merge에서 `gh api`로
   workflow run·PushEvent를 실측 (2026-07-19).
 
 ## 발견
@@ -18,7 +18,7 @@
   완결했고 산출(사이트 배포·PyPI 발행) 정상.
 - ✅ **비재현 관측 2회**: 직전 merge(`ef1e35f`, PR #38)와 직후 merge(`b91e7e4`, PR #40)는
   push-trigger가 정상 발화했다. n=3 중 1회.
-- 🔶 판단: GitHub 측 transient event drop으로 보인다. tx close 후의 배포는 push-trigger가
+- 🔶 Judgment: GitHub 측 transient event drop으로 보인다. tx close 후의 배포는 push-trigger가
   돌았다고 가정하지 말고 `gh api .../actions/runs?head_sha=<merge-sha>`로 실측하라 —
   0건이면 dispatch가 복구 경로다. (dispatch는 workflow 파일이 default branch에 있어야
   가능하다는 제약도 같은 mission에서 실측 — 첫 배포는 merge 전 dispatch가 불가했다.)
