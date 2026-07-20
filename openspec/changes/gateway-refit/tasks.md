@@ -43,3 +43,9 @@
 - verify 1차가 en §05 표의 "enables all four plugins" 잔존을 검출(치환 원문 오추정
   no-op 3번째 — 4.3 grep이 계수 어휘 미포함이 원인). 정정 후 계수 어휘(all four·
   the four·4종·네 개)까지 포함한 재grep으로 6표면 0건 확인.
+- verify 2차가 D1을 검출: plugin manifest 4개의 "license": "MIT" 자기선언이 MIT grant
+  본문 없는 tree와 모순. 4종 전부 Apache-2.0으로 이관하고 repo 규칙에 따라 patch
+  bump(ploop 0.47.1·tx 0.12.8·refine 0.9.6·version-up-alert 0.2.1, plugin.json↔pyproject
+  쌍 일관). 비차단 관찰 반영: delta의 "진입점 하나" 문구를 "repo root 한 곳으로 수렴"으로
+  정정(anchor 3개·destination 1개), 4.3 기록의 "무관 잔재 0"은 unaffiliated 의미에
+  한정한다(ko의 "무관한 key"는 merge-write 설명으로 별개).

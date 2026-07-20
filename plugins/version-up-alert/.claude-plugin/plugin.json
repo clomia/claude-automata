@@ -1,6 +1,6 @@
 {
   "name": "version-up-alert",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Marketplace-wide update alert — one SessionStart notice naming every claude-automata plugin with a newer release, applied interactively in /plugin. Installed automatically as a dependency of each plugin",
   "author": {
     "name": "clomia",
@@ -9,7 +9,7 @@
   },
   "homepage": "https://github.com/clomia/claude-automata",
   "repository": "https://github.com/clomia/claude-automata",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": [
     "update",
     "version",

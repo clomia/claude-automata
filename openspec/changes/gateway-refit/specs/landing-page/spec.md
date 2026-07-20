@@ -22,8 +22,8 @@ scenario 집합이 함께 재편되므로 요구를 재작성한다.
 기여가 이 환경을 돌리는 Claude Code agent에 의해 작성된다는 자기개발(재귀적 자기개선)
 표기. version-up-alert는 기억 이론 밖의 add-on이므로 방문자 표면에서 다루지 않는다(MUST
 NOT). **사이트의 이해는 자체 완결이어야 한다(MUST)** — page를 떠나지 않고 스크롤만으로
-정체·기제·가치·시작법이 전달되며, module 소개는 정본 link를 두지 않는다(MUST NOT — repo
-진입점은 titleblock의 GitHub link 하나다). 기억 시각화는 hero의 서술 산문에 선행해야
+정체·기제·가치·시작법이 전달되며, module 소개는 정본 link를 두지 않는다(MUST NOT — page의 repo
+link들은 전부 repo root 한 곳으로만 수렴한다). 기억 시각화는 hero의 서술 산문에 선행해야
 한다(MUST). 한국어 변형이 `/ko/` 경로에 존재해야 하며(SHALL — default는 English, 언어
 toggle 상호 연결, 한국어 기반 + native 영어 어휘), init 공개·link 결속 검증의 표면에
 포함되어야 한다(MUST). 공유 link unfurl을 위한 Open Graph·Twitter Card metadata와 share

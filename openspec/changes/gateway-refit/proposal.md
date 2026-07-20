@@ -42,6 +42,7 @@ unaffiliated 고지를 제거하며, "claude-automata는 claude-automata로 개�
 ## Impact
 
 - `LICENSE`(교체)·`NOTICE`(신규)·`pyproject.toml`(license·0.1.6)
+- `plugins/*/.claude-plugin/plugin.json`·`plugins/*/pyproject.toml` — license field 이관 + patch bump 4종
 - `README.md`·`README.ko.md`, `site/index.html`·`site/ko/index.html`·`site/style.css`
 - `site/assets/og-card.html`·`og.png`·`banner-card.html`·`banner.png` (쌍 재생성)
 - `openspec/specs/landing-page/spec.md` (archive 시 sync)
