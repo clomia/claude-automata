@@ -59,7 +59,7 @@ section[id] { scroll-margin-top: 1.5rem; }
   align-items: baseline; justify-content: space-between;
   max-width: var(--wrap); margin: 0 auto;
   padding: 1.1rem clamp(1.25rem, 4vw, 2.5rem) 0.9rem;
-  border-bottom: 3px double var(--hairline-strong);
+  border-bottom: 1px solid var(--hairline-strong);
 }
 .tb-name { font-family: var(--display); font-weight: 700; letter-spacing: 0.08em; font-size: 1rem; }
 .tb-fields { display: flex; flex-wrap: wrap; gap: 0.35rem 1.6rem; }
@@ -176,10 +176,10 @@ section[id] { scroll-margin-top: 1.5rem; }
 .c2 { grid-column: 4; }
 .arrowhead { position: absolute; width: 7px; height: 7px;
   border-top: 1.5px solid var(--hairline-strong); border-right: 1.5px solid var(--hairline-strong); }
-.arrowhead.right { right: 1px; top: -4px; transform: rotate(45deg); }
+.arrowhead.right { right: 1px; top: -4.25px; transform: rotate(45deg); }
 .arrowhead.up { transform: rotate(-45deg); }
 .arrowhead.verd { border-color: var(--verdigris); }
-.pulse { position: absolute; top: -3.25px; left: 0; width: 6.5px; height: 6.5px;
+.pulse { position: absolute; top: -4px; left: 0; width: 6.5px; height: 6.5px;
   border-radius: 50%; background: var(--copper); opacity: 0; }
 .p-pass   { animation: pulse-pass var(--cycle) linear infinite; }
 .p-settle { background: var(--verdigris); animation: pulse-settle var(--cycle) linear infinite; }
@@ -196,7 +196,7 @@ section[id] { scroll-margin-top: 1.5rem; }
 .ground line { stroke: var(--copper); stroke-width: 2; stroke-linecap: round; opacity: 0.75; }
 .drain-label { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.08em;
   color: var(--muted); }
-.p-drain { background: var(--copper); left: -3.25px; top: 0;
+.p-drain { background: var(--copper); left: -4px; top: 0;
   animation: pulse-drain var(--cycle) linear infinite; }
 
 /* refine return path: LTM -> down -> across -> up -> gate */
@@ -263,12 +263,12 @@ section[id] { scroll-margin-top: 1.5rem; }
   90%, 100% { opacity: 0; top: calc(100% - 4px); transform: scale(0.2); }
 }
 @keyframes pulse-refine {   /* travels the U: down the right edge, across, up the left edge */
-  0%, 8% { opacity: 0; top: -3px; left: calc(100% - 3.25px); }
-  10%    { opacity: 1; top: -3px; left: calc(100% - 3.25px); }
-  16%    { top: calc(100% - 3.25px); left: calc(100% - 3.25px); }
-  34%    { top: calc(100% - 3.25px); left: -3.25px; }
-  42%    { opacity: 1; top: -3px; left: -3.25px; }
-  46%, 100% { opacity: 0; top: -3px; left: -3.25px; }
+  0%, 8% { opacity: 0; top: -3px; left: calc(100% - 2.5px); }
+  10%    { opacity: 1; top: -3px; left: calc(100% - 2.5px); }
+  16%    { top: calc(100% - 2.5px); left: calc(100% - 2.5px); }
+  34%    { top: calc(100% - 2.5px); left: -4px; }
+  42%    { opacity: 1; top: -3px; left: -4px; }
+  46%, 100% { opacity: 0; top: -3px; left: -4px; }
 }
 
 /* ---------------------------------------------------------------- sections */
@@ -303,6 +303,8 @@ section[id] { scroll-margin-top: 1.5rem; }
 .xc-gap { text-align: center; color: var(--muted); font-size: 0.75rem;
   letter-spacing: 0.08em; padding: 0.7rem 0; }
 .xc-note { max-width: 72ch; font-size: 0.88rem; color: var(--muted); margin-top: 1rem; }
+.sec-punch { font-family: var(--display); font-weight: 700; font-size: 1.2rem;
+  letter-spacing: 0.01em; margin-top: 1.6rem; max-width: 72ch; }
 
 /* 02 premise */
 .claims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
@@ -350,7 +352,7 @@ section[id] { scroll-margin-top: 1.5rem; }
 /* ---------------------------------------------------------------- footer */
 .colophon { max-width: var(--wrap); margin: 0 auto;
   padding: 2.6rem clamp(1.25rem, 4vw, 2.5rem) 3.2rem;
-  border-top: 3px double var(--hairline-strong); }
+  border-top: 1px solid var(--hairline-strong); }
 .colophon-lead { max-width: 72ch; font-size: 0.92rem; }
 .colophon-meta { margin-top: 1rem; font-family: var(--mono); font-size: 0.72rem;
   color: var(--muted); letter-spacing: 0.02em; }
@@ -380,7 +382,7 @@ section[id] { scroll-margin-top: 1.5rem; }
   .conn { align-self: center; height: 58px; width: 0;
     border-top: none; border-left: 1.5px solid var(--hairline-strong); }
   .arrowhead.right { right: auto; left: -4.25px; top: auto; bottom: 1px; transform: rotate(135deg); }
-  .pulse { left: -3.25px; top: 0; }
+  .pulse { left: -4px; top: 0; }
   .p-pass   { animation-name: pulse-pass-y; }
   .p-settle { animation-name: pulse-settle-y; }
   .drain { left: 22%; gap: 1px; }   /* beside the descending main flow: center = promotion, side = discharge */
@@ -394,7 +396,7 @@ section[id] { scroll-margin-top: 1.5rem; }
     transform: translateY(-50%); font-family: var(--mono); font-size: 0.72rem;
     color: var(--verdigris); }
   .refine-riser .riser-head { left: -4.25px; top: -1px; }
-  .p-refine-m { background: var(--verdigris); left: -3.25px; top: 0;
+  .p-refine-m { background: var(--verdigris); left: -4px; top: 0;
     animation: pulse-refine-m var(--cycle) linear infinite; }
   .refine-path { margin: 0.4rem 0 0; height: auto; position: static; }
   .refine-line { position: static; height: auto; border: none; text-align: center; }
