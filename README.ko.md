@@ -2,7 +2,7 @@
   <a href="https://claude-automata.clomia.com/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata: 24/7 full self-driving for Claude Code" width="840"></a>
 </p>
 
-<p align="center"><strong>agent는 끝났다고 <em>생각하는</em> 순간 멈춥니다. claude-automata는 정말로 끝났을 때 멈춥니다.</strong></p>
+<p align="center"><strong>agent는 끝났다고 생각하는 순간 멈춥니다. claude-automata는 정말로 끝났을 때 멈춥니다.</strong></p>
 
 <p align="center">
   인간 기억 구조를 본뜬 Claude Code 자율 agent 환경.<br>
