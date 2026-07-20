@@ -252,16 +252,19 @@ section[id] { scroll-margin-top: 1.5rem; }
    only; geometry never moves. */
 @keyframes orbit { to { transform: rotate(360deg); } }
 @keyframes pulse-event {
-  0%      { opacity: 0; top: 0; }
-  2%      { opacity: 1; top: 0; }
-  6%      { opacity: 1; top: calc(100% - 5.5px); }
-  7%, 30% { opacity: 0; top: 0; }
-  32%     { opacity: 1; top: 0; }
-  36%     { opacity: 1; top: calc(100% - 5.5px); }
-  37%, 72% { opacity: 0; top: 0; }
-  74%     { opacity: 1; top: 0; }
-  78%     { opacity: 1; top: calc(100% - 5.5px); }
-  79%, 100% { opacity: 0; top: 0; }
+  0%, 1%    { opacity: 0; top: 0; }
+  2%        { opacity: 1; top: 0; }
+  10%       { opacity: 1; top: calc(100% - 5.5px); }
+  11%       { opacity: 0; top: calc(100% - 5.5px); }
+  12%, 28%  { opacity: 0; top: 0; }
+  29%       { opacity: 1; top: 0; }
+  37%       { opacity: 1; top: calc(100% - 5.5px); }
+  38%       { opacity: 0; top: calc(100% - 5.5px); }
+  39%, 67%  { opacity: 0; top: 0; }
+  68%       { opacity: 1; top: 0; }
+  76%       { opacity: 1; top: calc(100% - 5.5px); }
+  77%       { opacity: 0; top: calc(100% - 5.5px); }
+  78%, 100% { opacity: 0; top: 0; }
 }
 @keyframes pulse-pass2 {
   0%, 8%  { opacity: 0; left: 0; }
@@ -285,10 +288,10 @@ section[id] { scroll-margin-top: 1.5rem; }
   64%, 100% { border-color: var(--ink); background: var(--panel); }
 }
 @keyframes ltm-receive {
-  0%, 62%  { background: var(--panel); }
-  66%      { background: #eaf3ea; }
-  72%      { background: #eaf3ea; }
-  80%, 100% { background: var(--panel); }
+  0%, 64%  { background: var(--panel); }
+  68%      { background: #eaf3ea; }
+  74%      { background: #eaf3ea; }
+  82%, 100% { background: var(--panel); }
 }
 @keyframes pulse-pass {
   0%, 36% { opacity: 0; left: 0; }
@@ -311,12 +314,12 @@ section[id] { scroll-margin-top: 1.5rem; }
 @keyframes pulse-settle {
   0%, 56% { opacity: 0; left: 0; }
   58%     { opacity: 1; }
-  66%     { opacity: 1; left: calc(100% - 7px); }
-  68%, 100% { opacity: 0; left: calc(100% - 7px); }
+  68%     { opacity: 1; left: calc(100% - 7px); }
+  70%, 100% { opacity: 0; left: calc(100% - 7px); }
 }
 @keyframes tick-new {
-  0%, 66% { opacity: 0; }
-  70%, 96% { opacity: 1; }
+  0%, 68% { opacity: 0; }
+  72%, 96% { opacity: 1; }
   100% { opacity: 0; }
 }
 @keyframes pulse-drain {   /* never promoted: discharges to ground */
@@ -516,8 +519,8 @@ section[id] { scroll-margin-top: 1.5rem; }
 @keyframes pulse-settle-y {
   0%, 56% { opacity: 0; top: 0; }
   58%     { opacity: 1; }
-  66%     { opacity: 1; top: calc(100% - 7px); }
-  68%, 100% { opacity: 0; top: calc(100% - 7px); }
+  68%     { opacity: 1; top: calc(100% - 7px); }
+  70%, 100% { opacity: 0; top: calc(100% - 7px); }
 }
 @keyframes pulse-refine-m {   /* re-grounding trace climbs back into the gate */
   0%, 10% { opacity: 0; top: calc(100% - 7px); }
