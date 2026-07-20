@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://clomia.github.io/claude-automata/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata: 24/7 full self-driving for Claude Code" width="840"></a>
+  <a href="https://claude-automata.clomia.com/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata: 24/7 full self-driving for Claude Code" width="840"></a>
 </p>
 
 <p align="center"><strong>Your agent stops when it <em>thinks</em> it's done. This one stops when it's actually done.</strong></p>
@@ -9,7 +9,7 @@
   An advisor audits every stop; nothing becomes memory without passing one verified gate.
 </p>
 
-<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ Watch the memory circuit run</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ Watch the memory circuit run</strong></a></p>
 
 <p align="center">
   <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=f54e00" alt="PyPI"></a>
@@ -99,6 +99,6 @@ Heavyweight multi-agent workflows (3–12 hours per run) that eliminate accumula
 
 ---
 
-<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ Watch the memory circuit run</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ Watch the memory circuit run</strong></a></p>
 
 Apache-2.0 · claude-automata develops claude-automata. A Claude Code agent running this environment authored every contribution in this repository. Recursive self-improvement in production.

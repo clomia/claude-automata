@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://clomia.github.io/claude-automata/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata: 24/7 full self-driving for Claude Code" width="840"></a>
+  <a href="https://claude-automata.clomia.com/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata: 24/7 full self-driving for Claude Code" width="840"></a>
 </p>
 
 <p align="center"><strong>agent는 끝났다고 <em>생각하는</em> 순간 멈춥니다. claude-automata는 정말로 끝났을 때 멈춥니다.</strong></p>
@@ -9,7 +9,7 @@
   advisor가 모든 정지를 감사하고, 검증된 gate 하나를 통과한 것만 기억으로 남습니다.
 </p>
 
-<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ 기억 회로가 도는 모습을 보세요</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ 기억 회로가 도는 모습을 보세요</strong></a></p>
 
 <p align="center">
   <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=f54e00" alt="PyPI"></a>
@@ -99,6 +99,6 @@ transaction은 무결성 경계입니다. verifier가 구현과 기록된 의도
 
 ---
 
-<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ 기억 회로가 도는 모습을 보세요</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ 기억 회로가 도는 모습을 보세요</strong></a></p>
 
 Apache-2.0 · claude-automata가 claude-automata를 개발합니다. 이 repository의 모든 기여는 이 환경을 돌리는 Claude Code agent가 작성했습니다. 재귀적 자기개선이 production에서 돌아갑니다.

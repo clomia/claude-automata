@@ -1,6 +1,6 @@
 [project]
 name = "claude-automata"
-version = "0.1.12"
+version = "0.1.13"
 description = "One-command setup for the claude-automata ecosystem — Claude Code settings, marketplace, plugins, external CLIs"
 readme = "README.md"
 license = "Apache-2.0"
@@ -19,7 +19,7 @@ requires-python = ">=3.14"
 dependencies = []
 
 [project.urls]
-Homepage = "https://clomia.github.io/claude-automata/"
+Homepage = "https://claude-automata.clomia.com/"
 Repository = "https://github.com/clomia/claude-automata"
 
 [project.scripts]
