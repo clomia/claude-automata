@@ -40,3 +40,6 @@
   잔재 0 (badge alt는 License로 중립화).
 - replace no-op 2건(en refine 시간·§05 lede — 원문 불일치)을 render 실측으로 검출해
   정정 — 화면 검증이 문자열 치환의 gate였다.
+- verify 1차가 en §05 표의 "enables all four plugins" 잔존을 검출(치환 원문 오추정
+  no-op 3번째 — 4.3 grep이 계수 어휘 미포함이 원인). 정정 후 계수 어휘(all four·
+  the four·4종·네 개)까지 포함한 재grep으로 6표면 0건 확인.
