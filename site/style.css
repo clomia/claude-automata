@@ -1,34 +1,41 @@
-/* claude-automata — landing. Document-of-record register: drafting paper, ink,
-   copper (working / volatile) oxidizing to verdigris (long-term / verified). */
+/* claude-automata — landing. Skin per site/DESIGN.md (Warp-derived): warm near-charcoal
+   canvas, off-white ink, Inter narrative / DM Mono technical / Instrument Serif editorial.
+   The circuit keeps its two semantic hues — copper (working / volatile) oxidizing to
+   verdigris (long-term / verified) — retuned for the dark canvas; that chroma is the
+   schematic's data encoding, the one place color carries meaning. */
 
 /* ---------------------------------------------------------------- fonts */
-@font-face { font-family: "Saira SemiCondensed"; font-weight: 600; font-display: swap;
-  src: url("assets/fonts/saira-semi-condensed-600.woff2") format("woff2"); }
-@font-face { font-family: "Saira SemiCondensed"; font-weight: 700; font-display: swap;
-  src: url("assets/fonts/saira-semi-condensed-700.woff2") format("woff2"); }
-@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap;
-  src: url("assets/fonts/ibm-plex-sans-400.woff2") format("woff2"); }
-@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap;
-  src: url("assets/fonts/ibm-plex-sans-600.woff2") format("woff2"); }
-@font-face { font-family: "IBM Plex Mono"; font-weight: 400; font-display: swap;
-  src: url("assets/fonts/ibm-plex-mono-400.woff2") format("woff2"); }
-@font-face { font-family: "IBM Plex Mono"; font-weight: 500; font-display: swap;
-  src: url("assets/fonts/ibm-plex-mono-500.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 400; font-display: swap;
+  src: url("assets/fonts/inter-400.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 500; font-display: swap;
+  src: url("assets/fonts/inter-500.woff2") format("woff2"); }
+@font-face { font-family: "DM Mono"; font-weight: 400; font-display: swap;
+  src: url("assets/fonts/dm-mono-400.woff2") format("woff2"); }
+@font-face { font-family: "DM Mono"; font-weight: 500; font-display: swap;
+  src: url("assets/fonts/dm-mono-500.woff2") format("woff2"); }
+@font-face { font-family: "Instrument Serif"; font-weight: 400; font-style: italic; font-display: swap;
+  src: url("assets/fonts/instrument-serif-italic.woff2") format("woff2"); }
 
 /* ---------------------------------------------------------------- tokens */
 :root {
-  --paper: #f5f4ef;
-  --panel: #fdfdfa;
-  --ink: #191813;
-  --muted: #63604f;
-  --hairline: #d9d6c9;
-  --hairline-strong: #b9b5a4;
-  --copper: #b25c28;
-  --copper-deep: #94481c;
-  --verdigris: #3e6f5e;
-  --display: "Saira SemiCondensed", "Arial Narrow", sans-serif;
-  --body: "IBM Plex Sans", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --paper: #2b2622;            /* canvas — the warmth is the identity */
+  --panel: #383330;            /* canvas-soft — cards, mockups, panels */
+  --ink: #f7f5f0;              /* off-white — text and primary, unified */
+  --body-text: #c9c0ad;        /* secondary body copy */
+  --body-strong: #dad2c1;      /* lead paragraphs */
+  --muted: #aea69c;            /* captions, fine print */
+  --hairline: #3f3a36;
+  --hairline-strong: #574f47;
+  --copper: #c9743f;           /* working / volatile — stroke weight */
+  --copper-deep: #d98e5f;      /* working / volatile — text weight on dark */
+  --verdigris: #67a189;        /* long-term / verified */
+  --display: "Inter", system-ui, -apple-system, sans-serif;
+  --body: "Inter", system-ui, -apple-system, sans-serif;
+  --mono: "DM Mono", ui-monospace, "SFMono-Regular", monospace;
+  --serif: "Instrument Serif", Georgia, serif;
+  --r-sm: 3px;
+  --r-md: 4px;
+  --r-lg: 6px;
   --wrap: 1120px;
   --cycle: 9s;
 }
@@ -47,8 +54,8 @@ body {
 main { display: block; }
 a { color: inherit; text-decoration: underline; text-decoration-color: var(--hairline-strong); text-underline-offset: 3px; }
 a:hover { color: var(--copper-deep); text-decoration-color: var(--copper); }
-:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
-::selection { background: var(--copper); color: var(--paper); }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+::selection { background: var(--ink); color: var(--paper); }
 code { font-family: var(--mono); font-size: 0.92em; }
 section[id] { scroll-margin-top: 1.5rem; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -59,9 +66,9 @@ section[id] { scroll-margin-top: 1.5rem; }
   align-items: baseline; justify-content: space-between;
   max-width: var(--wrap); margin: 0 auto;
   padding: 1.1rem clamp(1.25rem, 4vw, 2.5rem) 0.9rem;
-  border-bottom: 1px solid var(--hairline-strong);
+  border-bottom: 1px solid var(--hairline);
 }
-.tb-name { font-family: var(--display); font-weight: 700; letter-spacing: 0.08em; font-size: 1rem; }
+.tb-name { font-family: var(--display); font-weight: 500; letter-spacing: 0.05em; font-size: 0.95rem; }
 .tb-fields { display: flex; flex-wrap: wrap; gap: 0.35rem 1.6rem; }
 .tb-field { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
 .tb-k { color: var(--muted); margin-right: 0.45em; }
@@ -83,23 +90,24 @@ section[id] { scroll-margin-top: 1.5rem; }
   color: var(--muted); text-transform: uppercase; margin-bottom: 1.4rem;
 }
 .hero h1 {
-  font-family: var(--display); font-weight: 700; text-transform: uppercase;
-  font-size: clamp(2.3rem, 5.7vw, 4.2rem); line-height: 1.04; letter-spacing: 0.01em;
-  max-width: 36ch;
+  font-family: var(--display); font-weight: 400;
+  font-size: clamp(2.4rem, 5.4vw, 4rem); line-height: 1.1; letter-spacing: -0.025em;
+  max-width: 24ch;
 }
 .thesis {
-  max-width: 62ch; margin-top: 2.6rem;
+  max-width: 62ch; margin-top: 2.6rem; color: var(--body-strong);
   font-size: clamp(1rem, 1.4vw, 1.125rem); line-height: 1.75;
 }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: 2.2rem; }
 .btn {
-  font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase;
-  text-decoration: none; border: 1px solid var(--ink); padding: 0.72rem 1.3rem;
+  font-family: var(--body); font-weight: 500; font-size: 0.875rem; line-height: 1.45;
+  text-decoration: none; border: 1px solid var(--hairline-strong); border-radius: var(--r-sm);
+  padding: 0.5rem 1.1rem; color: var(--ink);
   transition: color 120ms, border-color 120ms, background 120ms;
 }
-.btn:hover { color: var(--copper-deep); border-color: var(--copper); }
-.btn-solid { background: var(--ink); color: var(--paper); }
-.btn-solid:hover { background: var(--copper-deep); color: var(--paper); border-color: var(--copper-deep); }
+.btn:hover { color: var(--ink); border-color: var(--ink); }
+.btn-solid { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn-solid:hover { background: var(--body-strong); color: var(--paper); border-color: var(--body-strong); }
 
 /* ---------------------------------------------------------------- schematic */
 .schematic-figure { position: relative; margin: clamp(1.6rem, 3.5vw, 2.6rem) 0 0; }
@@ -127,8 +135,8 @@ section[id] { scroll-margin-top: 1.5rem; }
 .rail-items { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem; }
 .event {
   font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.04em;
-  border: 1px solid var(--hairline-strong); color: var(--ink);
-  padding: 0.18rem 0.5rem; background: var(--panel);
+  border: 1px solid var(--hairline-strong); color: var(--body-strong);
+  padding: 0.18rem 0.5rem; background: var(--panel); border-radius: 2px;
 }
 .rail-drop {
   width: 0; height: 26px; border-left: 1.5px solid var(--hairline-strong);
@@ -139,15 +147,15 @@ section[id] { scroll-margin-top: 1.5rem; }
 /* stations */
 .station {
   grid-row: 2; border: 1.5px solid var(--ink); background: var(--panel);
-  padding: 1.15rem 1rem 1.05rem; text-align: center;
+  padding: 1.15rem 1rem 1.05rem; text-align: center; border-radius: var(--r-md);
   display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
 }
 .st-working { grid-column: 1; border-style: dashed; position: relative; }   /* impermanent by drawing convention; anchors the drain */
 .st-gate    { grid-column: 3; }
-.st-ltm     { grid-column: 5; border-color: var(--verdigris); box-shadow: 3px 3px 0 rgba(62, 111, 94, 0.18); }
+.st-ltm     { grid-column: 5; border-color: var(--verdigris); }
 .glyph { width: 84px; height: 84px; margin-bottom: 0.35rem; }
 .glyph svg { width: 100%; height: 100%; overflow: visible; }
-.st-name { font-family: var(--display); font-weight: 700; letter-spacing: 0.09em; font-size: 0.92rem; }
+.st-name { font-family: var(--mono); font-weight: 500; letter-spacing: 0.09em; font-size: 0.8rem; }
 .st-plugin { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.03em; }
 .plugin-copper { color: var(--copper-deep); }
 .plugin-ink { color: var(--ink); }
@@ -278,16 +286,16 @@ section[id] { scroll-margin-top: 1.5rem; }
   border-top: 1px solid var(--hairline);
 }
 .section h2 {
-  font-family: var(--display); font-weight: 700; text-transform: uppercase;
-  font-size: clamp(1.3rem, 2.4vw, 1.6rem); letter-spacing: 0.1em;
+  font-family: var(--mono); font-weight: 500;
+  font-size: clamp(1.05rem, 2vw, 1.25rem); letter-spacing: 0.1em;
   margin-bottom: 2.2rem;
 }
-.sec-no { font-family: var(--mono); font-weight: 500; color: var(--copper); margin-right: 1rem; }
-.sec-lede { max-width: 68ch; margin: -1.2rem 0 2.4rem; color: var(--ink); }
+.sec-no { font-family: var(--mono); font-weight: 500; color: var(--copper-deep); margin-right: 1rem; }
+.sec-lede { max-width: 68ch; margin: -1.2rem 0 2.4rem; color: var(--body-strong); }
 
 /* 01 the advisor — illustrative exchange */
 .exchange {
-  background: var(--panel); border: 1px solid var(--hairline-strong);
+  background: var(--panel); border: 1px solid var(--hairline-strong); border-radius: var(--r-md);
   padding: 1.5rem 1.7rem; max-width: 72ch;
   font-family: var(--mono); font-size: 0.88rem; line-height: 1.65;
 }
@@ -298,19 +306,20 @@ section[id] { scroll-margin-top: 1.5rem; }
 .xc-agent { color: var(--ink); }
 .xc-hook { color: var(--muted); }
 .xc-advisor { color: var(--copper-deep); }
-.xc-text { flex: 1; }
+.xc-text { flex: 1; color: var(--body-strong); }
 .xc-text.xc-end { color: var(--verdigris); }
 .xc-gap { text-align: center; color: var(--muted); font-size: 0.75rem;
   letter-spacing: 0.08em; padding: 0.7rem 0; }
 .xc-note { max-width: 72ch; font-size: 0.88rem; color: var(--muted); margin-top: 1rem; }
-.sec-punch { font-family: var(--display); font-weight: 700; font-size: 1.2rem;
-  letter-spacing: 0.01em; margin-top: 1.6rem; max-width: 72ch; }
+.sec-punch { font-family: var(--serif); font-style: italic; font-weight: 400;
+  font-size: clamp(1.45rem, 2.6vw, 1.8rem); line-height: 1.3; letter-spacing: -0.01em;
+  margin-top: 1.8rem; max-width: 62ch; }
 
 /* 02 premise */
 .claims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
-.claim h3 { font-weight: 600; font-size: 1.08rem; margin-bottom: 0.7rem; }
-.claim h3::before { content: "—"; color: var(--copper); margin-right: 0.55rem; }
-.claim p { font-size: 0.95rem; color: #33312a; }
+.claim h3 { font-weight: 500; font-size: 1.08rem; margin-bottom: 0.7rem; letter-spacing: -0.01em; }
+.claim h3::before { content: "—"; color: var(--copper-deep); margin-right: 0.55rem; }
+.claim p { font-size: 0.95rem; color: var(--body-text); }
 
 /* 02 memory system */
 .stages { list-style: none; border-top: 1px solid var(--hairline); }
@@ -320,25 +329,25 @@ section[id] { scroll-margin-top: 1.5rem; }
 .stage-copper .stage-key { color: var(--copper-deep); }
 .stage-ink .stage-key { color: var(--ink); }
 .stage-verd .stage-key { color: var(--verdigris); }
-.stage-body p { max-width: 68ch; font-size: 0.97rem; }
+.stage-body p { max-width: 68ch; font-size: 0.97rem; color: var(--body-text); }
 
 /* 03 modules */
 .modules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-.module { border: 1px solid var(--hairline-strong); background: var(--panel);
+.module { border: 1px solid var(--hairline-strong); background: var(--panel); border-radius: var(--r-lg);
   padding: 1.6rem 1.7rem 1.4rem; display: flex; flex-direction: column; gap: 0.85rem; }
 .mod-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
   border-bottom: 1px solid var(--hairline); padding-bottom: 0.7rem; }
 .mod-name { font-family: var(--mono); font-weight: 500; font-size: 1.05rem; }
 .mod-role { font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.12em; color: var(--muted); white-space: nowrap; }
-.module p { font-size: 0.94rem; color: #33312a; flex-grow: 1; }
+.module p { font-size: 0.94rem; color: var(--body-text); flex-grow: 1; }
 
 /* 04 getting started */
-.code-block { background: var(--panel); border: 1px solid var(--hairline-strong);
+.code-block { background: var(--panel); border: 1px solid var(--hairline-strong); border-radius: var(--r-md);
   padding: 1.05rem 1.3rem; overflow-x: auto; font-size: 0.95rem; line-height: 1.75;
-  font-family: var(--mono); }
+  font-family: var(--mono); color: var(--body-strong); }
 .c-muted { color: var(--muted); }
 .init-disclosure { margin-top: 2.6rem; }
-.disclosure-title { font-family: var(--display); font-weight: 700; font-size: 0.95rem;
+.disclosure-title { font-family: var(--mono); font-weight: 500; font-size: 0.82rem;
   letter-spacing: 0.1em; margin-bottom: 0.9rem; }
 .disclosure-note { max-width: 68ch; font-size: 0.9rem; color: var(--muted); margin: 0.9rem 0; }
 .spec-table { width: 100%; border-collapse: collapse; border-top: 1px solid var(--hairline-strong); }
@@ -346,14 +355,15 @@ section[id] { scroll-margin-top: 1.5rem; }
   padding: 0.65rem 1rem 0.65rem 0; border-bottom: 1px solid var(--hairline); }
 .spec-table th { font-family: var(--mono); font-weight: 500; font-size: 0.78rem;
   letter-spacing: 0.02em; white-space: nowrap; width: 1%; padding-right: 2.2rem; }
-.spec-table td { font-size: 0.92rem; }
+.spec-table td { font-size: 0.92rem; color: var(--body-text); }
+.spec-table td code { color: var(--body-strong); }
 .next-steps { margin-top: 2.6rem; }
 
 /* ---------------------------------------------------------------- footer */
 .colophon { max-width: var(--wrap); margin: 0 auto;
   padding: 2.6rem clamp(1.25rem, 4vw, 2.5rem) 3.2rem;
-  border-top: 1px solid var(--hairline-strong); }
-.colophon-lead { max-width: 72ch; font-size: 0.92rem; }
+  border-top: 1px solid var(--hairline); }
+.colophon-lead { max-width: 72ch; font-size: 0.92rem; color: var(--body-text); }
 .colophon-meta { margin-top: 1rem; font-family: var(--mono); font-size: 0.72rem;
   color: var(--muted); letter-spacing: 0.02em; }
 

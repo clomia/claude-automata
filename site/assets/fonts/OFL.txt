@@ -1,8 +1,9 @@
 The fonts in this directory are redistributed under the SIL Open Font License, Version 1.1.
 Subset (latin) woff2 builds obtained from Google Fonts.
 
-- Saira SemiCondensed — Copyright 2020 The Saira Project Authors (https://github.com/Omnibus-Type/Saira)
-- IBM Plex Sans, IBM Plex Mono — Copyright 2017 IBM Corp. (https://github.com/IBM/plex)
+- Inter — Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+- DM Mono — Copyright 2020 The DM Mono Project Authors (https://github.com/googlefonts/dm-mono)
+- Instrument Serif — Copyright 2022 The Instrument Serif Project Authors (https://github.com/Instrument/instrument-serif)
 
 SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
 Full text: https://openfontlicense.org/open-font-license-official-text/
