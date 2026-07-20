@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>claude-automata — full self-driving for Claude Code, 24/7</title>
+<title>claude-automata · full self-driving for Claude Code, 24/7</title>
 <meta name="description" content="An autonomous agent environment for Claude Code, modeled on human memory: an advisor loop as working memory, one verified consolidation gate, long-term memory as git-tracked text, and a re-grounding maintenance cycle. Developed end to end by its own Claude Code agents. Apache-2.0.">
 <link rel="canonical" href="https://clomia.github.io/claude-automata/">
 <link rel="alternate" hreflang="en" href="https://clomia.github.io/claude-automata/">
@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://clomia.github.io/claude-automata/">
 <meta property="og:site_name" content="claude-automata">
-<meta property="og:title" content="claude-automata — full self-driving for Claude Code, 24/7">
+<meta property="og:title" content="claude-automata · full self-driving for Claude Code, 24/7">
 <meta property="og:description" content="Human memory architecture mapped onto Claude Code: a working-memory loop, one verified consolidation gate, git-tracked long-term memory, and a re-grounding cycle. Developed by its own agents.">
 <meta property="og:image" content="https://clomia.github.io/claude-automata/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -40,15 +40,15 @@
 <section class="hero">
   <p class="eyebrow">AN AGENT ENVIRONMENT FOR CLAUDE CODE, MODELED ON HUMAN MEMORY</p>
   <h1>24/7 full self‑driving.<br>
-      Delegate everything and rest.</h1>
+      Delegate everything. Rest.</h1>
 
   <figure class="schematic-figure">
     <div class="schematic" role="img"
-         aria-label="Memory circuit diagram. Events — a user prompt, a schedule, CI, a notification — all enter a working-memory loop (the ploop plugin, untracked and lossy, it dies with the loop). Work leaves the loop only through a consolidation gate (the tx plugin: independent verify, CI, squash merge). What passes the gate settles into long-term memory: the repository's git-tracked text. Traces that are never promoted die in working memory — forgetting is designed in. A re-grounding cycle (the refine plugin) carries long-term memory back through the same gate, keeping it true against the code.">
+         aria-label="Memory circuit diagram. Events (a user prompt, a schedule, CI, a notification) all enter a working-memory loop (the ploop plugin, untracked and lossy, it dies with the loop). Work leaves the loop only through a consolidation gate (the tx plugin: independent verify, CI, squash merge). What passes the gate settles into long-term memory: the repository's git-tracked text. Traces that are never promoted die in working memory; forgetting is designed in. A re-grounding cycle (the refine plugin) carries long-term memory back through the same gate, keeping it true against the code.">
 
       <!-- input rail: the user is one event type among many -->
       <div class="rail" aria-hidden="true">
-        <span class="rail-caption">EVENTS — ALL EQUAL</span>
+        <span class="rail-caption">EVENTS: ALL EQUAL</span>
         <div class="rail-items">
           <span class="event">user</span>
           <span class="event">schedule</span>
@@ -74,7 +74,7 @@
             </svg>
           </div>
           <div class="st-name">WORKING MEMORY</div>
-          <div class="st-plugin plugin-copper">ploop — advisor loop</div>
+          <div class="st-plugin plugin-copper">ploop · advisor loop</div>
           <div class="st-props">untracked · lossy · dies with the loop</div>
           <!-- discard drain: unpromoted work discharges to ground -->
           <div class="drain" aria-hidden="true">
@@ -107,7 +107,7 @@
             </svg>
           </div>
           <div class="st-name">CONSOLIDATION</div>
-          <div class="st-plugin plugin-ink">tx — the only gate</div>
+          <div class="st-plugin plugin-ink">tx · the only gate</div>
           <div class="st-props">verify · CI · squash merge</div>
         </div>
 
@@ -144,18 +144,18 @@
           <i class="pulse p-refine"></i>
           <i class="arrowhead up verd"></i>
         </div>
-        <span class="refine-label">refine — re‑grounding cycle, through the same gate</span>
+        <span class="refine-label">refine · re‑grounding cycle, through the same gate</span>
       </div>
     </div>
-    <figcaption class="fig-caption">FIG. 1 — THE MEMORY CIRCUIT · WORK IS LOSSY, MEMORY IS VERIFIED</figcaption>
+    <figcaption class="fig-caption">FIG. 1: THE MEMORY CIRCUIT · WORK IS LOSSY, MEMORY IS VERIFIED</figcaption>
   </figure>
 
   <p class="thesis">
     claude‑automata turns Claude Code into a running system rather than a conversation.
     Write your intent once: a loop holds the initiative around the clock, an advisor
     refuses to let it quit while work remains, and one gate decides what may be
-    remembered. Long‑term memory is the repository's own git‑tracked text —
-    everything unverified dies with the loop, on purpose.
+    remembered. Long‑term memory is the repository's own git‑tracked text.
+    Everything unverified dies with the loop, on purpose.
   </p>
 
   <div class="hero-actions">
@@ -170,23 +170,24 @@
   <p class="sec-lede">
     Agents end their turn the moment they <em>believe</em> they're finished. Here the
     stop itself is an event: a hook blocks it and summons an independent advisor with
-    a clean context — metacognition for the loop. After "done", something still asks:
+    a clean context: metacognition for the loop. After "done", something still asks:
     <em>is it really done?</em>
   </p>
   <div class="exchange" role="img"
-       aria-label="An illustrative exchange: the agent declares the mission accomplished and tries to stop; the hook blocks the stop and summons the advisor; the advisor lists overlooked regions — unmeasured layouts, uncited claims, unpromoted facts; the agent resumes. Six rounds later the advisor writes: I have no further advice, ending the turn. Only then does the loop end.">
+       aria-label="An illustrative exchange: the agent declares the mission accomplished and tries to stop; the hook blocks the stop and summons the advisor; the advisor lists overlooked regions (unmeasured layouts, uncited claims, facts still awaiting promotion); the agent resumes. Six rounds later the advisor writes: I have no further advice, ending the turn. Only then does the loop end.">
     <div class="xc-line"><span class="xc-who xc-agent">agent</span><span class="xc-text">Mission accomplished. Stopping.</span></div>
-    <div class="xc-line"><span class="xc-who xc-hook">hook</span><span class="xc-text">Stop blocked — summoning the advisor.</span></div>
+    <div class="xc-line"><span class="xc-who xc-hook">hook</span><span class="xc-text">Stop blocked. Summoning the advisor.</span></div>
     <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text">Not yet. The mobile layout was never measured. Two claims cite no source. The promotion queue still holds facts.</span></div>
     <div class="xc-line"><span class="xc-who xc-agent">agent</span><span class="xc-text">…resuming.</span></div>
     <div class="xc-gap">⟲ six rounds later</div>
     <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text xc-end">I have no further advice. Ending the turn.</span></div>
   </div>
   <p class="xc-note">
-    An illustrative exchange — the mechanics are real: the stop‑blocking hook, the
+    An illustrative exchange. The mechanics are real: the stop‑blocking hook, the
     clean‑context advisor, and the rule that only the advisor may end the loop. There
-    is no round cap; termination is a judgment, not a counter.
+    is no round cap; the loop ends when the advisor judges it done.
   </p>
+  <p class="sec-punch">Saying "done" doesn't end it. Being done does.</p>
 </section>
 
 <!-- ============================ 02 PREMISE ============================== -->
@@ -196,7 +197,7 @@
     <article class="claim">
       <h3>Intent survives anything</h3>
       <p>
-        The anchor — your intent, written once — is preserved outside the transcript
+        The anchor (your intent, written once) is preserved outside the transcript
         and re‑injected whenever context is rebuilt, so work spans days and survives
         repeated auto‑compaction. The advisor reads it fresh every round: the loop
         stays anchored instead of drifting toward whatever it last said.
@@ -205,11 +206,11 @@
     <article class="claim">
       <h3>The user is one event type</h3>
       <p>
-        A typed prompt, a schedule firing, CI finishing, a task notification — all of
+        A typed prompt, a schedule firing, CI finishing, a task notification: all of
         them are just events arriving at an anchored loop. None of them stops it.
         You can steer mid‑flight or ask a read‑only docent session what is going on;
         the loop absorbs the input and resumes at the next stop. By design, every
-        contribution to the repository is made by Claude Code agents — humans provide
+        contribution to the repository is made by Claude Code agents; humans provide
         intent and observe.
       </p>
     </article>
@@ -217,9 +218,9 @@
       <h3>Memory passes through one gate</h3>
       <p>
         Nothing becomes long‑term memory except through a transaction: planned intent,
-        an independent verifier, CI, then a squash merge. Everything else — loop state,
-        dead ends, trial and error — dies with the loop. Forgetting is a feature, not
-        a failure: what remains is exactly what was verified.
+        an independent verifier, CI, then a squash merge. Everything else (loop state,
+        dead ends, trial and error) dies with the loop. Forgetting is deliberate:
+        what remains is exactly what was verified.
       </p>
     </article>
   </div>
@@ -229,9 +230,9 @@
 <section class="section" id="memory-system">
   <h2><span class="sec-no">03</span>THE MEMORY SYSTEM</h2>
   <p class="sec-lede">
-    The circuit above is not a metaphor bolted on afterwards — it is the design itself:
+    The circuit above is the design itself, not a metaphor bolted on afterwards:
     three plugins drive its stages, and the store is the repository's own git‑tracked
-    text. No database, no vector index — files, admitted one verified merge at a time.
+    text. No database, no vector index: files, admitted one verified merge at a time.
   </p>
   <ol class="stages">
     <li class="stage stage-copper">
@@ -239,8 +240,8 @@
       <div class="stage-body">
         <p>
           The ploop workspace: the anchor, loop‑local state, candidate facts and terms
-          awaiting promotion. It is untracked and lossy on purpose — rounds are
-          discarded, and an advisor loop keeps the work anchored instead of drifting.
+          awaiting promotion. It is untracked and lossy: rounds are
+          discarded, and an advisor loop keeps the work anchored.
         </p>
       </div>
     </li>
@@ -260,7 +261,7 @@
         <p>
           All of the repository's git‑tracked, non‑executable text: requirement specs
           (semantic), archived changes (episodic), design canons and research records,
-          operating rules, glossary terms (lexical), skills (procedural). Recall is grep —
+          operating rules, glossary terms (lexical), skills (procedural). Recall is grep:
           names are chosen to be found.
         </p>
       </div>
@@ -271,7 +272,7 @@
         <p>
           Memory decays while it sits. The refine workflows re‑verify documented claims
           against the code, prune what can no longer be verified, and converge
-          duplicates — and their fixes pass through the same gate as everything else.
+          duplicates; the fixes pass through the same gate as everything else.
         </p>
       </div>
     </li>
@@ -289,11 +290,11 @@
         <span class="mod-role">ADVISOR LOOP</span>
       </div>
       <p>
-        An autonomous loop for long, multi‑day work. Write an anchor — a mission with
-        completion criteria, or an open‑ended purpose — and launch; on every stop an
+        An autonomous loop for long, multi‑day work. Write an anchor (a mission with
+        completion criteria, or an open‑ended purpose) and launch; on every stop an
         independent advisor surfaces overlooked regions until nothing remains. It runs
         on the official nested‑subagent path only, creating no separate sessions, so it
-        is safe on subscription plans — safe in mechanism, not in price: the loop shares
+        is safe on subscription plans (safe in mechanism, not in price): the loop shares
         your plan's quota, and multi‑day runs spend it accordingly. A read‑only docent
         answers your questions from the loop's records without touching it.
       </p>
@@ -305,7 +306,7 @@
         <span class="mod-role">TRANSACTION GATE</span>
       </div>
       <p>
-        A Git workflow that treats change as a transaction — an integrity boundary, not
+        A Git workflow that treats change as a transaction: an integrity boundary, not
         a unit of work. <code>/tx:open</code> cuts a branch off the base;
         <code>tx:plan → tx:apply → tx:verify</code> drive the change with an independent
         verify stage; <code>/tx:close</code> squash‑merges it back only when verification,
@@ -323,7 +324,7 @@
         debt: code architecture, documentation truth, and integrity boundaries. Regions
         are analyzed in parallel, findings settle through cross‑examination into
         consensus, and only the highest‑ROI plans are executed. In the docs pass, code
-        is never modified — code defects are reported, not fixed. Invoke with
+        is never modified; code defects are reported, not fixed. Invoke with
         <code>/refine:code</code> · <code>/refine:docs</code> · <code>/refine:integrity</code>,
         an optional focus area as the argument.
       </p>
@@ -348,22 +349,22 @@
   <div class="init-disclosure">
     <h3 class="disclosure-title">WHAT INIT ACTUALLY WRITES</h3>
     <p class="disclosure-note">
-      Full disclosure — this environment assumes unattended operation, and init
+      Full disclosure: this environment assumes unattended operation, and init
       configures Claude Code accordingly. With <code>bypassPermissions</code> the agent
-      runs shell commands on your machine without asking first — the trust you extend
+      runs shell commands on your machine without asking first. The trust you extend
       is host‑level, not repo‑level. Adopt this on a machine where you accept that mode,
       and review the diff before you commit it.
     </p>
     <table class="spec-table">
       <caption class="sr-only">Settings that init merge-writes into .claude/settings.json</caption>
       <tbody>
-        <tr><th scope="row">permissions.defaultMode</th><td><code>"bypassPermissions"</code> — no approval prompts</td></tr>
-        <tr><th scope="row">model</th><td><code>"opus[1m]"</code> — pinned, 1M‑token context</td></tr>
+        <tr><th scope="row">permissions.defaultMode</th><td><code>"bypassPermissions"</code> (no approval prompts)</td></tr>
+        <tr><th scope="row">model</th><td><code>"opus[1m]"</code> (pinned, 1M‑token context)</td></tr>
         <tr><th scope="row">alwaysThinkingEnabled</th><td><code>true</code></td></tr>
-        <tr><th scope="row">autoCompactEnabled</th><td><code>true</code> — long loops depend on it</td></tr>
-        <tr><th scope="row">autoMemoryEnabled</th><td><code>false</code> — memory belongs to the repo, not the harness</td></tr>
+        <tr><th scope="row">autoCompactEnabled</th><td><code>true</code> (long loops depend on it)</td></tr>
+        <tr><th scope="row">autoMemoryEnabled</th><td><code>false</code> (memory belongs to the repo, not the harness)</td></tr>
         <tr><th scope="row">marketplace + plugins</th><td>registers <code>clomia/claude-automata</code>, enables its plugins</td></tr>
-        <tr><th scope="row">external CLIs</th><td>installs missing <code>gh</code>, Node.js ≥ 20, <code>repomix</code> into <code>~/.local</code> — no sudo, present tools skipped, <code>gh auth login</code> stays yours</td></tr>
+        <tr><th scope="row">external CLIs</th><td>installs missing <code>gh</code>, Node.js ≥ 20, <code>repomix</code> into <code>~/.local</code> (no sudo, present tools skipped, <code>gh auth login</code> stays yours)</td></tr>
       </tbody>
     </table>
     <p class="disclosure-note">
@@ -374,15 +375,15 @@
 
   <div class="next-steps">
     <h3 class="disclosure-title">THEN LAUNCH A LOOP</h3>
-    <pre class="code-block"><code><span class="c-muted"># in one session — write the anchor with the interview skill</span>
+    <pre class="code-block"><code><span class="c-muted"># in one session: write the anchor with the interview skill</span>
 /ploop:define-mission
 
-<span class="c-muted"># in a fresh session — hand the anchor text to the loop</span>
+<span class="c-muted"># in a fresh session: hand the anchor text to the loop</span>
 /ploop:launch [anchor text]</code></pre>
     <pre class="code-block"><code><span class="c-muted"># operate the loop</span>
-/ploop:off      <span class="c-muted"># pause — the loop stops at its next stop</span>
-/ploop:on       <span class="c-muted"># resume — also wakes a loop stalled by ESC, API errors, session limits</span>
-/ploop:docent   <span class="c-muted"># ask questions in a separate session — read-only, never touches the loop</span></code></pre>
+/ploop:off      <span class="c-muted"># pause: the loop stops at its next stop</span>
+/ploop:on       <span class="c-muted"># resume: also wakes a loop stalled by ESC, API errors, session limits</span>
+/ploop:docent   <span class="c-muted"># ask questions in a separate session: read-only, never touches the loop</span></code></pre>
   </div>
 </section>
 
@@ -392,7 +393,7 @@
   <p class="colophon-lead">
     claude‑automata is developed by claude‑automata: every contribution in this
     repository was authored by a Claude Code agent running the loop this page
-    describes. Recursive self‑improvement, in production.
+    describes. Recursive self‑improvement in production.
   </p>
   <p class="colophon-meta">
     Apache‑2.0 · <a href="https://github.com/clomia/claude-automata">github.com/clomia/claude-automata</a>

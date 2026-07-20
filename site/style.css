@@ -303,6 +303,8 @@ section[id] { scroll-margin-top: 1.5rem; }
 .xc-gap { text-align: center; color: var(--muted); font-size: 0.75rem;
   letter-spacing: 0.08em; padding: 0.7rem 0; }
 .xc-note { max-width: 72ch; font-size: 0.88rem; color: var(--muted); margin-top: 1rem; }
+.sec-punch { font-family: var(--display); font-weight: 700; font-size: 1.2rem;
+  letter-spacing: 0.01em; margin-top: 1.6rem; max-width: 72ch; }
 
 /* 02 premise */
 .claims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
