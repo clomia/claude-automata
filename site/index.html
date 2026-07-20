@@ -151,10 +151,10 @@
   </figure>
 
   <p class="thesis">
-    claude‑automata turns Claude Code into a running system rather than a conversation.
-    Write your intent once: a loop holds the initiative around the clock, an advisor
-    refuses to let it quit while work remains, and one gate decides what may be
-    remembered. Long‑term memory is the repository's own git‑tracked text.
+    Claude Code stops when your conversation ends. claude‑automata doesn't: write
+    the intent once, and a loop holds the initiative around the clock. An advisor
+    refuses to let it quit while work remains, one gate decides what may be
+    remembered, and long‑term memory is the repository's own git‑tracked text.
     Everything unverified dies with the loop, on purpose.
   </p>
 
@@ -290,13 +290,10 @@
         <span class="mod-role">ADVISOR LOOP</span>
       </div>
       <p>
-        An autonomous loop for long, multi‑day work. Write an anchor (a mission with
-        completion criteria, or an open‑ended purpose) and launch; on every stop an
-        independent advisor surfaces overlooked regions until nothing remains. It runs
-        on the official nested‑subagent path only, creating no separate sessions, so it
-        is safe on subscription plans (safe in mechanism, not in price): the loop shares
-        your plan's quota, and multi‑day runs spend it accordingly. A read‑only docent
-        answers your questions from the loop's records without touching it.
+        An autonomous loop for work that spans days. Write an anchor (a mission with
+        an end, or an open‑ended purpose), launch it, and walk away: on every stop an
+        independent advisor surfaces what was overlooked, and the loop continues until
+        nothing remains.
       </p>
     </article>
 
@@ -306,11 +303,10 @@
         <span class="mod-role">TRANSACTION GATE</span>
       </div>
       <p>
-        A Git workflow that treats change as a transaction: an integrity boundary, not
-        a unit of work. <code>/tx:open</code> cuts a branch off the base;
-        <code>tx:plan → tx:apply → tx:verify</code> drive the change with an independent
-        verify stage; <code>/tx:close</code> squash‑merges it back only when verification,
-        a docs gate and CI all pass. Guard hooks keep the base branch protected in between.
+        A Git workflow that treats change as a transaction (an integrity boundary).
+        The loop's agents drive it on their own: every change lands as one verified,
+        CI‑green squash merge, and guard hooks keep the base branch protected in
+        between. You review merged results, not work in progress.
       </p>
     </article>
 
@@ -320,13 +316,11 @@
         <span class="mod-role">MAINTENANCE WORKFLOWS</span>
       </div>
       <p>
-        Heavyweight multi‑agent workflows (3–12 hours per run) that eliminate accumulated
-        debt: code architecture, documentation truth, and integrity boundaries. Regions
-        are analyzed in parallel, findings settle through cross‑examination into
-        consensus, and only the highest‑ROI plans are executed. In the docs pass, code
-        is never modified; code defects are reported, not fixed. Invoke with
-        <code>/refine:code</code> · <code>/refine:docs</code> · <code>/refine:integrity</code>,
-        an optional focus area as the argument.
+        Three workflows that keep an aging repository true. <code>/refine:code</code>
+        reworks code architecture, <code>/refine:docs</code> re‑verifies documentation
+        against the code, <code>/refine:integrity</code> inspects the boundaries between
+        modules. Run one with an optional focus area; each is a multi‑agent pass that
+        takes hours.
       </p>
     </article>
 
@@ -338,11 +332,11 @@
 <section class="section" id="getting-started">
   <h2><span class="sec-no">05</span>GETTING STARTED</h2>
   <p class="sec-lede">
-    One command sets a repository up to run this environment.
-    Requires <a href="https://claude.com/claude-code">Claude Code</a> and
-    <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> on a
-    POSIX system (macOS / Linux / WSL). Run it at your project root:
+    Run one command inside a git repository and setup is complete.
   </p>
+  <p class="prereq">REQUIRES · <a href="https://claude.com/claude-code">Claude Code</a> ·
+    <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> ·
+    POSIX (macOS / Linux / WSL)</p>
 
   <pre class="code-block"><code>uvx claude-automata init</code></pre>
 
@@ -374,16 +368,31 @@
   </div>
 
   <div class="next-steps">
-    <h3 class="disclosure-title">THEN LAUNCH A LOOP</h3>
-    <pre class="code-block"><code><span class="c-muted"># in one session: write the anchor with the interview skill</span>
-/ploop:define-mission
+    <h3 class="disclosure-title">RUN THE LOOP</h3>
+    <p class="disclosure-note">
+      This is the whole operating surface: write an anchor, launch it, and step in
+      only when you want to.
+    </p>
 
-<span class="c-muted"># in a fresh session: hand the anchor text to the loop</span>
+    <p class="step-caption">1 · WRITE THE ANCHOR</p>
+    <pre class="code-block"><code><span class="c-muted"># an interview writes your intent down</span>
+/ploop:define-mission   <span class="c-muted"># a mission with an end</span>
+/ploop:define-purpose   <span class="c-muted"># an open-ended purpose</span></code></pre>
+
+    <p class="step-caption">2 · LAUNCH</p>
+    <pre class="code-block"><code><span class="c-muted"># in a fresh session: hand the anchor to the loop</span>
 /ploop:launch [anchor text]</code></pre>
-    <pre class="code-block"><code><span class="c-muted"># operate the loop</span>
-/ploop:off      <span class="c-muted"># pause: the loop stops at its next stop</span>
+
+    <p class="step-caption">3 · OPERATE</p>
+    <pre class="code-block"><code>/ploop:off      <span class="c-muted"># pause: the loop stops at its next stop</span>
 /ploop:on       <span class="c-muted"># resume: also wakes a loop stalled by ESC, API errors, session limits</span>
-/ploop:docent   <span class="c-muted"># ask questions in a separate session: read-only, never touches the loop</span></code></pre>
+/ploop:docent   <span class="c-muted"># ask what's happening in a separate session: read-only, never touches the loop</span></code></pre>
+
+    <p class="step-caption">4 · KEEP THE REPOSITORY LEAN</p>
+    <pre class="code-block"><code><span class="c-muted"># between missions: hours-long maintenance passes</span>
+/refine:code       <span class="c-muted"># reworks code architecture</span>
+/refine:docs       <span class="c-muted"># re-verifies documentation against the code</span>
+/refine:integrity  <span class="c-muted"># inspects the boundaries between modules</span></code></pre>
   </div>
 </section>
 
