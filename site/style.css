@@ -350,6 +350,11 @@ section[id] { scroll-margin-top: 1.5rem; }
 .disclosure-title { font-family: var(--mono); font-weight: 500; font-size: 0.82rem;
   letter-spacing: 0.1em; margin-bottom: 0.9rem; }
 .disclosure-note { max-width: 68ch; font-size: 0.9rem; color: var(--muted); margin: 0.9rem 0; }
+.prereq { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em;
+  color: var(--muted); margin: -1.6rem 0 1.4rem; }
+.prereq a { text-decoration-color: var(--hairline-strong); }
+.step-caption { font-family: var(--mono); font-size: 0.7rem; font-weight: 500;
+  letter-spacing: 0.12em; color: var(--muted); margin: 1.7rem 0 0.6rem; }
 .spec-table { width: 100%; border-collapse: collapse; border-top: 1px solid var(--hairline-strong); }
 .spec-table th, .spec-table td { text-align: left; vertical-align: top;
   padding: 0.65rem 1rem 0.65rem 0; border-bottom: 1px solid var(--hairline); }
