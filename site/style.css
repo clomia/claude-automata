@@ -349,6 +349,11 @@ section[id] { scroll-margin-top: 1.5rem; }
   margin-bottom: 2.2rem;
 }
 .sec-no { font-weight: 600; color: var(--primary); margin-right: 1rem; }
+.sec-link { text-decoration: none; }
+.sec-link:hover { color: inherit; }
+.sec-link::after { content: "#"; margin-left: 0.4rem; color: var(--primary);
+  opacity: 0; transition: opacity 0.15s ease; }
+.sec-link:hover::after, .sec-link:focus-visible::after { opacity: 1; }
 .sec-lede { max-width: 58ch; margin: -1.2rem 0 2.4rem; color: var(--ink);
   font-size: clamp(1.125rem, 1.7vw, 1.375rem); line-height: 1.5; letter-spacing: -0.005em; }
 
