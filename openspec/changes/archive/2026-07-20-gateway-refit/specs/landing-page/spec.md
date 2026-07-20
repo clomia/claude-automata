@@ -1,45 +1,16 @@
-# landing-page Specification
+## REMOVED Requirements
 
-## Purpose
-방문자 관문의 지속 계약 — 처음 방문자가 수 분 안에 "무엇인지 → 왜 가치 있는지 → 어떻게 시작하는지"를 얻도록, landing page(site/ 정적 산출물과 Pages 배포)와 README 쌍이 항구적으로 실어야 할 내용과 형태를 고정한다.
-## Requirements
-### Requirement: Site source — static, in `site/`
-landing page의 source는 `site/`에 있어야 하며(SHALL), build step 없이 그대로 serve 가능한
-정적 파일(html·css·js·assets)이어야 한다(MUST). 외부 framework·라이브러리에 의존해서는
-안 된다(MUST NOT). `docs/`를 site source로 사용해서는 안 된다(MUST NOT) — `docs/research/`는
-조사 기록의 home이다.
+### Requirement: Site 내용 계약
 
-#### Scenario: 정적 무의존 serve
-- **WHEN** `site/`를 임의의 정적 file server로 그대로 serve하면
-- **THEN** build 도구·package 설치 없이 page가 완전히 rendering된다
+**Reason**: 소유자 지시로 계약의 세 축이 바뀐다 — version-up-alert는 이론 밖 add-on이라
+방문자 표면에서 다루지 않고, module 정본 link는 자체 완결을 해치므로 금지되며,
+unaffiliated 고지는 불필요 판정으로 폐기되고 그 자리를 자기개발 표기가 대신한다.
+scenario 집합이 함께 재편되므로 요구를 재작성한다.
 
-### Requirement: GitHub Pages 배포 workflow
-`.github/workflows/pages.yml`은 main push 시 `site/`를 GitHub 공식 Pages actions로 발행해야
-하며(SHALL), 수동 trigger(`workflow_dispatch`)를 지원해야 한다(MUST). site 외 경로만 바뀐
-push에는 발행이 불필요하므로 `site/`·workflow 자신으로 path filter해야 한다(SHOULD).
+**Migration**: 후속 "Site 서사 계약"이 나머지 결속(init 공개·image 쌍·내부 link 존재·
+반응형·한국어 변형·정본 비복제)을 그대로 승계한다.
 
-#### Scenario: main 병합 후 자동 발행
-- **WHEN** `site/` 변경이 main에 병합되면
-- **THEN** workflow가 `site/`를 artifact로 올려 GitHub Pages에 배포한다
-
-### Requirement: README 관문화
-`README.md`·`README.ko.md`는 쌍으로 유지되어야 하며(MUST), 각각 banner image + 한 줄
-tagline + plugin 인벤토리 + 설치(init 단일 경로, 실동작 공개) + 사이트로의 초대 hook으로
-열어야 한다(SHALL). 사이트 hook은 "Landing page" 같은 일반 명칭이 아니라 내용을 예고하는
-초대 문구여야 한다(MUST). README는 내부 개발 정본(ARCHITECTURE.md·MEMORY.md)을 참조해서는
-안 된다(MUST NOT) — 방문자의 이해 경로는 README와 사이트로 완결된다. 섹션 heading은 h2
-이하여야 하고(MUST — 문서 최상위 자리는 banner·tagline이 대신하며 h1을 두지 않는다),
-plugin별 개별 Install·Update 안내를 포함해서는 안 되며(MUST NOT), 상세 사용법은
-접힘(`<details>`)으로 점진 공개한다(SHOULD).
-
-#### Scenario: 관문 구조
-- **WHEN** 방문자가 README 상단만 읽으면
-- **THEN** 무엇인지(banner·tagline), 무엇이 들었는지(인벤토리), 어떻게 시작하는지(init),
-  어디서 더 보는지(사이트 초대 hook)를 얻는다
-
-#### Scenario: 내부 정본 비참조
-- **WHEN** README 어디에서든 link를 따라가면
-- **THEN** ARCHITECTURE.md·MEMORY.md로 이동하는 경로가 없다
+## ADDED Requirements
 
 ### Requirement: Site 서사 계약
 
@@ -101,4 +72,3 @@ CI로 검증되어야 한다(SHALL — 외부 link는 network 비결정성으로
 #### Scenario: 정본 link 존재 결속
 - **WHEN** 방문자 표면이 가리키는 repo-내부 경로가 tree에서 사라진 PR이 열리면
 - **THEN** CI가 실패해 관문이 404를 안내하기 전에 차단한다
-

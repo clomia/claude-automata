@@ -1,6 +1,6 @@
 {
   "name": "tx",
-  "version": "0.12.7",
+  "version": "0.12.8",
   "description": "Git transaction workflow — open a branch as an integrity boundary, drive OpenSpec through the change, and squash-merge it back only when clean, with guard hooks keeping protected branches and sync intact",
   "author": {
     "name": "clomia",
@@ -9,7 +9,7 @@
   },
   "homepage": "https://github.com/clomia/claude-automata",
   "repository": "https://github.com/clomia/claude-automata",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": [
     "git",
     "workflow",

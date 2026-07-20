@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=b25c28" alt="PyPI"></a>
-  <a href="https://github.com/clomia/claude-automata/blob/main/LICENSE"><img src="https://img.shields.io/github/license/clomia/claude-automata?style=flat&color=3e6f5e" alt="MIT"></a>
+  <a href="https://github.com/clomia/claude-automata/blob/main/LICENSE"><img src="https://img.shields.io/github/license/clomia/claude-automata?style=flat&color=3e6f5e" alt="License"></a>
 </p>
 
 English | [한국어](https://github.com/clomia/claude-automata/blob/main/README.ko.md)
@@ -27,7 +27,6 @@ Claude Code ends its turn the moment it believes it's finished, and forgets ever
 | **ploop** | working memory — a loop for work spanning days; every stop is audited by an independent advisor until nothing is left to surface |
 | **tx** | consolidation — the only gate into memory: plan, independent verify, CI, squash merge |
 | **refine** | re-grounding — hours-long workflows that re-verify old memory against the code |
-| **version-up-alert** | update notice — one line at session start when a plugin is behind; alert-only, never swaps a running plugin; ships with the others |
 
 Long-term memory isn't a database. It's the repository's own git-tracked text — recall is grep. Whatever never passes the gate dies with the loop, on purpose.
 
@@ -46,7 +45,7 @@ Re-running is safe (idempotent). `uvx claude-automata@latest init` forces the ne
 - `permissions.defaultMode: "bypassPermissions"` — no approval prompts. The agent runs shell commands on your machine without asking first; the trust is host-level, not repo-level.
 - `model: "opus[1m]"` — pinned model, 1M context
 - `alwaysThinkingEnabled: true` · `autoCompactEnabled: true` · `autoMemoryEnabled: false`
-- registers the `clomia/claude-automata` marketplace and enables all four plugins
+- registers the `clomia/claude-automata` marketplace and enables its plugins
 - installs missing `gh`, Node.js ≥ 20, `repomix` into your user area — no sudo, present tools skipped, `gh auth login` stays yours
 
 ## Run a loop
@@ -102,4 +101,4 @@ Heavyweight multi-agent workflows (hours per run, 3–12h) that eliminate accumu
 
 <p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ Watch the memory circuit run</strong></a></p>
 
-MIT License · An independent open-source project, unaffiliated with Anthropic. By design, every contribution to this repository is authored by Claude Code agents.
+Apache-2.0 · claude-automata is developed by claude-automata — every contribution in this repository was authored by a Claude Code agent running this very environment. Recursive self-improvement, in production.
