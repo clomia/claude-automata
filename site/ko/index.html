@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>claude-automata · 24/7 완전 자율주행. 모두 위임하고 쉬세요.</title>
-<meta name="description" content="인간 기억 구조를 사상한 Claude Code 자율 agent 환경: 작업기억 advisor loop, 하나의 검증된 consolidation gate, git 추적 text 장기기억, 재접지 주기. 전 과정을 자신의 Claude Code agent가 개발합니다. Apache-2.0.">
+<meta name="description" content="인간 기억 구조를 본뜬 Claude Code 자율 agent 환경: 작업기억 advisor loop, 하나의 검증된 consolidation gate, git 추적 text 장기기억, 재접지 주기. 전 과정을 자신의 Claude Code agent가 개발합니다. Apache-2.0.">
 <link rel="canonical" href="https://clomia.github.io/claude-automata/ko/">
 <link rel="alternate" hreflang="en" href="https://clomia.github.io/claude-automata/">
 <link rel="alternate" hreflang="ko" href="https://clomia.github.io/claude-automata/ko/">
@@ -14,7 +14,7 @@
 <meta property="og:site_name" content="claude-automata">
 <meta property="og:locale" content="ko_KR">
 <meta property="og:title" content="claude-automata · 24/7 완전 자율주행. 모두 위임하고 쉬세요.">
-<meta property="og:description" content="인간 기억 구조를 Claude Code에 사상: 작업기억 loop, 하나의 검증된 consolidation gate, git 추적 장기기억, 재접지 주기. 자신의 agent가 개발합니다.">
+<meta property="og:description" content="인간 기억 구조를 Claude Code에 투영: 작업기억 loop, 하나의 검증된 consolidation gate, git 추적 장기기억, 재접지 주기. 자신의 agent가 개발합니다.">
 <meta property="og:image" content="https://clomia.github.io/claude-automata/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -48,7 +48,7 @@
 
 <!-- ================================ HERO ================================ -->
 <section class="hero">
-  <p class="eyebrow">인간 기억 구조를 사상한 CLAUDE CODE AGENT 환경</p>
+  <p class="eyebrow">인간 기억 구조를 본뜬 CLAUDE CODE AGENT 환경</p>
   <h1>24/7 완전 자율주행.<br>
       모두 위임하고 쉬세요.</h1>
 
@@ -175,7 +175,7 @@
 
 <!-- ============================ 01 THE ADVISOR ========================== -->
 <section class="section" id="advisor">
-  <h2><span class="sec-no">01</span>"끝났다"는 선언도 감사받습니다</h2>
+  <h2><span class="sec-no">01</span>"끝났다"는 선언도 감사를 거칩니다</h2>
   <p class="sec-lede">
     agent는 끝났다고 <em>믿는</em> 순간 turn을 끝냅니다. 여기서는 그 정지 자체가
     event입니다: hook이 정지를 막고 clean context의 독립 advisor, 곧 loop의
@@ -183,7 +183,7 @@
     <em>정말 끝났는가?</em>
   </p>
   <div class="exchange" role="img"
-       aria-label="연출된 대화: agent가 임무 완료를 선언하고 멈추려 하자 hook이 정지를 차단하고 advisor를 소집한다. advisor가 미고려 영역(측정되지 않은 layout, 출처 없는 주장, 승격 대기열의 사실)을 제시하고 agent가 재개한다. 여섯 round 뒤 advisor가 쓴다: 더 조언할 것이 없습니다, turn을 끝냅니다. 그때에야 loop가 끝난다.">
+       aria-label="연출된 대화: agent가 임무 완료를 선언하고 멈추려 하자 hook이 정지를 차단하고 advisor를 소집한다. advisor가 놓친 부분(측정되지 않은 layout, 출처 없는 주장, 승격 대기열의 사실)을 제시하고 agent가 재개한다. 여섯 round 뒤 advisor가 쓴다: 더 조언할 것이 없습니다, turn을 끝냅니다. 그때에야 loop가 끝난다.">
     <div class="xc-line"><span class="xc-who xc-agent">agent</span><span class="xc-text">임무 완료. 종료합니다.</span></div>
     <div class="xc-line"><span class="xc-who xc-hook">hook</span><span class="xc-text">정지 차단. advisor를 소집합니다.</span></div>
     <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text">아직입니다. mobile layout은 측정된 적이 없습니다. 출처 없는 주장이 둘 있습니다. 승격 대기열에 사실이 남아 있습니다.</span></div>
@@ -235,7 +235,7 @@
 
 <!-- ========================= 03 MEMORY SYSTEM =========================== -->
 <section class="section" id="memory-system">
-  <h2><span class="sec-no">03</span>기억 SYSTEM</h2>
+  <h2><span class="sec-no">03</span>기억 시스템</h2>
   <p class="sec-lede">
     위의 회로는 나중에 붙인 은유가 아니라 설계 그 자체입니다: 세 plugin이
     단계를 구동합니다. database도 vector index도 없습니다. 검증된 merge가
@@ -247,7 +247,7 @@
       <div class="stage-body">
         <p>
           ploop의 작업 공간: anchor, loop-local 상태, 승격을 기다리는 사실·용어
-          후보들. 의도적으로 미추적이고 lossy합니다. round는 폐기됩니다.
+          후보들. 의도적으로 추적되지 않고 lossy합니다. round는 폐기됩니다.
         </p>
       </div>
     </li>
@@ -321,7 +321,7 @@
         <span class="mod-role">MAINTENANCE WORKFLOWS</span>
       </div>
       <p>
-        낡아가는 repository를 참으로 되돌리는 workflow 3개입니다.
+        낡아가는 repository를 참인 상태로 되돌리는 workflow 3개입니다.
         <code>/refine:code</code>는 코드 architecture를 재작업하고,
         <code>/refine:docs</code>는 문서를 코드와 재대조하고,
         <code>/refine:integrity</code>는 동작 무결성을 확보합니다. 필요할 때

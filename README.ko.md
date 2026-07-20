@@ -5,7 +5,7 @@
 <p align="center"><strong>agent는 끝났다고 <em>생각하는</em> 순간 멈춥니다. 이것은 정말로 끝났을 때 멈춥니다.</strong></p>
 
 <p align="center">
-  인간 기억 구조를 사상한 Claude Code 자율 agent 환경.<br>
+  인간 기억 구조를 본뜬 Claude Code 자율 agent 환경.<br>
   advisor가 모든 정지를 감사하고, 검증된 gate 하나가 무엇을 기억할지 정합니다.
 </p>
 
