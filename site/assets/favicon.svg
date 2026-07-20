@@ -1,3 +1,75 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <circle cx="16" cy="16" r="13" fill="none" stroke="#000000" stroke-width="2.7" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <title>clomia</title>
+  <defs>
+    <linearGradient id="clomia-base" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8AB6FF"/><stop offset="1" stop-color="#07090F"/>
+    </linearGradient>
+    <linearGradient id="clomia-g0" x1="12" y1="2" x2="15.8268" y2="2.7612" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8AB6FF"/><stop offset="1" stop-color="#6C9EFA"/>
+    </linearGradient>
+    <linearGradient id="clomia-g1" x1="15.8268" y1="2.7612" x2="19.0711" y2="4.9289" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6C9EFA"/><stop offset="1" stop-color="#4E85F5"/>
+    </linearGradient>
+    <linearGradient id="clomia-g2" x1="19.0711" y1="4.9289" x2="21.2388" y2="8.1732" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4E85F5"/><stop offset="1" stop-color="#3C71EA"/>
+    </linearGradient>
+    <linearGradient id="clomia-g3" x1="21.2388" y1="8.1732" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3C71EA"/><stop offset="1" stop-color="#2B5CDE"/>
+    </linearGradient>
+    <linearGradient id="clomia-g4" x1="22" y1="12" x2="21.2388" y2="15.8268" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2B5CDE"/><stop offset="1" stop-color="#1F45AC"/>
+    </linearGradient>
+    <linearGradient id="clomia-g5" x1="21.2388" y1="15.8268" x2="19.0711" y2="19.0711" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1F45AC"/><stop offset="1" stop-color="#14307C"/>
+    </linearGradient>
+    <linearGradient id="clomia-g6" x1="19.0711" y1="19.0711" x2="15.8268" y2="21.2388" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#14307C"/><stop offset="1" stop-color="#0E1D42"/>
+    </linearGradient>
+    <linearGradient id="clomia-g7" x1="15.8268" y1="21.2388" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0E1D42"/><stop offset="1" stop-color="#07090F"/>
+    </linearGradient>
+    <linearGradient id="clomia-g8" x1="12" y1="22" x2="8.1732" y2="21.2388" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#07090F"/><stop offset="1" stop-color="#0A1226"/>
+    </linearGradient>
+    <linearGradient id="clomia-g9" x1="8.1732" y1="21.2388" x2="4.9289" y2="19.0711" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0A1226"/><stop offset="1" stop-color="#0C1B3F"/>
+    </linearGradient>
+    <linearGradient id="clomia-g10" x1="4.9289" y1="19.0711" x2="2.7612" y2="15.8268" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0C1B3F"/><stop offset="1" stop-color="#142853"/>
+    </linearGradient>
+    <linearGradient id="clomia-g11" x1="2.7612" y1="15.8268" x2="2" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#142853"/><stop offset="1" stop-color="#1D3567"/>
+    </linearGradient>
+    <linearGradient id="clomia-g12" x1="2" y1="12" x2="2.7612" y2="8.1732" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1D3567"/><stop offset="1" stop-color="#345696"/>
+    </linearGradient>
+    <linearGradient id="clomia-g13" x1="2.7612" y1="8.1732" x2="4.9289" y2="4.9289" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#345696"/><stop offset="1" stop-color="#4C79C7"/>
+    </linearGradient>
+    <linearGradient id="clomia-g14" x1="4.9289" y1="4.9289" x2="8.1732" y2="2.7612" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4C79C7"/><stop offset="1" stop-color="#6A97E3"/>
+    </linearGradient>
+    <linearGradient id="clomia-g15" x1="8.1732" y1="2.7612" x2="12" y2="2" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6A97E3"/><stop offset="1" stop-color="#8AB6FF"/>
+    </linearGradient>
+  </defs>
+  <g stroke-width="2" fill="none">
+    <circle cx="12" cy="12" r="10" stroke="url(#clomia-base)"/>
+    <path d="M12 2A10 10 0 0 1 15.8268 2.7612" stroke="url(#clomia-g0)"/>
+    <path d="M15.8268 2.7612A10 10 0 0 1 19.0711 4.9289" stroke="url(#clomia-g1)"/>
+    <path d="M19.0711 4.9289A10 10 0 0 1 21.2388 8.1732" stroke="url(#clomia-g2)"/>
+    <path d="M21.2388 8.1732A10 10 0 0 1 22 12" stroke="url(#clomia-g3)"/>
+    <path d="M22 12A10 10 0 0 1 21.2388 15.8268" stroke="url(#clomia-g4)"/>
+    <path d="M21.2388 15.8268A10 10 0 0 1 19.0711 19.0711" stroke="url(#clomia-g5)"/>
+    <path d="M19.0711 19.0711A10 10 0 0 1 15.8268 21.2388" stroke="url(#clomia-g6)"/>
+    <path d="M15.8268 21.2388A10 10 0 0 1 12 22" stroke="url(#clomia-g7)"/>
+    <path d="M12 22A10 10 0 0 1 8.1732 21.2388" stroke="url(#clomia-g8)"/>
+    <path d="M8.1732 21.2388A10 10 0 0 1 4.9289 19.0711" stroke="url(#clomia-g9)"/>
+    <path d="M4.9289 19.0711A10 10 0 0 1 2.7612 15.8268" stroke="url(#clomia-g10)"/>
+    <path d="M2.7612 15.8268A10 10 0 0 1 2 12" stroke="url(#clomia-g11)"/>
+    <path d="M2 12A10 10 0 0 1 2.7612 8.1732" stroke="url(#clomia-g12)"/>
+    <path d="M2.7612 8.1732A10 10 0 0 1 4.9289 4.9289" stroke="url(#clomia-g13)"/>
+    <path d="M4.9289 4.9289A10 10 0 0 1 8.1732 2.7612" stroke="url(#clomia-g14)"/>
+    <path d="M8.1732 2.7612A10 10 0 0 1 12 2" stroke="url(#clomia-g15)"/>
+  </g>
 </svg>

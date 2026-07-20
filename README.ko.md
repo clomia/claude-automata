@@ -2,29 +2,29 @@
   <a href="https://clomia.github.io/claude-automata/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata: 24/7 full self-driving for Claude Code" width="840"></a>
 </p>
 
-<p align="center"><strong>agent는 끝났다고 <em>생각하는</em> 순간 멈춥니다. 이것은 정말로 끝났을 때 멈춥니다.</strong></p>
+<p align="center"><strong>agent는 끝났다고 <em>생각하는</em> 순간 멈춥니다. claude-automata는 정말로 끝났을 때 멈춥니다.</strong></p>
 
 <p align="center">
   인간 기억 구조를 본뜬 Claude Code 자율 agent 환경.<br>
-  advisor가 모든 정지를 감사하고, 검증된 gate 하나가 무엇을 기억할지 정합니다.
+  advisor가 모든 정지를 감사하고, 검증된 gate 하나를 통과한 것만 기억으로 남습니다.
 </p>
 
-<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ 기억 회로가 도는 것을 보세요</strong></a></p>
+<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ 기억 회로가 도는 모습을 보세요</strong></a></p>
 
 <p align="center">
-  <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=b25c28" alt="PyPI"></a>
-  <a href="https://github.com/clomia/claude-automata/blob/main/LICENSE"><img src="https://img.shields.io/pypi/l/claude-automata?style=flat&color=3e6f5e" alt="License"></a>
+  <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=f54e00" alt="PyPI"></a>
+  <a href="https://github.com/clomia/claude-automata/blob/main/LICENSE"><img src="https://img.shields.io/pypi/l/claude-automata?style=flat&color=447e48" alt="License"></a>
 </p>
 
 [English](https://github.com/clomia/claude-automata/blob/main/README.md) | 한국어
 
 ---
 
-Claude Code는 끝났다고 믿는 순간 turn을 끝내고, 다음 compaction에서 전부 잊습니다. claude-automata는 그것을 기억이 실제로 작동하는 방식으로 재구성합니다:
+Claude Code는 끝났다고 믿는 순간 turn을 끝내고, 다음 compaction에서 세부를 잊습니다. claude-automata는 Claude Code를 인간 기억이 작동하는 방식으로 재구성합니다:
 
 | Plugin | 기억 역할 |
 |---|---|
-| **ploop** | 작업기억: 며칠짜리 작업의 loop. 모든 정지를 독립 advisor가 감사하며, 더 표면화할 것이 없을 때까지 계속됩니다 |
+| **ploop** | 작업기억: 며칠짜리 작업의 loop. 독립 advisor가 모든 정지를 감사하며, 더 찾을 것이 없을 때까지 계속됩니다 |
 | **tx** | consolidation: 기억으로 들어가는 유일한 gate(plan, 독립 verify, CI, squash merge) |
 | **refine** | 재접지: 오래된 기억을 코드와 재대조하는 수 시간짜리 workflow |
 
@@ -40,7 +40,7 @@ uvx claude-automata init
 
 재실행해도 안전합니다(idempotent). 최신 version 강제는 `uvx claude-automata@latest init`.
 
-**init이 실제로 기록하는 설정.** 이 환경은 무인 운용을 전제합니다. commit 전에 diff를 확인하세요:
+**init이 기록하는 설정.** 이 환경은 무인 운용을 전제합니다. commit 전에 diff를 확인하세요:
 
 - `permissions.defaultMode: "bypassPermissions"`: 승인 prompt 없음. agent가 묻지 않고 이 machine에서 shell command를 실행합니다. 신뢰의 범위는 repo가 아니라 host입니다.
 - `model: "opus[1m]"`: model 고정, 1M context
@@ -51,11 +51,11 @@ uvx claude-automata init
 ## Loop 돌리기
 
 ```
-/ploop:define-mission          # anchor 작성: interview로 뽑아낸 당신의 의도
+/ploop:define-mission          # anchor 작성: agent가 당신을 interview해 뽑아낸 의도
 /ploop:launch [anchor 내용]    # 새 session에서 loop에 전달
 ```
 
-loop는 Stop hook을 탑니다: agent가 멈출 때마다 clean context의 독립 advisor가 round를 검사하고 놓친 것을 표면화합니다. loop는 agent가 끝났다고 느낄 때가 아니라 **advisor가 더 말할 것이 없을 때** 끝납니다.
+loop는 Stop hook을 탑니다: agent가 멈출 때마다 clean context의 독립 advisor가 round를 검사하고 놓친 것을 표면화합니다. loop는 **advisor가 더 말할 것이 없을 때** 끝납니다.
 
 ```
 agent   › Mission accomplished. Stopping.
@@ -73,8 +73,8 @@ advisor › I have no further advice. Ending the turn.
 
 <br>
 
-- Auto-Compact가 True여야 합니다. 무인 운용에는 `askUserQuestionTimeout` 설정을 권장합니다. 그러면 응답 없는 질문에서 loop가 무한정 기다리는 일이 없습니다.
-- `/ploop:off`로 일시정지, `/ploop:on`으로 재개. `on`은 실수로 누른 ESC·API error·session limit로 멈춘 loop까지 깨우는 범용 wake button입니다 (turn이 돌고 있으면 ESC로 끊은 뒤). 그 밖의 어떤 것도 loop를 멈추지 않습니다.
+- init이 Auto-Compact를 켭니다; 그대로 두세요. 무인 운용에는 `askUserQuestionTimeout` 설정을 권장합니다. 그러면 응답 없는 질문에서 loop가 무한정 기다리는 일이 없습니다.
+- `/ploop:off`로 일시정지, `/ploop:on`으로 재개. `on`은 실수로 누른 ESC·API error·session limit로 멈춘 loop까지 깨우는 wake button입니다 (turn이 돌고 있으면 ESC로 끊은 뒤). 그 밖의 어떤 것도 loop를 멈추지 않습니다.
 - **같은 directory의 별도 session**에서 `/ploop:docent`가 loop 기록을 읽어 질문에 답합니다. loop에는 어떤 영향도 없습니다. 질문은 docent에게, 개입은 loop session에 직접.
 
 </details>
@@ -87,7 +87,7 @@ advisor › I have no further advice. Ending the turn.
 /tx:close               # verify·docs gate·CI 후 squash merge
 ```
 
-transaction은 무결성 경계입니다. 구현과 기록된 의도가 모두 검증되어야만 닫힙니다. 그동안 base branch는 guard hook들이 지킵니다. 위의 모든 것이 이 gate를 통과합니다.
+transaction은 무결성 경계입니다. verifier가 구현과 기록된 의도를 모두 검증해야만 닫힙니다. 그동안 base branch는 guard hook들이 지킵니다. 위의 모든 것이 이 gate를 통과합니다.
 
 ## 기억을 참인 상태로 유지하기
 
@@ -95,10 +95,10 @@ transaction은 무결성 경계입니다. 구현과 기록된 의도가 모두 �
 /refine:code [영역] · /refine:docs [영역] · /refine:integrity [영역]
 ```
 
-쌓인 부채를 없애는 heavyweight multi-agent workflow(한 번에 수 시간, 3–12h): 코드 architecture, 문서의 참, 무결성 경계. 발견은 교차검증 회의에서 합의를 거치고 최고 ROI 계획만 실행됩니다. docs pass는 코드를 수정하지 않습니다. 결함은 보고됩니다. 영역을 비우면 codebase 전체가 대상, 진행은 `/workflows`에서.
+쌓인 부채를 없애는 heavyweight multi-agent workflow(한 번에 수 시간, 3–12h): 코드 architecture, 문서의 참, 무결성 경계. agent들이 발견을 교차검증 회의에서 합의로 수렴시키고, 최고 ROI 계획만 실행합니다. docs pass는 코드를 수정하지 않고 결함을 보고합니다. 영역을 비우면 codebase 전체가 대상, 진행은 `/workflows`에서.
 
 ---
 
-<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ 기억 회로가 도는 것을 보세요</strong></a></p>
+<p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ 기억 회로가 도는 모습을 보세요</strong></a></p>
 
-Apache-2.0 · claude-automata는 claude-automata로 개발됩니다: 이 repository의 모든 기여는 바로 이 환경을 돌리는 Claude Code agent가 작성했습니다. 재귀적 자기개선이 실제로 돌아가고 있습니다.
+Apache-2.0 · claude-automata가 claude-automata를 개발합니다. 이 repository의 모든 기여는 이 환경을 돌리는 Claude Code agent가 작성했습니다. 재귀적 자기개선이 production에서 돌아갑니다.

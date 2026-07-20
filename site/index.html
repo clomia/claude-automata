@@ -152,10 +152,9 @@
 
   <p class="thesis">
     Claude Code stops when your conversation ends. claude‑automata keeps it
-    running: write the intent once, and a loop holds the initiative around the
-    clock. An advisor
-    refuses to let it quit while work remains, and one gate decides what may
-    be remembered.
+    running. Write the intent once, and a loop holds the initiative around
+    the clock. An advisor refuses to let it quit while work remains, and one
+    verified gate stands between work and memory.
   </p>
 
   <div class="hero-actions">
@@ -169,9 +168,9 @@
   <h2><span class="sec-no">01</span>"DONE" GETS AUDITED</h2>
   <p class="sec-lede">
     Agents end their turn the moment they <em>believe</em> they're finished. Here the
-    stop itself is an event: a hook blocks it and summons an independent advisor
-    with a clean context, the loop's metacognition. After "done", something still asks:
-    <em>is it really done?</em>
+    stop itself is an event. A hook blocks it and summons an independent advisor
+    with a clean context, the loop's metacognition. After "done", the advisor
+    still asks: <em>is it really done?</em>
   </p>
   <div class="exchange" role="img"
        aria-label="An illustrative exchange: the agent declares the mission accomplished and tries to stop; the hook blocks the stop and summons the advisor; the advisor lists overlooked regions (unmeasured layouts, uncited claims, facts still awaiting promotion); the agent resumes. Six rounds later the advisor writes: I have no further advice, ending the turn. Only then does the loop end.">
@@ -196,17 +195,17 @@
     <article class="claim">
       <h3>Intent survives anything</h3>
       <p>
-        The anchor (your intent, written once) is preserved outside the transcript
-        and re‑injected whenever context is rebuilt, so work spans days and survives
-        auto‑compaction. The advisor reads it fresh every round: the loop
-        stays anchored instead of drifting toward whatever it last said.
+        ploop keeps the anchor (your intent, written once) outside the transcript
+        and re‑injects it whenever the harness rebuilds context, so work spans
+        days and survives auto‑compaction. The advisor reads it fresh every
+        round, and the loop stays anchored.
       </p>
     </article>
     <article class="claim">
       <h3>The user is one event type</h3>
       <p>
         A typed prompt, a schedule firing, CI finishing, a task notification: all of
-        them are just events arriving at an anchored loop. None of them stops it.
+        them are events arriving at an anchored loop. None of them stops it.
         You can steer mid‑flight or ask a read‑only docent session what is going on;
         the loop absorbs the input and resumes at the next stop. You provide intent
         and observe.
@@ -218,7 +217,7 @@
         Nothing becomes long‑term memory except through a verified transaction.
         Everything else (loop state,
         dead ends, trial and error) dies with the loop. Forgetting is deliberate:
-        what remains is exactly what was verified.
+        what remains is what the verifier passed.
       </p>
     </article>
   </div>
@@ -228,9 +227,9 @@
 <section class="section" id="memory-system">
   <h2><span class="sec-no">03</span>THE MEMORY SYSTEM</h2>
   <p class="sec-lede">
-    The circuit above is the design itself, not a metaphor bolted on afterwards:
-    three plugins drive its stages. No database, no vector index: files, admitted
-    one verified merge at a time.
+    The circuit above is the design: three plugins drive its stages. Long‑term
+    memory is plain files, admitted one verified merge at a time. No database,
+    no vector index.
   </p>
   <ol class="stages">
     <li class="stage stage-copper">
@@ -238,7 +237,7 @@
       <div class="stage-body">
         <p>
           The ploop workspace: the anchor, loop‑local state, candidate facts and terms
-          awaiting promotion. It is untracked and lossy: rounds are discarded.
+          awaiting promotion. It is untracked and lossy: the loop discards rounds.
         </p>
       </div>
     </li>
@@ -246,9 +245,9 @@
       <div class="stage-key">CONSOLIDATION</div>
       <div class="stage-body">
         <p>
-          A tx transaction is the only way anything is written into memory: change
-          artifacts record the intent, an independent verifier checks the implementation
-          against it, CI must be green, and the result lands as a single squash merge.
+          A tx transaction is the only way to write memory. Change artifacts
+          record the intent, an independent verifier checks the implementation
+          against it, CI must pass, and the result lands as a single squash merge.
         </p>
       </div>
     </li>
@@ -258,8 +257,8 @@
         <p>
           All of the repository's git‑tracked, non‑executable text: requirement specs
           (semantic), archived changes (episodic), design canons and research records,
-          operating rules, glossary terms (lexical), skills (procedural). Recall is grep:
-          names are chosen to be found.
+          operating rules, glossary terms (lexical), skills (procedural). Recall is grep.
+          Names are chosen to be found.
         </p>
       </div>
     </li>
@@ -268,8 +267,8 @@
       <div class="stage-body">
         <p>
           Memory decays while it sits. The refine workflows re‑verify documented claims
-          against the code, prune what can no longer be verified, and converge
-          duplicates; the fixes pass through the same gate as everything else.
+          against the code, prune claims the code no longer backs, and converge
+          duplicates. The fixes pass through the same gate as everything else.
         </p>
       </div>
     </li>
@@ -287,10 +286,10 @@
         <span class="mod-role">ADVISOR LOOP</span>
       </div>
       <p>
-        An autonomous loop for work that spans days. Write an anchor (a mission with
-        an end, or an open‑ended purpose), launch it, and walk away: on every stop an
-        independent advisor surfaces what was overlooked, and the loop continues until
-        nothing remains.
+        An autonomous loop for work that spans days. Write an anchor (a mission
+        with an end, or an open‑ended purpose) and launch it; the loop does the
+        rest. On every stop an independent advisor surfaces what the agent
+        overlooked, and the loop continues until nothing remains.
       </p>
     </article>
 
@@ -301,7 +300,7 @@
       </div>
       <p>
         A Git workflow that treats change as a transaction (an integrity boundary).
-        The loop's agents drive it on their own: every change lands as one verified,
+        The loop's agents drive it on their own. Every change lands as one verified,
         CI‑green squash merge, and guard hooks keep the base branch protected in
         between. You review merged results, not work in progress.
       </p>
@@ -338,10 +337,10 @@
   <pre class="code-block"><code>uvx claude-automata init</code></pre>
 
   <div class="init-disclosure">
-    <h3 class="disclosure-title">WHAT INIT ACTUALLY WRITES</h3>
+    <h3 class="disclosure-title">WHAT INIT WRITES</h3>
     <p class="disclosure-note">
-      Full disclosure: this environment assumes unattended operation, and init
-      configures Claude Code accordingly. With <code>bypassPermissions</code> the agent
+      This environment assumes unattended operation, and init configures
+      Claude Code for it. With <code>bypassPermissions</code> the agent
       runs shell commands on your machine without asking first. The trust you extend
       is host‑level, not repo‑level. Adopt this on a machine where you accept that mode,
       and review the diff before you commit it.
@@ -359,8 +358,8 @@
       </tbody>
     </table>
     <p class="disclosure-note">
-      Merge‑write: unrelated keys in <code>.claude/settings.json</code> are preserved,
-      and re‑running is idempotent.
+      init merge‑writes: it preserves unrelated keys in
+      <code>.claude/settings.json</code>, and re‑running is idempotent.
     </p>
   </div>
 
@@ -370,12 +369,12 @@
 <section class="section" id="run-the-loop">
   <h2><span class="sec-no">06</span>RUN THE LOOP</h2>
   <p class="sec-lede">
-    This is the whole operating surface: write an anchor, launch it, and step in
-    only when you want to.
+    This is the whole operating surface. Write an anchor, launch it, and step
+    in only when you want to.
   </p>
 
     <p class="step-caption">1 · WRITE THE ANCHOR</p>
-    <pre class="code-block"><code><span class="c-muted"># an interview writes your intent down</span>
+    <pre class="code-block"><code><span class="c-muted"># an agent interviews you and writes the anchor</span>
 /ploop:define-mission   <span class="c-muted"># a mission with an end</span>
 /ploop:define-purpose   <span class="c-muted"># an open-ended purpose</span></code></pre>
 
@@ -399,9 +398,9 @@
 
 <footer class="colophon">
   <p class="colophon-lead">
-    claude‑automata is developed by claude‑automata: every contribution in this
-    repository was authored by a Claude Code agent running the loop this page
-    describes. Recursive self‑improvement in production.
+    claude‑automata develops claude‑automata. A Claude Code agent running the
+    loop this page describes authored every contribution in this repository.
+    Recursive self‑improvement in production.
   </p>
   <p class="colophon-meta">
     Apache‑2.0 · <a href="https://github.com/clomia/claude-automata">github.com/clomia/claude-automata</a>

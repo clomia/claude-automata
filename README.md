@@ -6,25 +6,25 @@
 
 <p align="center">
   An autonomous agent environment for Claude Code, modeled on human memory.<br>
-  An advisor audits every stop; one verified gate decides what gets remembered.
+  An advisor audits every stop; nothing becomes memory without passing one verified gate.
 </p>
 
 <p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ Watch the memory circuit run</strong></a></p>
 
 <p align="center">
-  <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=b25c28" alt="PyPI"></a>
-  <a href="https://github.com/clomia/claude-automata/blob/main/LICENSE"><img src="https://img.shields.io/pypi/l/claude-automata?style=flat&color=3e6f5e" alt="License"></a>
+  <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=f54e00" alt="PyPI"></a>
+  <a href="https://github.com/clomia/claude-automata/blob/main/LICENSE"><img src="https://img.shields.io/pypi/l/claude-automata?style=flat&color=447e48" alt="License"></a>
 </p>
 
 English | [한국어](https://github.com/clomia/claude-automata/blob/main/README.ko.md)
 
 ---
 
-Claude Code ends its turn the moment it believes it's finished, and forgets everything at the next compaction. claude-automata rebuilds it around the way memory actually works:
+Claude Code ends its turn the moment it believes it's finished, and loses the detail at the next compaction. claude-automata rebuilds it around the way human memory works:
 
 | Plugin | Memory role |
 |---|---|
-| **ploop** | working memory: a loop for work spanning days; every stop is audited by an independent advisor until nothing is left to surface |
+| **ploop** | working memory: a loop for work spanning days; an independent advisor audits every stop until it finds nothing more |
 | **tx** | consolidation: the only gate into memory (plan, independent verify, CI, squash merge) |
 | **refine** | re-grounding: hours-long workflows that re-verify old memory against the code |
 
@@ -40,7 +40,7 @@ uvx claude-automata init
 
 Re-running is safe (idempotent). `uvx claude-automata@latest init` forces the newest release.
 
-**What init actually writes.** This environment assumes unattended operation. Review the diff before you commit it:
+**What init writes.** This environment assumes unattended operation. Review the diff before you commit it:
 
 - `permissions.defaultMode: "bypassPermissions"`: no approval prompts. The agent runs shell commands on your machine without asking first; the trust is host-level, not repo-level.
 - `model: "opus[1m]"`: pinned model, 1M context
@@ -51,11 +51,11 @@ Re-running is safe (idempotent). `uvx claude-automata@latest init` forces the ne
 ## Run a loop
 
 ```
-/ploop:define-mission          # write the anchor: your intent, interviewed out of you
+/ploop:define-mission          # write the anchor: an agent interviews your intent out of you
 /ploop:launch [anchor text]    # hand it to the loop in a fresh session
 ```
 
-The loop rides the Stop hook: whenever the agent stops, an independent advisor with a clean context inspects the round and surfaces what was missed. It ends only when the advisor has nothing left to say, not when the agent feels finished.
+The loop rides the Stop hook: whenever the agent stops, an independent advisor with a clean context inspects the round and surfaces what the agent missed. It ends when the advisor has nothing left to say.
 
 ```
 agent   › Mission accomplished. Stopping.
@@ -73,8 +73,8 @@ advisor › I have no further advice. Ending the turn.
 
 <br>
 
-- Auto-Compact must be set to True. For unattended runs, set `askUserQuestionTimeout` so an unanswered question never parks the loop forever.
-- `/ploop:off` pauses; `/ploop:on` resumes, and doubles as a universal wake button: it revives a loop stalled by an accidental ESC, an API error, or a session limit (interrupt with ESC first if a turn is running). Nothing else stops the loop.
+- init sets Auto-Compact; keep it on. For unattended runs, set `askUserQuestionTimeout` so an unanswered question can't park the loop.
+- `/ploop:off` pauses; `/ploop:on` resumes, and doubles as a wake button: it revives a loop stalled by an accidental ESC, an API error, or a session limit (interrupt with ESC first if a turn is running). Nothing else stops the loop.
 - `/ploop:docent` in a **separate session, same directory** answers your questions from the loop's records without touching the loop. Questions go to the docent; interventions go straight to the loop session.
 
 </details>
@@ -87,7 +87,7 @@ advisor › I have no further advice. Ending the turn.
 /tx:close                 # verify, docs gate, CI, then squash-merge
 ```
 
-A transaction is an integrity boundary: it can only close once the implementation and its recorded intent are both verified. Guard hooks keep the base branch protected in between. This is the gate everything above flows through.
+A transaction is an integrity boundary: it closes only after the verifier passes both the implementation and its recorded intent. Guard hooks keep the base branch protected in between. This is the gate everything above flows through.
 
 ## Keep memory true
 
@@ -95,10 +95,10 @@ A transaction is an integrity boundary: it can only close once the implementatio
 /refine:code [focus] · /refine:docs [focus] · /refine:integrity [focus]
 ```
 
-Heavyweight multi-agent workflows (hours per run, 3–12h) that eliminate accumulated debt: code architecture, documentation truth, integrity boundaries. Findings settle through cross-examination into consensus; only the highest-ROI plans execute. The docs pass never modifies code; defects are reported. Empty focus targets the whole codebase; watch with `/workflows`.
+Heavyweight multi-agent workflows (hours per run, 3–12h) that eliminate accumulated debt: code architecture, documentation truth, integrity boundaries. Agents cross-examine findings into consensus and execute only the highest-ROI plans. The docs pass reports defects and never modifies code. Empty focus targets the whole codebase; watch with `/workflows`.
 
 ---
 
 <p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ Watch the memory circuit run</strong></a></p>
 
-Apache-2.0 · claude-automata is developed by claude-automata: every contribution in this repository was authored by a Claude Code agent running this very environment. Recursive self-improvement in production.
+Apache-2.0 · claude-automata develops claude-automata. A Claude Code agent running this environment authored every contribution in this repository. Recursive self-improvement in production.

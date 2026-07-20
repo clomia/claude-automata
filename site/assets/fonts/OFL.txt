@@ -1,9 +1,8 @@
 The fonts in this directory are redistributed under the SIL Open Font License, Version 1.1.
 Subset (latin) woff2 builds obtained from Google Fonts.
 
-- Inter — Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
-- DM Mono — Copyright 2020 The DM Mono Project Authors (https://github.com/googlefonts/dm-mono)
-- Instrument Serif — Copyright 2022 The Instrument Serif Project Authors (https://github.com/Instrument/instrument-serif)
+- Inter: Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+- JetBrains Mono: Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
 
 SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
 Full text: https://openfontlicense.org/open-font-license-official-text/
