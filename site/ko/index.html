@@ -161,10 +161,10 @@
   </figure>
 
   <p class="thesis">
-    Claude Code는 대화가 끝나면 멈춥니다. claude‑automata는 Claude Code를
-    계속 돌립니다. 의도를 한 번 적어두면 loop가 24시간 주도권을 쥡니다.
-    advisor는 일이 남아 있는 한 끝내지 못하게 하고, 기억은 하나의 검증된
-    gate를 통과한 것만 남습니다.
+    Claude Code는 대화를 계속 요구하므로 사용자의 주의력이 끊임없이
+    소모됩니다. claude‑automata를 사용하면 스스로 나아갑니다. 몇 달짜리
+    작업을 주면 며칠에 걸쳐 완료합니다. loop가 요구하는 것은 오직 당신의
+    의도입니다.
   </p>
 
   <div class="hero-actions">
@@ -177,10 +177,8 @@
 <section class="section" id="advisor">
   <h2><span class="sec-no">01</span>"끝났다"는 선언도 감사를 거칩니다</h2>
   <p class="sec-lede">
-    agent는 끝났다고 <em>믿는</em> 순간 turn을 끝냅니다. 여기서는 그 정지 자체가
-    event입니다. hook이 정지를 막고 clean context의 독립 advisor, 곧 loop의
-    메타인지를 소집합니다. "끝났다" 뒤에도 advisor가 다시 묻습니다:
-    <em>정말 끝났는가?</em>
+    agent가 끝났다고 선언하는 순간 hook이 정지를 막고 advisor를 소집합니다.
+    advisor는 전체 스토리에 접근할 수 있는 독립 메타인지입니다.
   </p>
   <div class="exchange" role="img"
        aria-label="연출된 대화: agent가 임무 완료를 선언하고 멈추려 하자 hook이 정지를 차단하고 advisor를 소집한다. advisor가 놓친 부분(측정되지 않은 layout, 출처 없는 주장, 승격 대기열의 사실)을 제시하고 agent가 재개한다. 여섯 round 뒤 advisor가 쓴다: 더 조언할 것이 없습니다, turn을 끝냅니다. 그때에야 loop가 끝난다.">
@@ -192,8 +190,7 @@
     <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text xc-end">더 조언할 것이 없습니다. turn을 끝냅니다.</span></div>
   </div>
   <p class="xc-note">
-    연출된 대화입니다. 기제는 실제입니다: hook이 정지를 차단하고, loop를 끝낼
-    권한은 advisor에게만 있습니다.
+    ploop이 제공하는 기능입니다. loop를 종료할 권한은 advisor에게 있습니다.
   </p>
   <p class="sec-punch">끝났다는 말로는 끝나지 않습니다. 정말 끝나야 끝납니다.</p>
 </section>
@@ -203,31 +200,26 @@
   <h2><span class="sec-no">02</span>작동 원리</h2>
   <div class="claims">
     <article class="claim">
-      <h3>의도는 어떤 일에도 살아남습니다</h3>
+      <h3>루프는 방황하지 않습니다</h3>
       <p>
-        ploop는 anchor(한 번 적어둔 당신의 의도)를 transcript 밖에 보존하고,
-        harness가 context를 재구성할 때마다 다시 주입합니다. 그래서 작업은
-        며칠을 넘기고 auto‑compaction에서도 살아남습니다. advisor는 매 round
-        anchor를 새로 읽고, loop는 anchor에 정박합니다.
+        ploop은 당신이 전달한 의도를 anchor로 정의하여 외부에 박고 advisor가
+        항상 참조합니다. anchor는 auto‑compaction 직후 컨텍스트에 주입되어
+        항상 SSoT 권위를 가집니다.
       </p>
     </article>
     <article class="claim">
-      <h3>사용자는 event type 중 하나입니다</h3>
+      <h3>loop가 사용자를 도구처럼 호출합니다</h3>
       <p>
-        타이핑한 prompt, schedule 발동, CI 완료, task notification: 전부 정박된
-        loop에 도착하는 event입니다. 어느 것도 loop를 멈추지 않습니다. 도중에
-        지시를 넣거나 read‑only docent session에 상황을 물어볼 수 있습니다.
-        loop는 입력을 흡수하고 다음 정지에서 재개됩니다. 당신은 의도를 주고
-        관찰합니다.
+        launch된 loop는 멈추지 않고 사용자는 anchor를 위한 도구로 취급됩니다.
+        도중에 지시를 넣거나 별도의 docent session에서 설명을 요청할 수
+        있습니다. 당신은 루프의 구성 요소 중 하나입니다.
       </p>
     </article>
     <article class="claim">
-      <h3>기억은 하나의 gate만 통과합니다</h3>
+      <h3>망각 시스템이 중요합니다</h3>
       <p>
-        검증된 transaction을 통하지 않고는 어떤 것도 장기기억이 되지 못합니다.
-        그 밖의 모든 것(loop 상태,
-        막다른 길, 시행착오)은 loop와 함께 사라집니다. 망각은 설계입니다:
-        남는 것은 verifier를 통과한 것뿐입니다.
+        검증된 transaction 회로를 통과하지 못한 기억은 loop와 함께
+        망각됩니다. 망각은 지능을 구성하는 핵심 요소입니다.
       </p>
     </article>
   </div>
@@ -237,17 +229,16 @@
 <section class="section" id="memory-system">
   <h2><span class="sec-no">03</span>기억 시스템</h2>
   <p class="sec-lede">
-    위의 회로가 설계 그 자체입니다: 세 plugin이 단계를 구동합니다. 장기기억은
-    검증된 merge가 하나씩 쌓은 평범한 파일들입니다. database도 vector index도
-    없습니다.
+    인간의 기억 시스템이 3개의 plugin으로 모듈화되어 있습니다. 작업 기억이
+    장기 기억으로 통합되고 장기 기억은 주기적으로 재구성됩니다.
   </p>
   <ol class="stages">
     <li class="stage stage-copper">
       <div class="stage-key">WORKING MEMORY</div>
       <div class="stage-body">
         <p>
-          ploop의 작업 공간: anchor, loop-local 상태, 승격을 기다리는 사실·용어
-          후보들. 추적되지 않는 lossy 공간입니다. loop가 round를 폐기합니다.
+          작업기억은 ploop에서 만들어집니다. anchor가 판단 기준, advisor가
+          메타인지를 담당하며 장기기억으로 승격시킬 기억을 생성합니다.
         </p>
       </div>
     </li>
@@ -255,9 +246,8 @@
       <div class="stage-key">CONSOLIDATION</div>
       <div class="stage-body">
         <p>
-          tx transaction이 기억을 쓰는 유일한 방법입니다. change artifact가
-          의도를 기록하고, 독립 verifier가 구현을 그 의도와 대조하고, CI를
-          통과해야 하며, 결과는 하나의 squash merge로 안착합니다.
+          tx는 작업기억을 심사하고 장기기억에 통합시킵니다. 작업기억의 의도와
+          구현을 대조하고 CI를 거쳐 squash merge로 장기기억을 생성합니다.
         </p>
       </div>
     </li>
@@ -265,9 +255,9 @@
       <div class="stage-key">LONG‑TERM MEMORY</div>
       <div class="stage-body">
         <p>
-          repository의 git 추적되는 비실행 text 전부: 요구사항 spec(의미기억),
-          archive된 change(일화기억), 설계 정본과 조사 기록, 운영 규칙, 용어
-          (어휘기억), skill(절차기억). 회상은 grep입니다. 이름은 grep에 걸리도록 짓습니다.
+          실행되지 않는 텍스트 중 git 추적에 포함되는 건 전부 장기기억입니다.
+          의미기억은 spec, 일화기억은 archive된 change, 어휘기억은 glossary,
+          절차기억은 skill 등으로 정교하게 구성됩니다.
         </p>
       </div>
     </li>
@@ -275,9 +265,8 @@
       <div class="stage-key">RE‑GROUNDING</div>
       <div class="stage-body">
         <p>
-          기억은 놓아두는 동안 부패합니다. refine workflow가 문서의 주장을 코드와
-          재대조하고, 코드가 더는 뒷받침하지 않는 주장을 지우고, 중복을
-          수렴시킵니다. 그 수정 역시 다른 모든 것과 같은 gate를 통과합니다.
+          정체된 기억은 살아남지 못합니다. refine workflow가 죽은 기억을
+          정리하고 전체 레포지토리를 최적의 상태로 수렴시킵니다.
         </p>
       </div>
     </li>
@@ -292,40 +281,35 @@
     <article class="module">
       <div class="mod-head">
         <h3 class="mod-name">ploop</h3>
-        <span class="mod-role">ADVISOR LOOP</span>
+        <span class="mod-tag tag-wm">작업기억</span>
       </div>
       <p>
-        며칠을 넘기는 작업을 위한 자율 loop입니다. anchor(끝이 있는 mission,
-        또는 끝이 없는 purpose)를 작성해 launch하면 그다음은 loop의 몫입니다.
-        멈출 때마다 독립 advisor가 agent가 놓친 것을 표면화하고, 남은 것이
-        없어질 때까지 계속됩니다.
+        단일 세션이 며칠에 걸쳐 자율적으로 항해할 수 있도록 만듭니다. 당신의
+        의도가 닻이 되어 루프가 표류하지 않고 안정적으로 유지됩니다.
       </p>
     </article>
 
     <article class="module">
       <div class="mod-head">
         <h3 class="mod-name">tx</h3>
-        <span class="mod-role">TRANSACTION GATE</span>
+        <span class="mod-tag tag-ltm">장기기억 추가</span>
       </div>
       <p>
-        변경을 transaction(무결성 경계)으로 다루는 Git workflow입니다. loop의
-        agent들이 알아서 사용합니다. 모든 변경은 검증과 CI를 통과한 하나의 squash
-        merge로 안착하고, 그동안 base branch는 guard hook이 지킵니다. 당신은 진행
-        중인 작업이 아니라 merge된 결과를 봅니다.
+        변경을 transaction(무결성 경계)으로 다루는 Git workflow. repository의
+        무결성을 지킵니다. 설치만 하면 에이전트가 알아서 사용합니다.
       </p>
     </article>
 
     <article class="module">
       <div class="mod-head">
         <h3 class="mod-name">refine</h3>
-        <span class="mod-role">MAINTENANCE WORKFLOWS</span>
+        <span class="mod-tag tag-ltm">장기기억 정리</span>
       </div>
       <p>
-        낡아가는 repository를 참인 상태로 되돌리는 workflow 3개입니다.
-        <code>/refine:code</code>는 코드 architecture를 재작업하고,
-        <code>/refine:docs</code>는 문서를 코드와 재대조하고,
-        <code>/refine:integrity</code>는 동작 무결성을 확보합니다. 필요할 때
-        영역을 지정해 실행하세요. 각각 수 시간짜리 multi‑agent pass입니다.
+        기술 부채를 제거하는 대규모 워크플로우입니다.
+        <code>/refine:code</code>(코드 최적화), <code>/refine:docs</code>(문서
+        정합), <code>/refine:integrity</code>(무결성 검수)가 있습니다.
+        레포지토리 전체를 탐색하고 해결하므로 10시간 이상 걸릴 수 있습니다.
       </p>
     </article>
 
@@ -348,22 +332,19 @@
   <div class="init-disclosure">
     <h3 class="disclosure-title">INIT이 기록하는 것</h3>
     <p class="disclosure-note">
-      이 환경은 무인 운용을 전제하며, init은 Claude Code를 그에 맞게
-      설정합니다. <code>bypassPermissions</code>에서는 agent가 묻지 않고 이
-      machine에서 shell command를 실행합니다. 신뢰의 범위는 repo가 아니라
-      host입니다. 그 방식을 수용할 machine에서 도입하고, commit 전에 diff를
-      확인하세요.
+      claude‑automata가 안정적으로 운용될 수 있는 환경을 원 커맨드로
+      셋업합니다.
     </p>
     <table class="spec-table">
       <caption class="sr-only">init이 .claude/settings.json에 merge-write하는 설정</caption>
       <tbody>
-        <tr><th scope="row">permissions.defaultMode</th><td><code>"bypassPermissions"</code> (승인 prompt 없음)</td></tr>
-        <tr><th scope="row">model</th><td><code>"opus[1m]"</code> (model 고정, 1M‑token context)</td></tr>
+        <tr><th scope="row">permissions.defaultMode</th><td><code>"bypassPermissions"</code></td></tr>
+        <tr><th scope="row">model</th><td><code>"opus[1m]"</code></td></tr>
         <tr><th scope="row">alwaysThinkingEnabled</th><td><code>true</code></td></tr>
-        <tr><th scope="row">autoCompactEnabled</th><td><code>true</code> (장기 loop가 여기 의존합니다)</td></tr>
-        <tr><th scope="row">autoMemoryEnabled</th><td><code>false</code> (기억은 harness가 아니라 repo의 것)</td></tr>
+        <tr><th scope="row">autoCompactEnabled</th><td><code>true</code></td></tr>
+        <tr><th scope="row">autoMemoryEnabled</th><td><code>false</code></td></tr>
         <tr><th scope="row">marketplace + plugins</th><td><code>clomia/claude-automata</code> 등록, plugin 활성화</td></tr>
-        <tr><th scope="row">external CLIs</th><td>없는 <code>gh</code>·Node.js ≥ 20·<code>repomix</code>를 <code>~/.local</code>에 설치 (sudo 불필요, 있으면 건너뜀, <code>gh auth login</code>은 당신 몫)</td></tr>
+        <tr><th scope="row">external CLIs</th><td><code>repomix</code>, <code>gh</code></td></tr>
       </tbody>
     </table>
     <p class="disclosure-note">
@@ -392,24 +373,22 @@
 /ploop:launch [anchor text]</code></pre>
 
     <p class="step-caption">3 · 조작</p>
-    <pre class="code-block"><code>/ploop:off      <span class="c-muted"># 일시정지: loop는 다음 정지에서 멈춥니다</span>
-/ploop:on       <span class="c-muted"># 재개: ESC·API error·session limit로 멈춘 loop도 깨웁니다</span>
-/ploop:docent   <span class="c-muted"># 반드시 별도 session에서 실행(같은 directory): read-only, loop를 건드리지 않습니다</span></code></pre>
+    <pre class="code-block"><code>/ploop:off      <span class="c-muted"># 루프 일시정지</span>
+/ploop:on       <span class="c-muted"># 루프 재개 (복원)</span>
+/ploop:docent   <span class="c-muted"># 루프의 진행 상황 보고 (반드시 동일한 디렉토리의 별도 session에서 실행)</span></code></pre>
 
     <p class="step-caption">4 · REPOSITORY 정비</p>
     <pre class="code-block"><code><span class="c-muted"># mission 사이에: 수 시간짜리 정비 pass</span>
-/refine:code       <span class="c-muted"># 코드 architecture 재작업</span>
-/refine:docs       <span class="c-muted"># 문서를 코드와 재대조</span>
-/refine:integrity  <span class="c-muted"># 동작 무결성 확보</span></code></pre>
+/refine:code       <span class="c-muted"># 코드 architecture 최적화</span>
+/refine:docs       <span class="c-muted"># 문서를 코드에 정합</span>
+/refine:integrity  <span class="c-muted"># 논리적 무결성 검증</span></code></pre>
 </section>
 
 </main>
 
 <footer class="colophon">
   <p class="colophon-lead">
-    claude‑automata가 claude‑automata를 개발합니다. 이 repository의 모든 기여는
-    이 page가 설명하는 loop를 돌리는 Claude Code agent가 작성했습니다. 재귀적
-    자기개선이 production에서 돌아갑니다.
+    재귀적 자기개선: claude‑automata는 claude‑automata에서 개발됩니다.
   </p>
   <p class="colophon-meta">
     Apache‑2.0 · <a href="https://github.com/clomia/claude-automata">github.com/clomia/claude-automata</a>

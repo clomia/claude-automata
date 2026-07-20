@@ -345,7 +345,11 @@ section[id] { scroll-margin-top: 1.5rem; }
 .mod-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
   border-bottom: 1px solid var(--hairline); padding-bottom: 0.7rem; }
 .mod-name { font-family: var(--mono); font-weight: 500; font-size: 1.05rem; }
-.mod-role { font-family: var(--body); font-weight: 600; font-size: 0.65rem; letter-spacing: 0.08em; color: var(--muted); white-space: nowrap; }
+.mod-tag { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.05em;
+  background: var(--chip); padding: 0.22rem 0.6rem; border-radius: var(--r-pill);
+  white-space: nowrap; }
+.tag-wm { color: var(--copper-deep); }
+.tag-ltm { color: var(--verdigris); }
 .module p { font-size: 0.94rem; color: var(--body-text); flex-grow: 1; }
 
 /* 04 getting started */

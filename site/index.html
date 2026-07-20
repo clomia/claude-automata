@@ -151,10 +151,9 @@
   </figure>
 
   <p class="thesis">
-    Claude Code stops when your conversation ends. claude‑automata keeps it
-    running. Write the intent once, and a loop holds the initiative around
-    the clock. An advisor refuses to let it quit while work remains, and one
-    verified gate stands between work and memory.
+    Claude Code runs on conversation, and conversation runs on your
+    attention. claude‑automata drives itself: hand it months of work and it
+    finishes in days. All the loop asks of you is your intent.
   </p>
 
   <div class="hero-actions">
@@ -167,10 +166,9 @@
 <section class="section" id="advisor">
   <h2><span class="sec-no">01</span>"DONE" GETS AUDITED</h2>
   <p class="sec-lede">
-    Agents end their turn the moment they <em>believe</em> they're finished. Here the
-    stop itself is an event. A hook blocks it and summons an independent advisor
-    with a clean context, the loop's metacognition. After "done", the advisor
-    still asks: <em>is it really done?</em>
+    The moment the agent declares itself done, a hook blocks the stop and
+    summons the advisor: an independent metacognition with access to the
+    whole story.
   </p>
   <div class="exchange" role="img"
        aria-label="An illustrative exchange: the agent declares the mission accomplished and tries to stop; the hook blocks the stop and summons the advisor; the advisor lists overlooked regions (unmeasured layouts, uncited claims, facts still awaiting promotion); the agent resumes. Six rounds later the advisor writes: I have no further advice, ending the turn. Only then does the loop end.">
@@ -182,8 +180,8 @@
     <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text xc-end">I have no further advice. Ending the turn.</span></div>
   </div>
   <p class="xc-note">
-    An illustrative exchange. The mechanics are real: a hook blocks the stop,
-    and only the advisor may end the loop.
+    This is what ploop provides. The authority to end the loop rests with
+    the advisor.
   </p>
   <p class="sec-punch">Saying "done" doesn't end it. Being done does.</p>
 </section>
@@ -193,31 +191,28 @@
   <h2><span class="sec-no">02</span>OPERATING PRINCIPLES</h2>
   <div class="claims">
     <article class="claim">
-      <h3>Intent survives anything</h3>
+      <h3>The loop never wanders</h3>
       <p>
-        ploop keeps the anchor (your intent, written once) outside the transcript
-        and re‑injects it whenever the harness rebuilds context, so work spans
-        days and survives auto‑compaction. The advisor reads it fresh every
-        round, and the loop stays anchored.
+        ploop defines the intent you hand it as the anchor, plants it outside
+        the transcript, and the advisor consults it constantly. Injected into
+        context right after each auto‑compaction, the anchor remains the
+        single source of truth.
       </p>
     </article>
     <article class="claim">
-      <h3>The user is one event type</h3>
+      <h3>The loop calls you like a tool</h3>
       <p>
-        A typed prompt, a schedule firing, CI finishing, a task notification: all of
-        them are events arriving at an anchored loop. None of them stops it.
-        You can steer mid‑flight or ask a read‑only docent session what is going on;
-        the loop absorbs the input and resumes at the next stop. You provide intent
-        and observe.
+        Once launched, the loop does not stop, and it treats you as a tool in
+        service of the anchor. You can drop in instructions mid‑flight or ask
+        a separate docent session for an explanation. You are one component
+        of the loop.
       </p>
     </article>
     <article class="claim">
-      <h3>Memory passes through one gate</h3>
+      <h3>Forgetting matters</h3>
       <p>
-        Nothing becomes long‑term memory except through a verified transaction.
-        Everything else (loop state,
-        dead ends, trial and error) dies with the loop. Forgetting is deliberate:
-        what remains is what the verifier passed.
+        Memory that fails the verified transaction circuit is forgotten along
+        with the loop. Forgetting is a core component of intelligence.
       </p>
     </article>
   </div>
@@ -227,17 +222,18 @@
 <section class="section" id="memory-system">
   <h2><span class="sec-no">03</span>THE MEMORY SYSTEM</h2>
   <p class="sec-lede">
-    The circuit above is the design: three plugins drive its stages. Long‑term
-    memory is plain files, admitted one verified merge at a time. No database,
-    no vector index.
+    The human memory system, modularized into three plugins. Working memory
+    consolidates into long‑term memory, and long‑term memory is rebuilt on
+    a cycle.
   </p>
   <ol class="stages">
     <li class="stage stage-copper">
       <div class="stage-key">WORKING MEMORY</div>
       <div class="stage-body">
         <p>
-          The ploop workspace: the anchor, loop‑local state, candidate facts and terms
-          awaiting promotion. It is untracked and lossy: the loop discards rounds.
+          Working memory forms inside ploop. With the anchor as its criteria
+          and the advisor as its metacognition, the loop generates the
+          memories worth promoting to long‑term.
         </p>
       </div>
     </li>
@@ -245,9 +241,9 @@
       <div class="stage-key">CONSOLIDATION</div>
       <div class="stage-body">
         <p>
-          A tx transaction is the only way to write memory. Change artifacts
-          record the intent, an independent verifier checks the implementation
-          against it, CI must pass, and the result lands as a single squash merge.
+          tx screens working memory and consolidates it into long‑term memory.
+          It checks the implementation against the intent, passes CI, and
+          writes long‑term memory as one squash merge.
         </p>
       </div>
     </li>
@@ -255,10 +251,9 @@
       <div class="stage-key">LONG‑TERM MEMORY</div>
       <div class="stage-body">
         <p>
-          All of the repository's git‑tracked, non‑executable text: requirement specs
-          (semantic), archived changes (episodic), design canons and research records,
-          operating rules, glossary terms (lexical), skills (procedural). Recall is grep.
-          Names are chosen to be found.
+          Every non‑executable, git‑tracked text is long‑term memory, organized
+          with precision: specs as semantic memory, archived changes as
+          episodic, the glossary as lexical, skills as procedural.
         </p>
       </div>
     </li>
@@ -266,9 +261,9 @@
       <div class="stage-key">RE‑GROUNDING</div>
       <div class="stage-body">
         <p>
-          Memory decays while it sits. The refine workflows re‑verify documented claims
-          against the code, prune claims the code no longer backs, and converge
-          duplicates. The fixes pass through the same gate as everything else.
+          Stagnant memory does not survive. The refine workflows clear out
+          dead memory and converge the whole repository toward its optimal
+          state.
         </p>
       </div>
     </li>
@@ -283,40 +278,37 @@
     <article class="module">
       <div class="mod-head">
         <h3 class="mod-name">ploop</h3>
-        <span class="mod-role">ADVISOR LOOP</span>
+        <span class="mod-tag tag-wm">WORKING MEMORY</span>
       </div>
       <p>
-        An autonomous loop for work that spans days. Write an anchor (a mission
-        with an end, or an open‑ended purpose) and launch it; the loop does the
-        rest. On every stop an independent advisor surfaces what the agent
-        overlooked, and the loop continues until nothing remains.
+        Lets a single session sail autonomously for days. Your intent becomes
+        the anchor that holds the loop steady against drift.
       </p>
     </article>
 
     <article class="module">
       <div class="mod-head">
         <h3 class="mod-name">tx</h3>
-        <span class="mod-role">TRANSACTION GATE</span>
+        <span class="mod-tag tag-ltm">LONG-TERM MEMORY · WRITE</span>
       </div>
       <p>
-        A Git workflow that treats change as a transaction (an integrity boundary).
-        The loop's agents drive it on their own. Every change lands as one verified,
-        CI‑green squash merge, and guard hooks keep the base branch protected in
-        between. You review merged results, not work in progress.
+        A Git workflow that treats change as a transaction (an integrity
+        boundary). It guards the repository's integrity. Install it and the
+        agents drive it on their own.
       </p>
     </article>
 
     <article class="module">
       <div class="mod-head">
         <h3 class="mod-name">refine</h3>
-        <span class="mod-role">MAINTENANCE WORKFLOWS</span>
+        <span class="mod-tag tag-ltm">LONG-TERM MEMORY · UPKEEP</span>
       </div>
       <p>
-        Three workflows that keep an aging repository true. <code>/refine:code</code>
-        reworks code architecture, <code>/refine:docs</code> re‑verifies documentation
-        against the code, <code>/refine:integrity</code> verifies behavioral integrity.
-        Run one with an optional focus area; each is a multi‑agent pass that
-        takes hours.
+        Large‑scale workflows that eliminate technical debt:
+        <code>/refine:code</code> optimizes the code architecture,
+        <code>/refine:docs</code> aligns documentation with the code, and
+        <code>/refine:integrity</code> audits integrity. They sweep the whole
+        repository, so a run can take ten hours or more.
       </p>
     </article>
 
@@ -339,22 +331,19 @@
   <div class="init-disclosure">
     <h3 class="disclosure-title">WHAT INIT WRITES</h3>
     <p class="disclosure-note">
-      This environment assumes unattended operation, and init configures
-      Claude Code for it. With <code>bypassPermissions</code> the agent
-      runs shell commands on your machine without asking first. The trust you extend
-      is host‑level, not repo‑level. Adopt this on a machine where you accept that mode,
-      and review the diff before you commit it.
+      One command sets up the environment claude‑automata needs to run
+      reliably.
     </p>
     <table class="spec-table">
       <caption class="sr-only">Settings that init merge-writes into .claude/settings.json</caption>
       <tbody>
-        <tr><th scope="row">permissions.defaultMode</th><td><code>"bypassPermissions"</code> (no approval prompts)</td></tr>
-        <tr><th scope="row">model</th><td><code>"opus[1m]"</code> (pinned, 1M‑token context)</td></tr>
+        <tr><th scope="row">permissions.defaultMode</th><td><code>"bypassPermissions"</code></td></tr>
+        <tr><th scope="row">model</th><td><code>"opus[1m]"</code></td></tr>
         <tr><th scope="row">alwaysThinkingEnabled</th><td><code>true</code></td></tr>
-        <tr><th scope="row">autoCompactEnabled</th><td><code>true</code> (long loops depend on it)</td></tr>
-        <tr><th scope="row">autoMemoryEnabled</th><td><code>false</code> (memory belongs to the repo, not the harness)</td></tr>
+        <tr><th scope="row">autoCompactEnabled</th><td><code>true</code></td></tr>
+        <tr><th scope="row">autoMemoryEnabled</th><td><code>false</code></td></tr>
         <tr><th scope="row">marketplace + plugins</th><td>registers <code>clomia/claude-automata</code>, enables its plugins</td></tr>
-        <tr><th scope="row">external CLIs</th><td>installs missing <code>gh</code>, Node.js ≥ 20, <code>repomix</code> into <code>~/.local</code> (no sudo, present tools skipped, <code>gh auth login</code> stays yours)</td></tr>
+        <tr><th scope="row">external CLIs</th><td><code>repomix</code>, <code>gh</code></td></tr>
       </tbody>
     </table>
     <p class="disclosure-note">
@@ -383,24 +372,23 @@
 /ploop:launch [anchor text]</code></pre>
 
     <p class="step-caption">3 · OPERATE</p>
-    <pre class="code-block"><code>/ploop:off      <span class="c-muted"># pause: the loop stops at its next stop</span>
-/ploop:on       <span class="c-muted"># resume: also wakes a loop stalled by ESC, API errors, session limits</span>
-/ploop:docent   <span class="c-muted"># run it in a separate session (same directory): read-only, never touches the loop</span></code></pre>
+    <pre class="code-block"><code>/ploop:off      <span class="c-muted"># pause the loop</span>
+/ploop:on       <span class="c-muted"># resume / restore the loop</span>
+/ploop:docent   <span class="c-muted"># reports the loop's progress (must run in a separate session, same directory)</span></code></pre>
 
     <p class="step-caption">4 · KEEP THE REPOSITORY LEAN</p>
     <pre class="code-block"><code><span class="c-muted"># between missions: hours-long maintenance passes</span>
-/refine:code       <span class="c-muted"># reworks code architecture</span>
-/refine:docs       <span class="c-muted"># re-verifies documentation against the code</span>
-/refine:integrity  <span class="c-muted"># verifies behavioral integrity</span></code></pre>
+/refine:code       <span class="c-muted"># optimizes the code architecture</span>
+/refine:docs       <span class="c-muted"># aligns documentation with the code</span>
+/refine:integrity  <span class="c-muted"># verifies logical integrity</span></code></pre>
 </section>
 
 </main>
 
 <footer class="colophon">
   <p class="colophon-lead">
-    claude‑automata develops claude‑automata. A Claude Code agent running the
-    loop this page describes authored every contribution in this repository.
-    Recursive self‑improvement in production.
+    Recursive self‑improvement: claude‑automata is developed inside
+    claude‑automata.
   </p>
   <p class="colophon-meta">
     Apache‑2.0 · <a href="https://github.com/clomia/claude-automata">github.com/clomia/claude-automata</a>
