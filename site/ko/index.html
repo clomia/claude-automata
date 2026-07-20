@@ -163,9 +163,7 @@
   <p class="thesis">
     Claude Code는 대화가 끝나면 멈춥니다. claude‑automata는 멈추지 않습니다:
     의도를 한 번 적어두면 loop가 24시간 주도권을 쥡니다. advisor는 일이 남아
-    있는 한 끝내지 못하게 하고, 하나의 gate가 무엇을 기억할지 정하며, 장기기억은
-    repository의 git 추적 text 그 자체입니다. 검증되지 않은 것은 의도적으로
-    loop와 함께 사라집니다.
+    있는 한 끝내지 못하게 하고, 하나의 gate가 무엇을 기억할지 정합니다.
   </p>
 
   <div class="hero-actions">
@@ -179,8 +177,8 @@
   <h2><span class="sec-no">01</span>"끝났다"는 선언도 감사받습니다</h2>
   <p class="sec-lede">
     agent는 끝났다고 <em>믿는</em> 순간 turn을 끝냅니다. 여기서는 그 정지 자체가
-    event입니다: hook이 정지를 막고 clean context의 독립 advisor를 소집합니다.
-    loop의 메타인지입니다. "끝났다" 뒤에도 무언가가 계속 묻습니다:
+    event입니다: hook이 정지를 막고 clean context의 독립 advisor, 곧 loop의
+    메타인지를 소집합니다. "끝났다" 뒤에도 무언가가 계속 묻습니다:
     <em>정말 끝났는가?</em>
   </p>
   <div class="exchange" role="img"
@@ -195,7 +193,7 @@
   <p class="xc-note">
     연출된 대화입니다. 기제는 실제입니다: 정지를 차단하는 hook, clean context의
     advisor, 그리고 loop를 끝낼 권한은 advisor에게만 있다는 규칙. round 상한은
-    없습니다. loop는 advisor가 끝났다고 판단할 때 끝납니다.
+    없습니다.
   </p>
   <p class="sec-punch">끝났다는 말로는 끝나지 않습니다. 정말 끝나야 끝납니다.</p>
 </section>
@@ -208,7 +206,7 @@
       <h3>의도는 무엇에도 살아남습니다</h3>
       <p>
         anchor(한 번 적어둔 당신의 의도)는 transcript 밖에 보존되고 context가
-        재구성될 때마다 다시 주입됩니다. 그래서 작업은 며칠을 넘기고 거듭되는
+        재구성될 때마다 다시 주입됩니다. 그래서 작업은 며칠을 넘기고
         auto‑compaction에서도 살아남습니다. advisor는 매 round anchor를 새로
         읽습니다. loop는 마지막으로 한 말이 아니라 anchor에 정박합니다.
       </p>
@@ -219,15 +217,15 @@
         타이핑한 prompt, schedule 발동, CI 완료, task notification: 전부 정박된
         loop에 도착하는 event일 뿐입니다. 어느 것도 loop를 멈추지 않습니다. 도중에
         지시를 넣거나 read‑only docent session에 상황을 물어볼 수 있습니다.
-        loop는 입력을 흡수하고 다음 정지에서 재개됩니다. 설계상 이 repository의
-        모든 기여는 Claude Code agent가 작성합니다. 인간은 의도를 주고 관찰합니다.
+        loop는 입력을 흡수하고 다음 정지에서 재개됩니다. 당신은 의도를 주고
+        관찰합니다.
       </p>
     </article>
     <article class="claim">
       <h3>기억은 하나의 gate만 통과합니다</h3>
       <p>
-        transaction을 통하지 않고는 어떤 것도 장기기억이 되지 못합니다: 계획된
-        의도, 독립 verifier, CI, 그리고 squash merge. 그 밖의 모든 것(loop 상태,
+        검증된 transaction을 통하지 않고는 어떤 것도 장기기억이 되지 못합니다.
+        그 밖의 모든 것(loop 상태,
         막다른 길, 시행착오)은 loop와 함께 사라집니다. 망각은 설계입니다:
         남는 것은 오직 검증된 것뿐입니다.
       </p>
@@ -239,9 +237,9 @@
 <section class="section" id="memory-system">
   <h2><span class="sec-no">03</span>기억 SYSTEM</h2>
   <p class="sec-lede">
-    위의 회로는 나중에 붙인 은유가 아니라 설계 그 자체입니다: 세 plugin이 단계를
-    구동하고, 저장소는 repository의 git 추적 text입니다. database도 vector index도
-    없습니다. 검증된 merge가 하나씩 쌓여 만들어지는 파일들입니다.
+    위의 회로는 나중에 붙인 은유가 아니라 설계 그 자체입니다: 세 plugin이
+    단계를 구동합니다. database도 vector index도 없습니다. 검증된 merge가
+    하나씩 쌓여 만들어지는 파일들입니다.
   </p>
   <ol class="stages">
     <li class="stage stage-copper">
@@ -249,8 +247,7 @@
       <div class="stage-body">
         <p>
           ploop의 작업 공간: anchor, loop-local 상태, 승격을 기다리는 사실·용어
-          후보들. 의도적으로 미추적이고 lossy합니다. round는 폐기되고, advisor
-          loop가 정박을 지킵니다.
+          후보들. 의도적으로 미추적이고 lossy합니다. round는 폐기됩니다.
         </p>
       </div>
     </li>
@@ -375,11 +372,14 @@
     </p>
   </div>
 
-  <div class="next-steps">
-    <h3 class="disclosure-title">LOOP를 돌리세요</h3>
-    <p class="disclosure-note">
-      운용 표면은 이것이 전부입니다: anchor를 쓰고, launch하고, 원할 때만 개입합니다.
-    </p>
+</section>
+
+<!-- ========================== 06 RUN THE LOOP =========================== -->
+<section class="section" id="run-the-loop">
+  <h2><span class="sec-no">06</span>LOOP를 돌리세요</h2>
+  <p class="sec-lede">
+    운용 표면은 이것이 전부입니다: anchor를 쓰고, launch하고, 원할 때만 개입합니다.
+  </p>
 
     <p class="step-caption">1 · ANCHOR 작성</p>
     <pre class="code-block"><code><span class="c-muted"># interview가 당신의 의도를 받아 적습니다</span>
@@ -393,14 +393,13 @@
     <p class="step-caption">3 · 조작</p>
     <pre class="code-block"><code>/ploop:off      <span class="c-muted"># 일시정지: loop는 다음 정지에서 멈춥니다</span>
 /ploop:on       <span class="c-muted"># 재개: ESC·API error·session limit로 멈춘 loop도 깨웁니다</span>
-/ploop:docent   <span class="c-muted"># 별도 session에서 상황을 묻습니다: read-only, loop를 건드리지 않습니다</span></code></pre>
+/ploop:docent   <span class="c-muted"># 반드시 별도 session에서 실행(같은 directory): read-only, loop를 건드리지 않습니다</span></code></pre>
 
     <p class="step-caption">4 · REPOSITORY 정비</p>
     <pre class="code-block"><code><span class="c-muted"># mission 사이에: 수 시간짜리 정비 pass</span>
 /refine:code       <span class="c-muted"># 코드 architecture 재작업</span>
 /refine:docs       <span class="c-muted"># 문서를 코드와 재대조</span>
 /refine:integrity  <span class="c-muted"># module 사이의 경계 점검</span></code></pre>
-  </div>
 </section>
 
 </main>
