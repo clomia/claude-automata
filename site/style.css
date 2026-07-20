@@ -66,7 +66,6 @@ section[id] { scroll-margin-top: 1.5rem; }
 .tb-field { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
 .tb-k { color: var(--muted); margin-right: 0.45em; }
 .tb-k::after { content: " ·"; }
-.tb-unaffiliated { color: var(--copper-deep); }
 .tb-link { text-decoration: none; }
 .tb-link:hover { color: var(--copper-deep); }
 .tb-lang { color: var(--muted); }
@@ -322,7 +321,7 @@ section[id] { scroll-margin-top: 1.5rem; }
 .stage-body p { max-width: 68ch; font-size: 0.97rem; }
 
 /* 03 modules */
-.modules { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.modules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
 .module { border: 1px solid var(--hairline-strong); background: var(--panel);
   padding: 1.6rem 1.7rem 1.4rem; display: flex; flex-direction: column; gap: 0.85rem; }
 .mod-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
@@ -330,12 +329,6 @@ section[id] { scroll-margin-top: 1.5rem; }
 .mod-name { font-family: var(--mono); font-weight: 500; font-size: 1.05rem; }
 .mod-role { font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.12em; color: var(--muted); white-space: nowrap; }
 .module p { font-size: 0.94rem; color: #33312a; flex-grow: 1; }
-.canon-link { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.05em;
-  color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--hairline);
-  align-self: flex-start; padding-bottom: 0.15rem; }
-.canon-link:hover { color: var(--copper-deep); border-color: var(--copper); }
-.lang-tag { font-size: 0.58rem; border: 1px solid currentColor; padding: 0 0.25em;
-  margin-left: 0.3em; vertical-align: 0.1em; }
 
 /* 04 getting started */
 .code-block { background: var(--panel); border: 1px solid var(--hairline-strong);
@@ -358,7 +351,7 @@ section[id] { scroll-margin-top: 1.5rem; }
 .colophon { max-width: var(--wrap); margin: 0 auto;
   padding: 2.6rem clamp(1.25rem, 4vw, 2.5rem) 3.2rem;
   border-top: 3px double var(--hairline-strong); }
-.unaffiliated { max-width: 72ch; font-size: 0.92rem; }
+.colophon-lead { max-width: 72ch; font-size: 0.92rem; }
 .colophon-meta { margin-top: 1rem; font-family: var(--mono); font-size: 0.72rem;
   color: var(--muted); letter-spacing: 0.02em; }
 

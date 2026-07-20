@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>claude-automata — runs for days, remembers only what's verified</title>
-<meta name="description" content="An autonomous agent environment for Claude Code, modeled on human memory: an advisor loop as working memory, one verified consolidation gate, long-term memory as git-tracked text, and a re-grounding maintenance cycle. Independent open-source project, MIT.">
+<meta name="description" content="An autonomous agent environment for Claude Code, modeled on human memory: an advisor loop as working memory, one verified consolidation gate, long-term memory as git-tracked text, and a re-grounding maintenance cycle. Developed end to end by its own Claude Code agents. Apache-2.0.">
 <link rel="canonical" href="https://clomia.github.io/claude-automata/">
 <link rel="alternate" hreflang="en" href="https://clomia.github.io/claude-automata/">
 <link rel="alternate" hreflang="ko" href="https://clomia.github.io/claude-automata/ko/">
@@ -13,7 +13,7 @@
 <meta property="og:url" content="https://clomia.github.io/claude-automata/">
 <meta property="og:site_name" content="claude-automata">
 <meta property="og:title" content="claude-automata — runs for days, remembers only what's verified">
-<meta property="og:description" content="Human memory architecture mapped onto Claude Code: a working-memory loop, one verified consolidation gate, git-tracked long-term memory, and a re-grounding cycle. Independent open-source project.">
+<meta property="og:description" content="Human memory architecture mapped onto Claude Code: a working-memory loop, one verified consolidation gate, git-tracked long-term memory, and a re-grounding cycle. Developed by its own agents.">
 <meta property="og:image" content="https://clomia.github.io/claude-automata/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -28,8 +28,7 @@
   <div class="tb-name">CLAUDE‑AUTOMATA</div>
   <div class="tb-fields">
     <span class="tb-field"><span class="tb-k">DOC</span> LANDING</span>
-    <span class="tb-field"><span class="tb-k">LICENSE</span> MIT</span>
-    <span class="tb-field tb-unaffiliated"><span class="tb-k">STATUS</span> NOT AFFILIATED WITH ANTHROPIC</span>
+    <span class="tb-field"><span class="tb-k">LICENSE</span> APACHE-2.0</span>
     <a class="tb-field tb-link" href="https://github.com/clomia/claude-automata"><span class="tb-k">SOURCE</span> GITHUB ↗</a>
     <span class="tb-field tb-lang"><b>EN</b> · <a href="ko/">KO</a></span>
   </div>
@@ -153,10 +152,10 @@
 
   <p class="thesis">
     claude‑automata turns Claude Code into a running system rather than a conversation.
-    Write your intent once; a loop holds the initiative around the clock, an advisor
-    refuses to let it quit while work remains, and one consolidation gate decides what
-    may be remembered. Long‑term memory is nothing but the repository's git‑tracked
-    text — everything unverified dies with the loop, on purpose.
+    Write your intent once: a loop holds the initiative around the clock, an advisor
+    refuses to let it quit while work remains, and one gate decides what may be
+    remembered. Long‑term memory is the repository's own git‑tracked text —
+    everything unverified dies with the loop, on purpose.
   </p>
 
   <div class="hero-actions">
@@ -298,7 +297,6 @@
         your plan's quota, and multi‑day runs spend it accordingly. A read‑only docent
         answers your questions from the loop's records without touching it.
       </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/ploop/ARCHITECTURE.md">SOURCE — plugins/ploop/ARCHITECTURE.md <span class="lang-tag">KOREAN</span></a>
     </article>
 
     <article class="module">
@@ -313,7 +311,6 @@
         verify stage; <code>/tx:close</code> squash‑merges it back only when verification,
         a docs gate and CI all pass. Guard hooks keep the base branch protected in between.
       </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/tx/README.md">SOURCE — plugins/tx/README.md</a>
     </article>
 
     <article class="module">
@@ -322,7 +319,7 @@
         <span class="mod-role">MAINTENANCE WORKFLOWS</span>
       </div>
       <p>
-        Heavyweight multi‑agent workflows (hours per run) that eliminate accumulated
+        Heavyweight multi‑agent workflows (3–12 hours per run) that eliminate accumulated
         debt: code architecture, documentation truth, and integrity boundaries. Regions
         are analyzed in parallel, findings settle through cross‑examination into
         consensus, and only the highest‑ROI plans are executed. In the docs pass, code
@@ -330,22 +327,8 @@
         <code>/refine:code</code> · <code>/refine:docs</code> · <code>/refine:integrity</code>,
         an optional focus area as the argument.
       </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/refine">SOURCE — plugins/refine <span class="lang-tag">KOREAN</span></a>
     </article>
 
-    <article class="module">
-      <div class="mod-head">
-        <h3 class="mod-name">version‑up‑alert</h3>
-        <span class="mod-role">UPDATE NOTICE</span>
-      </div>
-      <p>
-        When a newer release of any installed claude‑automata plugin ships, one line
-        appears at session start naming every plugin that is behind. Alert‑only — it
-        never swaps a plugin under a running session; you choose when to update. Every
-        other plugin installs it as a dependency, so there is nothing to install.
-      </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/version-up-alert">SOURCE — plugins/version-up-alert</a>
-    </article>
 
   </div>
 </section>
@@ -354,7 +337,7 @@
 <section class="section" id="getting-started">
   <h2><span class="sec-no">05</span>GETTING STARTED</h2>
   <p class="sec-lede">
-    One command converges a repository to the environment's prerequisites.
+    One command sets a repository up to run this environment.
     Requires <a href="https://claude.com/claude-code">Claude Code</a> and
     <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> on a
     POSIX system (macOS / Linux / WSL). Run it at your project root:
@@ -406,13 +389,13 @@
 </main>
 
 <footer class="colophon">
-  <p class="unaffiliated">
-    claude‑automata is an independent open‑source project. It is not affiliated with,
-    endorsed by, or sponsored by Anthropic. Claude and Claude Code are products of Anthropic.
+  <p class="colophon-lead">
+    claude‑automata is developed by claude‑automata: every contribution in this
+    repository was authored by a Claude Code agent running the loop this page
+    describes. Recursive self‑improvement, in production.
   </p>
   <p class="colophon-meta">
-    MIT License · <a href="https://github.com/clomia/claude-automata">github.com/clomia/claude-automata</a>
-    · By design, every contribution to this repository is authored by Claude Code agents.
+    Apache‑2.0 · <a href="https://github.com/clomia/claude-automata">github.com/clomia/claude-automata</a>
   </p>
 </footer>
 

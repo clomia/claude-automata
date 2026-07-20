@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>claude-automata — 며칠이고 돌아갑니다. 검증된 것만 기억합니다.</title>
-<meta name="description" content="인간 기억 구조를 사상한 Claude Code 자율 agent 환경: 작업기억 advisor loop, 하나의 검증된 consolidation gate, git 추적 text 장기기억, 재접지 주기. Anthropic과 무관한 독립 open-source project, MIT.">
+<meta name="description" content="인간 기억 구조를 사상한 Claude Code 자율 agent 환경: 작업기억 advisor loop, 하나의 검증된 consolidation gate, git 추적 text 장기기억, 재접지 주기. 전 과정을 자신의 Claude Code agent가 개발합니다. Apache-2.0.">
 <link rel="canonical" href="https://clomia.github.io/claude-automata/ko/">
 <link rel="alternate" hreflang="en" href="https://clomia.github.io/claude-automata/">
 <link rel="alternate" hreflang="ko" href="https://clomia.github.io/claude-automata/ko/">
@@ -14,7 +14,7 @@
 <meta property="og:site_name" content="claude-automata">
 <meta property="og:locale" content="ko_KR">
 <meta property="og:title" content="claude-automata — 며칠이고 돌아갑니다. 검증된 것만 기억합니다.">
-<meta property="og:description" content="인간 기억 구조를 Claude Code에 사상: 작업기억 loop, 하나의 검증된 consolidation gate, git 추적 장기기억, 재접지 주기. 독립 open-source project.">
+<meta property="og:description" content="인간 기억 구조를 Claude Code에 사상: 작업기억 loop, 하나의 검증된 consolidation gate, git 추적 장기기억, 재접지 주기. 자신의 agent가 개발합니다.">
 <meta property="og:image" content="https://clomia.github.io/claude-automata/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -37,8 +37,7 @@
   <div class="tb-name">CLAUDE‑AUTOMATA</div>
   <div class="tb-fields">
     <span class="tb-field"><span class="tb-k">DOC</span> LANDING</span>
-    <span class="tb-field"><span class="tb-k">LICENSE</span> MIT</span>
-    <span class="tb-field tb-unaffiliated"><span class="tb-k">STATUS</span> NOT AFFILIATED WITH ANTHROPIC</span>
+    <span class="tb-field"><span class="tb-k">LICENSE</span> APACHE-2.0</span>
     <a class="tb-field tb-link" href="https://github.com/clomia/claude-automata"><span class="tb-k">SOURCE</span> GITHUB ↗</a>
     <span class="tb-field tb-lang"><a href="../">EN</a> · <b>KO</b></span>
   </div>
@@ -163,7 +162,7 @@
   <p class="thesis">
     claude‑automata는 Claude Code를 대화가 아니라 돌아가는 system으로 바꿉니다.
     의도를 한 번 적어두면 loop가 24시간 주도권을 쥐고, advisor는 일이 남아 있는 한
-    끝내지 못하게 하며, 하나의 consolidation gate가 무엇을 기억할지 정합니다.
+    끝내지 못하게 하며, 하나의 gate가 무엇을 기억할지 정합니다.
     장기기억은 repository의 git 추적 text 그 자체입니다 — 검증되지 않은 것은
     loop와 함께 사라집니다, 의도적으로.
   </p>
@@ -306,7 +305,6 @@
         quota를 그만큼 소모합니다. read‑only docent가
         loop를 건드리지 않고 기록에서 질문에 답합니다.
       </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/ploop/ARCHITECTURE.md">SOURCE — plugins/ploop/ARCHITECTURE.md <span class="lang-tag">KOREAN</span></a>
     </article>
 
     <article class="module">
@@ -321,7 +319,6 @@
         이끌며, <code>/tx:close</code>는 verification·docs gate·CI가 전부 통과했을
         때만 squash merge합니다. 그동안 base branch는 guard hook들이 지킵니다.
       </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/blob/main/plugins/tx/README.md">SOURCE — plugins/tx/README.md</a>
     </article>
 
     <article class="module">
@@ -330,29 +327,15 @@
         <span class="mod-role">MAINTENANCE WORKFLOWS</span>
       </div>
       <p>
-        쌓인 부채를 없애는 heavyweight multi‑agent workflow(한 번에 수 시간)입니다:
+        쌓인 부채를 없애는 heavyweight multi‑agent workflow(한 번에 3–12시간)입니다:
         코드 architecture, 문서의 참, 무결성 경계. 영역을 나눠 병렬 분석하고,
         발견은 교차검증 회의에서 합의로 걸러지며, 최고 ROI 계획만 실행됩니다.
         docs pass는 코드를 절대 수정하지 않습니다 — 결함은 보고됩니다.
         <code>/refine:code</code> · <code>/refine:docs</code> ·
         <code>/refine:integrity</code>로 호출하고, 선택 인자로 영역을 좁힙니다.
       </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/refine">SOURCE — plugins/refine <span class="lang-tag">KOREAN</span></a>
     </article>
 
-    <article class="module">
-      <div class="mod-head">
-        <h3 class="mod-name">version‑up‑alert</h3>
-        <span class="mod-role">UPDATE NOTICE</span>
-      </div>
-      <p>
-        설치된 claude‑automata plugin에 새 release가 나오면 session 시작 시 뒤처진
-        plugin을 전부 담은 한 줄이 표시됩니다. 알림만 합니다 — 실행 중인 session
-        뒤에서 몰래 plugin을 갈아끼우지 않으며, update 시점은 당신이 정합니다. 다른
-        모든 plugin에 의존성으로 딸려 설치되므로 따로 설치할 것이 없습니다.
-      </p>
-      <a class="canon-link" href="https://github.com/clomia/claude-automata/tree/main/plugins/version-up-alert">SOURCE — plugins/version-up-alert</a>
-    </article>
 
   </div>
 </section>
@@ -361,7 +344,7 @@
 <section class="section" id="getting-started">
   <h2><span class="sec-no">05</span>시작하기</h2>
   <p class="sec-lede">
-    command 하나로 repository가 이 환경의 전제조건을 갖춘 상태로 수렴합니다.
+    command 하나면 repository가 이 환경을 돌릴 준비를 마칩니다.
     <a href="https://claude.com/claude-code">Claude Code</a>와
     <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>가 필요하고,
     POSIX(macOS / Linux / WSL)에서 동작합니다. project root에서 실행하세요:
@@ -386,7 +369,7 @@
         <tr><th scope="row">alwaysThinkingEnabled</th><td><code>true</code></td></tr>
         <tr><th scope="row">autoCompactEnabled</th><td><code>true</code> — 장기 loop가 여기 의존합니다</td></tr>
         <tr><th scope="row">autoMemoryEnabled</th><td><code>false</code> — 기억은 harness가 아니라 repo의 것</td></tr>
-        <tr><th scope="row">marketplace + plugins</th><td><code>clomia/claude-automata</code> 등록, plugin 4종 활성화</td></tr>
+        <tr><th scope="row">marketplace + plugins</th><td><code>clomia/claude-automata</code> 등록, plugin 활성화</td></tr>
         <tr><th scope="row">external CLIs</th><td>없는 <code>gh</code>·Node.js ≥ 20·<code>repomix</code>를 <code>~/.local</code>에 설치 — sudo 불필요, 있으면 건너뜀, <code>gh auth login</code>은 당신 몫</td></tr>
       </tbody>
     </table>
@@ -413,13 +396,13 @@
 </main>
 
 <footer class="colophon">
-  <p class="unaffiliated">
-    claude‑automata는 독립 open‑source project입니다. Anthropic과 제휴·보증·후원
-    관계가 없습니다. Claude와 Claude Code는 Anthropic의 제품입니다.
+  <p class="colophon-lead">
+    claude‑automata는 claude‑automata로 개발됩니다: 이 repository의 모든 기여는 이
+    page가 설명하는 loop를 돌리는 Claude Code agent가 작성했습니다. 재귀적 자기개선이
+    실제로 돌아가고 있습니다.
   </p>
   <p class="colophon-meta">
-    MIT License · <a href="https://github.com/clomia/claude-automata">github.com/clomia/claude-automata</a>
-    · 설계상 이 repository의 모든 기여는 Claude Code agent가 작성합니다.
+    Apache‑2.0 · <a href="https://github.com/clomia/claude-automata">github.com/clomia/claude-automata</a>
   </p>
 </footer>
 

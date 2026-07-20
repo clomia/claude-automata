@@ -1,10 +1,10 @@
 [project]
 name = "claude-automata"
-version = "0.1.5"
+version = "0.1.6"
 description = "One-command setup for the claude-automata ecosystem — Claude Code settings, marketplace, plugins, external CLIs"
 readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "clomia", email = "clomia.sig@gmail.com" }]
 keywords = ["claude", "claude-code", "setup", "plugins", "marketplace"]
 classifiers = [

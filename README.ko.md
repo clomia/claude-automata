@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=b25c28" alt="PyPI"></a>
-  <a href="https://github.com/clomia/claude-automata/blob/main/LICENSE"><img src="https://img.shields.io/github/license/clomia/claude-automata?style=flat&color=3e6f5e" alt="MIT"></a>
+  <a href="https://github.com/clomia/claude-automata/blob/main/LICENSE"><img src="https://img.shields.io/github/license/clomia/claude-automata?style=flat&color=3e6f5e" alt="License"></a>
 </p>
 
 [English](https://github.com/clomia/claude-automata/blob/main/README.md) | 한국어
@@ -27,7 +27,6 @@ Claude Code는 끝났다고 믿는 순간 turn을 끝내고, 다음 compaction�
 | **ploop** | 작업기억 — 며칠짜리 작업의 loop; 모든 정지를 독립 advisor가 감사하며, 더 표면화할 것이 없을 때까지 계속됩니다 |
 | **tx** | consolidation — 기억으로 들어가는 유일한 gate: plan, 독립 verify, CI, squash merge |
 | **refine** | 재접지 — 오래된 기억을 코드와 재대조하는 수 시간짜리 workflow |
-| **version-up-alert** | update 알림 — 뒤처진 plugin이 있으면 session 시작 시 한 줄; 알림만 하고 실행 중인 plugin을 갈아끼우지 않으며, 다른 plugin과 함께 설치됩니다 |
 
 장기기억은 database가 아닙니다. repository의 git 추적 text 그 자체입니다 — 회상은 grep입니다. gate를 통과하지 못한 것은 loop와 함께 죽습니다, 의도적으로.
 
@@ -46,7 +45,7 @@ uvx claude-automata init
 - `permissions.defaultMode: "bypassPermissions"` — 승인 prompt 없음. agent가 묻지 않고 이 machine에서 shell command를 실행합니다 — 신뢰의 범위는 repo가 아니라 host입니다.
 - `model: "opus[1m]"` — model 고정, 1M context
 - `alwaysThinkingEnabled: true` · `autoCompactEnabled: true` · `autoMemoryEnabled: false`
-- `clomia/claude-automata` marketplace 등록 + plugin 4종 활성화
+- `clomia/claude-automata` marketplace 등록 + plugin 활성화
 - 없는 `gh`·Node.js ≥ 20·`repomix`를 사용자 영역에 설치 — sudo 불필요, 있으면 건너뜀, `gh auth login`은 사용자 몫
 
 ## Loop 돌리기
@@ -102,4 +101,4 @@ transaction은 무결성 경계입니다 — 구현과 기록된 의도가 모�
 
 <p align="center"><a href="https://clomia.github.io/claude-automata/"><strong>▶ 기억 회로가 도는 것을 보세요</strong></a></p>
 
-MIT License · Anthropic과 무관한 독립 open-source project입니다. 설계상 이 repository의 모든 기여는 Claude Code agent가 작성합니다.
+Apache-2.0 · claude-automata는 claude-automata로 개발됩니다 — 이 repository의 모든 기여는 바로 이 환경을 돌리는 Claude Code agent가 작성했습니다. 재귀적 자기개선이 실제로 돌아가고 있습니다.
