@@ -29,6 +29,7 @@
   --copper: #c9743f;           /* working / volatile — stroke weight */
   --copper-deep: #d98e5f;      /* working / volatile — text weight on dark */
   --verdigris: #67a189;        /* long-term / verified */
+  --sky: #7fb2d6;              /* principle markers */
   --display: "Inter", system-ui, -apple-system, sans-serif;
   --body: "Inter", system-ui, -apple-system, sans-serif;
   --mono: "DM Mono", ui-monospace, "SFMono-Regular", monospace;
@@ -318,7 +319,9 @@ section[id] { scroll-margin-top: 1.5rem; }
 /* 02 premise */
 .claims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
 .claim h3 { font-weight: 500; font-size: 1.08rem; margin-bottom: 0.7rem; letter-spacing: -0.01em; }
-.claim h3::before { content: "—"; color: var(--copper-deep); margin-right: 0.55rem; }
+.claim h3::before { content: ""; display: inline-block; width: 9px; height: 9px;
+  border: 1.5px solid var(--sky); border-radius: 1.5px; transform: rotate(45deg);
+  margin-right: 0.7rem; vertical-align: 1px; }
 .claim p { font-size: 0.95rem; color: var(--body-text); }
 
 /* 02 memory system */
