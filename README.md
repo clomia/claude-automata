@@ -5,7 +5,7 @@
 <p align="center"><strong>Your agent stops when it thinks it's done. This one stops when it's actually done.</strong></p>
 
 <p align="center">
-  An autonomous agent environment for Claude Code, modeled on human memory.<br>
+  An agent environment for Claude Code, modeled on human memory.<br>
   Hand it months of work and rest: it finishes in days.
 </p>
 
@@ -30,7 +30,7 @@ Claude Code ends its turn the moment it believes it's finished, and loses the de
 
 Long-term memory is the repository's own git-tracked text, not a database. Recall is grep. Whatever never passes the gate dies with the loop, on purpose.
 
-## Install
+## Getting started
 
 Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/) on POSIX (macOS / Linux / WSL). One command, inside a git repository:
 
@@ -48,14 +48,14 @@ Re-running is safe (idempotent). `uvx claude-automata@latest init` forces the ne
 - registers the `clomia/claude-automata` marketplace and enables its plugins
 - installs `repomix` and `gh`
 
-## Run a loop
+## Operating the loop
 
 ```
 /ploop:define-mission          # an agent interviews you, interprets your intent, and writes the anchor
 /ploop:launch [anchor text]    # hand it to the loop in a fresh session
 ```
 
-Declare it done and a hook blocks the stop, summoning an independent advisor: the loop's metacognition, with access to the whole story. The loop ends when the advisor has nothing left to say.
+Declare it done and a hook blocks the stop, summoning the advisor: an independent metacognition with access to the whole story. The loop ends when the advisor has nothing left to say.
 
 ```
 agent   › Mission accomplished. Stopping.
@@ -66,7 +66,7 @@ agent   › …resuming.
 advisor › I have no further advice. Ending the turn.
 ```
 
-*An illustrative exchange: this is what ploop provides.* The anchor survives every auto-compaction. Safe on subscription plans (safe in mechanism, not in price): the loop shares your plan's quota, and a multi-day run spends days of it.
+*An illustrative exchange: this is what ploop provides. The authority to end the loop rests with the advisor.* The anchor survives every auto-compaction. Safe on subscription plans (safe in mechanism, not in price): the loop shares your plan's quota, and a multi-day run spends days of it.
 
 <details>
 <summary><strong>Pause, resume, observe</strong></summary>
@@ -81,15 +81,15 @@ advisor › I have no further advice. Ending the turn.
 
 ## Change as transactions
 
-Agents drive tx on their own. Every change lands as one verified, CI-green squash merge behind an integrity boundary, and guard hooks keep the base branch protected in between. You review merged results, not work in progress.
+Agents drive tx on their own. Every change lands as one verified, CI-green squash merge behind an integrity boundary, and tx blocks writes to the base branch in between. You review merged results, not work in progress.
 
-## Keep memory true
+## Keep the repository lean
 
 ```
 /refine:code [focus] · /refine:docs [focus] · /refine:integrity [focus]
 ```
 
-Large-scale workflows that eliminate technical debt: `/refine:code` optimizes the code architecture, `/refine:docs` aligns documentation with the code, `/refine:integrity` verifies logical integrity. Each sweeps the whole repository and can run past ten hours. Empty focus targets the whole codebase; watch with `/workflows`.
+Large-scale workflows that eliminate technical debt: `/refine:code` optimizes the code architecture, `/refine:docs` aligns documentation with the code, `/refine:integrity` verifies logical integrity. They sweep the whole repository, so a run can take ten hours or more. Empty focus targets the whole codebase; watch with `/workflows`.
 
 ---
 
