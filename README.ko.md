@@ -51,7 +51,7 @@ uvx claude-automata init
 ## Loop 돌리기
 
 ```
-/ploop:define-mission          # agent가 당신을 interview해 anchor를 받아 적습니다
+/ploop:define-mission          # agent가 당신을 interview하여 의도를 해석하고 anchor를 작성합니다
 /ploop:launch [anchor 내용]    # 새 session에서 loop에 전달
 ```
 
