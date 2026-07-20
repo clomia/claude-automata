@@ -32,7 +32,7 @@ Long-term memory is the repository's own git-tracked text, not a database. Recal
 
 ## Install
 
-Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/), on POSIX (macOS / Linux / WSL). One command, from your project root:
+Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/) on POSIX (macOS / Linux / WSL). One command, from your project root:
 
 ```
 uvx claude-automata init
@@ -66,7 +66,7 @@ agent   › …resuming.
 advisor › I have no further advice. Ending the turn.
 ```
 
-*An illustrative exchange. The mechanics are real.* The anchor survives every auto-compaction. Safe on subscription plans (safe in mechanism, not in price): the loop shares your plan's quota, and multi-day runs spend it accordingly.
+*An illustrative exchange. The mechanics are real.* The anchor survives every auto-compaction. Safe on subscription plans (safe in mechanism, not in price): the loop shares your plan's quota, and a multi-day run spends days of it.
 
 <details>
 <summary><strong>Pause, resume, observe</strong></summary>
@@ -95,7 +95,7 @@ A transaction is an integrity boundary: it closes only after the verifier passes
 /refine:code [focus] · /refine:docs [focus] · /refine:integrity [focus]
 ```
 
-Heavyweight multi-agent workflows (hours per run, 3–12h) that eliminate accumulated debt: code architecture, documentation truth, integrity boundaries. Agents cross-examine findings into consensus and execute only the highest-ROI plans. The docs pass reports defects and never modifies code. Empty focus targets the whole codebase; watch with `/workflows`.
+Heavyweight multi-agent workflows (3–12 hours per run) that eliminate accumulated debt: code architecture, documentation truth, integrity boundaries. Agents cross-examine findings into consensus and execute only the highest-ROI plans. The docs pass reports defects and never modifies code. Empty focus targets the whole codebase; watch with `/workflows`.
 
 ---
 
