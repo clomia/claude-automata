@@ -23,12 +23,13 @@
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../style.css">
 <style>
-  /* Hangul renders through per-glyph system-font fallback (Saira/Plex carry no Hangul);
-     wide caps tracking reads loose on Hangul, so ko headings track tighter, and
-     keep-all stops mid-word Hangul line breaks. */
+  /* Hangul renders through per-glyph system-font fallback (Inter/DM Mono carry no
+     Hangul); negative display tracking pinches Hangul, synthetic italic slants it,
+     and keep-all stops mid-word line breaks. */
   body { word-break: keep-all; overflow-wrap: break-word; }
-  .hero h1 { letter-spacing: 0; }
-  .section h2, .st-name, .disclosure-title { letter-spacing: 0.02em; }
+  .hero h1 { letter-spacing: -0.01em; }
+  .sec-punch { font-style: normal; }
+  .section h2, .disclosure-title { letter-spacing: 0.04em; }
 </style>
 </head>
 <body>
@@ -169,7 +170,7 @@
 
   <div class="hero-actions">
     <a class="btn btn-solid" href="#getting-started">시작하기</a>
-    <a class="btn" href="https://github.com/clomia/claude-automata">VIEW SOURCE ↗</a>
+    <a class="btn" href="https://github.com/clomia/claude-automata">View source ↗</a>
   </div>
 </section>
 
