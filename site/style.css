@@ -5,7 +5,9 @@
    (working / volatile) oxidizing to verdigris (long-term / verified), re-derived
    from Cursor's timeline pastels (thinking peach, grep mint) and deepened for the
    light canvas; that chroma is the schematic's data encoding, the one place color
-   carries meaning. The claim diamonds re-derive --sky from timeline-read likewise. */
+   carries meaning. Traveling pulses ride a brighter --travel orange so motion reads
+   at a glance; verified pulses (settle, refine) stay verdigris. The claim diamonds
+   re-derive --sky from timeline-read likewise. */
 
 /* ---------------------------------------------------------------- fonts */
 @font-face { font-family: "Inter"; font-weight: 400; font-display: swap;
@@ -33,6 +35,7 @@
   --on-primary: #ffffff;
   --copper: #bf6840;           /* working / volatile: timeline-thinking, stroke weight */
   --copper-deep: #9e512e;      /* working / volatile: text weight on cream */
+  --travel: #ef5b1c;           /* live pulse in motion: brightened copper, near Cursor Orange */
   --verdigris: #447e48;        /* long-term / verified: timeline-grep, deepened */
   --sky: #5480ba;              /* principle markers: timeline-read, deepened */
   --display: "Inter", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -144,7 +147,7 @@ section[id] { scroll-margin-top: 1.5rem; }
   padding: 0.18rem 0.5rem; background: var(--chip); border-radius: var(--r-pill);
 }
 .rail-drop {
-  width: 0; height: 26px; border-left: 1.5px solid var(--muted);
+  width: 0; height: 48px; border-left: 1.5px solid var(--muted);
   position: relative; margin-top: 0.5rem;
 }
 .arrowhead.down { left: -4.25px; bottom: 1px; transform: rotate(135deg); }
@@ -194,10 +197,10 @@ section[id] { scroll-margin-top: 1.5rem; }
 .arrowhead.up { transform: rotate(-45deg); }
 .arrowhead.verd { border-color: var(--verdigris); }
 .pulse { position: absolute; top: -4px; left: 0; width: 6.5px; height: 6.5px;
-  border-radius: 50%; background: var(--copper); opacity: 0; }
+  border-radius: 50%; background: var(--travel); opacity: 0; }
 .p-pass   { animation: pulse-pass var(--cycle) linear infinite; }
 .p-pass2  { animation: pulse-pass2 var(--cycle) linear infinite; }
-.p-event  { width: 5.5px; height: 5.5px; background: var(--ink); left: -3.5px; top: 0;
+.p-event  { width: 5.5px; height: 5.5px; background: var(--travel); left: -3.5px; top: 0;
   animation: pulse-event var(--cycle) linear infinite; }
 .p-settle { background: var(--verdigris); animation: pulse-settle var(--cycle) linear infinite; }
 .refine-riser { display: none; }   /* mobile-only: the return route rides beside c2 */
@@ -207,13 +210,13 @@ section[id] { scroll-margin-top: 1.5rem; }
   position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 2px;
 }
-.drain-stub { position: relative; width: 0; height: 22px;
+.drain-stub { position: relative; width: 0; height: 40px;
   border-left: 1.5px dashed var(--copper); opacity: 0.75; }
 .ground { width: 22px; height: 11px; }
 .ground line { stroke: var(--copper); stroke-width: 2; stroke-linecap: round; opacity: 0.75; }
 .drain-label { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.08em;
   color: var(--muted); }
-.p-drain { background: var(--copper); left: -4px; top: 0;
+.p-drain { background: var(--travel); left: -4px; top: 0;
   animation: pulse-drain var(--cycle) linear infinite; }
 
 /* refine return path: LTM -> down -> across -> up -> gate */
@@ -450,7 +453,7 @@ section[id] { scroll-margin-top: 1.5rem; }
 
   .schematic { display: flex; flex-direction: column; align-items: stretch; }
   .rail { order: 0; }
-  .rail-drop { height: 22px; }
+  .rail-drop { height: 40px; }
   .station { width: 100%; }
   .st-working { order: 1; }
   .conn.c1 { order: 2; }
@@ -467,7 +470,7 @@ section[id] { scroll-margin-top: 1.5rem; }
   .p-pass2  { animation-name: pulse-pass2-y; }
   .p-settle { animation-name: pulse-settle-y; }
   .drain { left: 22%; gap: 1px; }   /* beside the descending main flow: center = promotion, side = discharge */
-  .drain-stub { height: 13px; }
+  .drain-stub { height: 24px; }
   .drain-label { font-size: 0.56rem; }
 
   /* the return route is drawn as a riser beside c2; the label stays below the stack */
