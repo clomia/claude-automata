@@ -1,13 +1,13 @@
 {
   "name": "refine",
-  "version": "0.9.7",
+  "version": "0.9.8",
   "description": "Repository debt elimination — heavyweight multi-agent workflows that cross-examine findings into consensus, then apply only the highest-ROI fixes: code, docs, integrity",
   "author": {
     "name": "clomia",
     "email": "clomia.sig@gmail.com",
     "url": "https://github.com/clomia"
   },
-  "homepage": "https://github.com/clomia/claude-automata",
+  "homepage": "https://claude-automata.clomia.com/",
   "repository": "https://github.com/clomia/claude-automata",
   "license": "Apache-2.0",
   "keywords": [
