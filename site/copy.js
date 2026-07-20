@@ -9,12 +9,8 @@ for (const wrap of document.querySelectorAll(".code-copy")) {
     try {
       await navigator.clipboard.writeText(code.textContent.trim());
       wrap.classList.add("copied");
-      btn.textContent = "Copied";
       clearTimeout(reset);
-      reset = setTimeout(() => {
-        wrap.classList.remove("copied");
-        btn.textContent = "Copy";
-      }, 1600);
+      reset = setTimeout(() => wrap.classList.remove("copied"), 1600);
     } catch {
       // clipboard unavailable (insecure context or denied); leave the block as-is
     }
