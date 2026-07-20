@@ -25,6 +25,7 @@
   --ink: #26251e;              /* warm near-black: display and emphasis */
   --body-text: #5a5852;        /* running text */
   --muted: #807d72;            /* labels, captions, fine print */
+  --muted-soft: #a09c92;       /* lightest label tier */
   --hairline: #e6e5e0;
   --hairline-strong: #cfcdc4;
   --primary: #f54e00;          /* Cursor Orange: CTA, wordmark, selection, focus */
@@ -379,8 +380,8 @@ section[id] { scroll-margin-top: 1.5rem; }
 .colophon { max-width: var(--wrap); margin: 0 auto;
   padding: clamp(4rem, 9vw, 6.5rem) clamp(1.25rem, 4vw, 2.5rem) 4rem;
   border-top: 1px solid var(--hairline); text-align: center; }
-.outro-label { font-family: var(--body); font-weight: 600; font-size: 0.6875rem;
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+.outro-label { font-family: var(--body); font-weight: 600; font-size: 0.9375rem;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-soft);
   margin-bottom: 1.2rem; }
 .outro { font-family: var(--display); font-weight: 400;
   font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.18; letter-spacing: -0.025em;
