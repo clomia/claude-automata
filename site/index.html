@@ -380,6 +380,15 @@
 /refine:code       <span class="c-muted"># optimizes the code architecture</span>
 /refine:docs       <span class="c-muted"># aligns documentation with the code</span>
 /refine:integrity  <span class="c-muted"># verifies logical integrity</span></code></pre>
+
+    <p class="step-caption">APPENDIX · WHY AGENTS BRANCH</p>
+    <p class="loop-note">
+      To guard repository integrity, tx blocks writes to the base branch.
+      Agents work on a <code>tx-*</code> branch cut by <code>/tx:open</code>,
+      and <code>/tx:close</code> lands it on base as one verified, CI‑green
+      squash merge. An agent branching off instead of editing the base branch
+      is tx working as intended.
+    </p>
 </section>
 
 </main>

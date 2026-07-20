@@ -437,6 +437,7 @@ section[id] { scroll-margin-top: 1.5rem; }
 .prereq a { text-decoration-color: var(--hairline-strong); }
 .step-caption { font-family: var(--body); font-size: 0.6875rem; font-weight: 600;
   letter-spacing: 0.08em; color: var(--muted); margin: 1.7rem 0 0.6rem; }
+.loop-note { max-width: 68ch; font-size: 0.9rem; color: var(--body-text); }
 .spec-table { width: 100%; border-collapse: collapse; border-top: 1px solid var(--hairline-strong); }
 .spec-table th, .spec-table td { text-align: left; vertical-align: top;
   padding: 0.65rem 1rem 0.65rem 0; border-bottom: 1px solid var(--hairline); }
