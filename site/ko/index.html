@@ -383,6 +383,15 @@
 /refine:code       <span class="c-muted"># 코드 architecture 최적화</span>
 /refine:docs       <span class="c-muted"># 문서를 코드에 정합</span>
 /refine:integrity  <span class="c-muted"># 논리적 무결성 검증</span></code></pre>
+
+    <p class="step-caption">APPENDIX · AGENT가 BRANCH를 만드는 이유</p>
+    <p class="loop-note">
+      tx는 repository 무결성을 위해 base branch 쓰기를 차단합니다. agent는
+      <code>/tx:open</code>이 생성한 <code>tx-*</code> branch에서 작업하고,
+      <code>/tx:close</code>가 검증과 CI를 통과한 squash merge 하나로 base에
+      병합합니다. agent가 base branch를 수정하지 않고 branch를 만드는 것은
+      tx의 의도된 동작입니다.
+    </p>
 </section>
 
 </main>
