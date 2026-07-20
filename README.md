@@ -6,7 +6,7 @@
 
 <p align="center">
   An autonomous agent environment for Claude Code, modeled on human memory.<br>
-  An advisor audits every stop; nothing becomes memory without passing one verified gate.
+  Hand it months of work and rest: it finishes in days.
 </p>
 
 <p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ Watch the memory circuit run</strong></a></p>
@@ -24,15 +24,15 @@ Claude Code ends its turn the moment it believes it's finished, and loses the de
 
 | Plugin | Memory role |
 |---|---|
-| **ploop** | working memory: a loop for work spanning days; an independent advisor audits every stop until it finds nothing more |
-| **tx** | consolidation: the only gate into memory (plan, independent verify, CI, squash merge) |
-| **refine** | re-grounding: hours-long workflows that re-verify old memory against the code |
+| **ploop** | working memory: a single session sails autonomously for days; an independent advisor audits every stop |
+| **tx** | consolidation: the screening gate into long-term memory (independent verify, CI, squash merge) |
+| **refine** | re-grounding: large-scale workflows that eliminate technical debt |
 
 Long-term memory is the repository's own git-tracked text, not a database. Recall is grep. Whatever never passes the gate dies with the loop, on purpose.
 
 ## Install
 
-Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/) on POSIX (macOS / Linux / WSL). One command, from your project root:
+Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/) on POSIX (macOS / Linux / WSL). One command, inside a git repository:
 
 ```
 uvx claude-automata init
@@ -40,22 +40,22 @@ uvx claude-automata init
 
 Re-running is safe (idempotent). `uvx claude-automata@latest init` forces the newest release.
 
-**What init writes.** This environment assumes unattended operation. Review the diff before you commit it:
+**What init writes.** It sets up the environment claude-automata needs to run reliably:
 
-- `permissions.defaultMode: "bypassPermissions"`: no approval prompts. The agent runs shell commands on your machine without asking first; the trust is host-level, not repo-level.
-- `model: "opus[1m]"`: pinned model, 1M context
+- `permissions.defaultMode: "bypassPermissions"`
+- `model: "opus[1m]"`
 - `alwaysThinkingEnabled: true` · `autoCompactEnabled: true` · `autoMemoryEnabled: false`
 - registers the `clomia/claude-automata` marketplace and enables its plugins
-- installs missing `gh`, Node.js ≥ 20, `repomix` into your user area: no sudo, present tools skipped, `gh auth login` stays yours
+- installs `repomix` and `gh`
 
 ## Run a loop
 
 ```
-/ploop:define-mission          # write the anchor: an agent interviews your intent out of you
+/ploop:define-mission          # an agent interviews you and writes the anchor
 /ploop:launch [anchor text]    # hand it to the loop in a fresh session
 ```
 
-The loop rides the Stop hook: whenever the agent stops, an independent advisor with a clean context inspects the round and surfaces what the agent missed. It ends when the advisor has nothing left to say.
+Declare it done and a hook blocks the stop, summoning an independent advisor: the loop's metacognition, with access to the whole story. The loop ends when the advisor has nothing left to say.
 
 ```
 agent   › Mission accomplished. Stopping.
@@ -66,7 +66,7 @@ agent   › …resuming.
 advisor › I have no further advice. Ending the turn.
 ```
 
-*An illustrative exchange. The mechanics are real.* The anchor survives every auto-compaction. Safe on subscription plans (safe in mechanism, not in price): the loop shares your plan's quota, and a multi-day run spends days of it.
+*An illustrative exchange: this is what ploop provides.* The anchor survives every auto-compaction. Safe on subscription plans (safe in mechanism, not in price): the loop shares your plan's quota, and a multi-day run spends days of it.
 
 <details>
 <summary><strong>Pause, resume, observe</strong></summary>
@@ -74,20 +74,14 @@ advisor › I have no further advice. Ending the turn.
 <br>
 
 - init sets Auto-Compact; keep it on. For unattended runs, set `askUserQuestionTimeout` so an unanswered question can't park the loop.
-- `/ploop:off` pauses; `/ploop:on` resumes, and doubles as a wake button: it revives a loop stalled by an accidental ESC, an API error, or a session limit (interrupt with ESC first if a turn is running). Nothing else stops the loop.
-- `/ploop:docent` in a **separate session, same directory** answers your questions from the loop's records without touching the loop. Questions go to the docent; interventions go straight to the loop session.
+- `/ploop:off` pauses the loop. `/ploop:on` resumes or restores it, even after an accidental ESC, an API error, or a session limit (interrupt with ESC first if a turn is running). Nothing else stops the loop.
+- `/ploop:docent` reports the loop's progress. Run it in a **separate session, same directory**: questions go to the docent, interventions go straight to the loop session.
 
 </details>
 
 ## Change as transactions
 
-```
-/tx:open  [description]   # cut a tx-* branch off base
-...work...                # tx:plan → tx:apply → tx:verify
-/tx:close                 # verify, docs gate, CI, then squash-merge
-```
-
-A transaction is an integrity boundary: it closes only after the verifier passes both the implementation and its recorded intent. Guard hooks keep the base branch protected in between. This is the gate everything above flows through.
+Agents drive tx on their own. Every change lands as one verified, CI-green squash merge behind an integrity boundary, and guard hooks keep the base branch protected in between. You review merged results, not work in progress.
 
 ## Keep memory true
 
@@ -95,10 +89,10 @@ A transaction is an integrity boundary: it closes only after the verifier passes
 /refine:code [focus] · /refine:docs [focus] · /refine:integrity [focus]
 ```
 
-Heavyweight multi-agent workflows (3–12 hours per run) that eliminate accumulated debt: code architecture, documentation truth, integrity boundaries. Agents cross-examine findings into consensus and execute only the highest-ROI plans. The docs pass reports defects and never modifies code. Empty focus targets the whole codebase; watch with `/workflows`.
+Large-scale workflows that eliminate technical debt: `/refine:code` optimizes the code architecture, `/refine:docs` aligns documentation with the code, `/refine:integrity` verifies logical integrity. Each sweeps the whole repository and can run past ten hours. Empty focus targets the whole codebase; watch with `/workflows`.
 
 ---
 
 <p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ Watch the memory circuit run</strong></a></p>
 
-Apache-2.0 · claude-automata develops claude-automata. A Claude Code agent running this environment authored every contribution in this repository. Recursive self-improvement in production.
+Apache-2.0 · Recursive self-improvement: claude-automata is developed inside claude-automata. A Claude Code agent running this environment authored every contribution in this repository.
