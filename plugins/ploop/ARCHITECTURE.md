@@ -6,7 +6,7 @@ plugin이다. 통합 지점은 Stop hook이고, loop의 main 역할은 session a
 
 ---
 
-## 용어
+## Glossary
 
 - **advisor loop** — hook·advisor·narrator로 매 round advice를 main에 주입하는 자율 loop. 이
   plugin(`ploop`)이 그것을 구현한다.

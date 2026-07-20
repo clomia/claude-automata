@@ -59,14 +59,14 @@ jobs:
                   elif sh("git", "check-ignore", "-q", "--", token).returncode == 0:
                       violations.append(f + ": references gitignored path " + token)
 
-          date_re = re.compile(r"^[-*]?\s*(작성일|Date)\s*:")
-          method_re = re.compile(r"^[-*]?\s*(방법|Method)\s*:")
+          date_re = re.compile(r"^[-*]?\s*Date\s*:")
+          method_re = re.compile(r"^[-*]?\s*Method\s*:")
           for f in research:
               head = Path(f).read_text(encoding="utf-8", errors="replace").splitlines()[:20]
               if not any(date_re.search(line) for line in head):
-                  violations.append(f + ": missing '작성일:'/'Date:' line in first 20 lines")
+                  violations.append(f + ": missing 'Date:' line in first 20 lines")
               if not any(method_re.search(line) for line in head):
-                  violations.append(f + ": missing '방법:'/'Method:' line in first 20 lines")
+                  violations.append(f + ": missing 'Method:' line in first 20 lines")
 
           if violations:
               print("\n".join(violations))

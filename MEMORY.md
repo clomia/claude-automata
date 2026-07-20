@@ -59,7 +59,7 @@ scaffold + pin version CLI, upstream prompt 0) 위에 tx 소유 skill — OpenSp
 | 코드를 구속하는 측정 사실 | 소비 지점 1곳=주석 · 2곳+/구조 구속=설계 정본 (§docs 표면 규약) |
 | 외부 세계의 측정 사실 | 조사 문서 (`docs/research/` 류) |
 | session마다 참이어야 할 운영 규칙 | CLAUDE.md·rules — 비싼 home, 최소로 |
-| 채택된 용어 | 소유 정본의 `## 용어` — 용어당 home 하나, 횡단 용어는 root 정본 |
+| 채택된 용어 | 소유 정본의 `## Glossary` — 용어당 home 하나, 횡단 용어는 root 정본 |
 | 반복이 입증된 절차 | `.claude/skills` — skill 문서, 이름이 호출 key |
 | loop 상태·막다른 길·시행착오 | 폐기 — 망각이 기능이다 |
 
@@ -167,7 +167,7 @@ pointer.
 | | living (제자리 재접지) | dated (의미 동결·축적) |
 |---|---|---|
 | auto-load | CLAUDE.md·rules (진입점 + 매 turn 규약) | ∅ — 금지 cell |
-| grep 회상 | 설계 정본(hub+위성) · `## 용어` · constraint 주석 · 위성 검증 기록 | `docs/research/<topic>-<yyyy>.md` |
+| grep 회상 | 설계 정본(hub+위성) · `## Glossary` · constraint 주석 · 위성 검증 기록 | `docs/research/<topic>-<yyyy>.md` |
 
 ### routing — 문장 단위로 "이 주장의 verifier가 누구인가"
 
@@ -196,7 +196,7 @@ section) + 구현 상태 범례. 정본은 코드를 앞설 수 있되 **앞서�
 무표기 선행 주장은 mismatch다. 신생 repo의 정본은 scaffold하지 않는다 — 첫 구조적 결정과 함께
 생성한다(빈 문서는 부채).
 
-**용어** — 소유 정본의 `## 용어` section, **용어당 home 하나**(단위 용어는 단위 정본, 횡단 용어는
+**용어** — 소유 정본의 `## Glossary` section, **용어당 home 하나**(단위 용어는 단위 정본, 횡단 용어는
 root 정본). 산문이 정의를 이미 운반하면 section을 만들지 않는다. 형식: `**term** — 1~2문장 정의 +
 referent`. 용어는 사실이 아니라 규약이다 — 참의 조건이 측정이 아니라 채택이므로 불변식 2가
 이렇게 사상된다: provenance = referent의 home, 검증 = 사용 실재 grep. 정의 속 behavior
@@ -206,7 +206,7 @@ referent`. 용어는 사실이 아니라 규약이다 — 참의 조건이 측�
 
 **조사 기록** — `docs/research/<topic>-<yyyy>.md`, 동년 재측정은 `-<yyyy>-<mm>`. 파일명 연도가
 1차 in-band 시효 신호다(grep이 모든 hit에 경로를 인쇄한다). header는 불변식 2의 산문 구현:
-작성일·질문·방법 의무 + 신뢰도 4등급(✅ 검증됨 · 🔶 판단 · ❓ 미검증 · ❌ 반박됨). **자기완결
+`Date:`·`Question:`·`Method:` 의무 + 신뢰도 4등급(✅ verified · 🔶 judgment · ❓ unverified · ❌ refuted). **자기완결
 의무**: gitignored·미추적 경로를 provenance로 지시하면 불변식 2 위반이다 — loop가 죽으면
 사슬이 끊긴다. 본문 의미는 동결이고 판정식은 판정자별로 결정 가능하다: 산출 mission만 tx
 재승격으로 제자리 개정 가능 / 제3자·후속 agent에게 dated는 항상 동결 — 새 측정은 새 문서
