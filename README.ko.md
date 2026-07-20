@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://clomia.github.io/claude-automata/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata — runs for days, remembers only what's verified" width="840"></a>
+  <a href="https://clomia.github.io/claude-automata/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata — 24/7 full self-driving for Claude Code" width="840"></a>
 </p>
 
 <p align="center"><strong>agent는 끝났다고 <em>생각하는</em> 순간 멈춥니다. 이것은 정말로 끝났을 때 멈춥니다.</strong></p>

@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://clomia.github.io/claude-automata/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata — runs for days, remembers only what's verified" width="840"></a>
+  <a href="https://clomia.github.io/claude-automata/"><img src="https://raw.githubusercontent.com/clomia/claude-automata/main/site/assets/banner.png" alt="claude-automata — 24/7 full self-driving for Claude Code" width="840"></a>
 </p>
 
 <p align="center"><strong>Your agent stops when it <em>thinks</em> it's done. This one stops when it's actually done.</strong></p>
