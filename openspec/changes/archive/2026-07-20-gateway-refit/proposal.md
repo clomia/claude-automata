@@ -21,8 +21,8 @@ unaffiliated 고지를 제거하며, "claude-automata는 claude-automata로 개�
   돌리는 Claude Code agent의 작성"이라는 검증 가능한 사실로 교체.
 - **version-up-alert 생략**: README 표 행(3행으로), 사이트 §04 module card(3종으로),
   "plugin 4종" 계수 표현 제거. 내부 정본·marketplace metadata는 불변(기능 표면).
-- **SOURCE 행 제거**: §04의 .canon-link 4행(en·ko) + 관련 CSS. repo 진입점은 titleblock
-  GitHub link 하나로 수렴.
+- **SOURCE 행 제거**: §04의 .canon-link 4행(en·ko) + 관련 CSS. page의 repo link들은
+  전부 repo root 한 곳으로만 수렴.
 - **카피라이팅 pass** (Ogilvy 원칙 조사 기반 — headline 지배, 구체성>수사, 문장당 benefit):
   §05 lede의 engineer-speak 완화, refine 소요시간 구체화(3–12h), thesis 압축.
 - root 0.1.6 (README 재발행), spec delta는 R3를 REMOVED+ADDED로 재작성.
