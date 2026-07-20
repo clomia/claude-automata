@@ -51,7 +51,7 @@ Re-running is safe (idempotent). `uvx claude-automata@latest init` forces the ne
 ## Run a loop
 
 ```
-/ploop:define-mission          # an agent interviews you and writes the anchor
+/ploop:define-mission          # an agent interviews you, interprets your intent, and writes the anchor
 /ploop:launch [anchor text]    # hand it to the loop in a fresh session
 ```
 
