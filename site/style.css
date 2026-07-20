@@ -155,9 +155,10 @@ section[id] { scroll-margin-top: 1.5rem; }
   padding: 1.15rem 1rem 1.05rem; text-align: center; border-radius: var(--r-md);
   display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
 }
-.st-working { grid-column: 1; border-style: dashed; position: relative; }   /* impermanent by drawing convention; anchors the drain */
-.st-gate    { grid-column: 3; }
-.st-ltm     { grid-column: 5; border-color: var(--verdigris); }
+.st-working { grid-column: 1; border-style: dashed; position: relative;
+  animation: wm-emit var(--cycle) linear infinite; }   /* impermanent by drawing convention; anchors the drain */
+.st-gate    { grid-column: 3; animation: gate-approve var(--cycle) linear infinite; }
+.st-ltm     { grid-column: 5; border-color: var(--verdigris); animation: ltm-receive var(--cycle) linear infinite; }
 .glyph { width: 84px; height: 84px; margin-bottom: 0.35rem; }
 .glyph svg { width: 100%; height: 100%; overflow: visible; }
 .st-name { font-family: var(--mono); font-weight: 500; letter-spacing: 0.09em; font-size: 0.8rem; }
@@ -175,7 +176,7 @@ section[id] { scroll-margin-top: 1.5rem; }
 .anchor-glyph * { stroke: var(--ink); stroke-width: 2; }
 .gate-wall { stroke: var(--ink); stroke-width: 2.5; }
 .gate-core { stroke: var(--ink); stroke-width: 2; animation: gate-flash var(--cycle) linear infinite; }
-.gate-check { stroke: var(--verdigris); stroke-width: 2.5; stroke-dasharray: 1; stroke-dashoffset: 1;
+.gate-check { stroke: var(--verdigris); stroke-width: 3; stroke-dasharray: 1; stroke-dashoffset: 1;
   animation: gate-check var(--cycle) linear infinite; }
 .strata-frame { stroke: var(--verdigris); stroke-width: 2; }
 .stratum { stroke: var(--verdigris); stroke-width: 1.2; opacity: 0.6; }
@@ -195,6 +196,9 @@ section[id] { scroll-margin-top: 1.5rem; }
 .pulse { position: absolute; top: -4px; left: 0; width: 6.5px; height: 6.5px;
   border-radius: 50%; background: var(--copper); opacity: 0; }
 .p-pass   { animation: pulse-pass var(--cycle) linear infinite; }
+.p-pass2  { animation: pulse-pass2 var(--cycle) linear infinite; }
+.p-event  { width: 5.5px; height: 5.5px; background: var(--ink); left: -3.5px; top: 0;
+  animation: pulse-event var(--cycle) linear infinite; }
 .p-settle { background: var(--verdigris); animation: pulse-settle var(--cycle) linear infinite; }
 .refine-riser { display: none; }   /* mobile-only: the return route rides beside c2 */
 
@@ -237,10 +241,52 @@ section[id] { scroll-margin-top: 1.5rem; }
 }
 
 /* ------------------------------------------------- schematic choreography
-   one 9s master cycle: trace leaves the loop, holds at the gate, oxidizes,
-   settles into strata; a second trace is rejected; a slow refine trace
-   returns through the same gate. */
+   one 9s master cycle, kept busy end to end: events keep dropping into the
+   loop, two traces ride c1 (the second gets verified), the gate's outline
+   flushes verdigris as the check draws, long-term memory flushes as the
+   settle lands, a rejected trace drains, and a slow refine trace rides the
+   U back through the same gate. Stations react by border/background color
+   only; geometry never moves. */
 @keyframes orbit { to { transform: rotate(360deg); } }
+@keyframes pulse-event {
+  0%      { opacity: 0; top: 0; }
+  2%      { opacity: 1; top: 0; }
+  6%      { opacity: 1; top: calc(100% - 5.5px); }
+  7%, 30% { opacity: 0; top: 0; }
+  32%     { opacity: 1; top: 0; }
+  36%     { opacity: 1; top: calc(100% - 5.5px); }
+  37%, 72% { opacity: 0; top: 0; }
+  74%     { opacity: 1; top: 0; }
+  78%     { opacity: 1; top: calc(100% - 5.5px); }
+  79%, 100% { opacity: 0; top: 0; }
+}
+@keyframes pulse-pass2 {
+  0%, 8%  { opacity: 0; left: 0; }
+  10%     { opacity: 1; }
+  20%     { opacity: 1; left: calc(100% - 7px); }
+  22%, 100% { opacity: 0; left: calc(100% - 7px); }
+}
+@keyframes wm-emit {
+  0%, 7%   { border-color: var(--ink); }
+  10%      { border-color: var(--copper); }
+  14%, 35% { border-color: var(--ink); }
+  38%      { border-color: var(--copper); }
+  42%, 100% { border-color: var(--ink); }
+}
+@keyframes gate-approve {
+  0%, 20%  { border-color: var(--ink); background: var(--panel); }
+  22%      { border-color: #6d9a70; background: var(--panel); }
+  26%, 46% { border-color: var(--ink); background: var(--panel); }
+  50%      { border-color: var(--verdigris); background: #eef4ee; }
+  58%      { border-color: var(--verdigris); background: #eef4ee; }
+  64%, 100% { border-color: var(--ink); background: var(--panel); }
+}
+@keyframes ltm-receive {
+  0%, 62%  { background: var(--panel); }
+  66%      { background: #eaf3ea; }
+  72%      { background: #eaf3ea; }
+  80%, 100% { background: var(--panel); }
+}
 @keyframes pulse-pass {
   0%, 36% { opacity: 0; left: 0; }
   38%     { opacity: 1; }
@@ -249,14 +295,15 @@ section[id] { scroll-margin-top: 1.5rem; }
 }
 @keyframes gate-flash {
   0%, 48%  { stroke: var(--ink); }
-  50%, 56% { stroke: var(--verdigris); }
-  60%, 100% { stroke: var(--ink); }
+  50%, 58% { stroke: var(--verdigris); }
+  62%, 100% { stroke: var(--ink); }
 }
 @keyframes gate-check {
   0%, 48% { stroke-dashoffset: 1; opacity: 0; }
   50%     { opacity: 1; }
   54%     { stroke-dashoffset: 0; opacity: 1; }
-  60%, 100% { stroke-dashoffset: 0; opacity: 0; }
+  62%     { stroke-dashoffset: 0; opacity: 1; }
+  68%, 100% { stroke-dashoffset: 0; opacity: 0; }
 }
 @keyframes pulse-settle {
   0%, 56% { opacity: 0; left: 0; }
@@ -417,6 +464,7 @@ section[id] { scroll-margin-top: 1.5rem; }
   .arrowhead.right { right: auto; left: -4.25px; top: auto; bottom: 1px; transform: rotate(135deg); }
   .pulse { left: -4px; top: 0; }
   .p-pass   { animation-name: pulse-pass-y; }
+  .p-pass2  { animation-name: pulse-pass2-y; }
   .p-settle { animation-name: pulse-settle-y; }
   .drain { left: 22%; gap: 1px; }   /* beside the descending main flow: center = promotion, side = discharge */
   .drain-stub { height: 13px; }
@@ -456,6 +504,12 @@ section[id] { scroll-margin-top: 1.5rem; }
   48%     { opacity: 1; top: calc(100% - 7px); }
   50%, 100% { opacity: 0; top: calc(100% - 7px); }
 }
+@keyframes pulse-pass2-y {
+  0%, 8%  { opacity: 0; top: 0; }
+  10%     { opacity: 1; }
+  20%     { opacity: 1; top: calc(100% - 7px); }
+  22%, 100% { opacity: 0; top: calc(100% - 7px); }
+}
 @keyframes pulse-settle-y {
   0%, 56% { opacity: 0; top: 0; }
   58%     { opacity: 1; }
@@ -472,7 +526,7 @@ section[id] { scroll-margin-top: 1.5rem; }
 /* ---------------------------------------------------------------- motion */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .orbiter, .gate-core, .tick-new { animation: none; }
+  .orbiter, .gate-core, .tick-new, .st-working, .st-gate, .st-ltm { animation: none; }
   .pulse { animation: none; opacity: 0; }
   .gate-check { animation: none; stroke-dashoffset: 0; opacity: 0.85; }
 }
