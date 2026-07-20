@@ -377,10 +377,16 @@ section[id] { scroll-margin-top: 1.5rem; }
 
 /* ---------------------------------------------------------------- footer */
 .colophon { max-width: var(--wrap); margin: 0 auto;
-  padding: 2.6rem clamp(1.25rem, 4vw, 2.5rem) 3.2rem;
-  border-top: 1px solid var(--hairline); }
-.colophon-lead { max-width: 72ch; font-size: 0.92rem; color: var(--body-text); }
-.colophon-meta { margin-top: 1rem; font-family: var(--body); font-size: 0.8125rem;
+  padding: clamp(4rem, 9vw, 6.5rem) clamp(1.25rem, 4vw, 2.5rem) 4rem;
+  border-top: 1px solid var(--hairline); text-align: center; }
+.outro-label { font-family: var(--body); font-weight: 600; font-size: 0.6875rem;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  margin-bottom: 1.2rem; }
+.outro { font-family: var(--display); font-weight: 400;
+  font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.18; letter-spacing: -0.025em;
+  max-width: 26ch; margin: 0 auto; }
+.outro-verd { color: var(--verdigris); }
+.colophon-meta { margin-top: 2.4rem; font-family: var(--body); font-size: 0.8125rem;
   color: var(--muted); }
 
 /* ---------------------------------------------------------------- tablet */
