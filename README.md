@@ -38,7 +38,7 @@ Enter the following instruction in Claude Code:
 Read https://raw.githubusercontent.com/clomia/claude-automata/refs/heads/main/INSTALL.md and install claude-automata in this repository.
 ```
 
-Your agent reads [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTALL.md) and brings the repository to the state it describes. Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/) on POSIX (macOS / Linux / WSL).
+Your agent reads [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTALL.md) and installs claude-automata. Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/) on POSIX (macOS / Linux / WSL).
 
 ## Operating the loop
 
