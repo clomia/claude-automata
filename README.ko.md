@@ -9,7 +9,9 @@
   몇 달짜리 작업을 맡기고 쉬세요. 며칠에 걸쳐 완료합니다.
 </p>
 
-<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ 기억 회로가 도는 모습을 보세요</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ 전체 시스템이 도는 모습을 보세요</strong></a></p>
+
+<p align="center"><sub>이 README는 요약입니다. 사이트가 전체 시스템을 애니메이션으로 안내합니다.</sub></p>
 
 <p align="center">
   <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=f54e00" alt="PyPI"></a>
@@ -47,18 +49,14 @@ agent가 [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTAL
 /ploop:launch [anchor 내용]    # 새 session에서 loop에 전달
 ```
 
-agent가 끝났다고 선언하는 순간 hook이 정지를 막고 advisor를 소집합니다. advisor는 전체 스토리에 접근할 수 있는 독립 메타인지입니다. loop는 **advisor가 더 말할 것이 없을 때** 끝납니다.
+agent가 끝났다고 선언하는 순간 hook이 정지를 막고 advisor를 소집합니다. advisor는 전체 스토리에 접근할 수 있는 독립 메타인지이고, loop는 advisor가 더 말할 것이 없을 때 끝납니다.
 
 ```
 agent   › Mission accomplished. Stopping.
-hook    › Stop blocked. Summoning the advisor.
-advisor › Not yet. The mobile layout was never measured. Two claims cite no source.
-agent   › …resuming.
-        ⟲ six rounds later
-advisor › I have no further advice. Ending the turn.
+advisor › Not yet. The mobile layout was never measured. …resuming.
 ```
 
-*연출된 대화입니다. ploop이 제공하는 기능입니다. loop를 종료할 권한은 advisor에게 있습니다.* anchor는 모든 auto-compaction에서 살아남습니다. 구독 요금제 이용 약관을 완전히 준수합니다.
+여섯 라운드 뒤 advisor가 turn을 종료합니다. [사이트에서 한 라운드를 처음부터 보세요.](https://claude-automata.clomia.com/#advisor) anchor는 모든 auto-compaction에서 살아남고, 구독 요금제 이용 약관을 완전히 준수합니다.
 
 <details>
 <summary><strong>일시정지 · 재개 · 관찰</strong></summary>
@@ -81,10 +79,10 @@ tx는 에이전트가 알아서 사용합니다. 모든 변경은 무결성 경�
 /refine:code [영역] · /refine:docs [영역] · /refine:integrity [영역]
 ```
 
-기술 부채를 제거하는 대규모 워크플로우입니다. `/refine:code`는 코드 architecture를 최적화하고, `/refine:docs`는 문서를 코드에 정합하고, `/refine:integrity`는 논리적 무결성을 검증합니다. 레포지토리 전체를 탐색하고 해결하므로 10시간 이상 걸릴 수 있습니다. 영역을 비우면 codebase 전체가 대상, 진행은 `/workflows`에서.
+기술 부채를 제거하는 레포지토리 전역 워크플로우입니다: 코드 architecture, 문서-코드 정합, 논리적 무결성. codebase 전체를 훑느라 한 번에 10시간 이상 걸릴 수 있고, 진행은 `/workflows`에서 봅니다.
 
 ---
 
-<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ 기억 회로가 도는 모습을 보세요</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ 전체 시스템이 도는 모습을 보세요</strong></a></p>
 
 Apache-2.0 · 재귀적 자기개선: claude-automata는 claude-automata에서 개발됩니다. 이 repository의 모든 기여는 이 환경을 돌리는 Claude Code agent가 작성했습니다.
