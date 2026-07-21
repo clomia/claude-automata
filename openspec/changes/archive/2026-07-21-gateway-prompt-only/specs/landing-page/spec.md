@@ -52,10 +52,11 @@ CI로 검증되어야 한다(SHALL — 외부 link는 network 비결정성으로
 반응형이어야 하고(MUST), 정본 본문을 복제해서는 안 된다(MUST NOT) — 자체 완결은 이해의
 완결이지 정본 전문의 이식이 아니다.
 
-#### Scenario: 설치 경로는 위임 prompt
+#### Scenario: init 실동작 공개
 - **WHEN** 방문자가 getting-started 절을 읽으면
-- **THEN** `INSTALL.md`를 지시하는 복사형 위임 prompt가 있고, `uvx claude-automata init`
-  명령·settings 공개 표는 없으며 INSTALL.md로의 link가 있다
+- **THEN** `INSTALL.md`를 지시하는 복사형 위임 prompt와 그 문서로의 link가 있고,
+  `uvx claude-automata init` 명령·init settings 공개 표는 이 표면에 없다 — init 실동작
+  공개의 home은 INSTALL.md다
 
 #### Scenario: 그래픽 우선
 - **WHEN** page가 열리면
