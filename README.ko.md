@@ -9,7 +9,7 @@
   몇 달짜리 작업을 맡기고 쉬세요. 며칠에 걸쳐 완료합니다.
 </p>
 
-<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ 전체 시스템이 도는 모습을 보세요</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>자세히 보기</strong></a></p>
 
 <p align="center"><sub>이 README는 요약입니다. 사이트가 전체 시스템을 애니메이션으로 안내합니다.</sub></p>
 
@@ -83,6 +83,6 @@ tx는 에이전트가 알아서 사용합니다. 모든 변경은 무결성 경�
 
 ---
 
-<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ 전체 시스템이 도는 모습을 보세요</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>자세히 보기</strong></a></p>
 
 Apache-2.0 · 재귀적 자기개선: claude-automata는 claude-automata에서 개발됩니다. 이 repository의 모든 기여는 이 환경을 돌리는 Claude Code agent가 작성했습니다.
