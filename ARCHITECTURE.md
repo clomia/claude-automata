@@ -20,7 +20,8 @@ Claude Code agent다(설계 전제) — 인간은 목적을 제공하고 관찰�
 | [plugins/tx/README.md](plugins/tx/README.md) | transaction model · base 해석 · guard hook · seed · verify stage |
 | plugins/refine/skills/\*/principles.md | 각 정제 workflow의 판단 axiom |
 | [openspec/specs/init-cli/spec.md](openspec/specs/init-cli/spec.md) | init CLI — 전제조건 수렴(settings·marketplace·외부 CLI provisioning) 요구사항 |
-| [README.ko.md](README.ko.md) / [README.md](README.md) | 설치·사용 (사람 대상, 한·영 쌍) |
+| [README.ko.md](README.ko.md) / [README.md](README.md) | 관문·사용 (사람 대상, 한·영 쌍) |
+| [INSTALL.md](INSTALL.md) | 설치 — installed state 술어 (설치 수행 agent 대상) |
 
 기억 domain 용어(작업기억·장기기억·응고·표면·정본)는 MEMORY.md가, ploop 내부 용어(advisor
 loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의하지 않는다.
@@ -54,7 +55,7 @@ ASCII 다이어그램은 정렬을 위해 영어만. **언어는 독자가 정�
 prompt 본문·정본 — 은 한국어, 사용자 대면 출력은 사용자 언어, 그 밖의 기계·UI lane —
 상태 고지 notice, description metadata, statusMessage, hook이 조립하는 발신 message, runtime
 위임 prompt — 는 영어다. root README만 한·영 쌍이고, plugins/tx/README.md는 정본 겸
-marketplace 대면이라 영어 단일본이다. plugin 특이사항은 소유 정본에 남는다(예: ploop의
+marketplace 대면이라, INSTALL.md는 관문의 연장(설치 수행 agent 대상)이라 영어 단일본이다. plugin 특이사항은 소유 정본에 남는다(예: ploop의
 hook 주입 message 조립).
 
 ## 결정 기록 (배제 — YAGNI/오컴)
