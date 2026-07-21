@@ -24,18 +24,20 @@ push에는 발행이 불필요하므로 `site/`·workflow 자신으로 path filt
 
 ### Requirement: README 관문화
 `README.md`·`README.ko.md`는 쌍으로 유지되어야 하며(MUST), 각각 banner image + 한 줄
-tagline + plugin 인벤토리 + 설치(init 단일 경로, 실동작 공개) + 사이트로의 초대 hook으로
-열어야 한다(SHALL). 사이트 hook은 "Landing page" 같은 일반 명칭이 아니라 내용을 예고하는
+tagline + plugin 인벤토리 + 설치 + 사이트로의 초대 hook으로 열어야 한다(SHALL). 설치 절은
+agent 위임을 1차 경로로 실어야 한다(SHALL) — `INSTALL.md`를 읽고 이 repository에 설치하라는
+복사형 한 줄 prompt — 그리고 `uvx claude-automata init` 직접 경로와 init 실동작 공개를
+유지해야 한다(MUST). 사이트 hook은 "Landing page" 같은 일반 명칭이 아니라 내용을 예고하는
 초대 문구여야 한다(MUST). README는 내부 개발 정본(ARCHITECTURE.md·MEMORY.md)을 참조해서는
-안 된다(MUST NOT) — 방문자의 이해 경로는 README와 사이트로 완결된다. 섹션 heading은 h2
+안 된다(MUST NOT) — 방문자의 이해 경로는 README·사이트·INSTALL.md로 완결된다. 섹션 heading은 h2
 이하여야 하고(MUST — 문서 최상위 자리는 banner·tagline이 대신하며 h1을 두지 않는다),
 plugin별 개별 Install·Update 안내를 포함해서는 안 되며(MUST NOT), 상세 사용법은
 접힘(`<details>`)으로 점진 공개한다(SHOULD).
 
 #### Scenario: 관문 구조
 - **WHEN** 방문자가 README 상단만 읽으면
-- **THEN** 무엇인지(banner·tagline), 무엇이 들었는지(인벤토리), 어떻게 시작하는지(init),
-  어디서 더 보는지(사이트 초대 hook)를 얻는다
+- **THEN** 무엇인지(banner·tagline), 무엇이 들었는지(인벤토리), 어떻게 시작하는지(agent에게
+  건넬 prompt와 init 공개), 어디서 더 보는지(사이트 초대 hook)를 얻는다
 
 #### Scenario: 내부 정본 비참조
 - **WHEN** README 어디에서든 link를 따라가면
@@ -46,14 +48,16 @@ plugin별 개별 Install·Update 안내를 포함해서는 안 되며(MUST NOT),
 사이트의 default page(`/`)는 English 단일 서사여야 하며(SHALL) 다음을 실어야 한다(SHALL):
 기억 system 시각화(작업기억 → 응고 gate → 장기기억 → 재접지 주기), advisor의
 정지-차단·재소집 기제를 보여주는 show-don't-tell 표현, plugin 3종(ploop·tx·refine)
-각각의 소개, `uvx claude-automata init` 단일 설치 경로와 init이 실제로 쓰는 settings의
+각각의 소개, `uvx claude-automata init`으로 수렴하는 단일 설치 경로 — getting-started는
+agent 위임(`INSTALL.md`를 지시하는 복사형 prompt)을 1차로, init 직접 실행을 그 아래 실어야
+한다(SHALL) — 와 init이 실제로 쓰는 settings의
 공개(`permissions.defaultMode="bypassPermissions"`·`model="opus[1m]"` 포함), 그리고 모든
 기여가 이 환경을 돌리는 Claude Code agent에 의해 작성된다는 자기개발(재귀적 자기개선)
 표기. version-up-alert는 기억 이론 밖의 add-on이므로 방문자 표면에서 다루지 않는다(MUST
 NOT). **사이트의 이해는 자체 완결이어야 한다(MUST)** — page를 떠나지 않고 스크롤만으로
 정체·기제·가치·시작법이 전달되며, module 소개는 정본 link를 두지 않는다(MUST NOT — page의 repo
-link들은 전부 repo root 한 곳으로만 수렴한다). 기억 시각화는 hero의 서술 산문에 선행해야
-한다(MUST). 한국어 변형이 `/ko/` 경로에 존재해야 하며(SHALL — default는 English, 언어
+link들은 전부 repo root와 INSTALL.md 두 곳으로만 수렴한다). 기억 시각화는 hero의 서술 산문에
+선행해야 한다(MUST). 한국어 변형이 `/ko/` 경로에 존재해야 하며(SHALL — default는 English, 언어
 toggle 상호 연결, 한국어 기반 + native 영어 어휘), init 공개·link 결속 검증의 표면에
 포함되어야 한다(MUST). 공유 link unfurl을 위한 Open Graph·Twitter Card metadata와 share
 image를 실어야 한다(SHALL). init 공개의 값은 `claude_automata/settings.py`의 실값과 CI로
@@ -66,7 +70,8 @@ CI로 검증되어야 한다(SHALL — 외부 link는 network 비결정성으로
 
 #### Scenario: init 실동작 공개
 - **WHEN** 방문자가 getting-started 절을 읽으면
-- **THEN** init이 기록하는 settings 전제조건(bypassPermissions·model 고정 포함)이 명시되어 있다
+- **THEN** agent 위임 prompt가 먼저 오고, init이 기록하는 settings 전제조건
+  (bypassPermissions·model 고정 포함)이 명시되어 있다
 
 #### Scenario: 그래픽 우선
 - **WHEN** page가 열리면
@@ -101,4 +106,22 @@ CI로 검증되어야 한다(SHALL — 외부 link는 network 비결정성으로
 #### Scenario: 정본 link 존재 결속
 - **WHEN** 방문자 표면이 가리키는 repo-내부 경로가 tree에서 사라진 PR이 열리면
 - **THEN** CI가 실패해 관문이 404를 안내하기 전에 차단한다
+
+### Requirement: Agent install canon — INSTALL.md
+repo root의 `INSTALL.md`는 설치를 수행할 agent 대상의 English 단일본이어야 하며(SHALL),
+방법 절차가 아니라 **installed state** — 전부 참이면 설치된 것인 검증 가능한 술어 집합 —
+를 서술해야 한다(SHALL). 상태 oracle(init 출력·seed 보고·openspec validate·CI)을 지정해야
+하고(MUST), host repository의 기존 harness를 존중하는 경계 — 동결 이력 불가침, 소급 재구성
+금지, repo 소유 결정의 사용자 귀속 — 를 installed state의 술어로 포함해야 한다(MUST).
+명령 시퀀스·단계 절차를 강제해서는 안 되며(MUST NOT — 경로는 대상 repo의 agent가 도출한다),
+내부 개발 정본(ARCHITECTURE.md·MEMORY.md)을 참조해서는 안 된다(MUST NOT).
+
+#### Scenario: 성공 상태 서술
+- **WHEN** agent가 INSTALL.md만 읽고 임의의 기 구축 repository에서 설치를 수행하면
+- **THEN** 도달할 상태와 각 술어의 검증 oracle이 전부 주어지고, 경로·순서는 문서가
+  강제하지 않는다
+
+#### Scenario: host harness 존중
+- **WHEN** 대상 repository에 자체 CLAUDE.md·rules·CI·문서 체계가 있으면
+- **THEN** installed state의 술어가 그 보존을 요구하고, 충돌 시 사용자 결정 귀속을 요구한다
 
