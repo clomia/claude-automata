@@ -17,7 +17,7 @@ one who can see it.
 - One transaction — opened with `/tx:open`, closed with `/tx:close` — has
   carried the adoption to the base branch: the seed's artifacts (openspec
   scaffold, memory-check CI, branch protection) merged through the
-  transaction's own gate with green checks. Green entails:
+  transaction's own gate with green checks. In the merged state:
   - No tracked living document resolves a gitignored, untracked, or
     system-temp path. The facts those references carried survive — pointed
     at the tracked source that defines each path (a config key, an env var
