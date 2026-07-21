@@ -34,8 +34,13 @@ When every line below holds, claude-automata is installed.
   integrates into, the one transactions open from and merge back into.
 - In that restarted session, one transaction (opened with `/tx:open`, closed
   with `/tx:close`) has carried the adoption to the base branch: the seed's
-  artifacts (openspec scaffold, memory-check CI, branch protection) merged
-  through the transaction's own gate with green checks. In the merged state:
+  artifacts (openspec scaffold, memory-check CI) merged through the
+  transaction's own gate with green checks. Branch protection is the seed's
+  server-side, best-effort companion: where GitHub offers rulesets to this
+  repository it lands and later converges upward; where GitHub withholds
+  them (a private repository on a free plan) the seed reports `unsupported`,
+  and that line is satisfied as-is — never a reason to change the
+  repository's visibility or plan. In the merged state:
   - No tracked living document resolves a gitignored, untracked, or
     system-temp path. The facts those references carried survive, now
     pointed at the tracked source that defines each path (a config key, an
@@ -59,9 +64,10 @@ When every line below holds, claude-automata is installed.
   specs); whether human review requirements coexist with agent self-merge
   (all rulesets apply together, and the most restrictive wins).
 - After the adoption merged: open PRs from before it are rebased so the new
-  required checks can report, and a later `/tx:open` has reported the
-  branch protection upgraded with required checks. Steady state: every seed
-  line reads `present`.
+  checks can report, and — where the protection landed — a later `/tx:open`
+  has reported it upgraded with required checks. Steady state: every seed
+  line reads `present`, or `unsupported` where that is the protection
+  line's settled report.
 
 Oracles outrank assumptions, including any this document leaves you with.
 Init's output, the seed's one-line reports, `openspec validate`, and CI are

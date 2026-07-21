@@ -136,6 +136,39 @@ def test_protection_never_downgrades_full_ruleset(monkeypatch):
     assert "put" not in state
 
 
+def failing_gh(reason: str):
+    """run_gh stand-in — slug resolves, every rulesets call fails with `reason`."""
+
+    def run_gh(args: list[str], payload: str | None = None) -> tuple[str | None, str]:
+        if args[0] == "repo":
+            return "owner/repo\n", ""
+        return None, reason
+
+    return run_gh
+
+
+def test_protection_plan_gate_is_terminal_unsupported(monkeypatch):
+    monkeypatch.setattr(
+        seed,
+        "run_gh",
+        failing_gh(
+            "gh: Upgrade to GitHub Pro or make this repository public (HTTP 403)"
+        ),
+    )
+    assert (
+        seed.protection_report()
+        == "branch protection: unsupported (private repo on a free plan)"
+    )
+
+
+def test_protection_other_failures_stay_unavailable(monkeypatch):
+    monkeypatch.setattr(seed, "run_gh", failing_gh("HTTP 404: Not Found"))
+    assert (
+        seed.protection_report()
+        == "branch protection: unavailable (HTTP 404: Not Found)"
+    )
+
+
 def test_protection_reduced_stays_while_conditions_unmet(monkeypatch):
     state = {"rules": ["pull_request"], "permissions": ("true\n", "")}
     monkeypatch.setattr(seed, "run_gh", fake_gh(state))
