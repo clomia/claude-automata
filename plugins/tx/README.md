@@ -45,7 +45,8 @@ stay silent.
   that lacks the scaffold.
 - **GitHub CLI (`gh`)** — `/tx:close` opens the PR and watches CI. The token
   needs the `workflow` scope: the seed commits a CI workflow file (and
-  re-commits it on pin drift), and pushing it is rejected without that scope.
+  re-commits it when it drifts from the plugin's copy), and pushing it is
+  rejected without that scope.
 
 ## Install
 
