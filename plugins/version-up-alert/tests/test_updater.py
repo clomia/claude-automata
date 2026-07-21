@@ -19,13 +19,13 @@ def test_is_newer_strict_and_robust():
 def test_outdated_reports_only_installed_and_behind():
     remote = {"a": "2.0.0", "b": "1.0.0", "c": "9.9.9"}
     local = {"b": "1.0.0", "a": "1.0.0", "d": "1.0.0"}
-    assert updater.outdated(remote, local) == ["a 1.0.0 -> 2.0.0"]
+    assert updater.outdated(remote, local) == ["a 1.0.0 > 2.0.0"]
 
 
 def test_build_message_names_marketplace_and_points_at_plugin():
-    message = updater.build_message(["a 1.0.0 -> 2.0.0", "b 1.0.0 -> 3.0.0"])
-    assert "claude-automata" in message
-    assert "a 1.0.0 -> 2.0.0, b 1.0.0 -> 3.0.0" in message
+    message = updater.build_message(["a 1.0.0 > 2.0.0", "b 1.0.0 > 3.0.0"])
+    assert "Claude-automata can now be updated." in message
+    assert "[a 1.0.0 > 2.0.0] [b 1.0.0 > 3.0.0]" in message
     assert "/plugin" in message
 
 
@@ -97,14 +97,14 @@ class TestCheckForUpdate:
             updater, "fetch_remote_versions", lambda: {"ploop": "9.9.9"}
         )
         updater.check_for_update()
-        assert "ploop 0.1.0 -> 9.9.9" in capsys.readouterr().out
+        assert "[ploop 0.1.0 > 9.9.9]" in capsys.readouterr().out
 
         def unexpected_fetch():
             raise AssertionError("fetch must be cooled")
 
         monkeypatch.setattr(updater, "fetch_remote_versions", unexpected_fetch)
         updater.check_for_update()
-        assert "ploop 0.1.0 -> 9.9.9" in capsys.readouterr().out
+        assert "[ploop 0.1.0 > 9.9.9]" in capsys.readouterr().out
 
     def test_clears_the_moment_local_is_current(self, tmp_path, monkeypatch, capsys):
         cache_file = self.arrange(tmp_path, monkeypatch, {"ploop": "9.9.9"})
