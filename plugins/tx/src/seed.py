@@ -23,8 +23,11 @@ converging on its final shape and reporting one line on stdout:
   never reduced — and the ruleset, like the workflow, is seed-owned: the
   upgrade writes the canonical shape whole.  An attempt, not a guarantee:
   any failure — no gh, no permission, API refusal — is one reported line and
-  the seed continues.  What the ruleset buys is not immutability but making
-  bypass an explicit, auditable API call.
+  the seed continues.  Where GitHub itself withholds rulesets — a private
+  repo on a free plan — the refusal is not a failure but a terminal state,
+  reported as unsupported; the same stateless attempt converges upward if
+  visibility or plan ever changes.  What the ruleset buys is not immutability
+  but making bypass an explicit, auditable API call.
 """
 
 import json
@@ -134,6 +137,15 @@ def run_gh(args: list[str], payload: str | None = None) -> tuple[str | None, str
     return result.stdout, ""
 
 
+def failure_report(reason: str) -> str:
+    """The report line for a failed gh call — GitHub's plan-gate refusal
+    (rulesets withheld from free-plan private repos) is a terminal satisfied
+    state, not a failure to converge later."""
+    if "Upgrade to GitHub Pro" in reason:
+        return "branch protection: unsupported (private repo on a free plan)"
+    return f"branch protection: unavailable ({reason})"
+
+
 def actions_enabled(slug: str) -> bool | None:
     """None when the probe fails — fall through to the full ruleset (no new failure mode)."""
     out, _ = run_gh(["api", f"repos/{slug}/actions/permissions", "--jq", ".enabled"])
@@ -174,7 +186,7 @@ def protection_report() -> str:
         ["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]
     )
     if slug is None:
-        return f"branch protection: unavailable ({reason})"
+        return failure_report(reason)
     slug = slug.strip()
     found, reason = run_gh(
         [
@@ -185,7 +197,7 @@ def protection_report() -> str:
         ]
     )
     if found is None:
-        return f"branch protection: unavailable ({reason})"
+        return failure_report(reason)
     if not found.strip():
         shape, note = desired_shape(slug)
         created, reason = run_gh(
@@ -193,7 +205,7 @@ def protection_report() -> str:
             payload=json.dumps(shape),
         )
         if created is None:
-            return f"branch protection: unavailable ({reason})"
+            return failure_report(reason)
         return (
             f"branch protection: attempted ({note})"
             if note
@@ -204,7 +216,7 @@ def protection_report() -> str:
         ["api", f"repos/{slug}/rulesets/{ruleset_id}", "--jq", "[.rules[].type]"]
     )
     if rule_types is None:
-        return f"branch protection: unavailable ({reason})"
+        return failure_report(reason)
     if CHECKS_RULE in rule_types:
         return "branch protection: present"
     shape, note = desired_shape(slug)
@@ -222,7 +234,7 @@ def protection_report() -> str:
         payload=json.dumps(shape),
     )
     if upgraded is None:
-        return f"branch protection: unavailable ({reason})"
+        return failure_report(reason)
     return "branch protection: upgraded (required checks added)"
 
 

@@ -109,7 +109,10 @@ they merge through the same gate:
   rule joins only once the seeded workflow is on the base branch and Actions
   is enabled — until then the rest of the ruleset holds active, and a later
   seed run converges it upward. Failure is reported in one line and never
-  blocks. Server-side rules make bypasses auditable rather than impossible —
+  blocks. Where GitHub itself withholds rulesets (a private repository on a
+  free plan) the seed reports `unsupported` — a settled state, not a
+  failure — and converges upward if visibility or plan ever changes.
+  Server-side rules make bypasses auditable rather than impossible —
   an admin token can still remove the gate.
 
 ## Guard hooks
