@@ -32,13 +32,13 @@ Long-term memory is the repository's own git-tracked text, not a database. Recal
 
 ## Getting started
 
-Installation is agent work — like everything else here. Paste this into Claude Code, inside the repository to adopt:
+Installation is agent work, like everything else here. Paste this into Claude Code, inside the repository to adopt:
 
 ```
-Read https://github.com/clomia/claude-automata/blob/main/INSTALL.md and install claude-automata in this repository.
+Read https://raw.githubusercontent.com/clomia/claude-automata/refs/heads/main/INSTALL.md and install claude-automata in this repository.
 ```
 
-Your agent reads [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTALL.md) — the installed state, and exactly what it writes to your settings — and converges the repository to it. Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/) on POSIX (macOS / Linux / WSL).
+Your agent reads [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTALL.md) and brings the repository to the state it describes. That file also spells out exactly what init writes to your settings. Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/) on POSIX (macOS / Linux / WSL).
 
 ## Operating the loop
 

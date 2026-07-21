@@ -123,7 +123,11 @@ repo root의 `INSTALL.md`는 설치를 수행할 agent 대상의 English 단일�
 init이 기록하는 settings 전제조건(`permissions.defaultMode="bypassPermissions"`·
 `model="opus[1m]"`·flag 3종·marketplace 등록)을 installed state의 일부로 공개해야 하며(SHALL —
 방문자 표면이 아니라 여기가 공개의 home이다), 그 값은 `claude_automata/settings.py`의 실값과
-CI로 결속되어야 한다(MUST). 명령 시퀀스·단계 절차를 강제해서는 안 되며(MUST NOT — 경로는
+CI로 결속되어야 한다(MUST). init이 기록하는 settings가 세션 재시작으로만 발효하고 plugin이
+세션 시작 시 로드되므로, installed state는 **init 이후의 세션 재시작을 별도 술어로 요구해야
+하며(SHALL)** — 재시작 전에는 tx skill이 없어 transaction 술어가 성립 불가다 — 설치 agent가
+자기 세션을 재시작할 수 없다는 사실과 그 재시작을 사용자에게 표면화해야 한다는 것을
+술어에 담아야 한다(MUST). 명령 시퀀스·단계 절차를 강제해서는 안 되며(MUST NOT — 경로는
 대상 repo의 agent가 도출한다), 내부 개발 정본(ARCHITECTURE.md·MEMORY.md)을 참조해서는 안
 된다(MUST NOT).
 
@@ -140,4 +144,9 @@ CI로 결속되어야 한다(MUST). 명령 시퀀스·단계 절차를 강제해
 - **WHEN** 신중한 사용자가 위임 prompt를 건네기 전에 INSTALL.md를 읽으면
 - **THEN** init이 기록하는 settings(bypassPermissions·model 고정 포함)가 명시되어 있고,
   그 값은 settings.py와 CI로 결박되어 표류하지 않는다
+
+#### Scenario: 재시작 관문
+- **WHEN** 설치 agent가 init을 실행한 세션에서 곧바로 다음 단계로 나아가려 하면
+- **THEN** installed state가 init 이후의 세션 재시작을 요구하고(재시작 전에는 plugin·tx
+  skill이 없다), agent는 스스로 재시작할 수 없으므로 그 재시작을 사용자에게 표면화한다
 

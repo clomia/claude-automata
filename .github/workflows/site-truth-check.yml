@@ -65,7 +65,7 @@ jobs:
           # on a domain this repo cannot write to is not actionable.
           pattern = re.compile(
               r"(?:github\.com/clomia/claude-automata/(?:blob|tree)/main"
-              r"|raw\.githubusercontent\.com/clomia/claude-automata/main)/([^\s\"'#)&<]+)")
+              r"|raw\.githubusercontent\.com/clomia/claude-automata/(?:refs/heads/)?main)/([^\s\"'#)&<]+)")
           surfaces = ["site/index.html", "site/ko/index.html", "README.md", "README.ko.md"]
           failures, total = [], 0
           for surface in surfaces:
