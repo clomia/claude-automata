@@ -32,13 +32,13 @@ Claude Code는 끝났다고 믿는 순간 turn을 끝내고, 다음 compaction�
 
 ## 시작하기
 
-도입할 repository 안에서 Claude Code에 이 한 줄을 붙여넣으세요:
+다음 지시를 Claude Code에 입력하세요:
 
 ```
 https://raw.githubusercontent.com/clomia/claude-automata/refs/heads/main/INSTALL.md 을 읽고 이 레포지토리에 claude-automata를 설치해주세요.
 ```
 
-agent가 [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTALL.md)를 읽고 repository를 그 문서가 정의한 상태로 수렴시킵니다. init이 settings에 무엇을 기록하는지도 그 문서에 적혀 있습니다. [Claude Code](https://claude.com/claude-code)와 [uv](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다. POSIX(macOS / Linux / WSL).
+agent가 [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTALL.md)를 읽고 repository를 그 문서가 정의한 상태로 수렴시킵니다. [Claude Code](https://claude.com/claude-code)와 [uv](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다. POSIX(macOS / Linux / WSL).
 
 ## 루프 운용 방법
 
