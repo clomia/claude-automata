@@ -32,7 +32,7 @@ Long-term memory is the repository's own git-tracked text, not a database. Recal
 
 ## Getting started
 
-Installation is agent work, like everything else here. Paste this into Claude Code, inside the repository to adopt:
+Paste this into Claude Code, inside the repository to adopt:
 
 ```
 Read https://raw.githubusercontent.com/clomia/claude-automata/refs/heads/main/INSTALL.md and install claude-automata in this repository.

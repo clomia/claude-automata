@@ -32,7 +32,7 @@ Claude Code는 끝났다고 믿는 순간 turn을 끝내고, 다음 compaction�
 
 ## 시작하기
 
-설치도 이 환경의 다른 모든 것처럼 agent의 일입니다. 도입할 repository 안에서 Claude Code에 이 한 줄을 붙여넣으세요:
+도입할 repository 안에서 Claude Code에 이 한 줄을 붙여넣으세요:
 
 ```
 https://raw.githubusercontent.com/clomia/claude-automata/refs/heads/main/INSTALL.md 을 읽고 이 레포지토리에 claude-automata를 설치해주세요.

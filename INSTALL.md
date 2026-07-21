@@ -10,10 +10,11 @@ one who can see it.
 
 When every line below holds, claude-automata is installed.
 
-- `uvx claude-automata init` converges: every line it prints reports a
-  satisfied state, nothing in its notes stays unresolved, and `gh` is
-  authenticated. Its output is the oracle for prerequisites; do not re-derive
-  what it already reports.
+- `uvx claude-automata init` has converged, with `uv` on PATH for it to run
+  at all: every line it prints reports a satisfied state, and `gh` is
+  authenticated. Its output is the oracle for prerequisites, so act on its
+  notes instead of re-deriving them. The one note it always leaves, to
+  restart Claude Code, is the predicate below.
 - The repository's `.claude/settings.json` carries the environment this
   autonomy needs: `permissions.defaultMode` is `"bypassPermissions"` (the
   agent stops asking before it acts), `model` is `"opus[1m]"`,
@@ -25,8 +26,10 @@ When every line below holds, claude-automata is installed.
 - The session has restarted since init ran. Claude Code loads the registered
   plugins and the new `model`/`bypassPermissions` only at startup, so in the
   session that ran init the tx skills (`/tx:open` and the rest) do not exist
-  yet. You cannot restart yourself: surface the restart to the user, and let
-  the transaction below run in the session that comes back.
+  yet. You can neither restart yourself nor carry this context across the
+  restart, so tell the user to restart Claude Code and then re-send the same
+  install request. The returning session re-reads this document, finds init
+  already converged, and runs the transaction below.
 - The GitHub default branch is the branch this repository actually
   integrates into, the one transactions open from and merge back into.
 - In that restarted session, one transaction (opened with `/tx:open`, closed
@@ -41,8 +44,8 @@ When every line below holds, claude-automata is installed.
     for whatever specs this repository keeps.
   - Exactly one CI job reports the `openspec-validate` context. If this
     repository already validated openspec on its own, that job is gone and
-    the seeded workflow carries the context name onward, so configurations
-    that required it keep their continuity.
+    the seeded memory-check workflow carries the context name onward, so
+    configurations that required it keep their continuity.
 - Pre-existing frozen history under `openspec/changes/archive/` is
   byte-identical to before the adoption, in place. It is judged only as
   pull requests bring files into it, and editing or moving it revokes that
