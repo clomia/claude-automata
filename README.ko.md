@@ -37,7 +37,7 @@ Claude Code는 끝났다고 믿는 순간 turn을 끝내고, 다음 compaction�
 다음 지시를 Claude Code에 입력하세요:
 
 ```
-curl -sSL https://raw.githubusercontent.com/clomia/claude-automata/refs/heads/main/INSTALL.md 을 실행하고 이 레포지토리에 claude-automata를 설치해주세요.
+curl -sSL 로 https://raw.githubusercontent.com/clomia/claude-automata/refs/heads/main/INSTALL.md 를 읽고 claude-automata를 설치하라.
 ```
 
 agent가 [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTALL.md)를 읽고 claude-automata를 설치합니다. [Claude Code](https://claude.com/claude-code)와 [uv](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다. POSIX(macOS / Linux / WSL).
