@@ -126,10 +126,11 @@ init이 기록하는 settings 전제조건(`permissions.defaultMode="bypassPermi
 CI로 결속되어야 한다(MUST). init이 기록하는 settings가 세션 재시작으로만 발효하고 plugin이
 세션 시작 시 로드되므로, installed state는 **init 이후의 세션 재시작을 별도 술어로 요구해야
 하며(SHALL)** — 재시작 전에는 tx skill이 없어 transaction 술어가 성립 불가다 — 설치 agent가
-자기 세션을 재시작할 수 없다는 사실과 그 재시작을 사용자에게 표면화해야 한다는 것을
-술어에 담아야 한다(MUST). 명령 시퀀스·단계 절차를 강제해서는 안 되며(MUST NOT — 경로는
-대상 repo의 agent가 도출한다), 내부 개발 정본(ARCHITECTURE.md·MEMORY.md)을 참조해서는 안
-된다(MUST NOT).
+자기 세션을 재시작하지도 그 context를 재시작 너머로 잇지도 못한다는 사실과, 재시작 및
+**재개 방법(돌아온 세션이 이 문서를 다시 읽어 마저 수렴하도록 하는 사용자 행동)**을 사용자에게
+표면화해야 한다는 것을 술어에 담아야 한다(MUST). 명령 시퀀스·단계 절차를 강제해서는 안 되며
+(MUST NOT — 경로는 대상 repo의 agent가 도출한다), 내부 개발 정본(ARCHITECTURE.md·MEMORY.md)을
+참조해서는 안 된다(MUST NOT).
 
 #### Scenario: 성공 상태 서술
 - **WHEN** agent가 INSTALL.md만 읽고 임의의 기 구축 repository에서 설치를 수행하면
@@ -148,5 +149,6 @@ CI로 결속되어야 한다(MUST). init이 기록하는 settings가 세션 재�
 #### Scenario: 재시작 관문
 - **WHEN** 설치 agent가 init을 실행한 세션에서 곧바로 다음 단계로 나아가려 하면
 - **THEN** installed state가 init 이후의 세션 재시작을 요구하고(재시작 전에는 plugin·tx
-  skill이 없다), agent는 스스로 재시작할 수 없으므로 그 재시작을 사용자에게 표면화한다
+  skill이 없다), agent는 스스로 재시작할 수 없으므로 재시작과 재개 방법(재시작 후 같은 요청을
+  다시 보내면 돌아온 세션이 이 문서를 다시 읽어 마저 수렴)을 사용자에게 표면화한다
 
