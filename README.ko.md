@@ -58,7 +58,7 @@ agent   › …resuming.
 advisor › I have no further advice. Ending the turn.
 ```
 
-*연출된 대화입니다. ploop이 제공하는 기능입니다. loop를 종료할 권한은 advisor에게 있습니다.* anchor는 모든 auto-compaction에서 살아남습니다. 구독 요금제에서도 안전하게 쓸 수 있습니다. 여기서 '안전'은 동작 기제 이야기지 비용이 들지 않는다는 뜻이 아닙니다. loop는 요금제 quota를 공유하며, 며칠짜리 실행은 quota를 그만큼 소모합니다.
+*연출된 대화입니다. ploop이 제공하는 기능입니다. loop를 종료할 권한은 advisor에게 있습니다.* anchor는 모든 auto-compaction에서 살아남습니다. 구독 요금제 이용 약관을 완전히 준수합니다.
 
 <details>
 <summary><strong>일시정지 · 재개 · 관찰</strong></summary>

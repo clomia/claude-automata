@@ -58,7 +58,7 @@ agent   › …resuming.
 advisor › I have no further advice. Ending the turn.
 ```
 
-*An illustrative exchange: this is what ploop provides. The authority to end the loop rests with the advisor.* The anchor survives every auto-compaction. Safe on subscription plans (safe in mechanism, not in price): the loop shares your plan's quota, and a multi-day run spends days of it.
+*An illustrative exchange: this is what ploop provides. The authority to end the loop rests with the advisor.* The anchor survives every auto-compaction. The loop fully complies with your subscription plan's terms of service.
 
 <details>
 <summary><strong>Pause, resume, observe</strong></summary>
