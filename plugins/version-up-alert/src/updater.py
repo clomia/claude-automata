@@ -118,16 +118,17 @@ def is_newer(a: str, b: str) -> bool:
 
 
 def outdated(remote: dict[str, str], local: dict[str, str]) -> list[str]:
-    """One `name local -> remote` row per installed plugin with a newer release."""
+    """One `name local > remote` row per installed plugin with a newer release."""
     return [
-        f"{name} {local[name]} -> {remote[name]}"
+        f"{name} {local[name]} > {remote[name]}"
         for name in sorted(local)
         if name in remote and is_newer(remote[name], local[name])
     ]
 
 
 def build_message(rows: list[str]) -> str:
-    return f"{MARKETPLACE} updates available: {', '.join(rows)} — /plugin"
+    bracketed = " ".join(f"[{row}]" for row in rows)
+    return f"{MARKETPLACE.capitalize()} can now be updated. {bracketed} — /plugin"
 
 
 def load_cache(cache_file: Path) -> dict:
