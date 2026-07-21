@@ -9,7 +9,7 @@
   Hand it months of work and rest: it finishes in days.
 </p>
 
-<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ Watch the whole system run</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>See more</strong></a></p>
 
 <p align="center"><sub>This README is the summary. The site walks the whole system, animated.</sub></p>
 
@@ -83,6 +83,6 @@ Repository-wide workflows that clear technical debt: code architecture, doc-to-c
 
 ---
 
-<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ Watch the whole system run</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>See more</strong></a></p>
 
 Apache-2.0 · Recursive self-improvement: claude-automata is developed inside claude-automata. A Claude Code agent running this environment authored every contribution in this repository.
