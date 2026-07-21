@@ -9,7 +9,9 @@
   Hand it months of work and rest: it finishes in days.
 </p>
 
-<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ Watch the memory circuit run</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ Watch the whole system run</strong></a></p>
+
+<p align="center"><sub>This README is the summary. The site walks the whole system, animated.</sub></p>
 
 <p align="center">
   <a href="https://pypi.org/project/claude-automata/"><img src="https://img.shields.io/pypi/v/claude-automata?style=flat&color=f54e00" alt="PyPI"></a>
@@ -47,18 +49,14 @@ Your agent reads [INSTALL.md](https://github.com/clomia/claude-automata/blob/mai
 /ploop:launch [anchor text]    # hand it to the loop in a fresh session
 ```
 
-Declare it done and a hook blocks the stop, summoning the advisor: an independent metacognition with access to the whole story. The loop ends when the advisor has nothing left to say.
+Declare the mission done and a hook blocks the stop, summoning an independent advisor with access to the whole story; the loop ends only when the advisor has nothing left to say.
 
 ```
 agent   › Mission accomplished. Stopping.
-hook    › Stop blocked. Summoning the advisor.
-advisor › Not yet. The mobile layout was never measured. Two claims cite no source.
-agent   › …resuming.
-        ⟲ six rounds later
-advisor › I have no further advice. Ending the turn.
+advisor › Not yet. The mobile layout was never measured. …resuming.
 ```
 
-*An illustrative exchange: this is what ploop provides. The authority to end the loop rests with the advisor.* The anchor survives every auto-compaction. The loop fully complies with your subscription plan's terms of service.
+Six rounds later the advisor ends the turn. [Watch a full round on the site.](https://claude-automata.clomia.com/#advisor) The anchor survives every auto-compaction, and the loop fully complies with your subscription plan's terms of service.
 
 <details>
 <summary><strong>Pause, resume, observe</strong></summary>
@@ -81,10 +79,10 @@ Agents drive tx on their own. Every change lands as one verified, CI-green squas
 /refine:code [focus] · /refine:docs [focus] · /refine:integrity [focus]
 ```
 
-Large-scale workflows that eliminate technical debt: `/refine:code` optimizes the code architecture, `/refine:docs` aligns documentation with the code, `/refine:integrity` verifies logical integrity. They sweep the whole repository, so a run can take ten hours or more. Empty focus targets the whole codebase; watch with `/workflows`.
+Repository-wide workflows that clear technical debt: code architecture, doc-to-code alignment, and logical integrity. A run can sweep the whole codebase and take ten hours or more; watch it with `/workflows`.
 
 ---
 
-<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ Watch the memory circuit run</strong></a></p>
+<p align="center"><a href="https://claude-automata.clomia.com/"><strong>▶ Watch the whole system run</strong></a></p>
 
 Apache-2.0 · Recursive self-improvement: claude-automata is developed inside claude-automata. A Claude Code agent running this environment authored every contribution in this repository.
