@@ -1,6 +1,6 @@
 {
   "name": "ploop",
-  "version": "0.47.4",
+  "version": "0.47.5",
   "description": "Advisor Loop — an autonomous loop for long, multi-day work: an independent advisor surfaces what the main agent overlooked and preserves the anchor across compactions, on subscription-safe nested agents",
   "author": {
     "name": "clomia",

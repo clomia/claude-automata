@@ -84,15 +84,18 @@ DECLINE_NOTICE = (
 # One-time redirect when only background shell commands hold the round open.
 # A finite shell needs no action — its exit wakes the session (official Bash
 # contract) and the loop swallows the stops in between.  An ambient process
-# (a server, a watcher) has no exit to wait for, so it must leave the shell
-# lane: Monitor is the official session-lifetime lane and is never gated.
+# (a server, a watcher) never exits, so left on the shell lane it parks the
+# loop for good — the notice says to clear it, but names no remedy: the launch
+# skill already owns the ambient-process/Monitor rule, and prescribing a
+# Monitor from a Stop is the wrong altitude — its session-lifetime
+# notifications would destabilize the very loop it would free.
 # Sent once per shell set; stopping again with the same set means waiting.
 SHELL_WAIT_NOTICE = (
     "Background shell command(s) are still running, so the round is held "
     "open. If you are waiting for their output, simply stop — their "
-    "completion will wake the session. If any is an ambient process (a "
-    "server, a watcher), it does not belong to the round: kill it or run it "
-    "under a Monitor, then stop.\n"
+    "completion will wake the session. An ambient process (a server, a "
+    "watcher) has no such completion, so it holds the loop here — clear it "
+    "before stopping.\n"
 )
 
 
@@ -277,10 +280,10 @@ def stop() -> None:
     # reachable).  Gate exactly the types whose completion is guaranteed to wake
     # the session (their specs promise a notification/re-invoke on completion):
     # subagent and workflow wait silently; a shell gets one redirect notice — an
-    # ambient process must leave the shell lane (Monitor, the never-completing
-    # session-lifetime lane, is never gated) — and the same shell set then waits
-    # silently.  Every other type, and an unreachable registry (no field),
-    # passes: stalling the loop is worse than an early advisor.
+    # ambient one has no exit, so it parks the loop until cleared — and the same
+    # shell set then waits silently.  Every other type (Monitor included, the
+    # never-gated session-lifetime lane) and an unreachable registry (no field)
+    # pass: stalling the loop is worse than an early advisor.
     tasks = [t for t in event.get("background_tasks") or [] if isinstance(t, dict)]
     if any(t.get("type") in ("subagent", "workflow") for t in tasks):
         sys.exit(0)
