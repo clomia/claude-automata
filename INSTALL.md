@@ -12,6 +12,14 @@ one who can see it.
   satisfied state, and nothing in its notes remains unresolved — settings
   picked up by a restarted session, `gh` authenticated. Its output is the
   oracle for prerequisites; do not re-derive what it already reports.
+- The repository's `.claude/settings.json` carries the environment this
+  autonomy needs: `permissions.defaultMode` is `"bypassPermissions"` (the
+  agent stops asking before it acts), `model` is `"opus[1m]"`,
+  `alwaysThinkingEnabled` `true`, `autoCompactEnabled` `true`,
+  `autoMemoryEnabled` `false`, and the `clomia/claude-automata` marketplace
+  is registered with its plugins enabled. That is what adopting this
+  environment means — init writes it, and these values are the disclosure a
+  cautious human reads before delegating the install.
 - The GitHub default branch is the branch this repository actually
   integrates into — transactions open from it and merge back into it.
 - One transaction — opened with `/tx:open`, closed with `/tx:close` — has

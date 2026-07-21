@@ -1,6 +1,6 @@
-# Binds the visitor surfaces to the code they disclose. The gateway must never
-# publish a stale init disclosure: when settings.py values change, this check
-# goes red until site/ and the README pair change with them.
+# Binds the init disclosure to the code it discloses. INSTALL.md is the home of
+# that disclosure (the visitor gateway carries only the delegation prompt): when
+# settings.py values change, this check goes red until INSTALL.md changes with them.
 name: site-truth-check
 
 on: pull_request
@@ -34,7 +34,7 @@ jobs:
           pairs = [(key, rep(value)) for key, value in prereq.items()]
           pairs.append(("permissions.defaultMode", mode.group(1)))
 
-          surfaces = ["site/index.html", "site/ko/index.html", "README.md", "README.ko.md"]
+          surfaces = ["INSTALL.md"]
           failures = []
           for surface in surfaces:
               text = re.sub(r"<[^>]+>", " ", pathlib.Path(surface).read_text())

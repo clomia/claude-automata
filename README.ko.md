@@ -38,11 +38,7 @@ Claude Code는 끝났다고 믿는 순간 turn을 끝내고, 다음 compaction�
 https://github.com/clomia/claude-automata/blob/main/INSTALL.md 을 읽고 이 레포지토리에 claude-automata를 설치해주세요.
 ```
 
-[INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTALL.md)는 도달해야 할 설치 완료 상태를 정의합니다. agent가 아래 셋업 실행까지 포함해 repository를 그 상태로 수렴시킵니다. [Claude Code](https://claude.com/claude-code)와 [uv](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다. POSIX(macOS / Linux / WSL). 셋업 command(idempotent, 최신 version 강제는 `uvx claude-automata@latest init`):
-
-```
-uvx claude-automata init
-```
+agent가 [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTALL.md)를 읽고 셋업 실행까지 포함해 repository를 설치 완료 상태로 수렴시킵니다. [Claude Code](https://claude.com/claude-code)와 [uv](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다. POSIX(macOS / Linux / WSL).
 
 **init이 기록하는 설정.** claude-automata가 안정적으로 운용될 수 있는 환경을 셋업합니다:
 
