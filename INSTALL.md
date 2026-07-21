@@ -10,11 +10,18 @@ one who can see it.
 
 When every line below holds, claude-automata is installed.
 
-- `uvx claude-automata init` has converged, with `uv` on PATH for it to run
-  at all: every line it prints reports a satisfied state, and `gh` is
-  authenticated. Its output is the oracle for prerequisites, so act on its
-  notes instead of re-deriving them. The one note it always leaves, to
-  restart Claude Code, is the predicate below.
+- `uvx claude-automata@latest init` has converged, with `uv` on PATH for it
+  to run at all: every line it prints reports a satisfied state, and `gh` is
+  authenticated. `@latest` is part of the command — a bare `claude-automata`
+  reuses whatever version uvx cached on this machine, and stale caches are
+  real (an unrelated prototype once occupied this PyPI name). Init's first
+  line is its own version: output that doesn't start with a version line is
+  the stale cache talking, not init. Its output is the oracle for
+  prerequisites, so act on its notes instead of re-deriving them. Init also
+  installs the marketplace and every plugin into the local plugin cache
+  through the claude CLI, so the restart below loads them whole; when that
+  CLI is not on PATH the plugins line reads `deferred` and the next session
+  start installs them instead.
 - The repository's `.claude/settings.json` carries the environment this
   autonomy needs: `permissions.defaultMode` is `"bypassPermissions"` (the
   agent stops asking before it acts), `model` is `"opus[1m]"`,
@@ -23,13 +30,16 @@ When every line below holds, claude-automata is installed.
   is registered with its plugins enabled. That is what adopting this
   environment means. Init writes these values, and a cautious human reads
   them here before delegating the install.
-- The session has restarted since init ran. Claude Code loads the registered
+- The session has restarted since init ran. Claude Code loads the installed
   plugins and the new `model`/`bypassPermissions` only at startup, so in the
   session that ran init the tx skills (`/tx:open` and the rest) do not exist
   yet. You can neither restart yourself nor carry this context across the
   restart, so tell the user to restart Claude Code and then re-send the same
   install request. The returning session re-reads this document, finds init
-  already converged, and runs the transaction below.
+  already converged, and runs the transaction below. If the tx skills are
+  still missing after the restart — the deferred path installs lazily at
+  startup, and that startup can miss registering skills — run
+  `/reload-plugins` once and re-check; that is the whole repair.
 - The GitHub default branch is the branch this repository actually
   integrates into, the one transactions open from and merge back into.
 - In that restarted session, one transaction (opened with `/tx:open`, closed

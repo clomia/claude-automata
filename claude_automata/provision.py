@@ -26,7 +26,7 @@ NODE_TOOLS = ("node", "npm", "npx")
 @dataclass
 class Outcome:
     tool: str
-    status: str  # "ok" | "installed" | "failed"
+    status: str  # "ok" | "installed" | "deferred" | "failed"
     note: str = ""
 
 

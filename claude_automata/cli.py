@@ -4,9 +4,10 @@ import argparse
 import json
 import subprocess
 import sys
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-from claude_automata import provision, settings
+from claude_automata import plugins, provision, settings
 
 
 def git_root() -> Path | None:
@@ -20,7 +21,15 @@ def read_json(path: Path) -> dict:
     return json.loads(path.read_text()) if path.exists() else {}
 
 
+def own_version() -> str:
+    try:
+        return version("claude-automata")
+    except PackageNotFoundError:
+        return "source"
+
+
 def init() -> int:
+    print(f"claude-automata {own_version()}")
     root = git_root()
     if root is None:
         print(
@@ -62,6 +71,7 @@ def init() -> int:
         )
 
     outcomes = provision.ensure_all()
+    outcomes.append(plugins.ensure_plugins(root))
     for outcome in outcomes:
         print(f"{outcome.tool:<10} {outcome.status} {outcome.note}".rstrip())
     notes += [
