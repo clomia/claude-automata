@@ -6,10 +6,10 @@ seed 소유 표면에 결함 3건이 실측됐다 — 셋 다 이 repo 자체에
 1. **동결 표면의 소급 재심판.** seed되는 `docs-form-check`는 전 추적 `.md`를 매 PR 전량
    스캔한다. `git check-ignore`는 *현재* `.gitignore`의 함수이므로, `.gitignore`에 항목이
    추가되는 순간 동결된 `openspec/changes/archive/**`가 소급 위반이 되어 모든 후속 PR을 영구
-   차단한다 — 해소책이 동결 위반(이력 편집)뿐인 교착이다. 실측: 이 repo의
-   `archive/2026-07-19-init-cli/design.md`가 `.claude/settings.local.json`을 참조하며, 그 표준
-   위생 항목 한 줄 거리에 있다. brownfield 도입에서는 기 archive가 gate를 통과한 적이 없어
-   즉시 발화한다.
+   차단한다 — 해소책이 동결 위반(이력 편집)뿐인 교착이다. 실측: 이 repo의 archive 문서
+   (2026-07-19-init-cli의 design)가 Claude Code의 개인 settings 파일 경로를 인용하며, 그
+   경로를 gitignore하는 표준 위생 한 줄 거리에 있다. brownfield 도입에서는 기 archive가
+   gate를 통과한 적이 없어 즉시 발화한다.
 2. **ruleset 부트스트랩 비대칭.** seed는 `tx-base-protection`을 즉시 active로 생성하며
    required check 2종을 요구하지만, 그 check를 만드는 workflow는 첫 tx가 merge되어야 base에
    닿는다. Actions-disabled는 처리하면서 workflow-not-on-base는 미처리라, 도입 시점에 열려

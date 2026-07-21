@@ -11,7 +11,7 @@ diff가 추가·수정하는 파일만 검사해야 한다(SHALL). PR diff를 �
 - **THEN** docs-form-check는 통과한다
 
 #### Scenario: archive로 유입되는 내용은 검사된다
-- **WHEN** PR이 gitignored 또는 `/tmp/` 경로를 참조하는 `.md`를 archive 아래로 추가(이동 포함)하면
+- **WHEN** PR이 gitignored 또는 system temp 경로를 참조하는 `.md`를 archive 아래로 추가(이동 포함)하면
 - **THEN** docs-form-check는 실패한다
 
 #### Scenario: living 표면은 diff와 무관하게 전량 검사된다
