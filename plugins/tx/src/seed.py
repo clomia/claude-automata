@@ -4,40 +4,42 @@ Every path is repository-root-relative: main() anchors itself at
 `git rev-parse --show-toplevel` before the first step, so a seed run from a
 subdirectory can never nest a second scaffold — and outside a repository it
 refuses (exit 1) instead of planting into the void.  Three steps, each
-converging on presence and reporting one line on stdout:
+converging on its final shape and reporting one line on stdout:
 
 - openspec scaffold: absent -> `init --tools none` under the pinned version.
   Plan cannot run without the scaffold (the openspec wrapper refuses
   un-scaffolded roots — the bare CLI would silently self-scaffold an implicit
   root), so a failed init aborts the seed (exit 1) with the CLI's stderr
   relayed for the open skill to surface.
-- memory-check workflow: absent -> copied whole from this plugin's
-  references/; present with a drifted pin -> overwritten whole, so a stale
-  seed never propagates its pin.
-- server-side branch protection: one idempotent attempt (skipped when the
-  `tx-base-protection` ruleset already exists).  An attempt, not a guarantee:
+- memory-check workflow: seed-owned whole — absent, or differing from the
+  plugin's copy in any byte -> written whole from it, so a content change
+  never waits on a pin drift to propagate.
+- server-side branch protection: one idempotent convergence attempt.  The
+  required-status-checks rule binds only where it can report — Actions
+  enabled and the memory-check workflow already on `origin/<base>` —
+  otherwise the ruleset lands (or stays) active without it, keeping PRs,
+  non-fast-forward, and deletion enforced, and a later seed run converges it
+  upward once both hold.  Convergence is upward only — a full ruleset is
+  never reduced — and the ruleset, like the workflow, is seed-owned: the
+  upgrade writes the canonical shape whole.  An attempt, not a guarantee:
   any failure — no gh, no permission, API refusal — is one reported line and
   the seed continues.  What the ruleset buys is not immutability but making
-  bypass an explicit, auditable API call.  The Actions probe is
-  point-in-time: Actions disabled after the seed, or re-enabled behind an
-  already-installed reduced ruleset, stays as-is — the `present`
-  short-circuit never upgrades a ruleset.
+  bypass an explicit, auditable API call.
 """
 
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 from src.openspec import NPX_MISSING, PIN
-from src.repo import git
+from src.repo import base_branch, git
 
 WORKFLOW_TARGET = Path(".github/workflows/memory-check.yml")
-OPENSPEC_PIN_RE = re.compile(r"@fission-ai/openspec@(\d+\.\d+\.\d+)")
 RULESET_NAME = "tx-base-protection"
+CHECKS_RULE = "required_status_checks"
 
 RULESET = {
     "name": RULESET_NAME,
@@ -59,7 +61,7 @@ RULESET = {
         {"type": "non_fast_forward"},
         {"type": "deletion"},
         {
-            "type": "required_status_checks",
+            "type": CHECKS_RULE,
             "parameters": {
                 # strict up-to-date closes the post-rebase-scan race server-side by
                 # forcing a re-rebase (and so a re-scan); close rebases anyway.
@@ -102,25 +104,16 @@ def workflow_source() -> Path:
     return Path(__file__).resolve().parents[1] / "references" / "memory-check.yml"
 
 
-def pin_drifted(workflow_text: str, pin: str = PIN) -> bool:
-    """Whether a deployed workflow must be overwritten with the seed copy.
-
-    The workflow is seed-owned: every openspec pin in it must equal `pin`.
-    A different pin, an extra one, or none at all is drift — overwriting whole
-    keeps one converged artifact instead of patching versions in place.
-    """
-    return set(OPENSPEC_PIN_RE.findall(workflow_text)) != {pin}
-
-
 def seed_workflow() -> None:
+    source = workflow_source()
     if not WORKFLOW_TARGET.exists():
         WORKFLOW_TARGET.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(workflow_source(), WORKFLOW_TARGET)
+        shutil.copyfile(source, WORKFLOW_TARGET)
         print("seeded memory-check workflow")
         return
-    if pin_drifted(WORKFLOW_TARGET.read_text(encoding="utf-8")):
-        shutil.copyfile(workflow_source(), WORKFLOW_TARGET)
-        print("refreshed memory-check workflow (pin drift)")
+    if WORKFLOW_TARGET.read_bytes() != source.read_bytes():
+        shutil.copyfile(source, WORKFLOW_TARGET)
+        print("refreshed memory-check workflow")
         return
     print("workflow present")
 
@@ -147,38 +140,90 @@ def actions_enabled(slug: str) -> bool | None:
     return None if out is None else out.strip() == "true"
 
 
+def workflow_on_base() -> bool | None:
+    """Whether the seeded workflow is on `origin/<base>` — the required checks
+    can only report once it is.  None when the base is unresolvable — fall
+    through to the full ruleset (no new failure mode)."""
+    base = base_branch()
+    if base is None:
+        return None
+    return (
+        git("cat-file", "-e", f"origin/{base}:{WORKFLOW_TARGET.as_posix()}") is not None
+    )
+
+
+def reduced(ruleset: dict) -> dict:
+    return {
+        **ruleset,
+        "rules": [r for r in ruleset["rules"] if r["type"] != CHECKS_RULE],
+    }
+
+
+def desired_shape(slug: str) -> tuple[dict, str]:
+    """The ruleset shape to write and its deferral note — empty note means full."""
+    if workflow_on_base() is False:
+        return reduced(RULESET), "checks rule deferred — workflow not on base yet"
+    if actions_enabled(slug) is False:
+        return reduced(RULESET), "checks rule skipped — Actions disabled"
+    return RULESET, ""
+
+
 def protection_report() -> str:
-    """One idempotent server-side attempt; the one-line outcome to print."""
+    """One idempotent server-side convergence attempt; the one-line outcome to print."""
     slug, reason = run_gh(
         ["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]
     )
     if slug is None:
         return f"branch protection: unavailable ({reason})"
-    names, reason = run_gh(
-        ["api", f"repos/{slug.strip()}/rulesets", "--jq", ".[].name"]
+    slug = slug.strip()
+    found, reason = run_gh(
+        [
+            "api",
+            f"repos/{slug}/rulesets",
+            "--jq",
+            f'.[] | select(.name == "{RULESET_NAME}") | .id',
+        ]
     )
-    if names is None:
+    if found is None:
         return f"branch protection: unavailable ({reason})"
-    if RULESET_NAME in names.splitlines():
+    if not found.strip():
+        shape, note = desired_shape(slug)
+        created, reason = run_gh(
+            ["api", f"repos/{slug}/rulesets", "--method", "POST", "--input", "-"],
+            payload=json.dumps(shape),
+        )
+        if created is None:
+            return f"branch protection: unavailable ({reason})"
+        return (
+            f"branch protection: attempted ({note})"
+            if note
+            else "branch protection: attempted"
+        )
+    ruleset_id = found.strip().splitlines()[0]
+    rule_types, reason = run_gh(
+        ["api", f"repos/{slug}/rulesets/{ruleset_id}", "--jq", "[.rules[].type]"]
+    )
+    if rule_types is None:
+        return f"branch protection: unavailable ({reason})"
+    if CHECKS_RULE in rule_types:
         return "branch protection: present"
-    enabled = actions_enabled(slug.strip())
-    ruleset = RULESET
-    if enabled is False:
-        ruleset = {
-            **RULESET,
-            "rules": [
-                r for r in RULESET["rules"] if r["type"] != "required_status_checks"
-            ],
-        }
-    created, reason = run_gh(
-        ["api", f"repos/{slug.strip()}/rulesets", "--method", "POST", "--input", "-"],
-        payload=json.dumps(ruleset),
+    shape, note = desired_shape(slug)
+    if note:
+        return f"branch protection: present ({note})"
+    upgraded, reason = run_gh(
+        [
+            "api",
+            f"repos/{slug}/rulesets/{ruleset_id}",
+            "--method",
+            "PUT",
+            "--input",
+            "-",
+        ],
+        payload=json.dumps(shape),
     )
-    if created is None:
+    if upgraded is None:
         return f"branch protection: unavailable ({reason})"
-    if enabled is False:
-        return "branch protection: attempted (checks rule skipped — Actions disabled)"
-    return "branch protection: attempted"
+    return "branch protection: upgraded (required checks added)"
 
 
 def repo_root() -> Path:

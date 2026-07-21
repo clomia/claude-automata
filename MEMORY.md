@@ -184,7 +184,9 @@ litmus: **spec은 제품이 무엇을 하는가, 정본은 단위가 왜 이 모
 proposal로 — 정본의 결정 기록과 탄생 시 같은 text일 수 있으나 권위가 즉시 분화한다(정본
 사본은 living으로 개정·삭제되고 archive 사본은 동결·권위 0 — 중복이 아니라 설계다).
 추적 text는 어디서든 gitignored·미추적(system temp 포함) 경로를 지시하지 않는다 — 자기완결은
-조사 기록만의 의무가 아니고, CI docs-form-check가 전 추적 `.md`에서 형식 검사한다.
+조사 기록만의 의무가 아니고, CI docs-form-check가 형식 검사한다: living 표면은 전 추적 `.md`
+전량, 동결 표면(`changes/archive/`)은 해당 PR로 유입되는 파일만 — 유입 시점에 gate를 지났고
+동결 뒤에는 현재 규칙으로 재심판하지 않는다(불변식 4의 "인용된 과거").
 
 ### home 규약
 
@@ -271,8 +273,9 @@ backstop뿐).
 - seed CI는 코드의 의미도 검증하지 않는다 — validate와 형식 check뿐이다. 코드 의미의 gate는
   verify stage와 대상 repo 자신의 test다.
 - 병렬 close의 분 단위 경합 창 — post-rebase scan 이후·병합 이전에 상대가 병합하는 창은
-  client측에서 제거 불가다. seed의 ruleset은 up-to-date 강제를 포함하므로 **시도가 성공한
-  repo에서는 재rebase→재scan이 강제되어 창이 닫힌다** — 단 tx는 server측을 보증하지 못한다
+  client측에서 제거 불가다. seed의 ruleset은 checks rule에 up-to-date 강제를 실으므로 **시도가
+  성공한 repo에서는 재rebase→재scan이 강제되어 창이 닫힌다**(checks rule은 workflow가 base에
+  도달한 뒤부터 결합한다) — 단 tx는 server측을 보증하지 못한다
   (실패는 1행 고지 후 진행), 성공해도 admin token은 gate를 우회·철거할 수 있다. server측이 주는
   것은 불변 보증이 아니라 **우회를 감사 가능하게 만드는 것**이다. `gh pr checks`는 required 지정과 무관하게
   보고된 전 check를 감시하므로 close 경로의 gate는 server 설정 없이도 성립한다 — 기여 주체는

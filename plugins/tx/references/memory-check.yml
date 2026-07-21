@@ -1,5 +1,5 @@
 # Seeded by the tx plugin (clomia/claude-automata) — seed-owned: the seed
-# overwrites this file whole when its openspec pin drifts from the plugin's.
+# overwrites this file whole whenever it differs from the plugin's copy.
 name: memory-check
 
 on: pull_request
@@ -20,6 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the merge commit plus both parents — HEAD^1 is the base head
+          fetch-depth: 2
       - name: docs form check
         run: |
           python3 - <<'PY'
@@ -33,6 +36,18 @@ jobs:
 
           tracked = sh("git", "ls-files").stdout.splitlines()
           md = [f for f in tracked if f.endswith(".md")]
+
+          # openspec/changes/archive/** is frozen memory: form is gated when a
+          # PR brings a file in, never re-judged against present-day rules.
+          ARCHIVE = "openspec/changes/archive/"
+          diff = sh("git", "diff", "--name-only", "--no-renames",
+                    "--diff-filter=AM", "HEAD^1", "HEAD")
+          if diff.returncode != 0:
+              print("cannot resolve the PR diff (HEAD^1..HEAD)", file=sys.stderr)
+              sys.exit(1)
+          entering = set(diff.stdout.splitlines())
+          md = [f for f in md if not f.startswith(ARCHIVE) or f in entering]
+
           research = [f for f in md if "/docs/research/" in "/" + f]
           violations = []
 

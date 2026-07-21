@@ -98,11 +98,18 @@ they merge through the same gate:
   a docs-form-check (research filename years, provenance self-containment,
   research headers). The checks are form-only: CI proves document form, never prose meaning or
   code semantics — the verify stage and the repository's own tests carry the
-  meaning.
+  meaning. Frozen `openspec/changes/archive/` is judged only as files enter
+  it through a PR — never re-judged against present-day rules, so adopting tx
+  on a repository with prior history cannot wedge on that history. The file
+  is seed-owned whole: any byte drift from the plugin's copy is overwritten
+  on the next seed run.
 - A **best-effort** server-side branch-protection attempt (PRs required, the
-  seeded checks required, no force-push or deletion). Failure is reported in
-  one line and never blocks. Server-side rules make bypasses auditable rather
-  than impossible — an admin token can still remove the gate.
+  seeded checks required, no force-push or deletion). The required-checks
+  rule joins only once the seeded workflow is on the base branch and Actions
+  is enabled — until then the rest of the ruleset holds active, and a later
+  seed run converges it upward. Failure is reported in one line and never
+  blocks. Server-side rules make bypasses auditable rather than impossible —
+  an admin token can still remove the gate.
 
 ## Guard hooks
 
