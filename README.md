@@ -38,19 +38,7 @@ Installation is agent work — like everything else here. Paste this into Claude
 Read https://github.com/clomia/claude-automata/blob/main/INSTALL.md and install claude-automata in this repository.
 ```
 
-[INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTALL.md) defines the installed state; your agent converges the repository to it, running the setup itself. Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/) on POSIX (macOS / Linux / WSL). The setup command (idempotent; `uvx claude-automata@latest init` forces the newest release):
-
-```
-uvx claude-automata init
-```
-
-**What init writes.** It sets up the environment claude-automata needs to run reliably:
-
-- `permissions.defaultMode: "bypassPermissions"`
-- `model: "opus[1m]"`
-- `alwaysThinkingEnabled: true` · `autoCompactEnabled: true` · `autoMemoryEnabled: false`
-- registers the `clomia/claude-automata` marketplace and enables its plugins
-- installs `repomix` and `gh`
+Your agent reads [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTALL.md) — the installed state, and exactly what it writes to your settings — and converges the repository to it. Needs [Claude Code](https://claude.com/claude-code) and [uv](https://docs.astral.sh/uv/getting-started/installation/) on POSIX (macOS / Linux / WSL).
 
 ## Operating the loop
 

@@ -30,7 +30,7 @@
   .hero h1 { letter-spacing: -0.01em; }
   .outro { letter-spacing: -0.01em; }
   .sec-lede, .sec-punch { letter-spacing: 0; }
-  .section h2, .disclosure-title { letter-spacing: 0.04em; }
+  .section h2 { letter-spacing: 0.04em; }
 </style>
 </head>
 <body>
@@ -324,9 +324,7 @@
   <h2><a class="sec-link" href="#getting-started"><span class="sec-no">05</span>시작하기</a></h2>
   <p class="sec-lede">
     설치도 agent의 일입니다. 도입할 repository의 Claude Code에 아래 prompt 한 줄을
-    붙여넣으세요 — agent가
-    <a href="https://github.com/clomia/claude-automata/blob/main/INSTALL.md">INSTALL.md</a>를
-    읽고 셋업 실행까지 포함해 repository를 설치 완료 상태로 수렴시킵니다.
+    붙여넣으세요.
   </p>
   <p class="prereq">REQUIRES · <a href="https://claude.com/claude-code">Claude Code</a> ·
     <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> ·
@@ -337,32 +335,12 @@
     <button class="copy-btn" type="button" aria-label="Copy prompt"><svg class="ico ico-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ico ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
   </div>
 
-  <p class="prereq">agent가 실행하는 command · 직접 실행해도 안전 (idempotent)</p>
-
-  <div class="code-copy">
-    <pre class="code-block"><code>uvx claude-automata init</code></pre>
-    <button class="copy-btn" type="button" aria-label="Copy command"><svg class="ico ico-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ico ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
-  </div>
-
-  <div class="init-disclosure">
-    <h3 class="disclosure-title">INIT이 기록하는 것</h3>
-    <p class="disclosure-note">
-      claude‑automata가 안정적으로 운용될 수 있는 환경을 one command로
-      셋업합니다.
-    </p>
-    <table class="spec-table">
-      <caption class="sr-only">init이 .claude/settings.json에 merge-write하는 설정</caption>
-      <tbody>
-        <tr><th scope="row">permissions.defaultMode</th><td><code>"bypassPermissions"</code></td></tr>
-        <tr><th scope="row">model</th><td><code>"opus[1m]"</code></td></tr>
-        <tr><th scope="row">alwaysThinkingEnabled</th><td><code>true</code></td></tr>
-        <tr><th scope="row">autoCompactEnabled</th><td><code>true</code></td></tr>
-        <tr><th scope="row">autoMemoryEnabled</th><td><code>false</code></td></tr>
-        <tr><th scope="row">marketplace + plugins</th><td><code>clomia/claude-automata</code> 등록, plugin 활성화</td></tr>
-        <tr><th scope="row">external CLIs</th><td><code>repomix</code>, <code>gh</code></td></tr>
-      </tbody>
-    </table>
-  </div>
+  <p class="disclosure-note">
+    agent가
+    <a href="https://github.com/clomia/claude-automata/blob/main/INSTALL.md">INSTALL.md</a>를
+    읽고 — 설치 완료 상태, 그리고 settings에 정확히 무엇을 기록하는지 — repository를
+    그 상태로 수렴시킵니다.
+  </p>
 
 </section>
 
