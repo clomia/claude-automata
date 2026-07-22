@@ -65,6 +65,12 @@ class Workspace:
         return self.path("anchor.md")
 
     @property
+    def project_path(self) -> Path:
+        """The loop's launch directory — docent lists a loop only where it was
+        launched.  Written at launch, backfilled at stop, never round-cleared."""
+        return self.path("project")
+
+    @property
     def active_path(self) -> Path:
         return self.path("active")
 

@@ -476,6 +476,31 @@ class TestStop:
         assert load_ledger(tmp_path / "s1_loop.json")["phase"] == ADVISING
         assert not (tmp_path / "s1_advisor_token").exists()
 
+    def test_backfills_project_provenance(self, tmp_path, monkeypatch):
+        """A loop launched before provenance recording gains its launch-directory
+        record at the next stop — even one that exits early on a gate."""
+        arrange_anchor(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+            ledger={"phase": ADVISING, "advice_history": []},
+        )
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", "/w/repo")
+        arrange(
+            tmp_path,
+            monkeypatch,
+            make_stdin(
+                transcript_path=str(tmp_path / "s1.jsonl"),
+                background_tasks=[
+                    {"id": "t1", "type": "subagent", "status": "running"}
+                ],
+            ),
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 0
+        assert (tmp_path / "s1_project").read_text() == "/w/repo"
+
     def test_background_shell_nags_once_then_waits(self, tmp_path, monkeypatch, capsys):
         """A shell-only background holds the round open: the first stop gets one
         redirect notice (wait, or move an ambient process off the shell lane) and
@@ -783,6 +808,7 @@ class TestLaunch:
 
     def test_writes_stripped_anchor_and_arms_loop(self, tmp_path, monkeypatch):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", "/w/repo")
         anchor = '  do the thing\nwith "quotes" and $vars  '
         monkeypatch.setattr(
             "sys.stdin",
@@ -799,6 +825,7 @@ class TestLaunch:
         saved = (tmp_path / "s1_anchor.md").read_text()
         assert saved == 'do the thing\nwith "quotes" and $vars'
         assert (tmp_path / "s1_active").exists()
+        assert (tmp_path / "s1_project").read_text() == "/w/repo"
         assert not (tmp_path / "s1_loop.json").exists()  # prior ledger cleared
         # an anchor owns one log, opened with its own text
         log = (tmp_path / "s1_loop.log").read_text()

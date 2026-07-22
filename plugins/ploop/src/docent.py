@@ -17,6 +17,19 @@ Transcript discovery is the observation-based part: the
 (measured 2026-07); when they drift the output degrades to "not found" /
 "(absent)" markers.
 
+The listing shows only loops launched in the invoking project directory —
+resolved --project-dir first (the skill passes "${CLAUDE_PROJECT_DIR}"
+through; the Bash lane gets no CLAUDE_* env, measured 2026-07), then the env
+var, then the process cwd.  The verdict is the launch-recorded directory
+({session}_project, written at launch and backfilled at stop); a session from
+before that recording falls back to its transcript's parent name, matched
+char-tolerantly (the observed encoding dashes path separators; unsampled
+characters may dash or survive), so an encoding variant errs toward inclusion.
+No record and no transcript is no verdict, and only positive verdicts are
+shown — everything else is one hidden-count line, never content.
+--exclude-converged additionally drops finished anchors (phase converged),
+for questions about the work still in flight.
+
 Everything here reads; nothing writes — the loop surface owns all mutation.
 Output is English (code-emitted lane).
 """
@@ -27,7 +40,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.state import Workspace, load_ledger
+from src.state import CONVERGED, Workspace, load_ledger
 
 
 def resolve_data_dir(flag: str | None) -> Path | None:
@@ -39,8 +52,44 @@ def resolve_data_dir(flag: str | None) -> Path | None:
     return found[0] if found else None
 
 
+def resolve_project_dir(flag: str | None) -> str:
+    """The chain: non-empty --project-dir, non-empty env, process cwd."""
+    for value in (flag, os.environ.get("CLAUDE_PROJECT_DIR")):
+        if value and value.strip():
+            return value.strip().rstrip("/") or "/"
+    return str(Path.cwd())
+
+
+def encodes(path: str, name: str) -> bool:
+    """Whether `name` is a plausible harness encoding of `path` — char-wise:
+    ASCII alphanumerics must match case-insensitively, anything else may
+    appear as itself or `-`.  The observed samples fix only `/`→`-` and
+    literal `-` survival; the tolerance covers the unsampled variants (case
+    folding included), so a rule variant errs toward inclusion and can never
+    hide the project's own loops."""
+    return len(name) == len(path) and all(
+        n.lower() == c.lower() if (c.isascii() and c.isalnum()) else n in ("-", c)
+        for c, n in zip(path, name)
+    )
+
+
 def find_transcripts(session_id: str) -> list[Path]:
     return sorted(Path.home().glob(f".claude/projects/*/{session_id}.jsonl"))
+
+
+def launched_here(ws: Workspace, project_dir: str) -> bool | None:
+    """The provenance verdict — the launch-recorded directory when present,
+    else the transcript's parent name (loops from before the recording), else
+    None: no record is no verdict, and only positive verdicts are listed."""
+    try:
+        recorded = ws.project_path.read_text().strip()
+    except OSError, UnicodeDecodeError:
+        recorded = ""  # unreadable record degrades to the fallback, never a crash
+    if recorded:
+        return recorded.rstrip("/") == project_dir.rstrip("/")
+    if found := find_transcripts(ws.session_id):
+        return any(encodes(project_dir, t.parent.name) for t in found)
+    return None
 
 
 def last_activity(ws: Workspace) -> float:
@@ -129,23 +178,43 @@ def render_session(ws: Workspace) -> str:
     return "\n".join(lines)
 
 
-def render(data_dir: Path) -> str:
+def render(data_dir: Path, project_dir: str, exclude_converged: bool = False) -> str:
     sessions = [
         Workspace(data_dir, anchor.name.removesuffix("_anchor.md"))
         for anchor in data_dir.glob("*_anchor.md")
     ]
     if not sessions:
         return f"No loops found in {data_dir}."
+    launched = [ws for ws in sessions if launched_here(ws, project_dir)]
+    shown = launched
+    notes = []
+    if len(launched) < len(sessions):
+        notes.append(
+            f"{len(sessions) - len(launched)} loop(s) hidden "
+            "(not attributed to this project directory)."
+        )
+    if exclude_converged:
+        shown = [
+            ws for ws in launched if load_ledger(ws.ledger_path)["phase"] != CONVERGED
+        ]
+        if len(shown) < len(launched):
+            notes.append(f"{len(launched) - len(shown)} converged loop(s) excluded.")
+    if not shown:
+        return "\n".join([f"No loops for this project ({project_dir}).", *notes])
     ordered = sorted(
-        sessions, key=lambda ws: (not ws.active_path.exists(), -last_activity(ws))
+        shown, key=lambda ws: (not ws.active_path.exists(), -last_activity(ws))
     )
-    return "\n\n".join(render_session(ws) for ws in ordered)
+    listing = "\n\n".join(render_session(ws) for ws in ordered)
+    return "\n\n".join([listing, "\n".join(notes)]) if notes else listing
 
 
 def resolve() -> None:
-    """Console entry: resolve the data dir and print every loop's records."""
+    """Console entry: resolve the data dir and project scope, then print the
+    records of this directory's loops."""
     parser = argparse.ArgumentParser(prog="docent")
     parser.add_argument("--data-dir", default=None)
+    parser.add_argument("--project-dir", default=None)
+    parser.add_argument("--exclude-converged", action="store_true")
     args = parser.parse_args()
     data_dir = resolve_data_dir(args.data_dir)
     if data_dir is None or not data_dir.is_dir():
@@ -154,4 +223,7 @@ def resolve() -> None:
             "~/.claude/plugins/data/ploop-*).\n"
         )
         return
-    sys.stdout.write(render(data_dir) + "\n")
+    sys.stdout.write(
+        render(data_dir, resolve_project_dir(args.project_dir), args.exclude_converged)
+        + "\n"
+    )

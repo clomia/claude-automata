@@ -30,6 +30,7 @@ to exit 0 (allow the action).
 """
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -106,6 +107,15 @@ def read_event() -> dict:
         return json.loads(sys.stdin.read())
     except json.JSONDecodeError, OSError:
         sys.exit(0)
+
+
+def project_dir(event: dict) -> str:
+    """The directory this loop belongs to — hooks get CLAUDE_PROJECT_DIR in
+    their environment; the event's cwd and the process cwd are the fallbacks."""
+    for value in (os.environ.get("CLAUDE_PROJECT_DIR"), event.get("cwd")):
+        if isinstance(value, str) and value.strip():
+            return value.strip().rstrip("/") or "/"
+    return str(Path.cwd())
 
 
 def block_expansion(reason: str) -> None:
@@ -273,6 +283,11 @@ def stop() -> None:
 
     if not ws.active_path.exists():
         sys.exit(0)
+
+    # Loops launched before provenance recording converge here: every stop of
+    # an active loop backfills the launch directory docent scopes by.
+    if not ws.project_path.exists():
+        ws.project_path.write_text(project_dir(event))
 
     # The advisor convenes only when foreground AND background are both empty.
     # Foreground-empty is this very Stop; background-empty is read from the
@@ -483,7 +498,8 @@ def launch() -> None:
     A real launch clears the prior anchor's round state, starts the round log
     with the anchor text (an anchor owns one log, and its final summary reads
     the anchor first; the finished log survives ordinary turns), writes the
-    anchor, and arms the loop.
+    anchor, records the launch directory (the provenance docent scopes its
+    listing by), and arms the loop.
     """
     event = read_event()
     if event.get("command_name", "") != "ploop:launch":
@@ -502,6 +518,7 @@ def launch() -> None:
     ws.clear_round_state()
     ws.log_path.write_text(f"[[ ANCHOR ]]\n\n{anchor}\n\n")
     ws.anchor_path.write_text(anchor)
+    ws.project_path.write_text(project_dir(event))
     ws.active_path.touch()
 
 
