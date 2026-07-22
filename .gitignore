@@ -5,3 +5,4 @@ __pycache__/
 dist/
 .ruff_cache/
 temp/
+.dev-sandbox/
