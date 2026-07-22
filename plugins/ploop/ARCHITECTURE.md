@@ -355,8 +355,19 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     `disable-model-invocation: true`라 loop main이 스스로 교리를 주입해 orchestrator 정체성과
     충돌할 수 없다(launch·off·on과 같은 explicit-only class — define 둘만 model-invocable로 남는다).
     session 식별은 skill 인자가 아니라 resolver 해석이다 — 새 launch는 새 loop라 주입된 식별은 낡은
-    subject를 가리키게 된다. resolver 목록은 machine 전역이라 다른 directory·지난 loop가 함께 나오고,
-    docent의 subject는 이 directory의 loop 하나다(transcript project dir ↔ cwd 대응으로 고른다). data dir는 `--data-dir`(skill이 `"${CLAUDE_PLUGIN_DATA}"`를
+    subject를 가리키게 된다. data dir는 machine 전역이지만 목록은 resolver가 launch directory
+    기준으로 강제한다: launch hook이 `{session}_project`에 기록한 launch directory(기록 없는
+    active loop은 Stop hook이 backfill — 기록 도입 이전 fleet의 수렴 경로)가 호출 project dir
+    (`--project-dir`, skill이 `"${CLAUDE_PROJECT_DIR}"`를 관통시킨다 — Bash env에는 CLAUDE_*
+    주입이 없다, 실측 2026-07 — →env→cwd)와 일치하는 session만 나온다. 기록 없는 legacy는
+    transcript 부모 이름의 관용 대응(오판은 과포함 방향)이 fallback이고, 둘 다 없으면 노출하지
+    않는다 — 타 directory·판정 불가의 숨김은 내용 없는 개수 1행로만 고지된다(loop 기계는
+    session_id 밖을 읽지 않으므로 stale loop의 유일한 교차 세션 표면이 이 열거였다). 판정을
+    launch 기록에 두는 이유는 loop 수명이 transcript 보존기간(활동 기준 정리)을 넘기 때문이다 —
+    장기 pause가 자기 directory에서 은닉되지 않고, 타 directory loop은 transcript 소멸 후에도
+    재노출되지 않는다. `--exclude-converged`는 완료 anchor를 제외한다(기본 포함 — 끝난 loop
+    회고는 1급 용례). docent의 subject는 그 목록의
+    loop 하나다. data dir는 `--data-dir`(skill이 `"${CLAUDE_PLUGIN_DATA}"`를
     관통시킨다)→env→`~/.claude/plugins/data/ploop-*` glob 순으로 해석한다 — placeholder의 skill 본문
     치환과 data dir layout(`~/.claude/plugins/data/{id}/`)은 공식 문서화되어 있다. 관측 기반 의존은
     transcript 쪽이다: `~/.claude/projects/*/{session}.jsonl` 위치와 `{session}/subagents/agent-*.jsonl`
@@ -412,8 +423,9 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
 - **docent의 해설은 기록 기반 추론이다** — 기록에 없는 "왜"의 재구성은 오귀속할 수 있다. 교리의
   관측/추론 구분·round 인용이 그 경계를 표시하고, compaction 이후에는 main도 그 기억을 갖지 않으므로
   기록이 최선의 증인이라는 전제는 advisor loop와 공유한다.
-- **docent resolver 목록은 무상한 성장한다** — 지난 session 기록에 GC가 없어 launch가 쌓일수록
-  열거가 길어진다. advice-history·loop.log와 같은 계열의 한계로, windowing은 관측 후 별도 작업이다.
+- **지난 session 기록은 GC 없이 축적된다** — disk의 기록은 무상한 성장한다. 열거는 launch
+  directory 범위로 좁아졌고 완료 anchor는 flag로 제외 가능하지만, 기록 자체의 windowing·정리는
+  관측 후 별도 작업으로, advice-history·loop.log와 같은 계열의 한계다.
 
 ---
 

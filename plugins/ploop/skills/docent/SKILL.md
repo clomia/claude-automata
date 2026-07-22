@@ -17,13 +17,15 @@ disable-model-invocation: true
 
 # 기록 표면
 
-resolver가 이 machine의 loop들과 그 기록 위치를 나열한다:
+resolver가 이 directory에서 launch된 loop들과 그 기록 위치를 최신순으로 나열한다:
 
 ```bash
-uv run --project "${CLAUDE_PLUGIN_ROOT}" docent --data-dir "${CLAUDE_PLUGIN_DATA}"
+uv run --project "${CLAUDE_PLUGIN_ROOT}" docent --data-dir "${CLAUDE_PLUGIN_DATA}" --project-dir "${CLAUDE_PROJECT_DIR}"
 ```
 
-너의 subject는 이 directory의 loop 하나다. (transcript의 project dir가 cwd와 대응하는 session)
+질문이 진행 중인 작업에 관한 것이면 `--exclude-converged`를 덧붙여 완료된 anchor를 뺀다.
+
+너의 subject는 이 directory의 loop 하나다.
 
 - **anchor**: loop가 정박한 원문
 - **loop log**: 완결 round들의 서사 + 그 round의 advice 전문. 유일한 완전 기록이며, 엔트리는 한 정지 늦게 완결된다
