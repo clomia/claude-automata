@@ -1,12 +1,16 @@
 """Plugins — converge the marketplace and plugin cache via the claude CLI.
 
 Settings declare the adoption and carry it to collaborators through the
-repository; this module converges the current machine deterministically, so a
-single restart loads every component — skills included — from an
-already-populated cache.  Without the claude CLI the declaration alone remains:
-the next session start installs lazily, and a missing-skills session heals with
-one /reload-plugins — the deferred note says so.  `claude plugin update` is
-deliberately unused: it does not auto-detect scope and exits 0 on failure.
+repository; this module converges the current machine deterministically by
+installing each plugin, so a single restart loads every component — skills
+included — from an already-populated cache.  The claude CLI is resolved from
+PATH and, failing that, from its standard install locations, since an init
+process whose PATH lacks ~/.local/bin would otherwise miss a claude installed
+there.  Without a resolvable claude the declaration alone remains and the cache
+is not converged — a settings declaration does not populate the install
+registry — so the deferred note directs the user to re-run init once claude is
+available.  `claude plugin update` is deliberately unused: it does not
+auto-detect scope and exits 0 on failure.
 """
 
 import json
@@ -14,20 +18,37 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from claude_automata.provision import Outcome
+from claude_automata.provision import LOCAL_BIN, Outcome
 from claude_automata.settings import MARKETPLACE, MARKETPLACE_REPO, plugin_names
 
-DEFERRED_NOTE = (
-    "claude CLI not on PATH — plugins install at the next session start; "
-    "if skills are missing after restarting, run /reload-plugins once"
+CLAUDE_STANDARD_PATHS = (
+    LOCAL_BIN / "claude",
+    Path.home() / ".claude" / "local" / "claude",
 )
+
+DEFERRED_NOTE = (
+    "claude CLI not found — the plugins are declared in settings but not yet "
+    "installed; put claude on PATH and re-run init to converge them "
+    "(or run `claude plugin install <plugin>@claude-automata --scope project`)"
+)
+
+
+def claude_bin() -> str | None:
+    """Absolute path to the claude CLI — PATH first, then standard install
+    locations an init process with a bare PATH would miss; None if unfound."""
+    return shutil.which("claude") or next(
+        (str(path) for path in CLAUDE_STANDARD_PATHS if path.exists()), None
+    )
 
 
 def run_claude(args: list[str], cwd: Path) -> tuple[str | None, str]:
     """claude runner — (stdout, "") on success, (None, one-line reason) on failure."""
+    claude = claude_bin()
+    if claude is None:
+        return None, "claude not found"
     try:
         result = subprocess.run(
-            ["claude", *args], cwd=cwd, capture_output=True, text=True, check=False
+            [claude, *args], cwd=cwd, capture_output=True, text=True, check=False
         )
     except OSError:
         return None, "claude not found"
@@ -57,7 +78,7 @@ def installed_here(root: Path) -> set[str] | None:
 
 def ensure_plugins(root: Path) -> Outcome:
     """One idempotent convergence of the plugin cache for the repo at `root`."""
-    if shutil.which("claude") is None:
+    if claude_bin() is None:
         return Outcome("plugins", "deferred", DEFERRED_NOTE)
     _, reason = run_claude(["plugin", "marketplace", "add", MARKETPLACE_REPO], cwd=root)
     if reason:

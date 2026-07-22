@@ -93,9 +93,26 @@ def test_partial_failure_continues_and_reports(monkeypatch, tmp_path):
 
 def test_missing_claude_cli_defers(monkeypatch, tmp_path):
     monkeypatch.setattr(plugins.shutil, "which", lambda name: None)
+    monkeypatch.setattr(plugins, "CLAUDE_STANDARD_PATHS", ())
     outcome = plugins.ensure_plugins(tmp_path)
     assert outcome.status == "deferred"
-    assert "/reload-plugins" in outcome.note
+    assert "re-run init" in outcome.note
+
+
+def test_claude_off_path_resolves_from_standard_location(monkeypatch, tmp_path):
+    fake_claude = tmp_path / "claude"
+    fake_claude.write_text("")
+    monkeypatch.setattr(plugins.shutil, "which", lambda name: None)
+    monkeypatch.setattr(
+        plugins, "CLAUDE_STANDARD_PATHS", (tmp_path / "absent", fake_claude)
+    )
+    calls = []
+    monkeypatch.setattr(
+        plugins, "run_claude", fake_run_claude(calls, tmp_path, listed=[])
+    )
+    outcome = plugins.ensure_plugins(tmp_path)
+    assert outcome.status == "installed"
+    assert installs(calls) == plugin_names()
 
 
 def test_marketplace_failure_reports_reason(monkeypatch, tmp_path):

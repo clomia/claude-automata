@@ -19,9 +19,11 @@ When every line below holds, claude-automata is installed.
   the stale cache talking, not init. Its output is the oracle for
   prerequisites, so act on its notes instead of re-deriving them. Init also
   installs the marketplace and every plugin into the local plugin cache
-  through the claude CLI, so the restart below loads them whole; when that
-  CLI is not on PATH the plugins line reads `deferred` and the next session
-  start installs them instead.
+  through the claude CLI — resolved from PATH or its standard install
+  location — so the restart below loads them whole; when claude cannot be
+  found at all the plugins line reads `deferred`, init writes only the
+  settings declaration, and the cache converges once you put claude on PATH
+  and re-run init.
 - The repository's `.claude/settings.json` carries the environment this
   autonomy needs: `permissions.defaultMode` is `"bypassPermissions"` (the
   agent stops asking before it acts), `model` is `"opus[1m]"`,
@@ -37,9 +39,11 @@ When every line below holds, claude-automata is installed.
   restart, so tell the user to restart Claude Code and then re-send the same
   install request. The returning session re-reads this document, finds init
   already converged, and runs the transaction below. If the tx skills are
-  still missing after the restart — the deferred path installs lazily at
-  startup, and that startup can miss registering skills — run
-  `/reload-plugins` once and re-check; that is the whole repair.
+  still missing after the restart, init's plugins line says which case you
+  are in: if it read `deferred`, claude was never found and nothing was
+  installed — put claude on PATH and re-run init, then restart; if it
+  reported them installed, run `/reload-plugins` once to re-register them
+  for the session and re-check.
 - The GitHub default branch is the branch this repository actually
   integrates into, the one transactions open from and merge back into.
 - In that restarted session, one transaction (opened with `/tx:open`, closed
