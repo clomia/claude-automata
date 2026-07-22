@@ -1,12 +1,15 @@
-claude-automata는 자신이 배포하는 plugin을 이 머신에서 dogfooding한다. 그래서
-`claude plugin install|uninstall|update`·`uvx claude-automata init`을 실행하면 머신-전역
+claude-automata는 자신이 배포하는 plugin을 이 머신에서 dogfooding한다. `claude plugin
+install|uninstall|update`·`uvx claude-automata init`은 머신-전역
 `~/.claude/plugins/installed_plugins.json`(모든 project가 공유하는 install 레지스트리)을
-재작성한다. 동시 session이 이 파일을 race하면 형제 project의 install record가 소실되며, 이 repo를
-개발하며 실제로 형제 project들을 그렇게 깨뜨렸다.
+재작성하고, 동시 session과 race하면 형제 project의 install record를 clobber한다 — 이 repo
+개발이 실제로 형제 project들을 깨뜨렸다.
 
-그러니 dev·test로 plugin을 mutate할 땐 격리된 config에서 하라:
+**plugin 편집 테스트는 install하지 말고 세션-한정 로드를 써라** (공식 방식):
 
-    scripts/dev-sandbox.sh <command>
+    claude --plugin-dir ./plugins/ploop     # 반복 지정으로 여러 개: --plugin-dir A --plugin-dir B
 
-이는 `CLAUDE_CONFIG_DIR`을 repo-local sandbox로 돌려 모든 write를 격리한다. 자동 test는
-`run_claude`를 monkeypatch하므로 실 CLI를 부르지 않아 이미 안전하다.
+레지스트리에 아무것도 쓰지 않고 working-tree 편집을 그대로 로드한다(반영은 `/reload-plugins`).
+
+`init`의 설치 흐름 자체를 end-to-end로 검증할 때만(드묾) 실제 `claude plugin install`이 돈다 —
+그땐 `CLAUDE_CONFIG_DIR=<빈 dir>`로 격리하라. 자동 test는 `run_claude`를 monkeypatch하므로 실
+CLI를 안 부른다.
