@@ -92,11 +92,9 @@ DECLINE_NOTICE = (
 # notifications would destabilize the very loop it would free.
 # Sent once per shell set; stopping again with the same set means waiting.
 SHELL_WAIT_NOTICE = (
-    "Background shell command(s) are still running, so the round is held "
-    "open. If you are waiting for their output, simply stop — their "
-    "completion will wake the session. An ambient process (a server, a "
-    "watcher) has no such completion, so it holds the loop here — clear it "
-    "before stopping.\n"
+    "Background shell command(s) hold the round open. Their exit wakes the "
+    "session, so stopping is safe. One that never exits (a server, a "
+    "watcher) leaves the loop asleep for good — clear it first.\n"
 )
 
 # ploop's loop depends on non-obvious Claude Code settings, and a Claude Code
