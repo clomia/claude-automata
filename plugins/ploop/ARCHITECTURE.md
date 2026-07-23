@@ -344,12 +344,13 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     정지시키고 완료 event로 다시 깨우므로, gate가 삼킨 정지는 반드시 되돌아온다. gate는 **완료가 session을
     깨운다고 명세가 보장하는 타입**에만 건다: `subagent`·`workflow`(완료 알림)는 조용히 대기(exit 0),
     `shell`(exit 시 재호출)은 **집합당 1회 교정 지시** 후 조용히 대기 — 완료가 없는 ambient process(server·watcher)는
-    shell 차선에 속하지 않으니 정리하거나 session 수명 차선인 `Monitor`로 옮기라는 지시다(`gated_shells` marker가
-    지시 중복을 막고 round arm이 지움). `monitor`는 명세상 session 수명 process라 gate하면 영구 교착 — 통과가
-    정당한 round 종료다. 그 외 타입·미지 타입·field 부재(task registry 도달 불가 — 명세상 이때만 배열이
-    빠진다)는 gating하지 않는다: 실패 방향은 이른 advisor이지 loop 정지가 아니다. 완료를 기다려야 하는
-    background는 gating 유형(shell·subagent·workflow)으로 두고, server 같은 ambient process는 `Monitor`(session
-    수명 차선)로 돌린다.
+    그 대기를 깨울 exit이 없어 loop를 park시키니 정지 전에 정리하라는 지시다(remedy는 명명하지 않는다: ambient의
+    거처는 launch rules가 소유하고, Stop에서 `Monitor`를 처방하는 것은 altitude가 어긋난다 — 그 session 수명
+    notification이 풀어주려는 loop를 흔든다. `gated_shells` marker가 지시 중복을 막고 round arm이 지움).
+    `monitor`는 명세상 session 수명 process라 gate하면 영구 교착 — 통과가 정당한 round 종료다. 그 외 타입·미지
+    타입·field 부재(task registry 도달 불가 — 명세상 이때만 배열이 빠진다)는 gating하지 않는다: 실패 방향은 이른
+    advisor이지 loop 정지가 아니다. 완료를 기다려야 하는 background는 gating 유형(shell·subagent·workflow)으로
+    두고, server 같은 ambient process는 `Monitor`(session 수명 차선)로 돌린다.
 17. **docent 표면 — hook 0·쓰기 0, query-time 해석.** docent는 skill 본문(교리)과 read-only
     resolver(`docent` console script)가 전부다: hooks.json에 등록하지 않아 loop 기계와 접점이 없고,
     `disable-model-invocation: true`라 loop main이 스스로 교리를 주입해 orchestrator 정체성과
