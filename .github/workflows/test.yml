@@ -16,15 +16,15 @@ jobs:
       run:
         working-directory: plugins/${{ matrix.plugin }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9.0.0
       - run: uv run pytest -q
       - run: uv run ruff check
 
   test-cli:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9.0.0
       - run: uv run pytest -q
       - run: uv run ruff check

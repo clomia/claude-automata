@@ -8,10 +8,11 @@ jobs:
   openspec-validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: lts/*
+          package-manager-cache: false
       - name: openspec validate
         if: hashFiles('openspec/config.yaml') != ''
         run: npx --yes @fission-ai/openspec@1.6.0 validate --all --strict --no-interactive
@@ -19,7 +20,7 @@ jobs:
   docs-form-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # the merge commit plus both parents — HEAD^1 is the base head
           fetch-depth: 2
