@@ -2,12 +2,14 @@
 
 Installed as a dependency of every plugin in the marketplace, so a single hook
 watches them all.  Installed versions come from the documented CLI
-(`claude plugin list --json`), read fresh on every fire so the notice clears
-the moment the user updates; published versions come from the plugin manifests
-on the repository's main branch, fetched under a 6-hour cooldown.  When any
-installed plugin is behind, one user-visible systemMessage names them all —
-updates are applied interactively in /plugin, so the notice points there and
-nowhere else.
+(`claude plugin list --json`), scoped to the plugins this session actually
+loaded — user scope plus the current project — and read fresh on every fire so
+the notice clears the moment the user updates.  A stale copy pinned in an
+unrelated project never leaks into this session's notice.  Published versions
+come from the plugin manifests on the repository's main branch, fetched under a
+6-hour cooldown.  When any of this session's plugins is behind, one user-visible
+systemMessage names them all — updates are applied interactively in /plugin, so
+the notice points there and nowhere else.
 
 The notice re-emits on every fire (startup, resume, clear) until the user
 updates; only the fetch is cooled.  `compact` is deliberately excluded from
@@ -72,11 +74,14 @@ def fetch_remote_versions() -> dict[str, str] | None:
     return versions
 
 
-def installed_versions() -> dict[str, str]:
-    """Versions of this marketplace's enabled plugins, via `claude plugin list --json`.
+def installed_versions(project_dir: str | None) -> dict[str, str]:
+    """Versions of this marketplace's plugins active in the current session.
 
-    A plugin installed at several scopes keeps its oldest version — the notice
-    stands until every copy is current.  {} on any failure.
+    `claude plugin list --json` reports every install on the machine; only user
+    scope and the entries pinned to project_dir belong to this session — an
+    unrelated project's stale copy is ignored so updating here can clear the
+    notice.  A plugin present at several of this session's scopes keeps its
+    oldest version.  {} on any failure.
     """
     try:
         result = subprocess.run(
@@ -92,6 +97,8 @@ def installed_versions() -> dict[str, str]:
     versions: dict[str, str] = {}
     for plugin in plugins if isinstance(plugins, list) else []:
         if not isinstance(plugin, dict) or not plugin.get("enabled", True):
+            continue
+        if plugin.get("scope") != "user" and plugin.get("projectPath") != project_dir:
             continue
         plugin_id, version = plugin.get("id"), plugin.get("version")
         if not isinstance(plugin_id, str) or not isinstance(version, str):
@@ -158,12 +165,27 @@ def cooldown_elapsed(cache: dict, now: float) -> bool:
     return not 0 <= now - last_check < COOLDOWN_SECONDS
 
 
+def read_event() -> dict:
+    """SessionStart payload on stdin; {} on any failure."""
+    try:
+        event = json.loads(sys.stdin.read())
+    except OSError, json.JSONDecodeError:
+        return {}
+    return event if isinstance(event, dict) else {}
+
+
+def session_project(event: dict) -> str | None:
+    """The project this session belongs to — hooks get CLAUDE_PROJECT_DIR; the
+    payload's cwd is the fallback.  None when neither is set."""
+    for value in (os.environ.get("CLAUDE_PROJECT_DIR"), event.get("cwd")):
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
 def check_for_update() -> None:
     """SessionStart hook entry point."""
-    try:
-        sys.stdin.read()  # drain — payload unused
-    except OSError:
-        pass
+    event = read_event()
 
     data_dir = os.environ.get("CLAUDE_PLUGIN_DATA")
     if not data_dir:
@@ -192,6 +214,6 @@ def check_for_update() -> None:
     if not remote:
         return
 
-    rows = outdated(remote, installed_versions())
+    rows = outdated(remote, installed_versions(session_project(event)))
     if rows:
         sys.stdout.write(json.dumps({"systemMessage": build_message(rows)}))
