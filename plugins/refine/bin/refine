@@ -1,11 +1,13 @@
 #!/usr/bin/env sh
 # refine — run a bundled entry point with no virtualenv.
 #
-# The plugin is stdlib-only, so there is nothing to install: the entry runs
-# straight off the source Claude Code copied into ${CLAUDE_PLUGIN_ROOT}. Writing
-# a venv there is wrong — that cache directory is ephemeral, shared across every
-# project on the machine, and rebuilt on every version bump. Both skills and any
-# future hook route through here, so no session mutates another project's cache.
+# Stdlib-only: entries run straight off the source Claude Code copied into the
+# plugin cache, and nothing is ever written there (-B) — that directory is
+# ephemeral, shared by every project on the machine, and rebuilt on every
+# version bump. The runner locates its own root from $0 and pins module
+# resolution to it (-P), so neither the caller's env nor its cwd can reach the
+# interpreter. When uv cannot run, exit 0 silently — the session-start uv
+# notice is version-up-alert's job.
 
 set -e
 
@@ -16,5 +18,6 @@ if ! command -v uv >/dev/null 2>&1 ||
     exit 0
 fi
 
-export PYTHONPATH="${CLAUDE_PLUGIN_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
-exec uv run --no-project --python ">=3.14" python -m src "$@"
+plugin_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 0
+export PYTHONPATH="$plugin_root"
+exec uv run --no-project --python ">=3.14" python -P -B -m src "$@"

@@ -1,13 +1,14 @@
 #!/usr/bin/env sh
 # version-up-alert-hook — run the update check with no virtualenv.
 #
-# The plugin is stdlib-only, so the entry runs straight off the source Claude
-# Code copied into ${CLAUDE_PLUGIN_ROOT}; a venv must never be written there
-# (that cache is ephemeral, shared across every project on the machine, and
-# rebuilt on every version bump). Installed as a dependency of every plugin,
-# this is the one place the marketplace surfaces its uv prerequisite: a single
-# systemMessage when uv cannot run, then exit 0 — a missing prerequisite never
-# breaks a session.
+# Stdlib-only: entries run straight off the source Claude Code copied into the
+# plugin cache, and nothing is ever written there (-B) — that directory is
+# ephemeral, shared by every project on the machine, and rebuilt on every
+# version bump. The runner locates its own root from $0 and pins module
+# resolution to it (-P), so neither the caller's env nor its cwd can reach the
+# interpreter. Installed as a dependency of every plugin, this is the one place
+# the marketplace surfaces its uv prerequisite: a single systemMessage, then
+# exit 0 — a missing prerequisite never breaks a session.
 
 set -e
 
@@ -23,5 +24,6 @@ if ! uv python find ">=3.14" >/dev/null 2>&1 && ! uv python install 3.14 >/dev/n
     exit 0
 fi
 
-export PYTHONPATH="${CLAUDE_PLUGIN_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
-exec uv run --no-project --python ">=3.14" python -m src "$@"
+plugin_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 0
+export PYTHONPATH="$plugin_root"
+exec uv run --no-project --python ">=3.14" python -P -B -m src "$@"

@@ -71,7 +71,7 @@ def test_installed_versions_scopes_to_session_and_keeps_oldest(monkeypatch):
             "version": "0.4.0",
             "enabled": True,
             "scope": "project",
-            "projectPath": here,
+            "projectPath": "/work/./here",
         },
         {
             "id": "ploop@claude-automata",

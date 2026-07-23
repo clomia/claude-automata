@@ -1,11 +1,12 @@
 #!/usr/bin/env sh
 # ploop-hook — run a bundled entry point with no virtualenv.
 #
-# The plugin is stdlib-only, so the entry runs straight off the source Claude
-# Code copied into ${CLAUDE_PLUGIN_ROOT}; a venv must never be written there
-# (that cache is ephemeral, shared across every project on the machine, and
-# rebuilt on every version bump). Every ploop hook and the docent skill route
-# through here. launch/off/on block when uv cannot run so their skill bodies
+# Stdlib-only: entries run straight off the source Claude Code copied into the
+# plugin cache, and nothing is ever written there (-B) — that directory is
+# ephemeral, shared by every project on the machine, and rebuilt on every
+# version bump. The runner locates its own root from $0 and pins module
+# resolution to it (-P), so neither the caller's env nor its cwd can reach the
+# interpreter. launch/off/on block when uv cannot run so their skill bodies
 # never announce a loop state that wasn't reached; every other entry stays
 # silent — the session-start uv notice is version-up-alert's job.
 
@@ -25,5 +26,6 @@ if ! command -v uv >/dev/null 2>&1 ||
     exit 0
 fi
 
-export PYTHONPATH="${CLAUDE_PLUGIN_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
-exec uv run --no-project --python ">=3.14" python -m src "$@"
+plugin_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 0
+export PYTHONPATH="$plugin_root"
+exec uv run --no-project --python ">=3.14" python -P -B -m src "$@"

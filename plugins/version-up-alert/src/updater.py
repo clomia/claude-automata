@@ -74,6 +74,14 @@ def fetch_remote_versions() -> dict[str, str] | None:
     return versions
 
 
+def is_here(candidate: object, project_dir: str | None) -> bool:
+    """Whether candidate names this session's project — realpath-normalized, so
+    a project opened through a symlink still matches its install record."""
+    if not isinstance(candidate, str) or not project_dir:
+        return False
+    return os.path.realpath(candidate) == os.path.realpath(project_dir)
+
+
 def installed_versions(project_dir: str | None) -> dict[str, str]:
     """Versions of this marketplace's plugins active in the current session.
 
@@ -98,7 +106,9 @@ def installed_versions(project_dir: str | None) -> dict[str, str]:
     for plugin in plugins if isinstance(plugins, list) else []:
         if not isinstance(plugin, dict) or not plugin.get("enabled", True):
             continue
-        if plugin.get("scope") != "user" and plugin.get("projectPath") != project_dir:
+        if plugin.get("scope") != "user" and not is_here(
+            plugin.get("projectPath"), project_dir
+        ):
             continue
         plugin_id, version = plugin.get("id"), plugin.get("version")
         if not isinstance(plugin_id, str) or not isinstance(version, str):
