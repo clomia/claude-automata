@@ -13,14 +13,14 @@ effort: max
 1. change-id를 정한다 — 보통 tx branch의 slug와 같다.
 
    ```bash
-   uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec new change <change-id>
+   "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec new change <change-id>
    ```
 
 2. artifact를 dependency 순서로 작성한다. artifact마다
    instructions·format·template을 engine에서 받는다 — format의 정본은 engine이다:
 
    ```bash
-   uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec instructions <artifact> --change <change-id> --json
+   "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec instructions <artifact> --change <change-id> --json
    ```
 
    task에는 close 전에 done이 되는 작업만 적는다 — transaction의 종결(close·archive·merge)과
@@ -29,7 +29,7 @@ effort: max
 3. validate한다:
 
    ```bash
-   uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec validate <change-id> --strict --no-interactive --json
+   "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec validate <change-id> --strict --no-interactive --json
    ```
 
    delta 없는 change(tooling·infra·docs 변경)에서는 validate가 class 전체로 `no deltas`

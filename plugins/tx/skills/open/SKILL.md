@@ -14,13 +14,13 @@ transaction은 작업 단위가 아니라 **무결성 경계**다.
   의도를 나타내는 짧은 kebab-case:
 
   ```bash
-  uv run --project "${CLAUDE_PLUGIN_ROOT}" open-tx <slug>
+  "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" open-tx <slug>
   ```
 
 - seed가 완료되어 있다 (idempotent) — 산출물은 이 transaction에 실려 함께 merge된다:
 
   ```bash
-  uv run --project "${CLAUDE_PLUGIN_ROOT}" seed
+  "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" seed
   ```
 
 - 변경이 route되어 있다: 구조·세계관에 영향을 주는 변경은 `tx:plan`(Skill 도구) —

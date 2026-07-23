@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+# refine — run a bundled entry point with no virtualenv.
+#
+# The plugin is stdlib-only, so there is nothing to install: the entry runs
+# straight off the source Claude Code copied into ${CLAUDE_PLUGIN_ROOT}. Writing
+# a venv there is wrong — that cache directory is ephemeral, shared across every
+# project on the machine, and rebuilt on every version bump. Both skills and any
+# future hook route through here, so no session mutates another project's cache.
+
+set -e
+
+[ -n "$1" ] || exit 0
+
+if ! command -v uv >/dev/null 2>&1 ||
+    { ! uv python find ">=3.14" >/dev/null 2>&1 && ! uv python install 3.14 >/dev/null 2>&1; }; then
+    exit 0
+fi
+
+export PYTHONPATH="${CLAUDE_PLUGIN_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
+exec uv run --no-project --python ">=3.14" python -m src "$@"

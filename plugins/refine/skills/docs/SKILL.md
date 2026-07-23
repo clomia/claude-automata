@@ -8,5 +8,5 @@ effort: max
 아래를 실행해, 출력된 `Workflow(...)` 호출을 그대로 실행하라.
 
 ```bash
-uv run --project "${CLAUDE_PLUGIN_ROOT}" bootstrap docs "$ARGUMENTS"
+"${CLAUDE_PLUGIN_ROOT}/bin/refine" bootstrap docs "$ARGUMENTS"
 ```
