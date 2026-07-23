@@ -806,9 +806,31 @@ class TestLaunch:
     def make_stdin(self, **payload):
         return io.StringIO(json.dumps(payload))
 
+    def prereqs(
+        self, tmp_path, monkeypatch, *, depth="5", auto_compact=True, thinking=True
+    ):
+        """Satisfy ploop's launch prerequisites; return the project dir.
+
+        Sets the nested-subagent env cap (depth=None leaves it unset) and writes a
+        project .claude/settings.json with the compaction and thinking toggles.
+        """
+        if depth is None:
+            monkeypatch.delenv("CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH", raising=False)
+        else:
+            monkeypatch.setenv("CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH", depth)
+        proj = tmp_path / "repo"
+        (proj / ".claude").mkdir(parents=True, exist_ok=True)
+        (proj / ".claude" / "settings.json").write_text(
+            json.dumps(
+                {"autoCompactEnabled": auto_compact, "alwaysThinkingEnabled": thinking}
+            )
+        )
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(proj))
+        return proj
+
     def test_writes_stripped_anchor_and_arms_loop(self, tmp_path, monkeypatch):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
-        monkeypatch.setenv("CLAUDE_PROJECT_DIR", "/w/repo")
+        proj = self.prereqs(tmp_path, monkeypatch)
         anchor = '  do the thing\nwith "quotes" and $vars  '
         monkeypatch.setattr(
             "sys.stdin",
@@ -825,7 +847,7 @@ class TestLaunch:
         saved = (tmp_path / "s1_anchor.md").read_text()
         assert saved == 'do the thing\nwith "quotes" and $vars'
         assert (tmp_path / "s1_active").exists()
-        assert (tmp_path / "s1_project").read_text() == "/w/repo"
+        assert (tmp_path / "s1_project").read_text() == str(proj)
         assert not (tmp_path / "s1_loop.json").exists()  # prior ledger cleared
         # an anchor owns one log, opened with its own text
         log = (tmp_path / "s1_loop.log").read_text()
@@ -838,6 +860,7 @@ class TestLaunch:
         events carry a string — both shapes must yield the anchor verbatim,
         or a harness update corrupts the anchor."""
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        self.prereqs(tmp_path, monkeypatch)
         monkeypatch.setattr(
             "sys.stdin",
             self.make_stdin(
@@ -906,6 +929,77 @@ class TestLaunch:
         assert (tmp_path / "s1_anchor.md").read_text() == "old anchor"
         assert (tmp_path / "s1_loop.log").read_text() == "old log"
         assert (tmp_path / "s1_advisor_running").exists()
+
+    def test_all_prerequisites_met_arms(self, tmp_path, monkeypatch):
+        """With nesting (env >= 5), auto compaction, and thinking all satisfied,
+        the launch clears the assertion and arms the loop."""
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        self.prereqs(tmp_path, monkeypatch)
+        monkeypatch.setattr(
+            "sys.stdin",
+            self.make_stdin(
+                command_name="ploop:launch", command_args="do it", session_id="s1"
+            ),
+        )
+        launch()
+        assert (tmp_path / "s1_active").exists()
+        assert (tmp_path / "s1_anchor.md").read_text() == "do it"
+
+    @pytest.mark.parametrize(
+        "unmet, needle",
+        [
+            ({"depth": None}, "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"),
+            ({"depth": "2"}, "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"),
+            ({"auto_compact": False}, "autoCompactEnabled"),
+            ({"thinking": False}, "alwaysThinkingEnabled"),
+        ],
+    )
+    def test_unmet_prerequisite_blocks(
+        self, tmp_path, monkeypatch, capsys, unmet, needle
+    ):
+        """Each unmet prerequisite blocks the launch and names its settings.json
+        fix — nesting from the env (unset or below 5, the provisioned cap),
+        compaction and thinking from the project settings.json."""
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        self.prereqs(tmp_path, monkeypatch, **unmet)
+        monkeypatch.setattr(
+            "sys.stdin",
+            self.make_stdin(
+                command_name="ploop:launch", command_args="do it", session_id="s1"
+            ),
+        )
+        with pytest.raises(SystemExit) as exc:
+            launch()
+        assert exc.value.code == 0
+        out = json.loads(capsys.readouterr().out)
+        assert out["decision"] == "block"
+        assert needle in out["reason"]
+        assert not (tmp_path / "s1_active").exists()
+        assert not (tmp_path / "s1_anchor.md").exists()
+
+    def test_multiple_unmet_all_listed_with_restart(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Several unmet prerequisites collect into one notice that lists every
+        fix and calls for a settings.json edit + restart."""
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        self.prereqs(
+            tmp_path, monkeypatch, depth=None, auto_compact=False, thinking=False
+        )
+        monkeypatch.setattr(
+            "sys.stdin",
+            self.make_stdin(
+                command_name="ploop:launch", command_args="do it", session_id="s1"
+            ),
+        )
+        with pytest.raises(SystemExit):
+            launch()
+        reason = json.loads(capsys.readouterr().out)["reason"]
+        assert "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH" in reason
+        assert "autoCompactEnabled" in reason
+        assert "alwaysThinkingEnabled" in reason
+        assert "restart" in reason.lower()
+        assert not (tmp_path / "s1_active").exists()
 
 
 # ── /ploop:off UserPromptExpansion hook ──

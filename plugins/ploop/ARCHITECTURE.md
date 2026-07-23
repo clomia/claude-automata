@@ -52,8 +52,19 @@ session이 오염되어도 loop로의 쓰기 경로가 존재하지 않는다 �
 Stop hook 안에서 `claude -p`를 spawn하는 가장 단순한 방법은 `--no-session-persistence`로 **별도의 임시
 session**을 만드는 자동화 pattern이라, Claude Pro/Max 구독 약관상 계정 정지 위험을 부른다(실제 차단 이력) —
 API 요금제 전용이 된다. 반면 `Agent` tool subagent는 **모든 요금제에서 지원되는 정식 기능**이고(main
-session과 quota 공유), subagent가 다시 subagent를 spawn할 수 있다(v2.1.172+, depth 5 cap). ploop은
+session과 quota 공유), subagent가 다시 subagent를 spawn할 수 있다. ploop은
 이 정식 경로 위에서 돈다 — main이 advisor를, advisor가 narrator를 `Agent` tool로 호출한다.
+
+**nested subagent는 ploop의 hard requirement이자 harness 의존이다.** nesting은 2.1.172에 도입됐고(공식
+CHANGELOG: "Sub-agents can now spawn their own sub-agents (up to 5 levels deep)"), **2.1.217이 이를 기본
+차단**했다(CHANGELOG: "Changed subagents to no longer spawn nested subagents by default; set
+`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` to allow deeper nesting"). Claude Code는 `spawner_depth >= cap`이면
+`Agent` tool을 미부여하므로 기본 cap 1에서 depth-1 advisor는 narrator(depth 2)를 못 띄운다. 복원은 그 공식
+env var 하나다 — `claude-automata init`이 `.claude/settings.json`의 `env`에
+`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH="5"`(2.1.172의 원래 cap)를 provision해 기여 machine 전체에 전파하고
+(init 소관 — ploop은 settings.json을 건드리지 않는다, 결정 12), `/ploop:launch`의 prerequisite assertion이 그 값
+`<5`면(다른 요구와 함께) loop을 arm하지 않고 교정을 안내한다(결정 18). reference 문서(sub-agents.md의 "fixed·not configurable", env-vars.md의 var
+부재)는 이 변경을 아직 반영하지 못했고 CHANGELOG가 shipped 동작의 정본이다.
 
 ---
 
@@ -90,7 +101,7 @@ narrator  depth 2  Read Write  narrate          round slice file -> narration.md
   준 round slice(`round.jsonl`)를 통째로 읽어 해석하고(hook 측 parsing 없음), narration을
   `narration.md`(advisor와 동일 temp channel)에 쓴다 — advisor가 분석 입력으로, hook이 round log로 읽는다.
   원본 slice를 해석하므로 `sonnet[1m]`/`medium`이다.
-- depth 2에서 tree를 닫아 depth-5 cap에 3단계 여유를 남긴다.
+- depth 2에서 tree를 닫아 provision된 depth-5 cap(§왜 nested subagent)에 3단계 여유를 남긴다.
 
 ---
 
@@ -230,7 +241,7 @@ pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal 
 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
-| **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 — `active` 존재·빈 `anchor`면 차단 · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`면 차단 |
+| **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 — `active` 존재·빈 `anchor`·prerequisite(nested cap `<5`·`autoCompactEnabled`·`alwaysThinkingEnabled`) 미충족이면 차단 · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`면 차단 |
 | **PostCompact** | (전체) | compaction 후 | `compacted` marker touch (Stop이 mechanism 2로 anchor text 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 token 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(자발 호출 차단) |
 | **Stop** | (전체) | main이 종료 시도 | active gate → **background gate**(`background_tasks`: subagent·workflow 조용히 대기, shell은 집합당 1회 교정 지시 후 대기, monitor·그 외 통과) → **in-flight guard** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 notice+log recap) 또는 `exit 0`(허용) |
@@ -375,6 +386,20 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     worker 기록은 미문서 layout이라(실측 2026-07) 표류 시 "not found"/"(absent)"로 degrade한다.
     resolver는 이 경로들을 출력해 worker 내부의 사후 판독을 연다 — advisor에 비가시인 worker 내부가
     docent에는 보이되, 산출의 판정은 여전히 gate가 소유한다(신뢰 model 불변).
+18. **launch prerequisite assertion 레이어 — init provision + READ-only 검사.** ploop은 비자명한 Claude
+    Code 설정에 mechanism이 걸려 있고 Claude Code 변경이 그 default를 뒤집어 loop을 silent하게 깨뜨릴 수
+    있다(2.1.217 nested subagent 기본 off). `/ploop:launch`가 세 요구를 검사해 미충족을 모아 block하고 각
+    settings.json fix·재시작·relaunch를 한 알람으로 안내한다: ① nested subagent
+    `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH >= 5`, ② `autoCompactEnabled`, ③ `alwaysThinkingEnabled`
+    (permission mode·autoMemory·model은 강제 안 함 — owner 결정). **provision↔enforcement 분리**: settings
+    쓰기는 `claude-automata init`의 본업(PREREQUISITES + env `"5"` = 2.1.172 원래 cap)이라 거기서 심어 커밋된
+    `.claude/settings.json`으로 기여 machine 전체에 전파하고, ploop은 **읽기만** 한다(결정 12 no-write 보존).
+    **소스 = effective 우선**: nesting은 env라 `os.environ`(effective)으로 봐 settings.json만 고치고 재시작
+    안 한 미반영 상태를 잡아 재시작을 강제한다 — declared read라면 "설정 있는데 안 먹는" silent 실패가
+    재발한다; compaction·thinking은 runtime 신호가 없어 project settings.json declared를 읽는다(차선).
+    **auto-write 기각**: env는 startup 반영이라 재시작이 어차피 필요하므로 self-provision(=settings.json
+    write=결정 12 위반)의 실익이 "한 줄 절약"뿐이다. 검사는 확장 가능한 tuple이라 향후 Claude Code 변경의 새
+    요구를 한 줄로 더한다(모범 선례 템플릿).
 
 ---
 

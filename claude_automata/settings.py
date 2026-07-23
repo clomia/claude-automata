@@ -34,6 +34,7 @@ def merged(current: dict) -> dict:
     out = copy.deepcopy(current)
     out.update(PREREQUISITES)
     out.setdefault("permissions", {})["defaultMode"] = "bypassPermissions"
+    out.setdefault("env", {})["CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"] = "5"
     out.setdefault("extraKnownMarketplaces", {})[MARKETPLACE] = {
         "source": {"source": "github", "repo": MARKETPLACE_REPO}
     }

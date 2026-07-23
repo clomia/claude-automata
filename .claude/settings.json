@@ -1,12 +1,16 @@
 {
 	"model": "opus[1m]",
 	"alwaysThinkingEnabled": true,
+	"autoCompactEnabled": true,
 	"effortLevel": "xhigh",
 	"includeCoAuthoredBy": false,
 	"gitAttribution": false,
 	"enableAllProjectMcpServers": true,
 	"autoMemoryEnabled": false,
 	"disableAgentView": true,
+	"env": {
+		"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "5"
+	},
 	"extraKnownMarketplaces": {
 		"claude-plugins-official": {
 			"source": {
