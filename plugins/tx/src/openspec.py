@@ -21,7 +21,7 @@ from typing import NoReturn
 from src.repo import git
 
 PIN = "1.6.0"
-NPX_MISSING = "npx not found — openspec requires Node.js >= 20."
+NPX_MISSING = "npx not found — openspec requires Node.js >= 22."
 
 
 def main() -> NoReturn:

@@ -13,15 +13,16 @@ def test_present_tools_are_ok(monkeypatch):
     assert provision.ensure_repomix().status == "ok"
 
 
-def test_node_below_20_is_replaced(monkeypatch, tmp_path):
+def test_node_below_floor_is_replaced(monkeypatch, tmp_path):
+    # node 20 reached EOL 2026-04-30 — the floor now rejects it.
     monkeypatch.setattr(provision.shutil, "which", lambda name: f"/usr/bin/{name}")
-    monkeypatch.setattr(provision, "node_major", lambda node: 18)
+    monkeypatch.setattr(provision, "node_major", lambda node: 20)
     monkeypatch.setattr(provision, "latest_node_lts", lambda: "v22.11.0")
     monkeypatch.setattr(provision, "extract", lambda url, into: tmp_path)
     monkeypatch.setattr(provision, "link", lambda binary, name: None)
     outcome = provision.ensure_node()
     assert outcome.status == "installed"
-    assert "below 20" in outcome.note
+    assert "below 22" in outcome.note
 
 
 def test_npm_env_prefers_local_bin():
@@ -79,7 +80,7 @@ def test_unsupported_platform_fails_with_guidance(monkeypatch):
         assert "manually" in outcome.note
 
 
-def test_pick_lts_takes_newest_lts_at_or_above_20():
+def test_pick_lts_takes_newest_lts_at_or_above_22():
     releases = [
         {"version": "v23.1.0", "lts": False},
         {"version": "v22.11.0", "lts": "Jod"},
@@ -87,4 +88,4 @@ def test_pick_lts_takes_newest_lts_at_or_above_20():
     ]
     assert provision.pick_lts(releases) == "v22.11.0"
     with pytest.raises(LookupError):
-        provision.pick_lts([{"version": "v18.20.0", "lts": "Hydrogen"}])
+        provision.pick_lts([{"version": "v20.18.0", "lts": "Iron"}])

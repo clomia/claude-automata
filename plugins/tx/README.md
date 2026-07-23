@@ -39,7 +39,7 @@ stay silent.
 ## Prerequisites
 
 - **[uv](https://docs.astral.sh/uv/getting-started/installation/)** — runs the guard hooks and tx commands.
-- **Node.js >= 20** — tx drives the OpenSpec CLI through `npx` at a version
+- **Node.js >= 22** — tx drives the OpenSpec CLI through `npx` at a version
   pinned inside tx. Nothing to install or configure: no global package, no
   `openspec init` by hand, no upstream prompts. `/tx:open` seeds a repository
   that lacks the scaffold.

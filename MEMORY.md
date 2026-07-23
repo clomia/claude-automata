@@ -118,7 +118,7 @@ glossary는 장기기억 소속이다. ubiquitous language는 모든 agent와 �
 
 - format 채택은 문법 채택이다(SHALL 요구사항·Scenario 구조). 이 구조가 validate와
   verify(요구사항→구현 증거 탐색)를 가능하게 하는 대가다.
-- Node.js >= 20 runtime 의존이 추가된다 (uv·gh에 더해).
+- Node.js >= 22 runtime 의존이 추가된다 (uv·gh에 더해).
 - upstream은 활발히 재설계 중이다(store·workset·initiatives 진행형) — HEAD를 쫓지 않는다.
 
 ### seam 계약

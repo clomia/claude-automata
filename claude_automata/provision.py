@@ -60,10 +60,10 @@ def pick_lts(releases: list[dict]) -> str:
     for release in releases:  # newest first
         if release.get("lts"):
             version = release["version"]
-            if int(version.lstrip("v").split(".", 1)[0]) >= 20:
+            if int(version.lstrip("v").split(".", 1)[0]) >= 22:
                 return version
             break
-    raise LookupError("no Node.js LTS >= 20 in the release index")
+    raise LookupError("no Node.js LTS >= 22 in the release index")
 
 
 def latest_node_lts() -> str:
@@ -146,15 +146,15 @@ def ensure_node() -> Outcome:
             major = node_major(node)
         except subprocess.CalledProcessError, OSError, ValueError:
             major = 0
-        if major >= 20:
+        if major >= 22:
             return Outcome("node", "ok", node)
-        replaced = f"node v{major} on PATH is below 20; "
+        replaced = f"node v{major} on PATH is below 22; "
     plat = target()
     if plat is None:
         return Outcome(
             "node",
             "failed",
-            "unsupported platform — install Node.js >= 20 manually: https://nodejs.org",
+            "unsupported platform — install Node.js >= 22 manually: https://nodejs.org",
         )
     try:
         version = latest_node_lts()
@@ -170,7 +170,7 @@ def ensure_node() -> Outcome:
         return Outcome(
             "node",
             "failed",
-            f"{error} — install Node.js >= 20 manually: https://nodejs.org",
+            f"{error} — install Node.js >= 22 manually: https://nodejs.org",
         )
 
 
