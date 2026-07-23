@@ -503,7 +503,7 @@ class TestStop:
 
     def test_background_shell_nags_once_then_waits(self, tmp_path, monkeypatch, capsys):
         """A shell-only background holds the round open: the first stop gets one
-        redirect notice (wait, or move an ambient process off the shell lane) and
+        redirect notice (wait, or clear an ambient one that never exits) and
         no advisor; a repeat stop with the same shell set waits silently; a new
         shell id nags again."""
         arrange_anchor(
