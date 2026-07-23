@@ -1,30 +1,29 @@
 #!/usr/bin/env sh
-# version-up-alert-hook — wraps the update check with a uv availability check.
+# version-up-alert-hook — run the update check with no virtualenv.
 #
-# Usage: version-up-alert-hook <entry-point>
-#
-# Installed as a dependency of every claude-automata plugin, this is the one
-# place the marketplace surfaces its uv prerequisite: if uv is not installed
-# or unable to provision the environment no plugin's Python hooks can run, so
-# the wrapper emits a single systemMessage instead of one notice per plugin,
-# and exits 0 — a missing prerequisite never breaks the session.
+# Stdlib-only: entries run straight off the source Claude Code copied into the
+# plugin cache, and nothing is ever written there (-B) — that directory is
+# ephemeral, shared by every project on the machine, and rebuilt on every
+# version bump. The runner locates its own root from $0 and pins module
+# resolution to it (-P), so neither the caller's env nor its cwd can reach the
+# interpreter. Installed as a dependency of every plugin, this is the one place
+# the marketplace surfaces its uv prerequisite: a single systemMessage, then
+# exit 0 — a missing prerequisite never breaks a session.
 
 set -e
 
-entry="$1"
-
-if [ -z "$entry" ]; then
-    exit 0
-fi
+[ -n "$1" ] || exit 0
 
 if ! command -v uv >/dev/null 2>&1; then
     printf '%s' '{"systemMessage":"claude-automata plugins require uv (Python package manager). Install it from https://docs.astral.sh/uv/getting-started/installation/ — without uv, no plugin hooks can run."}'
     exit 0
 fi
 
-if ! uv sync --project "${CLAUDE_PLUGIN_ROOT}" --no-dev -q >/dev/null 2>&1; then
-    printf '%s' '{"systemMessage":"uv cannot provision the plugin environment (Python >= 3.14 needs a download or network) — claude-automata hooks are off this session."}'
+if ! uv python find ">=3.14" >/dev/null 2>&1 && ! uv python install 3.14 >/dev/null 2>&1; then
+    printf '%s' '{"systemMessage":"uv cannot provision Python >= 3.14 (needs a download or network) — claude-automata hooks are off this session."}'
     exit 0
 fi
 
-exec uv run --project "${CLAUDE_PLUGIN_ROOT}" --no-dev "$entry"
+plugin_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 0
+export PYTHONPATH="$plugin_root"
+exec uv run --no-project --python ">=3.14" python -P -B -s -m src "$@"

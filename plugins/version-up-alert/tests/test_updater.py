@@ -56,29 +56,95 @@ def cli_result(payload: object, returncode: int = 0) -> SimpleNamespace:
     return SimpleNamespace(returncode=returncode, stdout=json.dumps(payload))
 
 
-def test_installed_versions_filters_marketplace_and_keeps_oldest(monkeypatch):
+def test_installed_versions_scopes_to_session_and_keeps_oldest(monkeypatch):
+    here = "/work/here"
     listing = [
-        {"id": "ploop@claude-automata", "version": "0.5.0", "enabled": True},
-        {"id": "ploop@claude-automata", "version": "0.4.0", "enabled": True},
-        {"id": "off@claude-automata", "version": "1.0.0", "enabled": False},
-        {"id": "other@another-market", "version": "1.0.0", "enabled": True},
-        {"id": "raw@claude-automata", "version": "unknown", "enabled": True},
+        {
+            "id": "ploop@claude-automata",
+            "version": "0.5.0",
+            "enabled": True,
+            "scope": "local",
+            "projectPath": here,
+        },
+        {
+            "id": "ploop@claude-automata",
+            "version": "0.4.0",
+            "enabled": True,
+            "scope": "project",
+            "projectPath": "/work/./here",
+        },
+        {
+            "id": "ploop@claude-automata",
+            "version": "0.1.0",
+            "enabled": True,
+            "scope": "project",
+            "projectPath": "/work/elsewhere",
+        },
+        {
+            "id": "user@claude-automata",
+            "version": "2.0.0",
+            "enabled": True,
+            "scope": "user",
+            "projectPath": None,
+        },
+        {
+            "id": "managed@claude-automata",
+            "version": "3.0.0",
+            "enabled": True,
+            "scope": "managed",
+            "projectPath": None,
+        },
+        {
+            "id": "off@claude-automata",
+            "version": "1.0.0",
+            "enabled": False,
+            "scope": "local",
+            "projectPath": here,
+        },
+        {
+            "id": "other@another-market",
+            "version": "1.0.0",
+            "enabled": True,
+            "scope": "local",
+            "projectPath": here,
+        },
+        {
+            "id": "raw@claude-automata",
+            "version": "unknown",
+            "enabled": True,
+            "scope": "local",
+            "projectPath": here,
+        },
     ]
     monkeypatch.setattr(updater.subprocess, "run", lambda *a, **k: cli_result(listing))
-    assert updater.installed_versions() == {"ploop": "0.4.0", "raw": "unknown"}
+    assert updater.installed_versions(here) == {
+        "ploop": "0.4.0",
+        "user": "2.0.0",
+        "managed": "3.0.0",
+        "raw": "unknown",
+    }
+
+
+def test_session_project_prefers_env_over_payload_cwd(monkeypatch):
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    assert updater.session_project({"cwd": "/p"}) == "/p"
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", "/env")
+    assert updater.session_project({"cwd": "/p"}) == "/env"
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    assert updater.session_project({}) is None
 
 
 def test_installed_versions_empty_on_cli_failure(monkeypatch):
     monkeypatch.setattr(
         updater.subprocess, "run", lambda *a, **k: cli_result([], returncode=1)
     )
-    assert updater.installed_versions() == {}
+    assert updater.installed_versions("/work/here") == {}
     monkeypatch.setattr(
         updater.subprocess,
         "run",
         lambda *a, **k: (_ for _ in ()).throw(OSError("no claude")),
     )
-    assert updater.installed_versions() == {}
+    assert updater.installed_versions("/work/here") == {}
 
 
 class TestCheckForUpdate:
@@ -86,7 +152,9 @@ class TestCheckForUpdate:
         data = tmp_path / "data"
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(data))
         monkeypatch.setattr("sys.stdin", io.StringIO(""))
-        monkeypatch.setattr(updater, "installed_versions", lambda: installed)
+        monkeypatch.setattr(
+            updater, "installed_versions", lambda project_dir=None: installed
+        )
         return data / updater.CACHE_FILENAME
 
     def test_emits_fresh_then_reuses_cache_within_cooldown(

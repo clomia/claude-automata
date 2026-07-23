@@ -65,7 +65,7 @@ wheels = [
 
 [[package]]
 name = "refine"
-version = "0.9.9"
+version = "0.9.10"
 source = { editable = "." }
 
 [package.dev-dependencies]

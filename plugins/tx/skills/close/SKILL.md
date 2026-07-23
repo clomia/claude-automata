@@ -10,7 +10,7 @@ effort: max
 base는 repository의 GitHub default branch다. 해석이 실패하면 stderr의 지시를 전하고 거부한다:
 
 ```bash
-BASE=$(uv run --project "${CLAUDE_PLUGIN_ROOT}" base)
+BASE=$("${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" base)
 ```
 
 # 닫힌 상태 — 아래가 전부 참이면 transaction은 닫힌 것이다

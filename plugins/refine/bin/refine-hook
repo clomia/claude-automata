@@ -1,28 +1,20 @@
 #!/usr/bin/env sh
-# ploop-hook — run a bundled entry point with no virtualenv.
+# refine-hook — run a bundled entry point with no virtualenv.
 #
 # Stdlib-only: entries run straight off the source Claude Code copied into the
 # plugin cache, and nothing is ever written there (-B) — that directory is
 # ephemeral, shared by every project on the machine, and rebuilt on every
 # version bump. The runner locates its own root from $0 and pins module
 # resolution to it (-P), so neither the caller's env nor its cwd can reach the
-# interpreter. launch/off/on block when uv cannot run so their skill bodies
-# never announce a loop state that wasn't reached; every other entry stays
-# silent — the session-start uv notice is version-up-alert's job.
+# interpreter. When uv cannot run, exit 0 silently — the session-start uv
+# notice is version-up-alert's job.
 
 set -e
 
-entry="$1"
-
-[ -n "$entry" ] || exit 0
+[ -n "$1" ] || exit 0
 
 if ! command -v uv >/dev/null 2>&1 ||
     { ! uv python find ">=3.14" >/dev/null 2>&1 && ! uv python install 3.14 >/dev/null 2>&1; }; then
-    case "$entry" in
-        launch | off-command | on-command)
-            printf '%s' '{"decision":"block","reason":"uv cannot run the plugin — the loop state did not change."}'
-            ;;
-    esac
     exit 0
 fi
 

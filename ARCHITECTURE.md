@@ -46,6 +46,15 @@ loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의
   구절도 미해결 어휘도 남지 않는다.
 - **multi-instance — 동시성의 단위는 worktree, 수렴 지점은 origin이다.** tx 상태는 worktree 격리·
   ploop 상태는 session keying이다.
+- **project-unit 격리 — install cache는 execute-only다.** plugin은 세션 스코프(머신-전역인
+  user·managed scope + 현재 project)와 전역 참(published manifest, Python toolchain)만 읽는다.
+  전역 write는 선언된 전제의 idempotent provisioning(uv-managed Python) 하나뿐 — cache는
+  ephemeral·머신 공유라 그 안의 상태는 곧 타 project 오염이다. 각 bin runner는 stdlib-only entry를
+  `uv run --no-project`로 source에서 직접 실행하며, `$0`에서 자기 root를 해석하고 module 해석을
+  그 root에 고정해(-P·-B·-s) caller의 env·cwd·user site와 절연한다. runner 이름은 `-hook` 접미다 —
+  plugin `bin/`은 Bash PATH에 주입되므로 bare 이름은 namespace 오염이다. 강제는
+  `tests/test_plugin_runtime.py`. 의존성이 생기는 미래 plugin은 cache가 아니라
+  CLAUDE_PLUGIN_DATA에 manifest-diff 패턴으로 환경을 둔다.
 - **규약 운반** — docs 표면 규약의 층별 배치와 fork 경계는 MEMORY.md 운반 절이 소유한다.
 
 ## 언어·prompt 정책 (repo 전역)

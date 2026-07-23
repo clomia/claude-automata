@@ -1,33 +1,31 @@
 #!/usr/bin/env sh
-# tx-hook — wraps plugin entry points with a uv availability check.
+# tx-hook — run a bundled entry point with no virtualenv.
 #
-# Usage: tx-hook <entry-point>
-#
-# Every tx hook is routed through this script.  If uv is not installed or
-# unable to provision the environment we cannot execute any Python code, so
-# the wrapper exits 0 without error — the session is never broken by a missing
-# prerequisite.  The git-sync-off/on
-# command expansions are blocked so their skill bodies never announce a toggle
-# that didn't happen; every other hook stays silent — the session-start uv
-# notice is version-up-alert's job (a dependency of every claude-automata
-# plugin).
+# Stdlib-only: entries run straight off the source Claude Code copied into the
+# plugin cache, and nothing is ever written there (-B) — that directory is
+# ephemeral, shared by every project on the machine, and rebuilt on every
+# version bump. The runner locates its own root from $0 and pins module
+# resolution to it (-P), so neither the caller's env nor its cwd can reach the
+# interpreter. git-sync-off/on block when uv cannot run so their skill bodies
+# never announce a toggle that didn't happen; every other entry stays silent —
+# the session-start uv notice is version-up-alert's job.
 
 set -e
 
 entry="$1"
 
-if [ -z "$entry" ]; then
-    exit 0
-fi
+[ -n "$entry" ] || exit 0
 
-if ! command -v uv >/dev/null 2>&1 || \
-   ! uv sync --project "${CLAUDE_PLUGIN_ROOT}" --no-dev -q >/dev/null 2>&1; then
+if ! command -v uv >/dev/null 2>&1 ||
+    { ! uv python find ">=3.14" >/dev/null 2>&1 && ! uv python install 3.14 >/dev/null 2>&1; }; then
     case "$entry" in
-        git-sync-off|git-sync-on)
+        git-sync-off | git-sync-on)
             printf '%s' '{"decision":"block","reason":"uv cannot run the plugin — the toggle did not happen."}'
             ;;
     esac
     exit 0
 fi
 
-exec uv run --project "${CLAUDE_PLUGIN_ROOT}" --no-dev "$entry"
+plugin_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 0
+export PYTHONPATH="$plugin_root"
+exec uv run --no-project --python ">=3.14" python -P -B -s -m src "$@"

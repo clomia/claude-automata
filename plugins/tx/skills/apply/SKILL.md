@@ -12,13 +12,13 @@ effort: max
    아니면 구현이 아니라 계획이 부족한 것 — `tx:plan`으로 돌아간다.
 
    ```bash
-   uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec status --change <change-id> --json
+   "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec status --change <change-id> --json
    ```
 
 2. context 파일 경로와 task checklist를 받는다:
 
    ```bash
-   uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec instructions apply --change <change-id> --json
+   "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec instructions apply --change <change-id> --json
    ```
 
 3. task를 dependency 순서대로 구현한다.

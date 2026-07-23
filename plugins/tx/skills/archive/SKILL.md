@@ -12,7 +12,7 @@ delta가 main spec에 sync되고 change directory가 `openspec/changes/archive/`
 1. 활성 change와 task 개수를 확인한다:
 
    ```bash
-   uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec list --json
+   "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec list --json
    ```
 
    활성 change가 없으면 그렇다고 반환한다. **task가 없거나(no-tasks) 미완료면
@@ -22,11 +22,11 @@ delta가 main spec에 sync되고 change directory가 `openspec/changes/archive/`
 2. archive한다. delta spec이 없는 change(tooling·infra·docs 변경)는 `--skip-specs`를 덧붙인다:
 
    ```bash
-   uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec archive <change-id> --yes
+   "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec archive <change-id> --yes
    ```
 
 3. sync 결과를 재검증한다 — 실패는 archive가 만든 spec 상태의 결함이다. 고치고 재검증한다:
 
    ```bash
-   uv run --project "${CLAUDE_PLUGIN_ROOT}" openspec validate --all --strict --no-interactive --json
+   "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec validate --all --strict --no-interactive --json
    ```

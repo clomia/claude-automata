@@ -20,7 +20,7 @@ disable-model-invocation: true
 resolver가 이 directory에서 launch된 loop들과 그 기록 위치를 최신순으로 나열한다:
 
 ```bash
-uv run --project "${CLAUDE_PLUGIN_ROOT}" docent --data-dir "${CLAUDE_PLUGIN_DATA}" --project-dir "${CLAUDE_PROJECT_DIR}"
+"${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook" docent --data-dir "${CLAUDE_PLUGIN_DATA}" --project-dir "${CLAUDE_PROJECT_DIR}"
 ```
 
 질문이 진행 중인 작업에 관한 것이면 `--exclude-converged`를 덧붙여 완료된 anchor를 뺀다.

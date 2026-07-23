@@ -1,18 +1,8 @@
 [project]
 name = "ploop"
-version = "0.49.1"
+version = "0.49.2"
 requires-python = ">=3.14"
 dependencies = []
-
-[project.scripts]
-stop = "src.main:stop"
-pre-tool-use = "src.main:pre_tool_use"
-subagent-stop = "src.main:subagent_stop"
-mark-compaction = "src.main:mark_compaction"
-launch = "src.main:launch"
-off-command = "src.main:off_command"
-on-command = "src.main:on_command"
-docent = "src.docent:resolve"
 
 [build-system]
 requires = ["uv_build>=0.11.0,<0.12.0"]
