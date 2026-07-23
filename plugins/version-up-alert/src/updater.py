@@ -85,11 +85,11 @@ def is_here(candidate: object, project_dir: str | None) -> bool:
 def installed_versions(project_dir: str | None) -> dict[str, str]:
     """Versions of this marketplace's plugins active in the current session.
 
-    `claude plugin list --json` reports every install on the machine; only user
-    scope and the entries pinned to project_dir belong to this session — an
-    unrelated project's stale copy is ignored so updating here can clear the
-    notice.  A plugin present at several of this session's scopes keeps its
-    oldest version.  {} on any failure.
+    `claude plugin list --json` reports every install on the machine; only the
+    machine-wide scopes (user, managed) and the entries pinned to project_dir
+    belong to this session — an unrelated project's stale copy is ignored so
+    updating here can clear the notice.  A plugin present at several of this
+    session's scopes keeps its oldest version.  {} on any failure.
     """
     try:
         result = subprocess.run(
@@ -106,7 +106,7 @@ def installed_versions(project_dir: str | None) -> dict[str, str]:
     for plugin in plugins if isinstance(plugins, list) else []:
         if not isinstance(plugin, dict) or not plugin.get("enabled", True):
             continue
-        if plugin.get("scope") != "user" and not is_here(
+        if plugin.get("scope") not in ("user", "managed") and not is_here(
             plugin.get("projectPath"), project_dir
         ):
             continue

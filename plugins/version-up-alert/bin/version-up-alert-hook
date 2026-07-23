@@ -26,4 +26,4 @@ fi
 
 plugin_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 0
 export PYTHONPATH="$plugin_root"
-exec uv run --no-project --python ">=3.14" python -P -B -m src "$@"
+exec uv run --no-project --python ">=3.14" python -P -B -s -m src "$@"

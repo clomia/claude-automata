@@ -26,7 +26,7 @@ CASES = {
         "No loops",
     ),
     "refine": (
-        "bin/refine",
+        "bin/refine-hook",
         lambda tmp: ["bootstrap", "__probe__"],
         "usage: bootstrap",
     ),

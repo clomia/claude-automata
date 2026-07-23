@@ -88,6 +88,13 @@ def test_installed_versions_scopes_to_session_and_keeps_oldest(monkeypatch):
             "projectPath": None,
         },
         {
+            "id": "managed@claude-automata",
+            "version": "3.0.0",
+            "enabled": True,
+            "scope": "managed",
+            "projectPath": None,
+        },
+        {
             "id": "off@claude-automata",
             "version": "1.0.0",
             "enabled": False,
@@ -113,6 +120,7 @@ def test_installed_versions_scopes_to_session_and_keeps_oldest(monkeypatch):
     assert updater.installed_versions(here) == {
         "ploop": "0.4.0",
         "user": "2.0.0",
+        "managed": "3.0.0",
         "raw": "unknown",
     }
 
