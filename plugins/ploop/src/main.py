@@ -99,6 +99,22 @@ SHELL_WAIT_NOTICE = (
     "before stopping.\n"
 )
 
+# ploop's loop depends on non-obvious Claude Code settings, and a Claude Code
+# release can flip a default out from under them — 2.1.217 disabled nested
+# subagents by default, silently breaking the advisor->narrator path.  launch
+# asserts each required setting and, if any is unmet, refuses to arm and names the
+# settings.json fix, so a user who just updated Claude Code gets a fix list, not a
+# broken loop.  Extend the tuple in unmet_prerequisites as Claude Code changes require.
+SPAWN_DEPTH_ENV = "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"
+SPAWN_DEPTH_MIN = 5
+PREREQUISITE_HEADER = (
+    "ploop requires these .claude/settings.json settings — set them, then "
+    "restart Claude Code:"
+)
+NESTED_FIX = '"env": {"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "5"}'
+COMPACT_FIX = '"autoCompactEnabled": true'
+THINKING_FIX = '"alwaysThinkingEnabled": true'
+
 
 def read_event() -> dict:
     """Parse the hook event from stdin; malformed input or a read error allows
@@ -127,6 +143,46 @@ def block_expansion(reason: str) -> None:
     """
     sys.stdout.write(json.dumps({"decision": "block", "reason": reason}))
     sys.exit(0)
+
+
+def project_settings(event: dict) -> dict:
+    """The project .claude/settings.json as a dict; unreadable/malformed -> {}.
+
+    The launch assertion reads (never writes) it to check the compaction and
+    thinking toggles, which have no runtime signal a hook could read instead.
+    """
+    try:
+        return json.loads(
+            (Path(project_dir(event)) / ".claude" / "settings.json").read_text()
+        )
+    except OSError, json.JSONDecodeError:
+        return {}
+
+
+def unmet_prerequisites(event: dict) -> list[str]:
+    """ploop's Claude Code prerequisites the environment fails to satisfy.
+
+    Each entry is a settings.json fix line; empty means all are met.  Nested-
+    subagent depth is read from os.environ — the effective value, so a settings.json
+    edit not yet applied by a restart still reads as unmet (the restart is what makes
+    the env var take hold, which a declared settings.json read would miss).  The
+    compaction and thinking toggles have no such runtime signal, so they are read
+    from the project settings.json.  Extend the tuple to assert a new setting.
+    """
+    settings = project_settings(event)
+    try:
+        depth = int(os.environ.get(SPAWN_DEPTH_ENV, ""))
+    except ValueError:
+        depth = 0
+    return [
+        fix
+        for ok, fix in (
+            (depth >= SPAWN_DEPTH_MIN, NESTED_FIX),
+            (settings.get("autoCompactEnabled") is True, COMPACT_FIX),
+            (settings.get("alwaysThinkingEnabled") is True, THINKING_FIX),
+        )
+        if not ok
+    ]
 
 
 def write_log(
@@ -489,11 +545,14 @@ def launch() -> None:
     an array of arguments — both shapes are accepted so a harness update
     cannot corrupt the anchor.
 
-    Two guards block the expansion (block_expansion — pure, turn erased): an
+    Three guards block the expansion (block_expansion — pure, turn erased): an
     armed loop (active marker), because relaunching over it would overwrite the
     anchor and log mid-flight and orphan an in-flight advisor — /ploop:off
-    pauses it first; and a blank anchor, because the skill body would otherwise
-    announce an activation this hook never armed (a ghost loop).
+    pauses it first; a blank anchor, because the skill body would otherwise
+    announce an activation this hook never armed (a ghost loop); and any unmet
+    Claude Code prerequisite (unmet_prerequisites — nested subagents, auto
+    compaction, thinking), since a loop launched without them silently degrades —
+    the notice lists each settings.json fix and calls for a restart.
 
     A real launch clears the prior anchor's round state, starts the round log
     with the anchor text (an anchor owns one log, and its final summary reads
@@ -515,6 +574,8 @@ def launch() -> None:
     anchor = str(args).strip()
     if not anchor:
         block_expansion("The anchor is empty. Run it as /ploop:launch <anchor>.")
+    if unmet := unmet_prerequisites(event):
+        block_expansion(PREREQUISITE_HEADER + "\n\n" + "\n".join(unmet))
     ws.clear_round_state()
     ws.log_path.write_text(f"[[ ANCHOR ]]\n\n{anchor}\n\n")
     ws.anchor_path.write_text(anchor)

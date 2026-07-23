@@ -16,6 +16,7 @@ def test_fresh_merge_carries_all_prerequisites():
     assert out["autoCompactEnabled"] is True
     assert out["model"] == "opus[1m]"
     assert out["permissions"]["defaultMode"] == "bypassPermissions"
+    assert out["env"]["CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"] == "5"
     assert out["extraKnownMarketplaces"]["claude-automata"] == {
         "source": {"source": "github", "repo": "clomia/claude-automata"}
     }
@@ -27,6 +28,7 @@ def test_existing_settings_survive():
     current = {
         "statusLine": {"type": "command", "command": "x"},
         "permissions": {"allow": ["Bash(ls)"]},
+        "env": {"HTTP_PROXY": "http://proxy"},
         "enabledPlugins": {"foreign@other": True},
         "extraKnownMarketplaces": {
             "other": {"source": {"source": "github", "repo": "a/b"}}
@@ -38,6 +40,8 @@ def test_existing_settings_survive():
     assert out["statusLine"] == {"type": "command", "command": "x"}
     assert out["permissions"]["allow"] == ["Bash(ls)"]
     assert out["permissions"]["defaultMode"] == "bypassPermissions"
+    assert out["env"]["HTTP_PROXY"] == "http://proxy"  # existing env key survives
+    assert out["env"]["CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"] == "5"
     assert out["enabledPlugins"]["foreign@other"] is True
     assert out["extraKnownMarketplaces"]["other"] == {
         "source": {"source": "github", "repo": "a/b"}
