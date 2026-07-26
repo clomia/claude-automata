@@ -10,3 +10,5 @@ effort: max
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/bin/refine-hook" bootstrap docs "$ARGUMENTS"
 ```
+
+`interrupted`가 반환되면 `args.agoraPath`를 반환된 경로로 바꿔 재실행하라 — 중단 지점부터 이어간다.

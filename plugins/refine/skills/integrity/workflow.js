@@ -165,6 +165,8 @@ const FINAL_SCHEMA = {
   },
 }
 
+log(`Agora: ${agoraPath}`)
+
 // 1. Map — 분석 영역 정의 + 독립 검수
 phase('Map')
 await synod(
@@ -357,6 +359,7 @@ for (const name of order) {
 변경 요약과 test 결과를 네 Agora에 기록하고 반환하라.`,
     { label: `apply:${p.label}`, schema: APPLY_SCHEMA },
   )
+  if (halted) break
   applied.push({ name, status: res?.status ?? 'unknown', testsPassed: res?.testsPassed ?? null })
   log(`applied ${applied.length}/${order.length}: ${name} (${res?.status ?? 'unknown'})`)
 }
