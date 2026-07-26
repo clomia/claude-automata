@@ -380,11 +380,12 @@ const finalReview = await synod(
   { label: 'final-review', schema: FINAL_SCHEMA },
 )
 
+// 긴 배열은 뒤로 — 반환값은 8000자에서 잘린다
 return outcome('done', {
   regions: regions.length,
   hazards: consensus.count,
-  consensusTitles: consensus.titles ?? [],
   plans: plans.length,
   applied,
   finalReview,
+  consensusTitles: consensus.titles ?? [],
 })
