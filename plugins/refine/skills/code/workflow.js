@@ -35,12 +35,14 @@ const synod = (agoraName, task, opts = {}) =>
   agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
 
 // 동시 실행은 session limit을 조기 소진시킨다 — agent는 한 번에 하나씩.
+// 하나가 죽어도 run은 계속된다.
 const series = async (tasks) => {
   const out = []
   for (const task of tasks) {
     try {
       out.push(await task())
-    } catch {
+    } catch (e) {
+      log(`series[${out.length}] failed: ${e}`)
       out.push(null)
     }
   }
