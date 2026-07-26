@@ -36,7 +36,6 @@ const synod = (agoraName, task, opts = {}) =>
   agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
 
 // 동시 실행은 session limit을 조기 소진시킨다 — agent는 한 번에 하나씩.
-// parallel의 semantics(입력 순서 결과 · 실패는 null)는 그대로 유지한다.
 const series = async (tasks) => {
   const out = []
   for (const task of tasks) {
@@ -193,7 +192,7 @@ inventory의 모든 문서를 읽고, 문서의 모든 주장을 코드와 대�
 발견은 다음으로 분류한다: mismatch(코드와 다른 주장) / duplication(같은 정보의 다중 서술 — 다른 영역 문서와의 중복 포함) / dead-doc(대상이 사라진 문서) / restating-comment(코드를 재언하는 주석) / code-defect(문서가 의도를 담고 코드가 결함인 충돌 — 수정 말고 보고) / convention(convention 파일이 정한 규약 위반).
 발견마다 근거(문서 위치·코드 위치)를 함께 기록하라.
 네 Agora에 이미 발견이 기록되어 있다면 그 너머의 새 발견만 기록·반환하라. 새 발견이 없으면 빈 배열을 반환하라.`,
-      { label: `verify:${r.dir}#${round}`, phase: 'Verify', schema: FINDINGS_SCHEMA },
+      { label: `verify:${r.dir}#${round}`, schema: FINDINGS_SCHEMA },
     )
     const fresh = res?.findings?.length ?? 0
     count += fresh
@@ -228,7 +227,7 @@ await series(
 너는 ${c.role}다.
 대상 영역(${c.targets.join(', ')})의 Agora에 기록된 발견에서 문서가 실제로는 옳은 오검출을 지목하고, 놓친 발견을 보완하라.
 비평과 보완은 네 Agora에 기록하라 (누구의 어떤 발견에 대한 것인지 명시).`,
-      { label: `critique:${c.dir}`, phase: 'Deliberate' },
+      { label: `critique:${c.dir}` },
     ),
   ),
 )
@@ -241,7 +240,7 @@ await series(
       `# 임무: 반박 (회의 2/3)
 비판자들(${critics.map((c) => c.dir).filter((d) => d !== r.dir).join(', ')})의 Agora에서 너의 발견을 겨냥한 비평을 모두 찾아,
 각각 수용/반박 의견을 네 Agora에 기록하라.`,
-      { label: `rebut:${r.dir}`, phase: 'Deliberate' },
+      { label: `rebut:${r.dir}` },
     ),
   ),
 )
@@ -254,14 +253,14 @@ await synod(
 ${agoraPath}/cartographer/consensus.md 에 작성하라.
 모든 발견을 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 실재하고 정합 가치가 있는 발견만 남겨라.
 code-defect 발견은 별도 section으로 모으고 codeDefects로 반환하라.`,
-  { label: 'consensus:draft', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
+  { label: 'consensus:draft', schema: CONSENSUS_SCHEMA },
 )
 const consensus = await synod(
   'cartographer',
   `# 임무: 합의 완전성 검수
 ${agoraPath}/ 전체를 consensus.md 와 대조해 판정이 누락된 발견과 반영되지 않은 비평·반박을 찾아라.
 누락이 있으면 consensus.md 를 수정하고, 최종 list를 codeDefects와 함께 반환하라.`,
-  { label: 'consensus:review', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
+  { label: 'consensus:review', schema: CONSENSUS_SCHEMA },
 )
 if (!consensus?.count) return { status: 'no-consensus', codeFindings: consensus?.codeDefects ?? [], agoraPath }
 log(`consensus: ${consensus.count} findings`)
@@ -306,7 +305,7 @@ await series(
 합의된 발견(${agoraPath}/cartographer/consensus.md)과 대상 계획(${p.proposal})을 읽어라.
 ${l.charge}
 issue나 개선점을 네 Agora에 기록하라.`,
-        { label: `review:${p.label}:${l.key}`, phase: 'Review' },
+        { label: `review:${p.label}:${l.key}` },
       ),
     ),
   ),
@@ -341,7 +340,7 @@ for (const name of order) {
 선행 적용 기록(${agoraPath}/apply-*)이 있으면 현재 상태 파악에 참고하라.
 주석·docstring 수정으로 코드 파일을 건드렸다면 test suite로 behavior 불변을 확인하라.
 변경 요약과 확인 결과를 네 Agora에 기록하고 반환하라.`,
-    { label: `apply:${p.label}`, phase: 'Apply', schema: APPLY_SCHEMA },
+    { label: `apply:${p.label}`, schema: APPLY_SCHEMA },
   )
   applied.push({ name, status: res?.status ?? 'unknown', testsPassed: res?.testsPassed ?? null })
   log(`applied ${applied.length}/${order.length}: ${name} (${res?.status ?? 'unknown'})`)
@@ -353,7 +352,7 @@ const finalReview = await synod(
 적용된 모든 계획(${agoraPath}/apply-* 기록)과 실제 변경된 문서를 종합 검수하라.
 변경된 모든 문서를 코드와 재대조해 남은 불일치가 없는지, 실행되는 behavior가 불변인지 확인하라.
 consensus.md의 code-defect section을 codeFindings 로 수집해 함께 반환하라.`,
-  { label: 'final-review', phase: 'Apply', schema: FINAL_SCHEMA },
+  { label: 'final-review', schema: FINAL_SCHEMA },
 )
 
 return {

@@ -36,7 +36,6 @@ const synod = (agoraName, task, opts = {}) =>
   agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
 
 // 동시 실행은 session limit을 조기 소진시킨다 — agent는 한 번에 하나씩.
-// parallel의 semantics(입력 순서 결과 · 실패는 null)는 그대로 유지한다.
 const series = async (tasks) => {
   const out = []
   for (const task of tasks) {
@@ -190,7 +189,7 @@ async function huntRegion(r) {
 principles를 기준으로, 이 영역에서 무결성 경계가 포함하지 못하는 도달 가능한 상태를 모두 찾아라 — 검증 없는 경계 입력과 경합까지.
 각 hazard의 도달 경로(입력·상태)와 현재 동작을 추적하고, 첫 질문의 답을 verdict로 제안하고 근거를 기록하라.
 네 Agora에 이미 hazard가 기록되어 있다면 그 너머의 새 hazard만 기록·반환하라. 새 hazard가 없으면 빈 배열을 반환하라.`,
-      { label: `hunt:${r.dir}#${round}`, phase: 'Hunt', schema: HAZARDS_SCHEMA },
+      { label: `hunt:${r.dir}#${round}`, schema: HAZARDS_SCHEMA },
     )
     const fresh = res?.hazards?.length ?? 0
     count += fresh
@@ -226,7 +225,7 @@ await series(
 대상 영역(${c.targets.join(', ')})의 Agora에 기록된 hazard를 검토하라 —
 실제로는 도달 불가능한 오검출을 지목하고, verdict가 옳은지 반론하고, 그들이 놓친 hazard를 찾아 보완하라.
 각 비평과 보완 hazard를 네 Agora에 기록하라 (누구의 어떤 hazard에 대한 것인지 명시).`,
-      { label: `critique:${c.dir}`, phase: 'Deliberate' },
+      { label: `critique:${c.dir}` },
     ),
   ),
 )
@@ -239,7 +238,7 @@ await series(
       `# 임무: 반박 (회의 2/3)
 비판자들(${critics.map((c) => c.dir).filter((d) => d !== r.dir).join(', ')})의 Agora에서 너의 hazard를 겨냥한 비평을 모두 찾아 검토하고,
 각 비평에 대한 수용/반박 의견을 네 Agora에 기록하라.`,
-      { label: `rebut:${r.dir}`, phase: 'Deliberate' },
+      { label: `rebut:${r.dir}` },
     ),
   ),
 )
@@ -252,14 +251,14 @@ await synod(
 ${consensusPath} 에 작성하라.
 모든 hazard를 빠짐없이 채택/기각으로 판정하고 근거를 남겨라. 교차검증을 통과한 — 실재하고 도달 가능하며 경계 안으로 흡수할 가치가 있는 — hazard만 verdict와 함께 list에 남겨라.
 verdict가 keep인 것은 근거만 기록하고 list에서 제외한다.`,
-  { label: 'consensus:draft', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
+  { label: 'consensus:draft', schema: CONSENSUS_SCHEMA },
 )
 const consensus = await synod(
   'cartographer',
   `# 임무: 합의 완전성 검수
 ${agoraPath}/ 전체를 consensus.md 와 대조해 판정이 누락된 hazard와 반영되지 않은 비평·반박을 찾아라.
 누락이 있으면 consensus.md 를 수정하고, 최종 list를 반환하라.`,
-  { label: 'consensus:review', phase: 'Deliberate', schema: CONSENSUS_SCHEMA },
+  { label: 'consensus:review', schema: CONSENSUS_SCHEMA },
 )
 if (!consensus?.count) return { status: 'no-consensus', agoraPath }
 log(`consensus: ${consensus.count} hazards`)
@@ -304,7 +303,7 @@ await series(
 합의된 hazard(${consensusPath})와 대상 계획(${p.proposal})을 읽어라.
 ${l.charge}
 issue나 개선점을 네 Agora에 기록하라.`,
-        { label: `review:${p.label}:${l.key}`, phase: 'Review' },
+        { label: `review:${p.label}:${l.key}` },
       ),
     ),
   ),
@@ -340,7 +339,7 @@ for (const name of order) {
 선행 적용 기록(${agoraPath}/apply-*)이 있으면 현재 상태 파악에 참고하라.
 **수정마다 새로 정의된 behavior를 고정하는 test를 추가하고**, 전체 test suite로 회귀가 없음을 확인하라.
 변경 요약과 test 결과를 네 Agora에 기록하고 반환하라.`,
-    { label: `apply:${p.label}`, phase: 'Apply', schema: APPLY_SCHEMA },
+    { label: `apply:${p.label}`, schema: APPLY_SCHEMA },
   )
   applied.push({ name, status: res?.status ?? 'unknown', testsPassed: res?.testsPassed ?? null })
   log(`applied ${applied.length}/${order.length}: ${name} (${res?.status ?? 'unknown'})`)
@@ -352,7 +351,7 @@ const finalReview = await synod(
 적용된 모든 계획(${agoraPath}/apply-* 기록)과 실제 변경된 코드를 종합 검수하라.
 각 정의가 test로 고정되고 이유가 기록되었는지, 전체 test가 통과하는지 확인하고,
 확정됐으나 흡수되지 않은 hazard를 unabsorbed로 수집해 함께 반환하라.`,
-  { label: 'final-review', phase: 'Apply', schema: FINAL_SCHEMA },
+  { label: 'final-review', schema: FINAL_SCHEMA },
 )
 
 return {
