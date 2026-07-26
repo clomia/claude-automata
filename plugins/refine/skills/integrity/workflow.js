@@ -32,17 +32,24 @@ function header(agoraName) {
   ].filter((l) => l !== null).join('\n')
 }
 
-// agent의 null은 결과가 아니라 실패다 — session limit·skip·safety block.
-// 첫 실패에서 멈춰야 남은 호출이 같은 벽에 줄줄이 부딪히지 않고, Agora가 재개 지점으로 남는다.
+// agent의 null은 결과가 아니라 실패이고, 대개 session limit이다 — runtime은 그 앞에서 멈춰주지 않는다.
+// 창이 풀릴 때까지 같은 자리에서 기다렸다 다시 부른다. 끝내 안 되면 멈춰서 Agora를 재개 지점으로 남긴다.
+const RETRY_WAIT_MS = 1_800_000
+const RETRIES = 8
 let halted = null
 const synod = async (agoraName, task, opts = {}) => {
   if (halted) return null
-  const res = await agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
-  if (res === null) {
-    halted = opts.label ?? agoraName
-    log(`halted at ${halted} — agent returned no result (limit, skip, or block)`)
+  const label = opts.label ?? agoraName
+  for (let attempt = 0; ; attempt++) {
+    const res = await agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
+    if (res !== null) return res
+    if (attempt === RETRIES) break
+    log(`${label}: no result — retry ${attempt + 1}/${RETRIES} in ${RETRY_WAIT_MS / 60000}m`)
+    await new Promise((resolve) => setTimeout(resolve, RETRY_WAIT_MS))
   }
-  return res
+  halted = label
+  log(`halted at ${halted} — no result after ${RETRIES} retries`)
+  return null
 }
 
 const outcome = (status, extra = {}) =>

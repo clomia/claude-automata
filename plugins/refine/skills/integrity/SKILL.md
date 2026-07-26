@@ -11,4 +11,4 @@ effort: max
 "${CLAUDE_PLUGIN_ROOT}/bin/refine-hook" bootstrap integrity "$ARGUMENTS"
 ```
 
-`interrupted`가 반환되면 `args.agoraPath`를 반환된 경로로 바꿔 재실행하라 — 중단 지점부터 이어간다.
+`interrupted`면 **같은 args 그대로** `resumeFromRunId`(launch 결과에 있다)를 더해 재실행하라 — 끝난 agent는 캐시에서 돌아오고 Agora가 나머지를 잇는다. bootstrap을 다시 돌리면 Agora가 새로 파여 둘 다 잃는다.
