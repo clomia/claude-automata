@@ -32,8 +32,18 @@ function header(agoraName) {
   ].filter((l) => l !== null).join('\n')
 }
 
-const synod = (agoraName, task, opts = {}) =>
-  agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
+// agent의 null은 결과가 아니라 실패다 — session limit·skip·safety block.
+// 첫 실패에서 멈춰야 남은 호출이 같은 벽에 줄줄이 부딪히지 않고, Agora가 재개 지점으로 남는다.
+let halted = null
+const synod = async (agoraName, task, opts = {}) => {
+  if (halted) return null
+  const res = await agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
+  if (res === null) halted = opts.label ?? agoraName
+  return res
+}
+
+const outcome = (status, extra = {}) =>
+  halted ? { status: 'interrupted', at: halted, agoraPath, ...extra } : { status, agoraPath, ...extra }
 
 // 동시 실행은 session limit을 조기 소진시킨다 — agent는 한 번에 하나씩.
 // 하나가 죽어도 run은 계속된다.
@@ -178,7 +188,7 @@ const regions = (mapping?.regions ?? []).map((r, i) => {
   usedDirs.add(dir)
   return { ...r, dir }
 })
-if (!regions.length) return { status: 'no-regions', agoraPath }
+if (!regions.length) return outcome('no-regions')
 log(`${regions.length} regions: ${regions.map((r) => r.dir).join(', ')}`)
 
 // 2. Verify — 영역별 주장 검증: 새 발견이 마를 때까지 재수색
@@ -204,7 +214,7 @@ inventory의 모든 문서를 읽고, 문서의 모든 주장을 코드와 대�
 }
 const counts = (await series(regions.map((r) => () => verifyRegion(r)))).filter((n) => n !== null)
 const totalFindings = counts.reduce((a, b) => a + b, 0)
-if (totalFindings === 0) return { status: 'no-findings', agoraPath }
+if (totalFindings === 0) return outcome('no-findings')
 log(`${totalFindings} findings across ${regions.length} regions`)
 
 // 3. Deliberate — 비판·반박·합의 (barriers: 각 단계가 이전 단계 전체 산출물을 요구)
@@ -264,7 +274,7 @@ ${agoraPath}/ 전체를 consensus.md 와 대조해 판정이 누락된 발견과
 누락이 있으면 consensus.md 를 수정하고, 최종 list를 codeDefects와 함께 반환하라.`,
   { label: 'consensus:review', schema: CONSENSUS_SCHEMA },
 )
-if (!consensus?.count) return { status: 'no-consensus', codeFindings: consensus?.codeDefects ?? [], agoraPath }
+if (!consensus?.count) return outcome('no-consensus', { codeFindings: consensus?.codeDefects ?? [] })
 log(`consensus: ${consensus.count} findings`)
 
 // 4. Plan — 정합 계획 수립
@@ -288,7 +298,7 @@ const plans = (planned?.plans ?? []).map((p, i) => {
     proposal: `${plansDir}/${name}/proposal.md`,
   }
 })
-if (!plans.length) return { status: 'no-plans', findings: consensus.count, codeFindings: consensus.codeDefects ?? [], agoraPath }
+if (!plans.length) return outcome('no-plans', { findings: consensus.count, codeFindings: consensus.codeDefects ?? [] })
 log(`${plans.length} alignment plans`)
 
 // 5. Review — 계획별 · 렌즈별 독립 검수
@@ -357,13 +367,11 @@ consensus.md의 code-defect section을 codeFindings 로 수집해 함께 반환�
   { label: 'final-review', schema: FINAL_SCHEMA },
 )
 
-return {
-  status: 'done',
-  agoraPath,
+return outcome('done', {
   regions: regions.length,
   findings: consensus.count,
   consensusTitles: consensus.titles ?? [],
   plans: plans.length,
   applied,
   finalReview,
-}
+})
