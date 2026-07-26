@@ -34,6 +34,20 @@ function header(agoraName) {
 const synod = (agoraName, task, opts = {}) =>
   agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
 
+// 동시 실행은 session limit을 조기 소진시킨다 — agent는 한 번에 하나씩.
+// parallel의 semantics(입력 순서 결과 · 실패는 null)는 그대로 유지한다.
+const series = async (tasks) => {
+  const out = []
+  for (const task of tasks) {
+    try {
+      out.push(await task())
+    } catch {
+      out.push(null)
+    }
+  }
+  return out
+}
+
 const PRINCIPLE = `## refactoring 원칙 (principles 해석)
 - 최대한 단순한 설계로 side-effect 없이 최대한 많은 antipattern을 제거하라.
 - 모든 antipattern 제거는 불가능하다. ROI 최적해를 찾아라.
@@ -158,7 +172,7 @@ const regions = (mapping?.regions ?? []).map((r, i) => {
 if (!regions.length) return { status: 'no-regions', agoraPath }
 log(`${regions.length} regions: ${regions.map((r) => r.dir).join(', ')}`)
 
-// 2. Identify — 영역별 antipattern 식별: 새 발견이 마를 때까지 재수색 (parallel per region)
+// 2. Identify — 영역별 antipattern 식별: 새 발견이 마를 때까지 재수색
 phase('Identify')
 const SWEEPS = 4
 async function identifyRegion(r) {
@@ -178,7 +192,7 @@ async function identifyRegion(r) {
   }
   return count
 }
-const counts = (await parallel(regions.map((r) => () => identifyRegion(r)))).filter((n) => n !== null)
+const counts = (await series(regions.map((r) => () => identifyRegion(r)))).filter((n) => n !== null)
 const totalAntipatterns = counts.reduce((a, b) => a + b, 0)
 if (totalAntipatterns === 0) return { status: 'no-antipatterns', agoraPath }
 log(`${totalAntipatterns} antipatterns across ${regions.length} regions`)
@@ -197,7 +211,7 @@ const critics =
     : [{ dir: 'skeptic', role: '독립 비판자', targets: names }]
 
 // 3.1 비판: 대상 영역의 antipattern을 검토, 비평은 자기 Agora에 기록
-await parallel(
+await series(
   critics.map((c) => () =>
     synod(
       c.dir,
@@ -211,7 +225,7 @@ await parallel(
 )
 
 // 3.2 반박: 자기 antipattern에 달린 비평을 찾아 수용/반박
-await parallel(
+await series(
   regions.map((r) => () =>
     synod(
       r.dir,
@@ -265,13 +279,13 @@ const plans = (planned?.plans ?? []).map((p, i) => {
 if (!plans.length) return { status: 'no-plans', antipatterns: consensus.count, agoraPath }
 log(`${plans.length} refactoring plans`)
 
-// 5. Review — 계획별 · 렌즈별 독립 검수 (parallel)
+// 5. Review — 계획별 · 렌즈별 독립 검수
 phase('Review')
 const LENSES = [
   { key: 'value', charge: '계획이 실제로 유효한 개선안인지 득실을 계산하라.' },
   { key: 'side-effects', charge: '계획이 고려하지 못한 side-effect를 탐색하라.' },
 ]
-await parallel(
+await series(
   plans.flatMap((p) =>
     LENSES.map((l) => () =>
       synod(
