@@ -38,7 +38,10 @@ let halted = null
 const synod = async (agoraName, task, opts = {}) => {
   if (halted) return null
   const res = await agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
-  if (res === null) halted = opts.label ?? agoraName
+  if (res === null) {
+    halted = opts.label ?? agoraName
+    log(`halted at ${halted} — agent returned no result (limit, skip, or block)`)
+  }
   return res
 }
 
@@ -209,6 +212,7 @@ inventory의 모든 문서를 읽고, 문서의 모든 주장을 코드와 대�
     const fresh = res?.findings?.length ?? 0
     count += fresh
     if (!fresh) break
+    if (round === SWEEPS) log(`${r.dir}: ${SWEEPS} sweeps spent, still finding — coverage capped`)
   }
   return count
 }

@@ -38,7 +38,10 @@ let halted = null
 const synod = async (agoraName, task, opts = {}) => {
   if (halted) return null
   const res = await agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
-  if (res === null) halted = opts.label ?? agoraName
+  if (res === null) {
+    halted = opts.label ?? agoraName
+    log(`halted at ${halted} — agent returned no result (limit, skip, or block)`)
+  }
   return res
 }
 
@@ -206,6 +209,7 @@ principles를 기준으로, 이 영역에서 무결성 경계가 포함하지 �
     const fresh = res?.hazards?.length ?? 0
     count += fresh
     if (!fresh) break
+    if (round === SWEEPS) log(`${r.dir}: ${SWEEPS} sweeps spent, still finding — coverage capped`)
   }
   return count
 }

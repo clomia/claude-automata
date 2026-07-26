@@ -37,7 +37,10 @@ let halted = null
 const synod = async (agoraName, task, opts = {}) => {
   if (halted) return null
   const res = await agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
-  if (res === null) halted = opts.label ?? agoraName
+  if (res === null) {
+    halted = opts.label ?? agoraName
+    log(`halted at ${halted} — agent returned no result (limit, skip, or block)`)
+  }
   return res
 }
 
@@ -200,6 +203,7 @@ async function identifyRegion(r) {
     const fresh = res?.antipatterns?.length ?? 0
     count += fresh
     if (!fresh) break
+    if (round === SWEEPS) log(`${r.dir}: ${SWEEPS} sweeps spent, still finding — coverage capped`)
   }
   return count
 }
