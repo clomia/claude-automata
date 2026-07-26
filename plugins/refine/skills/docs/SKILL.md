@@ -11,4 +11,4 @@ effort: max
 "${CLAUDE_PLUGIN_ROOT}/bin/refine-hook" bootstrap docs "$ARGUMENTS"
 ```
 
-`interrupted`면 **같은 args 그대로** `resumeFromRunId`(launch 결과에 있다)를 더해 재실행하라 — 끝난 agent는 캐시에서 돌아오고 Agora가 나머지를 잇는다. bootstrap을 다시 돌리면 Agora가 새로 파여 둘 다 잃는다.
+중단 시: 산출물은 `agoraPath`에 남고 agent는 자기 기록을 읽어 이어간다. `resumeFromRunId`(launch 결과)는 끝난 agent를 캐시에서 되살린다. 둘 다 args에 매여 있다.
