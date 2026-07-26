@@ -35,6 +35,20 @@ function header(agoraName) {
 const synod = (agoraName, task, opts = {}) =>
   agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
 
+// 동시 실행은 session limit을 조기 소진시킨다 — agent는 한 번에 하나씩.
+// parallel의 semantics(입력 순서 결과 · 실패는 null)는 그대로 유지한다.
+const series = async (tasks) => {
+  const out = []
+  for (const task of tasks) {
+    try {
+      out.push(await task())
+    } catch {
+      out.push(null)
+    }
+  }
+  return out
+}
+
 const PRINCIPLE = `## 정합 원칙 (principles 해석)
 - 모든 발견 해소는 불가능하다. ROI 낮은 계획은 폐기하라. backlog proposal 금지.`
 
@@ -166,7 +180,7 @@ const regions = (mapping?.regions ?? []).map((r, i) => {
 if (!regions.length) return { status: 'no-regions', agoraPath }
 log(`${regions.length} regions: ${regions.map((r) => r.dir).join(', ')}`)
 
-// 2. Verify — 영역별 주장 검증: 새 발견이 마를 때까지 재수색 (parallel per region)
+// 2. Verify — 영역별 주장 검증: 새 발견이 마를 때까지 재수색
 phase('Verify')
 const SWEEPS = 4
 async function verifyRegion(r) {
@@ -187,7 +201,7 @@ inventory의 모든 문서를 읽고, 문서의 모든 주장을 코드와 대�
   }
   return count
 }
-const counts = (await parallel(regions.map((r) => () => verifyRegion(r)))).filter((n) => n !== null)
+const counts = (await series(regions.map((r) => () => verifyRegion(r)))).filter((n) => n !== null)
 const totalFindings = counts.reduce((a, b) => a + b, 0)
 if (totalFindings === 0) return { status: 'no-findings', agoraPath }
 log(`${totalFindings} findings across ${regions.length} regions`)
@@ -206,7 +220,7 @@ const critics =
     : [{ dir: 'skeptic', role: '독립 비판자', targets: names }]
 
 // 3.1 비판: 대상 영역의 발견을 검토, 비평은 자기 Agora에 기록
-await parallel(
+await series(
   critics.map((c) => () =>
     synod(
       c.dir,
@@ -220,7 +234,7 @@ await parallel(
 )
 
 // 3.2 반박: 자기 발견에 달린 비평을 찾아 수용/반박
-await parallel(
+await series(
   regions.map((r) => () =>
     synod(
       r.dir,
@@ -276,14 +290,14 @@ const plans = (planned?.plans ?? []).map((p, i) => {
 if (!plans.length) return { status: 'no-plans', findings: consensus.count, codeFindings: consensus.codeDefects ?? [], agoraPath }
 log(`${plans.length} alignment plans`)
 
-// 5. Review — 계획별 · 렌즈별 독립 검수 (parallel)
+// 5. Review — 계획별 · 렌즈별 독립 검수
 phase('Review')
 const LENSES = [
   { key: 'claims', charge: '계획의 새 text가 코드와 어긋나는 새 주장을 만들지 않는지 검증하라.' },
   { key: 'reduction', charge: '계획이 irreducible한지 — 더 삭제·축약할 수 있는지 — 고찰하라.' },
   { key: 'side-effects', charge: '계획이 고려하지 못한 side-effect를 탐색하라.' },
 ]
-await parallel(
+await series(
   plans.flatMap((p) =>
     LENSES.map((l) => () =>
       synod(

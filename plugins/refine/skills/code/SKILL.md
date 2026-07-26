@@ -1,6 +1,6 @@
 ---
 name: code
-description: "Hours-long (3-12h) multi-agent code-architecture optimization — cross-examines antipatterns into consensus, then applies only the highest-ROI refactors. Not for routine refactors."
+description: "Long-running (6-30h) multi-agent code-architecture optimization — cross-examines antipatterns into consensus, then applies only the highest-ROI refactors. Not for routine refactors."
 argument-hint: "[focus area]"
 effort: max
 ---

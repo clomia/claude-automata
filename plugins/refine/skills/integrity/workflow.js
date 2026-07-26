@@ -35,6 +35,20 @@ function header(agoraName) {
 const synod = (agoraName, task, opts = {}) =>
   agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
 
+// 동시 실행은 session limit을 조기 소진시킨다 — agent는 한 번에 하나씩.
+// parallel의 semantics(입력 순서 결과 · 실패는 null)는 그대로 유지한다.
+const series = async (tasks) => {
+  const out = []
+  for (const task of tasks) {
+    try {
+      out.push(await task())
+    } catch {
+      out.push(null)
+    }
+  }
+  return out
+}
+
 const PRINCIPLE = `## 강화 원칙 (principles 해석)
 - 모든 hazard 흡수는 불가능하다. ROI 최적해를 찾아라.
 - backlog proposal 금지. ROI 낮은 계획은 폐기하라.`
@@ -164,7 +178,7 @@ const regions = (mapping?.regions ?? []).map((r, i) => {
 if (!regions.length) return { status: 'no-regions', agoraPath }
 log(`${regions.length} regions: ${regions.map((r) => r.dir).join(', ')}`)
 
-// 2. Hunt — 영역별 hazard 수집: 새 발견이 마를 때까지 재수색 (parallel per region)
+// 2. Hunt — 영역별 hazard 수집: 새 발견이 마를 때까지 재수색
 phase('Hunt')
 const SWEEPS = 4
 async function huntRegion(r) {
@@ -184,7 +198,7 @@ principles를 기준으로, 이 영역에서 무결성 경계가 포함하지 �
   }
   return count
 }
-const counts = (await parallel(regions.map((r) => () => huntRegion(r)))).filter((n) => n !== null)
+const counts = (await series(regions.map((r) => () => huntRegion(r)))).filter((n) => n !== null)
 const totalHazards = counts.reduce((a, b) => a + b, 0)
 if (totalHazards === 0) return { status: 'no-hazards', agoraPath }
 log(`${totalHazards} hazards across ${regions.length} regions`)
@@ -203,7 +217,7 @@ const critics =
     : [{ dir: 'skeptic', role: '독립 비판자', targets: names }]
 
 // 3.1 비판: 대상 영역의 hazard를 검토, 비평은 자기 Agora에 기록
-await parallel(
+await series(
   critics.map((c) => () =>
     synod(
       c.dir,
@@ -218,7 +232,7 @@ await parallel(
 )
 
 // 3.2 반박: 자기 hazard에 달린 비평을 찾아 수용/반박
-await parallel(
+await series(
   regions.map((r) => () =>
     synod(
       r.dir,
@@ -274,14 +288,14 @@ const plans = (planned?.plans ?? []).map((p, i) => {
 if (!plans.length) return { status: 'no-plans', hazards: consensus.count, unabsorbed: consensus.titles ?? [], agoraPath }
 log(`${plans.length} hardening plans`)
 
-// 5. Review — 계획별 · 렌즈별 독립 검수 (parallel)
+// 5. Review — 계획별 · 렌즈별 독립 검수
 phase('Review')
 const LENSES = [
   { key: 'hazard-fit', charge: '계획이 hazard를 실제로 제거하는지, verdict에 맞는 최단 해법인지 따져라.' },
   { key: 'simplicity', charge: '계획이 새로운 hazard나 복잡성을 만들지 않는지 검증하라.' },
   { key: 'test-pin', charge: '고정 test가 정의된 behavior를 정확히 고정하는지 확인하라.' },
 ]
-await parallel(
+await series(
   plans.flatMap((p) =>
     LENSES.map((l) => () =>
       synod(
