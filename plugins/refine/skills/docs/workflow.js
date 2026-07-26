@@ -381,11 +381,12 @@ consensus.md의 code-defect section을 codeFindings 로 수집해 함께 반환�
   { label: 'final-review', schema: FINAL_SCHEMA },
 )
 
+// 긴 배열은 뒤로 — 반환값은 8000자에서 잘린다
 return outcome('done', {
   regions: regions.length,
   findings: consensus.count,
-  consensusTitles: consensus.titles ?? [],
   plans: plans.length,
   applied,
   finalReview,
+  consensusTitles: consensus.titles ?? [],
 })
