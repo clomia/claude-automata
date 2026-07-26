@@ -31,8 +31,18 @@ function header(agoraName) {
   ].filter((l) => l !== null).join('\n')
 }
 
-const synod = (agoraName, task, opts = {}) =>
-  agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
+// agent의 null은 결과가 아니라 실패다 — session limit·skip·safety block.
+// 첫 실패에서 멈춰야 남은 호출이 같은 벽에 줄줄이 부딪히지 않고, Agora가 재개 지점으로 남는다.
+let halted = null
+const synod = async (agoraName, task, opts = {}) => {
+  if (halted) return null
+  const res = await agent(header(agoraName) + task, { agentType: SYNOD, ...opts })
+  if (res === null) halted = opts.label ?? agoraName
+  return res
+}
+
+const outcome = (status, extra = {}) =>
+  halted ? { status: 'interrupted', at: halted, agoraPath, ...extra } : { status, agoraPath, ...extra }
 
 // 동시 실행은 session limit을 조기 소진시킨다 — agent는 한 번에 하나씩.
 // 하나가 죽어도 run은 계속된다.
@@ -170,7 +180,7 @@ const regions = (mapping?.regions ?? []).map((r, i) => {
   usedDirs.add(dir)
   return { ...r, dir }
 })
-if (!regions.length) return { status: 'no-regions', agoraPath }
+if (!regions.length) return outcome('no-regions')
 log(`${regions.length} regions: ${regions.map((r) => r.dir).join(', ')}`)
 
 // 2. Identify — 영역별 antipattern 식별: 새 발견이 마를 때까지 재수색
@@ -195,7 +205,7 @@ async function identifyRegion(r) {
 }
 const counts = (await series(regions.map((r) => () => identifyRegion(r)))).filter((n) => n !== null)
 const totalAntipatterns = counts.reduce((a, b) => a + b, 0)
-if (totalAntipatterns === 0) return { status: 'no-antipatterns', agoraPath }
+if (totalAntipatterns === 0) return outcome('no-antipatterns')
 log(`${totalAntipatterns} antipatterns across ${regions.length} regions`)
 
 // 3. Deliberate — 변호·비판·합의 (barriers: 각 단계가 이전 단계 전체 산출물을 요구)
@@ -254,7 +264,7 @@ ${agoraPath}/ 전체를 consensus.md 와 대조해 판정이 누락된 antipatte
 누락이 있으면 consensus.md 를 수정하고, 최종 list를 반환하라.`,
   { label: 'consensus:review', schema: CONSENSUS_SCHEMA },
 )
-if (!consensus?.count) return { status: 'no-consensus', agoraPath }
+if (!consensus?.count) return outcome('no-consensus')
 log(`consensus: ${consensus.count} antipatterns`)
 
 // 4. Plan — refactoring 계획 수립
@@ -277,7 +287,7 @@ const plans = (planned?.plans ?? []).map((p, i) => {
     proposal: `${plansDir}/${name}/proposal.md`,
   }
 })
-if (!plans.length) return { status: 'no-plans', antipatterns: consensus.count, agoraPath }
+if (!plans.length) return outcome('no-plans', { antipatterns: consensus.count })
 log(`${plans.length} refactoring plans`)
 
 // 5. Review — 계획별 · 렌즈별 독립 검수
@@ -343,13 +353,11 @@ const finalReview = await synod(
   { label: 'final-review', schema: FINAL_SCHEMA },
 )
 
-return {
-  status: 'done',
-  agoraPath,
+return outcome('done', {
   regions: regions.length,
   antipatterns: consensus.count,
   consensusTitles: consensus.titles ?? [],
   plans: plans.length,
   applied,
   finalReview,
-}
+})
