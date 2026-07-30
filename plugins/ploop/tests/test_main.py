@@ -15,7 +15,11 @@ import json
 import pytest
 
 from src.main import (
+    FILE_CONDITION,
+    MORTAL,
     TERMINATION_TOKEN,
+    UNBOUNDED,
+    classify_wait,
     launch,
     mark_compaction,
     off_command,
@@ -23,6 +27,7 @@ from src.main import (
     pre_tool_use,
     stop,
     subagent_stop,
+    wait_gate,
     write_log,
     write_round_slice,
 )
@@ -37,10 +42,18 @@ ROUND_WORK = [
 ]
 
 
-def make_stdin(*, session_id="s1", transcript_path="/t.jsonl", background_tasks=None):
+def make_stdin(
+    *,
+    session_id="s1",
+    transcript_path="/t.jsonl",
+    background_tasks=None,
+    session_crons=None,
+):
     event = {"session_id": session_id, "transcript_path": transcript_path}
     if background_tasks is not None:
         event["background_tasks"] = background_tasks
+    if session_crons is not None:
+        event["session_crons"] = session_crons
     return json.dumps(event)
 
 
@@ -558,6 +571,108 @@ class TestStop:
         assert "ploop:advisor" in capsys.readouterr().err
         assert not (tmp_path / "s1_gated_shells").exists()
 
+    def test_surviving_wakeless_shell_blocks_at_the_transition(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """The incident path: while a mortal shell shields the set, gating is
+        the plain redirect; the stop after the mortal one exits — the moment
+        the last wake source is lost — is blocked once with the wakeless
+        notice naming the survivor; the identical stop after that is an
+        honored informed sleep; and once the shell is killed the advisor arms
+        with both markers cleared."""
+        arrange_anchor(tmp_path, monkeypatch, ROUND_WORK, ledger={"phase": FRESH})
+        immortal = {
+            "id": "w1",
+            "type": "shell",
+            "status": "running",
+            "command": "until [ -s /t/x.output ]; do sleep 60; done; head /t/x.output",
+        }
+        mortal = {
+            "id": "m1",
+            "type": "shell",
+            "status": "running",
+            "command": "python train.py",
+        }
+        stop_with = lambda tasks: arrange(  # noqa: E731
+            tmp_path,
+            monkeypatch,
+            make_stdin(
+                transcript_path=str(tmp_path / "s1.jsonl"), background_tasks=tasks
+            ),
+        )
+
+        stop_with([immortal, mortal])
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        assert "Background shell" in capsys.readouterr().err  # plain redirect
+
+        stop_with([immortal])  # the mortal shell exited and woke the session
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2  # old subset logic would sleep forever here
+        err = capsys.readouterr().err
+        assert "sleep forever" in err and "w1" in err and "until [ -s" in err
+
+        stop_with([immortal])  # same wakeless set again: informed sleep
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 0
+
+        stop_with([])  # killed: the round ends and the markers are gone
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        assert (tmp_path / "s1_advisor_token").exists()
+        assert not (tmp_path / "s1_wakeless_shells").exists()
+        assert not (tmp_path / "s1_gated_shells").exists()
+
+    def test_session_cron_voids_wakeless_block(self, tmp_path, monkeypatch, capsys):
+        """A scheduled wakeup is a wake source: an all-wakeless set gets the
+        plain redirect, never the wakeless block."""
+        arrange_anchor(tmp_path, monkeypatch, ROUND_WORK, ledger={"phase": FRESH})
+        arrange(
+            tmp_path,
+            monkeypatch,
+            make_stdin(
+                transcript_path=str(tmp_path / "s1.jsonl"),
+                background_tasks=[
+                    {
+                        "id": "w1",
+                        "type": "shell",
+                        "status": "running",
+                        "command": "until [ -s /x ]; do sleep 60; done",
+                    }
+                ],
+                session_crons=[
+                    {"id": "c1", "schedule": "0 9 * * *", "recurring": True}
+                ],
+            ),
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        err = capsys.readouterr().err
+        assert "Background shell" in err and "sleep forever" not in err
+        assert not (tmp_path / "s1_wakeless_shells").exists()
+
+    def test_terminal_status_shell_does_not_gate(self, tmp_path, monkeypatch):
+        """A completed shell lingering in the list must not defer the advisor —
+        its completion already woke the session."""
+        arrange_anchor(tmp_path, monkeypatch, ROUND_WORK, ledger={"phase": FRESH})
+        arrange(
+            tmp_path,
+            monkeypatch,
+            make_stdin(
+                transcript_path=str(tmp_path / "s1.jsonl"),
+                background_tasks=[{"id": "t1", "type": "shell", "status": "completed"}],
+            ),
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        assert (tmp_path / "s1_advisor_token").exists()
+
     def test_first_decline_redirects_to_advisor_authority(
         self, tmp_path, monkeypatch, capsys
     ):
@@ -734,6 +849,104 @@ class TestPreToolUse:
             assert exc.value.code == 0
             assert (tmp_path / "s1_advisor_token").exists()  # not consumed
             assert not (tmp_path / "s1_advisor_running").exists()
+
+
+# ── wake-integrity classification and launch gate ──
+
+
+class TestClassifyWait:
+    @pytest.mark.parametrize(
+        ("command", "verdict"),
+        [
+            # the incident command's shape
+            (
+                "until [ -s /t/x.output ]; do sleep 60; done; head -20 /t/x.output",
+                FILE_CONDITION,
+            ),
+            ("while ! test -f /done ; do sleep 5; done", FILE_CONDITION),
+            ("until [[ -e /out.json ]]\ndo\n  sleep 30\ndone", FILE_CONDITION),
+            # bounded forms are mortal
+            ("timeout 6000 bash -c 'until [ -s /x ]; do sleep 60; done'", MORTAL),
+            (
+                "i=0; until [ -s /x ] || [ $i -gt 100 ]; do i=$((i+1)); sleep 1; done",
+                MORTAL,
+            ),
+            # process-existence waits end when the process ends
+            ("until ! pgrep -f train.py; do sleep 30; done", MORTAL),
+            ("while kill -0 $PID 2>/dev/null; do sleep 10; done", MORTAL),
+            # a wait inside a called script is opaque -> presumed mortal
+            ("./await.sh /log 6000", MORTAL),
+            ("python train.py", MORTAL),
+            # unbounded but not file-conditioned -> warn class
+            ("until curl -sf localhost:8080/ready; do sleep 5; done", UNBOUNDED),
+            ("while true; do poll; sleep 60; done", UNBOUNDED),
+        ],
+    )
+    def test_verdicts(self, command, verdict):
+        assert classify_wait(command) == verdict
+
+
+class TestWaitGate:
+    def wait_stdin(self, command, *, session_id="s1"):
+        return json.dumps(
+            {
+                "session_id": session_id,
+                "tool_name": "Bash",
+                "tool_input": {"command": command, "run_in_background": True},
+            }
+        )
+
+    def test_file_condition_wait_denied_in_active_loop(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        (tmp_path / "s1_active").touch()
+        arrange(
+            tmp_path, monkeypatch, self.wait_stdin("until [ -s /x ]; do sleep 60; done")
+        )
+        with pytest.raises(SystemExit) as exc:
+            wait_gate()
+        assert exc.value.code == 0
+        decision = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+        assert decision["permissionDecision"] == "deny"
+        reason = decision["permissionDecisionReason"]
+        assert "pgrep" in reason and "timeout" in reason  # teaches the mortal forms
+
+    def test_unbounded_wait_warned_without_decision(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        (tmp_path / "s1_active").touch()
+        arrange(
+            tmp_path,
+            monkeypatch,
+            self.wait_stdin("until curl -sf $URL/ready; do sleep 5; done"),
+        )
+        with pytest.raises(SystemExit) as exc:
+            wait_gate()
+        assert exc.value.code == 0
+        output = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+        assert "permissionDecision" not in output  # the normal flow proceeds
+        assert output["additionalContext"]
+
+    def test_mortal_command_passes_silently(self, tmp_path, monkeypatch, capsys):
+        (tmp_path / "s1_active").touch()
+        arrange(
+            tmp_path,
+            monkeypatch,
+            self.wait_stdin("until ! pgrep -f train; do sleep 9; done"),
+        )
+        with pytest.raises(SystemExit) as exc:
+            wait_gate()
+        assert exc.value.code == 0
+        assert capsys.readouterr().out == ""
+
+    def test_inert_without_active_loop(self, tmp_path, monkeypatch, capsys):
+        arrange(
+            tmp_path, monkeypatch, self.wait_stdin("until [ -s /x ]; do sleep 60; done")
+        )
+        with pytest.raises(SystemExit) as exc:
+            wait_gate()
+        assert exc.value.code == 0
+        assert capsys.readouterr().out == ""
 
 
 # ── subagent_stop advisor-running marker ──

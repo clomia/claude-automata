@@ -59,6 +59,18 @@
             "statusMessage": "ploop: advisor gate"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
+            "args": ["wait-gate"],
+            "timeout": 30,
+            "statusMessage": "ploop: wait gate"
+          }
+        ]
       }
     ],
     "Stop": [
