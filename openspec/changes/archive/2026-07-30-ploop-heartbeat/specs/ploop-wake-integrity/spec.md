@@ -1,17 +1,10 @@
-# ploop-wake-integrity Specification
+# ploop-wake-integrity — delta
 
-## Purpose
-TBD - created by archiving change ploop-wakeless-shell-gate. Update Purpose after archive.
-## Requirements
-### Requirement: Only running shells gate the round
+Supervision replaces classification: instead of judging which commands can exit, the
+loop is woken after 3 hours of silence and the agent itself audits what is still
+running. Wake-integrity becomes "no sleep outlives the heartbeat interval".
 
-Shell entries SHALL gate the round only while their `status` is `running` (an absent
-status counts as running). A terminal-status shell SHALL NOT defer the advisor.
-
-#### Scenario: A completed shell left in the list does not park the loop
-
-- **WHEN** the only background task is a shell with `status: "completed"`
-- **THEN** the stop proceeds to ordinary round handling (the advisor can arm)
+## ADDED Requirements
 
 ### Requirement: Silence wakes an armed loop within the heartbeat interval
 
@@ -50,3 +43,25 @@ outside an armed loop SHALL arm nothing.
 - **WHEN** the heartbeat entry runs for a session with no active marker
 - **THEN** it exits 0 without writing a nonce or starting a timer
 
+## REMOVED Requirements
+
+### Requirement: Wait commands classify by wake guarantee
+
+**Reason**: Mortality of a command is undecidable; the classifier was a spelling
+treadmill with a blind spot (script-internal waits) shared by both of its consumers.
+**Migration**: none — the heartbeat needs no theory of why a session sleeps.
+
+### Requirement: Launch-time wait gate in active-loop sessions
+
+**Reason**: Policing agent-written Bash assumes the agent's responsibility and taxes
+every Bash call; with sleep bounded by the heartbeat, prevention-by-deny lost its
+justification. The mortal-wait doctrine line in the launch skill carries the teaching.
+**Migration**: none — commands run ungated; a bad wait now costs at most one heartbeat
+interval.
+
+### Requirement: Stop into a wakeless state is blocked once, informed
+
+**Reason**: Superseded by the heartbeat, which covers strictly more park modes (opaque
+scripts, hung subagents) without classifying shells at stop time.
+**Migration**: `wakeless_shells` state is replaced by the heartbeat nonce; no user
+action.

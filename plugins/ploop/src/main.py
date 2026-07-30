@@ -31,8 +31,8 @@ to exit 0 (allow the action).
 
 import json
 import os
-import re
 import sys
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -98,80 +98,23 @@ SHELL_WAIT_NOTICE = (
     "watcher) leaves the loop asleep for good — clear it first.\n"
 )
 
-# Wake-integrity classification.  The exit-wake premise behind the shell gate
-# holds only for shells that CAN exit; mortality of a command is undecidable,
-# so both consumers err toward MORTAL (a false mortal reproduces the plain
-# gate, a false wakeless costs one prod — never an early advisor): a bound
-# marker or a process-existence condition rescues a sleep-loop, and a wait
-# hidden inside a called script reads as mortal (the string is opaque).
-# FILE_CONDITION — a wait on file state, eternal once its producer dies — is
-# the one observed-fatal, always-improvable form and the only class the launch
-# gate denies; denying the whole unbounded class would teach hook evasion.
-MORTAL = "mortal"
-FILE_CONDITION = "file-condition"
-UNBOUNDED = "unbounded"
+# Heartbeat — the human supervision pattern, mechanized (decision 19).  Every
+# stop of an armed loop leaves a 3h timer behind (an asyncRewake Stop hook:
+# the process outlives context compaction, and its exit 2 wakes even an idle
+# session — measured, docs/research/asyncrewake-stop-hook-2026.md).  A fresh
+# nonce per stop supersedes every older timer, so the heartbeat fires only
+# after 3h WITHOUT a stop: an actively cycling loop never hears it, and a
+# loop parked by background work that can never finish is woken for the audit
+# below instead of sleeping forever.  Should the harness ever stop delivering
+# the wake, behavior degrades to the pre-heartbeat status quo — no new harm.
+HEARTBEAT_SECONDS = 10800
 
-WAIT_LOOP = re.compile(r"\b(?:until|while)\s+(?P<cond>[^;\n]{1,400}?)\s*[;\n]\s*do\b")
-SLEEP = re.compile(r"\bsleep\b")
-BOUND_MARKS = re.compile(
-    r"\btimeout\s+\S*\d|\bseq\b|\bSECONDS\b|--timeout|\bmax\w*\s*=\s*\d"
-    r"|\bread\s+(?:-\w+\s+)*-t\b|-[gl][te]\b|\+\+"
+HEARTBEAT_NOTICE = (
+    "Heartbeat: 3 hours without a stop — this session has likely been asleep. "
+    "Audit every live background task: kill what can never finish (a wait on "
+    "a dead producer, an orphaned process); relaunch bounded (`timeout N`) if "
+    "still needed. Then continue the anchor, or stop again to keep waiting.\n"
 )
-PROC_CONDITION = re.compile(r"\bpgrep\b|\bkill\s+-0\b|\bps\b")
-FILE_TEST = re.compile(r"(?:\[\[?|\btest)\s+(?:!\s+)?-[sfedr]\b")
-
-# The launch gate's two voices.  The deny reason teaches the mortal forms at
-# the moment of the mistake; the warning rides additionalContext without a
-# permission decision, so the normal flow proceeds.
-FILE_WAIT_DENY = (
-    "Unbounded file-condition wait: if the producer dies, the condition stays "
-    "false forever, the shell never exits, and nothing else wakes the loop. "
-    "Wait on the producer itself (`until ! pgrep -f <name>; do sleep N; done`) "
-    "or bound the wait (`timeout <secs> ...`)."
-)
-UNBOUNDED_WAIT_WARNING = (
-    "This wait has no bound. If its condition can die with its producer, the "
-    "shell never exits — and a sleeping loop wakes only on a background exit. "
-    "Prefer a process-existence condition (`pgrep`) or a `timeout` bound."
-)
-
-# One informed block at the stop that would lose the last wake source: every
-# gating shell is an unbounded wait and no session cron exists, so nothing can
-# ever wake the session and no hook runs after the sleep — the verdict must
-# land on THIS stop.  Sent once per shell set (wakeless_shells marker);
-# stopping again with the same set is an informed sleep and is honored.
-WAKELESS_STOP_NOTICE = (
-    "Every background shell still open is an unbounded wait with no guaranteed "
-    "exit, and an exit is this session's only wake source — stop now and the "
-    "loop may sleep forever. Kill what cannot finish, or re-launch the wait "
-    "bounded (`timeout N`) or on process existence (`pgrep`), then stop.\n"
-)
-
-
-def classify_wait(command: str) -> str:
-    """Classify a command by wake guarantee — MORTAL exits (or is opaque),
-    FILE_CONDITION / UNBOUNDED are sleep-loops nothing is guaranteed to end."""
-    if not SLEEP.search(command) or BOUND_MARKS.search(command):
-        return MORTAL
-    fragile = [
-        m.group("cond")
-        for m in WAIT_LOOP.finditer(command)
-        if not PROC_CONDITION.search(m.group("cond"))
-    ]
-    if not fragile:
-        return MORTAL
-    if any(FILE_TEST.search(cond) for cond in fragile):
-        return FILE_CONDITION
-    return UNBOUNDED
-
-
-def format_wakeless_notice(shells: list[dict]) -> str:
-    """The wakeless-stop prod: the header plus one `id: command` line per
-    shell, so the agent can kill or re-launch precisely."""
-    lines = "".join(
-        f"  {t.get('id', '?')}: {str(t.get('command', ''))[:120]}\n" for t in shells
-    )
-    return WAKELESS_STOP_NOTICE + lines
 
 
 # ploop's loop depends on non-obvious Claude Code settings, and a Claude Code
@@ -179,7 +122,10 @@ def format_wakeless_notice(shells: list[dict]) -> str:
 # subagents by default, silently breaking the advisor->narrator path.  launch
 # asserts each required setting and, if any is unmet, refuses to arm and names the
 # settings.json fix, so a user who just updated Claude Code gets a fix list, not a
-# broken loop.  Extend the tuple in unmet_prerequisites as Claude Code changes require.
+# broken loop.  Harness capabilities themselves (e.g. asyncRewake) are not
+# asserted: claude-automata assumes an auto-updated Claude Code — a release
+# targets the newest harness at ship time (root canon, 결정 기록).  Extend the
+# tuple in unmet_prerequisites as Claude Code changes require.
 SPAWN_DEPTH_ENV = "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"
 SPAWN_DEPTH_MIN = 5
 PREREQUISITE_HEADER = (
@@ -387,7 +333,6 @@ def arm_advisor(
     ws.advice_path.unlink(missing_ok=True)
     ws.narration_path.unlink(missing_ok=True)
     ws.gated_shells_path.unlink(missing_ok=True)
-    ws.wakeless_shells_path.unlink(missing_ok=True)
     ws.advisor_token_path.write_text("")
     sys.stderr.write(notice + trigger)
     sys.exit(2)
@@ -430,37 +375,20 @@ def stop() -> None:
     # redirect notice — an ambient one has no exit, so it parks the loop until
     # cleared — and the same shell set then waits silently.  Every other type
     # (Monitor included, the never-gated session-lifetime lane), a shell past
-    # running, and an unreachable registry (no field) pass: stalling the loop
-    # is worse than an early advisor.
-    #
-    # The exit-wake premise holds only for shells that CAN exit.  When every
-    # gating shell classifies wakeless and no session cron exists, this stop is
-    # the one that loses the last wake source — it gets the informed block
-    # (WAKELESS_STOP_NOTICE) instead of a silent pass; gated_shells is written
-    # too, so the next identical stop is an honored, informed sleep.
+    # running (a terminal entry left in the list must not defer the advisor),
+    # and an unreachable registry (no field) pass: stalling the loop is worse
+    # than an early advisor.  Any sleep this gate allows is bounded by the
+    # heartbeat (decision 19) — no wait is trusted to wake the session on its
+    # own.
     tasks = [t for t in event.get("background_tasks") or [] if isinstance(t, dict)]
     if any(t.get("type") in ("subagent", "workflow") for t in tasks):
         sys.exit(0)
-    shells = [
-        t
+    shell_ids = sorted(
+        str(t.get("id", ""))
         for t in tasks
         if t.get("type") == "shell" and t.get("status", "running") == "running"
-    ]
-    shell_ids = sorted(str(t.get("id", "")) for t in shells)
+    )
     if shell_ids:
-        wakeless = not event.get("session_crons") and all(
-            classify_wait(str(t.get("command", ""))) != MORTAL for t in shells
-        )
-        prodded = (
-            ws.wakeless_shells_path.read_text().split()
-            if ws.wakeless_shells_path.exists()
-            else []
-        )
-        if wakeless and set(shell_ids) != set(prodded):
-            ws.wakeless_shells_path.write_text("\n".join(shell_ids))
-            ws.gated_shells_path.write_text("\n".join(shell_ids))
-            sys.stderr.write(format_wakeless_notice(shells))
-            sys.exit(2)
         known = (
             ws.gated_shells_path.read_text().split()
             if ws.gated_shells_path.exists()
@@ -606,42 +534,46 @@ def pre_tool_use() -> None:
     sys.exit(2)
 
 
-def wait_gate() -> None:
-    """PreToolUse hook (matcher: Bash): keep waits mortal inside an active loop.
+def heartbeat_arm() -> None:
+    """First phase of the heartbeat timer: arm the silence watch, or decline.
 
-    An armed loop's only wake sources are background completions, and the
-    launch skill routes completion waits into background shells — so a wait
-    that cannot exit is a mistake that must fail at launch, not at a stop no
-    hook follows.  FILE_CONDITION is denied with the mortal alternatives;
-    UNBOUNDED rides additionalContext without a permission decision (the
-    normal flow proceeds); MORTAL and any session without an active loop pass
-    silently.  Keyed on command shape, not run_in_background — a foreground
-    unbounded wait auto-backgrounds at its timeout and lands in the same
-    immortal lane.  bin/ploop-hook already short-circuits this entry when no
-    loop is armed anywhere, so ordinary sessions never reach here.
+    Runs briefly under the wrapper's heartbeat branch, which owns the 3h
+    residency itself (sleeping python-under-uv would keep uv resident for the
+    whole interval).  For an armed loop this records a fresh nonce —
+    superseding every older timer — and prints the wrapper's handoff line
+    ("session nonce seconds"); outside an armed loop it prints nothing, and
+    the wrapper stands down without sleeping.
     """
     event = read_event()
     ws = Workspace.from_env(event.get("session_id", ""))
     if not ws.active_path.exists():
         sys.exit(0)
-    tool_input = event.get("tool_input") or {}
-    command = tool_input.get("command", "") if isinstance(tool_input, dict) else ""
-    verdict = classify_wait(str(command))
-    if verdict == MORTAL:
+    nonce = uuid.uuid4().hex
+    ws.heartbeat_nonce_path.write_text(nonce)
+    sys.stdout.write(f"{ws.session_id} {nonce} {HEARTBEAT_SECONDS}")
+
+
+def heartbeat_fire() -> None:
+    """Second phase of the heartbeat timer: wake the session or stand down.
+
+    Runs HEARTBEAT_SECONDS after the stop that armed it.  Stands down (exit 0)
+    when the loop ended or paused (active marker gone) or a later stop wrote a
+    newer nonce — that stop's own timer owns the watch.  Otherwise the session
+    was silent for the whole interval: exit 2 delivers HEARTBEAT_NOTICE as the
+    wake (asyncRewake), and the audit turn's own stop arms the next timer.
+    """
+    if len(sys.argv) < 3:
         sys.exit(0)
-    if verdict == FILE_CONDITION:
-        output = {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": FILE_WAIT_DENY,
-        }
-    else:
-        output = {
-            "hookEventName": "PreToolUse",
-            "additionalContext": UNBOUNDED_WAIT_WARNING,
-        }
-    sys.stdout.write(json.dumps({"hookSpecificOutput": output}))
-    sys.exit(0)
+    session_id, nonce = sys.argv[1], sys.argv[2]
+    ws = Workspace.from_env(session_id)
+    try:
+        current = ws.heartbeat_nonce_path.read_text()
+    except OSError:
+        sys.exit(0)
+    if not ws.active_path.exists() or current != nonce:
+        sys.exit(0)
+    sys.stderr.write(HEARTBEAT_NOTICE)
+    sys.exit(2)
 
 
 def mark_compaction() -> None:
@@ -796,6 +728,5 @@ def on_command() -> None:
     ws.advice_path.unlink(missing_ok=True)
     ws.narration_path.unlink(missing_ok=True)
     ws.gated_shells_path.unlink(missing_ok=True)
-    ws.wakeless_shells_path.unlink(missing_ok=True)
     save_ledger(ws.ledger_path, {**ledger, "phase": FRESH, "anomalies": 0})
     ws.active_path.touch()

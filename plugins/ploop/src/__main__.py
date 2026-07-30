@@ -8,7 +8,8 @@ from . import docent, main
 ENTRIES = {
     "stop": main.stop,
     "pre-tool-use": main.pre_tool_use,
-    "wait-gate": main.wait_gate,
+    "heartbeat-arm": main.heartbeat_arm,
+    "heartbeat-fire": main.heartbeat_fire,
     "subagent-stop": main.subagent_stop,
     "mark-compaction": main.mark_compaction,
     "launch": main.launch,
