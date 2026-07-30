@@ -103,10 +103,6 @@ class Workspace:
         return self.path("compacted")
 
     @property
-    def gated_shells_path(self) -> Path:
-        return self.path("gated_shells")
-
-    @property
     def heartbeat_nonce_path(self) -> Path:
         return self.path("heartbeat_nonce")
 
@@ -136,7 +132,6 @@ class Workspace:
             self.advisor_token_path,
             self.advisor_running_path,
             self.compacted_path,
-            self.gated_shells_path,
             self.heartbeat_nonce_path,
             self.advice_path,
             self.narration_path,

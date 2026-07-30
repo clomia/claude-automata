@@ -504,48 +504,35 @@ class TestStop:
         assert exc.value.code == 0
         assert (tmp_path / "s1_project").read_text() == "/w/repo"
 
-    def test_background_shell_nags_once_then_waits(self, tmp_path, monkeypatch, capsys):
-        """A shell-only background holds the round open: the first stop gets one
-        redirect notice (wait, or clear an ambient one that never exits) and
-        no advisor; a repeat stop with the same shell set waits silently; a new
-        shell id nags again."""
+    def test_running_shells_gate_silently(self, tmp_path, monkeypatch, capsys):
+        """A shell-only background defers the advisor exactly like a subagent:
+        silent exit 0, nothing injected, no state written — the shell's exit
+        or the heartbeat wakes the session."""
         arrange_anchor(
             tmp_path,
             monkeypatch,
             ROUND_WORK,
             ledger={"phase": ADVISING, "advice_history": []},
         )
-        shell_stdin = lambda ids: make_stdin(  # noqa: E731
-            transcript_path=str(tmp_path / "s1.jsonl"),
-            background_tasks=[
-                {"id": i, "type": "shell", "status": "running"} for i in ids
-            ],
+        arrange(
+            tmp_path,
+            monkeypatch,
+            make_stdin(
+                transcript_path=str(tmp_path / "s1.jsonl"),
+                background_tasks=[{"id": "t1", "type": "shell", "status": "running"}],
+            ),
         )
-        arrange(tmp_path, monkeypatch, shell_stdin(["t1"]))
         with pytest.raises(SystemExit) as exc:
             stop()
-        assert exc.value.code == 2
-        assert "Background shell" in capsys.readouterr().err
+        assert exc.value.code == 0
+        assert capsys.readouterr().err == ""
         assert not (tmp_path / "s1_advisor_token").exists()
         assert load_ledger(tmp_path / "s1_loop.json")["phase"] == ADVISING
 
-        arrange(tmp_path, monkeypatch, shell_stdin(["t1"]))
-        with pytest.raises(SystemExit) as exc:
-            stop()
-        assert exc.value.code == 0  # same set: the loop waits for the exit wake
-
-        arrange(tmp_path, monkeypatch, shell_stdin(["t1", "t9"]))
-        with pytest.raises(SystemExit) as exc:
-            stop()
-        assert exc.value.code == 2  # a new shell id gets its own redirect
-        assert "Background shell" in capsys.readouterr().err
-
     def test_monitor_only_background_arms_advisor(self, tmp_path, monkeypatch, capsys):
         """Monitor is the ambient, session-lifetime lane and never gates: a stop
-        with only monitors left is a legitimate round end — the advisor arms and
-        a stale shell-redirect marker is cleared."""
+        with only monitors left is a legitimate round end — the advisor arms."""
         arrange_anchor(tmp_path, monkeypatch, ROUND_WORK, ledger={"phase": FRESH})
-        (tmp_path / "s1_gated_shells").write_text("t1")
         arrange(
             tmp_path,
             monkeypatch,
@@ -559,7 +546,6 @@ class TestStop:
         assert exc.value.code == 2
         assert (tmp_path / "s1_advisor_token").exists()
         assert "ploop:advisor" in capsys.readouterr().err
-        assert not (tmp_path / "s1_gated_shells").exists()
 
     def test_terminal_status_shell_does_not_gate(self, tmp_path, monkeypatch):
         """A completed shell lingering in the list must not defer the advisor —
