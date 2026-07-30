@@ -192,7 +192,7 @@ system temp(위 근거). 한 session에 하나의 anchor를 가정해 `session_i
 | `{session}_advisor_running` | hook | advisor in-flight marker (PreToolUse set · SubagentStop clear) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 marker (Stop이 mechanism 2로 소비) |
 | `{session}_gated_shells` | hook | 교정 지시를 이미 보낸 background shell id 집합 — 같은 집합의 정지는 조용히 대기 (round arm·`/ploop:on`·launch가 지움) |
-| `{session}_wakeless_shells` | hook | wakeless 경고(WAKELESS_STOP_NOTICE)를 이미 보낸 shell id 집합 — 같은 집합으로 다시 정지하면 informed sleep으로 존중 (round arm·`/ploop:on`·launch가 지움) |
+| `{session}_heartbeat_nonce` | hook (heartbeat) | 마지막 armed stop의 heartbeat nonce — fire 시점에 이 값과 다르면 timer가 자멸(더 새 stop이 감시를 소유), 같으면 3h 침묵이므로 wake (launch가 지움) |
 
 **loop 상태(advice_history·phase·anomalies·round_start_line)는 hook이 단독 소유한다.** advisor는
 advice(또는 종료 token)를 `advice.md`에 Write만 하고, hook이 다음 round 시작에 그 파일을 읽어
@@ -245,8 +245,8 @@ pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal 
 | **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 — `active` 존재·빈 `anchor`·prerequisite(nested cap `<5`·`autoCompactEnabled`·`alwaysThinkingEnabled`) 미충족이면 차단 · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`면 차단 |
 | **PostCompact** | (전체) | compaction 후 | `compacted` marker touch (Stop이 mechanism 2로 anchor text 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 token 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(자발 호출 차단) |
-| **PreToolUse** | `Bash` | 활성 loop session의 Bash 호출 | **wait gate**(결정 19): unbounded 파일 조건 대기는 deny(mortal 대안 명시), 그 외 unbounded sleep-loop은 additionalContext 경고, mortal·비활성 session은 무개입 — wrapper가 `*_active` marker 부재 시 interpreter 없이 즉시 통과 |
-| **Stop** | (전체) | main이 종료 시도 | active gate → **background gate**(`background_tasks`: subagent·workflow 조용히 대기, running shell은 집합당 1회 교정 지시 후 대기 — 단 전원이 wakeless이고 `session_crons`가 비면 집합당 1회 informed block(결정 19), monitor·비running·그 외 통과) → **in-flight guard** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 notice+log recap) 또는 `exit 0`(허용) |
+| **Stop** | (전체) | main이 종료 시도 | active gate → **background gate**(`background_tasks`: subagent·workflow 조용히 대기, running shell은 집합당 1회 교정 지시 후 대기, monitor·비running·그 외 통과) → **in-flight guard** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 notice+log recap) 또는 `exit 0`(허용) |
+| **Stop** | (전체, `asyncRewake`) | main이 종료 시도 | **heartbeat**(결정 19): armed loop면 arm이 nonce를 기록·handoff하고 wrapper sh 자신이 3h를 잔다 — fire 시 nonce 최신·armed면 `exit 2`로 잠든 session을 깨워 background audit 지시, 아니면 무음 자멸. 비활성 session은 즉시 exit 0 |
 | **SubagentStop** | (전체) | subagent 종료 | `advisor` 종료면 `advisor_running` clear (in-flight 추적) |
 
 plugin agent는 `ploop:<agent>`로 scoped 등록돼 Agent 호출의 subagent_type이 그 이름을 쓴다. hook은
@@ -355,7 +355,7 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     main이 round 작업을 완료한 뒤라야 유효하다. foreground가 비었다는 것은 Stop이 fire한 것 그 자체이고, background는
     Stop 입력의 공식 배열 **`background_tasks`**(v2.1.145+)로 읽는다 — harness는 background가 남아 있어도 session을
     정지시키고 완료 event로 다시 깨우므로, gate가 삼킨 정지는 반드시 되돌아온다 — **단, gate된 shell 중 적어도
-    하나가 실제로 종료할 때만**(그 전제조건이 깨지는 wakeless 경로는 결정 19가 소유한다). gate는 **완료가 session을
+    하나가 실제로 종료할 때만**(그 전제조건이 깨져도 잠은 heartbeat가 3h로 상한한다 — 결정 19). gate는 **완료가 session을
     깨운다고 명세가 보장하는 타입**에만 건다: `subagent`·`workflow`(완료 알림)는 조용히 대기(exit 0),
     **running** `shell`(exit 시 재호출)은 **집합당 1회 교정 지시** 후 조용히 대기 — 완료가 없는 ambient process(server·watcher)는
     그 대기를 깨울 exit이 없어 loop를 park시키니 정지 전에 정리하라는 지시다(remedy는 명명하지 않는다: ambient의
@@ -405,24 +405,28 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     **auto-write 기각**: env는 startup 반영이라 재시작이 어차피 필요하므로 self-provision(=settings.json
     write=결정 12 위반)의 실익이 "한 줄 절약"뿐이다. 검사는 확장 가능한 tuple이라 향후 Claude Code 변경의 새
     요구를 한 줄로 더한다(모범 선례 템플릿).
-19. **wake integrity — armed loop는 wake source 없이 잠들지 않는다 (launch-time wait gate + stop-time
-    wakeless block).** 결정 16의 전제("exit이 깨운다")는 exit할 수 있는 shell에만 성립한다. 종료 불가능한
-    background shell(실측 2026-07: producer가 죽은 `until [ -s f ]; do sleep 60; done` — 32.8시간 손실)이 마지막으로
-    남으면 gate는 wake 근거 0으로 exit 0을 반복하고, hook은 stop에만 돌므로 **정지 후에는 어떤 코드도 구제할 수
-    없다** — 판정은 잠들 그 stop에서, 예방은 발사 시점에 이뤄져야 한다. mortality는 결정 불가라 두 표면 모두
-    command 문자열 heuristic이며 **mortal 방향으로 틀린다**(bound marker·process-existence 조건·호출 script의
-    불투명 문자열은 mortal — false mortal은 기존 동작 재현, false wakeless는 prod 1회 비용; 이른 advisor 방향
-    오류는 없다). ① **wait gate**(PreToolUse `Bash`, 활성 loop에서만): 파일 조건 unbounded 대기 — 관측된 유일
-    치명 형태이자 항상 개선 가능(process 대기·`timeout`) — 는 deny로 교정하고, 그 외 unbounded sleep-loop은
-    additionalContext 경고만 한다(전 class hard-block은 hook 우회를 학습시킨다). run_in_background가 아니라
-    형태에 건다 — foreground unbounded 대기도 timeout에 auto-background되어 같은 차선에 떨어진다. wrapper가
-    `*_active` 부재 시 Python 없이 통과시켜 비loop session의 per-Bash 비용은 stat 하나다. ② **wakeless
-    block**(Stop): gating shell 전원이 wakeless로 분류되고 `session_crons`(예약 wake source)가 비면, 그 정지가
-    마지막 wake source를 잃는 순간이므로 집합당 1회 shell id·command를 명명한 informed block(exit 2)을 낸다 —
-    `wakeless_shells` marker가 중복을 막고 `gated_shells`도 함께 써서 같은 집합의 다음 정지는 informed sleep으로
-    존중한다(주기적 re-prod는 harness stop-block cap을 소모하므로 기각). advisor는 결코 arm하지
-    않아 결정 16의 소집 계약은 불변이다. 유예의 길이 자체는 결함이 아니다 — background가 남은 39시간 무round는
-    정상 동작이다.
+19. **wake integrity — heartbeat: 침묵 3시간이 armed loop를 깨운다 (사람 감독 패턴의 기계화).** 결정 16의
+    전제("exit이 깨운다")는 exit할 수 있는 background에만 성립한다. 종료 불가능한 background shell(실측
+    2026-07: producer가 죽은 `until [ -s f ]; do sleep 60; done` — 32.8시간 손실)이 마지막으로 남으면 gate는
+    wake 근거 0으로 exit 0을 반복하고, hook은 stop에만 돌므로 **정지 후에는 loop 자신의 어떤 코드도 구제할 수
+    없다**. 사람 감독자가 이를 막는 방식은 단속이 아니라 관찰이다 — 몇 시간의 침묵을 보면 "뭐 하고 있나"를
+    묻는다. heartbeat가 그 trigger를 그대로 재현한다: **모든 armed-loop stop이 `asyncRewake` Stop hook으로 3h
+    timer를 남기고**(fresh nonce가 이전 timer 전부를 대체; 3h 잠은 wrapper sh 자신(~1MB)이 잔다 — `exec uv`는
+    python으로 exec하지 않고 ~26MB로 상주하므로(실측 2026-07) python은 arm(nonce 기록·handoff 출력)과 fire 두
+    순간만 돌며, fire의 exit code·stderr는 wrapper의 것으로 전파돼 harness가 관측한다), fire 시점에
+    nonce가 여전히 최신이고 loop가 armed면 — 즉 **3h 동안 stop이 없었으면** — exit 2로 잠든 session을 깨워
+    background task audit을 지시한다(HEARTBEAT_NOTICE). 나중 stop이 있었거나 loop가 끝났으면 조용히 자멸한다:
+    활발히 round를 도는 loop는 heartbeat를 듣지 않고, `/ploop:off`·수렴은 즉시 전 timer를 무장 해제한다.
+    **왜 이 형태인가**: 잠드는 *이유*를 몰라도 된다 — 파일 대기·불투명 script·멈춘 subagent를 균일하게 3h로
+    상한한다(0.50의 문자열 classifier는 결정 불가 판정·allowlist 쳇바퀴·양 소비처 공유 맹점으로 철회 —
+    코드 단속은 agent 책임의 침범이었다. archive `2026-07-30-ploop-heartbeat` 참조). session cron(7일 만료로
+    장기 mission에서 wake source가 소리 없이 소멸)·plugin monitor(experimental + Monitor 불가 host에서 무음
+    skip)도 같은 이유로 기각. timer는 OS process라 compaction과 무관하고, payload는 fire마다 새로 생성된다.
+    timeout 11100s는 2.1.220 번들 정적 분석(command hook timeout 무clamp)과 live canary(idle session이
+    stderr payload로 깨어남 — `docs/research/asyncrewake-stop-hook-2026.md`)로 실측했다. wake가 어느 날
+    조용히 죽으면 pre-heartbeat 현상 유지로 퇴행할 뿐 새 피해는 없고, 하위 harness 우려는 root canon의
+    auto-update 전제가 배제한다. advisor는 결코 arm하지 않아 결정 16의 소집 계약은 불변이다 — 유예의 길이
+    자체는 결함이 아니며, heartbeat wake가 잦아지는 것이 아니라 잠이 유한해지는 것이다.
 
 ---
 
@@ -503,10 +507,10 @@ ploop/
 ├── skills/launch/SKILL.md            # /ploop:launch — loop notice + orchestrator rules + 응고 계약 + anchor handoff (anchor 저장·활성화는 launch hook)
 ├── skills/off/SKILL.md               # /ploop:off — 일시정지 조용한 고지 (일시정지는 off_command hook)
 ├── skills/on/SKILL.md                # /ploop:on — 재개 확인 고지 (재개·정규화는 on_command hook)
-├── hooks/hooks.json                  # UserPromptExpansion(launch·off·on) + PostCompact + PreToolUse(Agent·Bash) + Stop + SubagentStop
-├── bin/ploop-hook                    # uv 가용성 check wrapper + wait-gate fast path(`*_active` 부재 시 무interpreter 통과)
+├── hooks/hooks.json                  # UserPromptExpansion(launch·off·on) + PostCompact + PreToolUse(Agent) + Stop(gate + asyncRewake heartbeat) + SubagentStop
+├── bin/ploop-hook                    # uv 가용성 check wrapper + heartbeat의 3h 상주(sh가 잔다 — uv는 exec돼도 상주)
 ├── src/                              # hook 구현 (runtime 의존성 없음)
-│   ├── main.py                       # hook entrypoint(stop·pre_tool_use·wait_gate·subagent_stop·mark_compaction·launch·off_command·on_command)
+│   ├── main.py                       # hook entrypoint(stop·pre_tool_use·heartbeat_arm·heartbeat_fire·subagent_stop·mark_compaction·launch·off_command·on_command)
 │   ├── docent.py                     # docent resolver — session 열거·기록 경로 해석 (read-only, `docent` console script)
 │   ├── state.py                      # Workspace(session 파일 경로의 단일 창구) + 4field ledger(advice_history·round_start_line·anomalies·phase) + phase 상수 · preserve-by-default load/저장
 │   └── prompt.py                     # advice-history format + 5-section advisor trigger 조립(narrator slice 파일 경로 포함)

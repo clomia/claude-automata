@@ -16,19 +16,6 @@ entry="$1"
 
 [ -n "$entry" ] || exit 0
 
-# wait-gate rides every Bash call; without an armed loop anywhere on the
-# machine it must cost a stat, not an interpreter (the per-session check
-# stays in Python). No $@ clobber: the glob expands inside the function.
-loop_active() {
-    for marker in "${CLAUDE_PLUGIN_DATA:-/nonexistent}"/*_active; do
-        [ -e "$marker" ] && return 0
-    done
-    return 1
-}
-if [ "$entry" = "wait-gate" ] && ! loop_active; then
-    exit 0
-fi
-
 if ! command -v uv >/dev/null 2>&1 ||
     { ! uv python find ">=3.14" >/dev/null 2>&1 && ! uv python install 3.14 >/dev/null 2>&1; }; then
     case "$entry" in
@@ -41,4 +28,26 @@ fi
 
 plugin_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 0
 export PYTHONPATH="$plugin_root"
-exec uv run --no-project --python ">=3.14" python -P -B -s -m src "$@"
+
+run_src() {
+    uv run --no-project --python ">=3.14" python -P -B -s -m src "$@"
+}
+
+# The heartbeat's 3h residency lives HERE, in this sh (~1MB) — `exec uv`
+# would not shed weight, because uv does not exec into python: it stays
+# resident (~26MB, measured 2026-07) above whatever python does. So python
+# runs only in two brief phases: arm prints "session nonce seconds" (empty =
+# not armed), this sh sleeps, fire delivers the verdict — its exit 2 is what
+# asyncRewake observes, stderr carried through inherited fds.
+if [ "$entry" = "heartbeat" ]; then
+    armed=$(run_src heartbeat-arm) || exit 0
+    [ -n "$armed" ] || exit 0
+    set -- $armed
+    [ $# -eq 3 ] || exit 0
+    sleep "$3"
+    run_src heartbeat-fire "$1" "$2"
+    exit $?
+fi
+
+run_src "$@"
+exit $?

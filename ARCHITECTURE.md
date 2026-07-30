@@ -85,6 +85,10 @@ hook 주입 message 조립).
   swap해 anchor에 정박된 loop의 행동을 운영자 모르게 바꾼다. version-up-alert의 alert-only가
   도구 교체를 인간 몫으로 유지한다. uv 부재 안내도 같은 곳으로 중앙화한다 — wrapper들의 차단
   message는 기능적 사실만 나른다.
+- **Claude Code 하위 호환 비목표 (auto-update 전제)** — 배포는 출시 시점의 최신 Claude Code만
+  대상으로 하고, 사용자의 Claude Code는 auto-update된다고 전제한다. plugin은 harness 버전을
+  탐지·분기하지 않는다 — 버전 guard는 존재하지 않는 사용자를 위한 복잡도다. (settings/env
+  상태의 assertion — ploop 결정 18 — 은 버전이 아니라 구성의 문제라 이 배제 밖이다.)
 - **소급 capability spec 전사 기각** — 기존 plugin behavior를 코드에서 spec으로 옮겨 적는
   것은 불변식 3이 막는 changelog 퇴화이자 결정 시점 provenance의 조작이다(verify는 change의
   delta를 읽지 main spec을 읽지 않는다). `openspec/specs/`는 첫 진짜 behavior delta의
