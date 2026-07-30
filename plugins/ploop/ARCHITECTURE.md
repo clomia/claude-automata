@@ -191,7 +191,6 @@ system temp(위 근거). 한 session에 하나의 anchor를 가정해 `session_i
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 token (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight marker (PreToolUse set · SubagentStop clear) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 marker (Stop이 mechanism 2로 소비) |
-| `{session}_gated_shells` | hook | 교정 지시를 이미 보낸 background shell id 집합 — 같은 집합의 정지는 조용히 대기 (round arm·`/ploop:on`·launch가 지움) |
 | `{session}_heartbeat_nonce` | hook (heartbeat) | 마지막 armed stop의 heartbeat nonce — fire 시점에 이 값과 다르면 timer가 자멸(더 새 stop이 감시를 소유), 같으면 3h 침묵이므로 wake (launch가 지움) |
 
 **loop 상태(advice_history·phase·anomalies·round_start_line)는 hook이 단독 소유한다.** advisor는
@@ -216,7 +215,7 @@ advice(또는 종료 token)를 `advice.md`에 Write만 하고, hook이 다음 ro
    in-flight 중에도 무조건 멈추도록 `advisor_running`도 지운다. 종료가 아니라 종료 notice는 없다. `active`가
    없으면(미실행·이미 off) **차단**한다.
 5. **`/ploop:on`** (on_command) — **범용 wake button**이다: stale handoff/gate transient(token·running·
-   advice·narration·gated_shells)를 지우고 `phase`를 `fresh`로 정규화(다음 정지가 advisor 미실행 round를 record하지
+   advice·narration)를 지우고 `phase`를 `fresh`로 정규화(다음 정지가 advisor 미실행 round를 record하지
    않게)하고 이상 counter를 reset하되 advice-history·round_start_line은 병합이 보존한 뒤 `active`를 다시
    쓴다. off·anomaly failsafe·예외(ESC·API error·session limit)로 멈춘 stuck loop까지 무엇이든 깨운다(active여도
    차단하지 않는다). 재개 불가는 딱 둘 — `anchor.md`/`loop.log` 부재(재개할 loop 없음)와 `phase ==
@@ -245,7 +244,7 @@ pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal 
 | **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 — `active` 존재·빈 `anchor`·prerequisite(nested cap `<5`·`autoCompactEnabled`·`alwaysThinkingEnabled`) 미충족이면 차단 · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`면 차단 |
 | **PostCompact** | (전체) | compaction 후 | `compacted` marker touch (Stop이 mechanism 2로 anchor text 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 token 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(자발 호출 차단) |
-| **Stop** | (전체) | main이 종료 시도 | active gate → **background gate**(`background_tasks`: subagent·workflow 조용히 대기, running shell은 집합당 1회 교정 지시 후 대기, monitor·비running·그 외 통과) → **in-flight guard** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 notice+log recap) 또는 `exit 0`(허용) |
+| **Stop** | (전체) | main이 종료 시도 | active gate → **background gate**(`background_tasks`: subagent·workflow·running shell 조용히 대기, monitor·비running·그 외 통과) → **in-flight guard** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 notice+log recap) 또는 `exit 0`(허용) |
 | **Stop** | (전체, `asyncRewake`) | main이 종료 시도 | **heartbeat**(결정 19): armed loop면 arm이 nonce를 기록·handoff하고 wrapper sh 자신이 3h를 잔다 — fire 시 nonce 최신·armed면 `exit 2`로 잠든 session을 깨워 background audit 지시, 아니면 무음 자멸. 비활성 session은 즉시 exit 0 |
 | **SubagentStop** | (전체) | subagent 종료 | `advisor` 종료면 `advisor_running` clear (in-flight 추적) |
 
@@ -354,19 +353,20 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
 16. **advisor는 foreground·background가 모두 빈 정지에만 소집 — `background_tasks` gating.** advisor 판정은
     main이 round 작업을 완료한 뒤라야 유효하다. foreground가 비었다는 것은 Stop이 fire한 것 그 자체이고, background는
     Stop 입력의 공식 배열 **`background_tasks`**(v2.1.145+)로 읽는다 — harness는 background가 남아 있어도 session을
-    정지시키고 완료 event로 다시 깨우므로, gate가 삼킨 정지는 반드시 되돌아온다 — **단, gate된 shell 중 적어도
-    하나가 실제로 종료할 때만**(그 전제조건이 깨져도 잠은 heartbeat가 3h로 상한한다 — 결정 19). gate는 **완료가 session을
-    깨운다고 명세가 보장하는 타입**에만 건다: `subagent`·`workflow`(완료 알림)는 조용히 대기(exit 0),
-    **running** `shell`(exit 시 재호출)은 **집합당 1회 교정 지시** 후 조용히 대기 — 완료가 없는 ambient process(server·watcher)는
-    그 대기를 깨울 exit이 없어 loop를 park시키니 정지 전에 정리하라는 지시다(remedy는 명명하지 않는다: ambient의
-    거처는 launch rules가 소유하고, Stop에서 `Monitor`를 처방하는 것은 altitude가 어긋난다 — 그 session 수명
-    notification이 풀어주려는 loop를 흔든다. `gated_shells` marker가 지시 중복을 막고 round arm이 지움).
+    정지시키고 완료 event로 다시 깨우므로, gate가 삼킨 정지는 반드시 되돌아온다 — **단, gate된 background 중
+    적어도 하나가 실제로 완료할 때만**(그 전제조건이 깨져도 잠은 heartbeat가 3h로 상한한다 — 결정 19). gate는
+    **완료가 session을 깨운다고 명세가 보장하는 타입**에만 걸고, 셋 모두 **조용히 대기**한다(exit 0):
+    `subagent`·`workflow`(완료 알림), **running** `shell`(exit 시 재호출). heartbeat 이전에는 shell에만 집합당
+    1회 "영원히 잠들 수 있다"는 교정 지시를 냈으나(`gated_shells` marker로 중복 방지), 잠이 3h로 상한된 뒤 그
+    경고의 위협 주장은 거짓이 되고 교정 내용은 heartbeat audit이 실제 발생 시점에 나르므로 지시와 marker를
+    철거했다(archive `2026-07-30-ploop-silent-shell-gate`) — stop 시점의 gate는 이제 할 말이 없다.
     `monitor`는 명세상 session 수명 process라 gate하면 영구 교착 — 통과가 정당한 round 종료다. 그 외 타입·미지
     타입·**running이 아닌 status의 shell**(list에 잔류한 terminal shell이 advisor를 영구 유예하는 구멍)·field
     부재(task registry 도달 불가 — 명세상 이때만 배열이 빠진다)는 gating하지 않는다: 실패 방향은 이른
     advisor이지 loop 정지가 아니다(status 부재만은 running으로 간주 — schema 표류 안전). 완료를 기다려야 하는
     background는 gating 유형(shell·subagent·workflow)으로 두고, server 같은 ambient process는
-    `Monitor`(session 수명 차선)로 돌린다.
+    `Monitor`(session 수명 차선)로 돌린다 — ambient가 shell 차선에 살아 있는 한 advisor 소집이 유예되는 문제는
+    heartbeat가 고치지 못하며(잠만 상한한다), 그 예방선은 launch rules의 Monitor 규칙이다.
 17. **docent 표면 — hook 0·쓰기 0, query-time 해석.** docent는 skill 본문(교리)과 read-only
     resolver(`docent` console script)가 전부다: hooks.json에 등록하지 않아 loop 기계와 접점이 없고,
     `disable-model-invocation: true`라 loop main이 스스로 교리를 주입해 orchestrator 정체성과

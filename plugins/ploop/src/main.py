@@ -83,21 +83,6 @@ DECLINE_NOTICE = (
     "end the loop.\n\n"
 )
 
-# One-time redirect when only background shell commands hold the round open.
-# A finite shell needs no action — its exit wakes the session (official Bash
-# contract) and the loop swallows the stops in between.  An ambient process
-# (a server, a watcher) never exits, so left on the shell lane it parks the
-# loop for good — the notice says to clear it, but names no remedy: the launch
-# skill already owns the ambient-process/Monitor rule, and prescribing a
-# Monitor from a Stop is the wrong altitude — its session-lifetime
-# notifications would destabilize the very loop it would free.
-# Sent once per shell set; stopping again with the same set means waiting.
-SHELL_WAIT_NOTICE = (
-    "Background shell command(s) hold the round open. Their exit wakes the "
-    "session, so stopping is safe. One that never exits (a server, a "
-    "watcher) leaves the loop asleep for good — clear it first.\n"
-)
-
 # Heartbeat — the human supervision pattern, mechanized (decision 19).  Every
 # stop of an armed loop leaves a 3h timer behind (an asyncRewake Stop hook:
 # the process outlives context compaction, and its exit 2 wakes even an idle
@@ -332,7 +317,6 @@ def arm_advisor(
     )
     ws.advice_path.unlink(missing_ok=True)
     ws.narration_path.unlink(missing_ok=True)
-    ws.gated_shells_path.unlink(missing_ok=True)
     ws.advisor_token_path.write_text("")
     sys.stderr.write(notice + trigger)
     sys.exit(2)
@@ -371,34 +355,21 @@ def stop() -> None:
     # official `background_tasks` input (present whenever the task registry is
     # reachable).  Gate exactly the types whose completion is guaranteed to wake
     # the session (their specs promise a notification/re-invoke on completion):
-    # subagent and workflow wait silently; a still-running shell gets one
-    # redirect notice — an ambient one has no exit, so it parks the loop until
-    # cleared — and the same shell set then waits silently.  Every other type
-    # (Monitor included, the never-gated session-lifetime lane), a shell past
-    # running (a terminal entry left in the list must not defer the advisor),
-    # and an unreachable registry (no field) pass: stalling the loop is worse
-    # than an early advisor.  Any sleep this gate allows is bounded by the
-    # heartbeat (decision 19) — no wait is trusted to wake the session on its
-    # own.
+    # subagent, workflow, and running shell all wait silently.  Every other
+    # type (Monitor included, the never-gated session-lifetime lane), a shell
+    # past running (a terminal entry left in the list must not defer the
+    # advisor), and an unreachable registry (no field) pass: stalling the loop
+    # is worse than an early advisor.  Any sleep this gate allows is bounded
+    # by the heartbeat (decision 19) — no wait is trusted to wake the session
+    # on its own, so the gate has nothing to say at stop time.
     tasks = [t for t in event.get("background_tasks") or [] if isinstance(t, dict)]
     if any(t.get("type") in ("subagent", "workflow") for t in tasks):
         sys.exit(0)
-    shell_ids = sorted(
-        str(t.get("id", ""))
+    if any(
+        t.get("type") == "shell" and t.get("status", "running") == "running"
         for t in tasks
-        if t.get("type") == "shell" and t.get("status", "running") == "running"
-    )
-    if shell_ids:
-        known = (
-            ws.gated_shells_path.read_text().split()
-            if ws.gated_shells_path.exists()
-            else []
-        )
-        if set(shell_ids) <= set(known):
-            sys.exit(0)
-        ws.gated_shells_path.write_text("\n".join(shell_ids))
-        sys.stderr.write(SHELL_WAIT_NOTICE)
-        sys.exit(2)
+    ):
+        sys.exit(0)
 
     ledger = load_ledger(ws.ledger_path)
     phase = ledger["phase"]
@@ -704,7 +675,7 @@ def on_command() -> None:
 
     The resume normalizes the round state to a clean arming point regardless of
     how the loop stalled: the stale handoff/gate transients (token, running
-    marker, advice, narration, gated shells) are cleared so the first resumed stop arms cleanly,
+    marker, advice, narration) are cleared so the first resumed stop arms cleanly,
     and the ledger's phase is reset to fresh (so the next stop skips recording a
     round no advisor ran) with the anomaly streak cleared, while advice-history
     and round_start_line are preserved by the merge (the resumed round's slice
@@ -727,6 +698,5 @@ def on_command() -> None:
     ws.advisor_running_path.unlink(missing_ok=True)
     ws.advice_path.unlink(missing_ok=True)
     ws.narration_path.unlink(missing_ok=True)
-    ws.gated_shells_path.unlink(missing_ok=True)
     save_ledger(ws.ledger_path, {**ledger, "phase": FRESH, "anomalies": 0})
     ws.active_path.touch()
