@@ -30,6 +30,7 @@ disable-model-invocation: true
 - 사용자의 도움이 필요하면 멈추지 말고 `AskUserQuestion`을 사용하라. loop 안에서 사용자와 소통하는 유일한 도구다. 창의적으로 활용하되, 가급적 스스로 판단하라.
 - 완료를 기다릴 작업은 background(shell·`Agent`·`Workflow`)로 실행하라.
   - background가 빌 때까지 advisor는 소집되지 않으며, 완료가 session을 깨운다.
+  - 대기 조건은 mortal해야 한다: 파일 조건(`until [ -s f ]`)은 producer가 죽으면 영원해져 session이 깨어날 근거를 잃는다 — 프로세스 존재(`pgrep`)로 걸거나 `timeout`으로 상한을 걸어라.
   - `Monitor`는 외부 channel·감시 같은 ambient process를 live로 돌리는 데만 사용하고 완료 대기에 쓰지 마라.
 
 </rule>

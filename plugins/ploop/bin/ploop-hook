@@ -16,6 +16,19 @@ entry="$1"
 
 [ -n "$entry" ] || exit 0
 
+# wait-gate rides every Bash call; without an armed loop anywhere on the
+# machine it must cost a stat, not an interpreter (the per-session check
+# stays in Python). No $@ clobber: the glob expands inside the function.
+loop_active() {
+    for marker in "${CLAUDE_PLUGIN_DATA:-/nonexistent}"/*_active; do
+        [ -e "$marker" ] && return 0
+    done
+    return 1
+}
+if [ "$entry" = "wait-gate" ] && ! loop_active; then
+    exit 0
+fi
+
 if ! command -v uv >/dev/null 2>&1 ||
     { ! uv python find ">=3.14" >/dev/null 2>&1 && ! uv python install 3.14 >/dev/null 2>&1; }; then
     case "$entry" in
