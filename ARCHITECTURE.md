@@ -38,12 +38,10 @@ loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의
   auto-compaction마다 fire하는 branch-state-warn(SessionStart `compact` matcher)이 유지하고,
   정합의 보증 자체는 close의 강제 fetch·rebase·CI가 소유한다 — loop 중 nudge는 신선도
   최적화이지 무결성 요건이 아니다.
-- **refine × tx — 청소도 gate를 지나고, 장기 workflow는 sync pause로 감싼다.** gate는 MEMORY
-  불변식 1. pause는 같은 rebase-무효화 hazard의 refine쪽 해소다: refine Workflow는 background로
-  평범한 정지 여러 개를 가로지르므로 ploop × tx의 `stop_hook_active` 조기 반환이 닿지 않는다 —
-  그래서 skill이 실행 전 `/tx:git-sync-off`, 종료 후 `/tx:git-sync-on`을 **사용자에게** 요청한다.
-  두 toggle이 user-only command인 것은 tx의 consent 설계다: agent는 자기 guard를 스스로 끄지
-  못한다.
+- **refine × tx — 청소도 gate를 지난다**(MEMORY 불변식 1). 접면은 그 gate 하나다: refine은 tx를
+  참조하지 않는다(무종속 계약). refine run의 halt 구간(빈 background 정지)에 tx git-sync nudge가
+  닿는 것은 알려진 접촉이고, 그 처방은 plugin 결합이 아니라 tx의 사용자 command
+  (`/tx:git-sync-off`·`on`)다 — in-flight 구간은 tx의 worktree 대기 defer가 이미 비켜간다.
 - **ploop × 기억 — loop는 repo를 오염하지 않는다.** ploop의 모든 상태는 repo 밖에 있다. repo로
   들어가는 유일한 경로는 응고(MEMORY 승격 routing)이며, launch rules의 승격 문구는
   행선("repo로")만 지시하고 gate·도구·세계관 어휘를 싣지 않는다 — gate의 정체는 tx

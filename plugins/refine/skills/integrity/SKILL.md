@@ -5,8 +5,6 @@ argument-hint: "[focus area]"
 effort: max
 ---
 
-> tx 플러그인이 활성이면 Workflow 실행 전 사용자에게 `/tx:git-sync-off`를, 끝난 뒤 `/tx:git-sync-on` 복원을 요청하라 — 둘 다 user-only command라 너는 실행할 수 없다. tx가 유도하는 mid-flight rebase는 장시간 workflow를 무효화한다.
-
 아래를 실행해, 출력된 `Workflow(...)` 호출을 그대로 실행하라.
 
 ```bash
