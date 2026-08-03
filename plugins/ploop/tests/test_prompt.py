@@ -1,13 +1,70 @@
 """Tests for the prompt module — advice-history formatting and the triggers."""
 
+from datetime import datetime
 from pathlib import Path
 
 from src.prompt import (
     INSTRUCTION_PATH,
+    deadline_status,
     format_advice_history,
     format_advisor_trigger,
     format_end_notice,
 )
+
+
+class TestDeadlineStatus:
+    """anchor frontmatter의 deadline — 상태 4종(무선언/remaining/expired/unreadable)과
+    경계. 코드는 시각 사실만 만들고 판단은 advisor 몫이다(결정 20)."""
+
+    NOW = datetime.fromisoformat("2026-08-04T19:47+09:00")
+
+    def anchor(self, value):
+        return f"---\ndeadline: {value}\n---\n\n# Mission\nbuild"
+
+    def test_remaining_renders_hours_and_minutes(self):
+        assert (
+            deadline_status(self.anchor("2026-08-04T22:00+09:00"), self.NOW)
+            == "2h 13m remaining"
+        )
+
+    def test_remaining_under_an_hour_drops_the_hour(self):
+        assert (
+            deadline_status(self.anchor("2026-08-04T20:17+09:00"), self.NOW)
+            == "30m remaining"
+        )
+
+    def test_expired_renders_elapsed(self):
+        assert (
+            deadline_status(self.anchor("2026-08-04T19:24+09:00"), self.NOW)
+            == "expired 23m ago"
+        )
+
+    def test_cross_timezone_arithmetic(self):
+        """deadline과 now의 timezone이 달라도 aware 연산으로 정확하다."""
+        now_utc = datetime.fromisoformat("2026-08-04T12:00+00:00")
+        assert (
+            deadline_status(self.anchor("2026-08-04T22:00+09:00"), now_utc)
+            == "1h 0m remaining"
+        )
+
+    def test_timezone_missing_is_unreadable_not_dropped(self):
+        out = deadline_status(self.anchor("2026-08-04T22:00"), self.NOW)
+        assert out.startswith("unreadable:") and "2026-08-04T22:00" in out
+
+    def test_garbage_value_is_unreadable(self):
+        assert deadline_status(self.anchor("tomorrow-ish"), self.NOW).startswith(
+            "unreadable:"
+        )
+
+    def test_undeclared_forms_are_silent(self):
+        """frontmatter 부재·key 부재·본문 산문 key·닫히지 않은 block — 전부 무선언."""
+        for anchor in (
+            "# Mission\nbuild",
+            "---\ntitle: x\n---\nbody",
+            "# Mission\ndeadline: 2026-08-04T22:00+09:00 까지다",
+            "---\ndeadline: 2026-08-04T22:00+09:00\nbody without close",
+        ):
+            assert deadline_status(anchor, self.NOW) == ""
 
 
 class TestFormatAdviceHistory:
@@ -24,7 +81,7 @@ class TestFormatAdviceHistory:
 
 
 class TestFormatAdvisorTrigger:
-    def trigger(self, anchor_text=None, candidates_pending=False):
+    def trigger(self, anchor_text=None, candidates_pending=False, deadline=""):
         return format_advisor_trigger(
             anchor_path=Path("/d/s1_anchor.md"),
             round_path=Path("/d/s1_round.jsonl"),
@@ -35,7 +92,18 @@ class TestFormatAdvisorTrigger:
             candidates_pending=candidates_pending,
             instruction_path=Path("/p/prompts/instruction.md"),
             anchor_text=anchor_text,
+            deadline=deadline,
         )
+
+    def test_deadline_rides_the_advisor_prompt_only_when_given(self):
+        """status는 advisor prompt block 안, anchor 직후에 실린다 — advisor가 받는
+        입력이어야 하므로. 미선언이면 흔적이 없다."""
+        out = self.trigger(deadline="2h 13m remaining")
+        assert "deadline: 2h 13m remaining" in out
+        assert (
+            out.index("anchor:") < out.index("deadline:") < out.index("action-history:")
+        )
+        assert "deadline" not in self.trigger()
 
     def test_lists_sections_in_canonical_order(self):
         """role lives in the advisor system prompt; the trigger carries the other

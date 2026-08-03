@@ -37,6 +37,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.prompt import (
+    deadline_status,
     format_advice_history,
     format_advisor_trigger,
     format_end_notice,
@@ -296,12 +297,13 @@ def arm_advisor(
     means its agent wrote nothing, sets the single-use token, and injects the
     trigger — prefixed by `notice` on an anomalous re-arm.
     """
+    try:
+        full_anchor = ws.anchor_path.read_text()
+    except OSError:
+        full_anchor = ""
     anchor_text = None
     if ws.compacted_path.exists():
-        try:
-            anchor_text = ws.anchor_path.read_text()
-        except OSError:
-            anchor_text = None
+        anchor_text = full_anchor or None
         ws.compacted_path.unlink(missing_ok=True)
 
     write_round_slice(lines, round_start, ws.round_path)
@@ -314,6 +316,7 @@ def arm_advisor(
         candidates_path=ws.candidates_path,
         candidates_pending=candidates_pending(ws),
         anchor_text=anchor_text,
+        deadline=deadline_status(full_anchor, datetime.now().astimezone()),
     )
     ws.advice_path.unlink(missing_ok=True)
     ws.narration_path.unlink(missing_ok=True)

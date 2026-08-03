@@ -52,6 +52,7 @@ main agent에게 advice를 제공할지 turn을 종료할지 판단하라.
 
 유효한 advice를 제공할 수 있는지 검토하라.  
 더 이상 유의미한 진척을 유도할 수 없다면 turn을 종료하라.  
+deadline이 주어졌으면 그 안에 mission이 정리되도록 advice를 조율하라. expired는 그 자체로 종료 사유다.  
 
 # 출력하기
 

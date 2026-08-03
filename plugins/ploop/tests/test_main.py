@@ -363,6 +363,26 @@ class TestStop:
         assert exc.value.code == 2
         assert load_ledger(tmp_path / "s1_loop.json")["round_start_line"] == 200
 
+    def test_deadline_frontmatter_rides_the_trigger(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """anchor frontmatter의 deadline이 arm 시점에 status로 렌더링되어 trigger에
+        실린다 — parse·시계·주입이 stop() 경유로 이어지는 end-to-end."""
+        arrange_anchor(
+            tmp_path,
+            monkeypatch,
+            ROUND_WORK,
+            ledger={"phase": ADVISING, "advice_history": []},
+            advice="some advice",
+        )
+        (tmp_path / "s1_anchor.md").write_text(
+            "---\ndeadline: 2099-01-01T00:00+00:00\n---\n\nbuild the thing"
+        )
+        with pytest.raises(SystemExit):
+            stop()
+        err = capsys.readouterr().err
+        assert "deadline:" in err and "remaining" in err
+
     def test_compacted_round_inlines_anchor_text(self, tmp_path, monkeypatch, capsys):
         """Mechanism 2: a compacted round re-injects the anchor text into
         the trigger and consumes the marker."""

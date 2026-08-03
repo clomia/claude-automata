@@ -25,9 +25,46 @@ internal message shapes.
 """
 
 import textwrap
+from datetime import datetime
 from pathlib import Path
 
 INSTRUCTION_PATH = Path(__file__).resolve().parent.parent / "prompts" / "instruction.md"
+
+
+def deadline_status(anchor: str, now: datetime) -> str:
+    """anchor frontmatter의 deadline을 now 기준 status로 렌더링 — 미선언이면 "".
+
+    frontmatter는 anchor 첫 줄의 `---`로 열려 다음 `---` 줄로 닫히는 block이고, 그
+    안의 `deadline:` 값은 timezone 있는 ISO 8601이어야 읽힌다 — parse 불가나
+    timezone 부재는 원문을 unreadable로 표면화한다(조용한 무장 해제는 거짓 안심이다).
+    본문의 `deadline:`은 산문이다.  여기서는 시각 사실만 만든다 — 판단은 advisor
+    몫이다(결정 20).
+    """
+    lines = anchor.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return ""
+    body = lines[1:]
+    closes = [i for i, line in enumerate(body) if line.strip() == "---"]
+    if not closes:
+        return ""  # 닫히지 않은 block은 frontmatter가 아니다
+    value = None
+    for line in body[: closes[0]]:
+        key, sep, rest = line.partition(":")
+        if sep and key.strip() == "deadline":
+            value = rest.strip()
+            break
+    if value is None:
+        return ""
+    try:
+        deadline = datetime.fromisoformat(value)
+    except ValueError:
+        deadline = None
+    if deadline is None or deadline.tzinfo is None:
+        return f"unreadable: {value[:40]}"
+    seconds = (deadline - now).total_seconds()
+    hours, minutes = divmod(int(abs(seconds) // 60), 60)
+    span = f"{hours}h {minutes}m" if hours else f"{minutes}m"
+    return f"{span} remaining" if seconds >= 0 else f"expired {span} ago"
 
 
 def format_advice_history(advice_history: list[str]) -> str:
@@ -56,6 +93,7 @@ def format_advisor_trigger(
     candidates_pending: bool,
     instruction_path: Path = INSTRUCTION_PATH,
     anchor_text: str | None = None,
+    deadline: str = "",
 ) -> str:
     """Build the stderr feedback that drives the main agent to invoke the advisor.
 
@@ -92,6 +130,9 @@ def format_advisor_trigger(
     prefix = ""
     if anchor_text:
         prefix = f"Your anchor — stay anchored to it:\n\n{anchor_text}\n\n---\n\n"
+    deadline_line = ""
+    if deadline:
+        deadline_line = f"\n                deadline: {deadline}"
     candidates_line = ""
     if candidates_pending:
         candidates_line = (
@@ -108,7 +149,7 @@ def format_advisor_trigger(
             description="review and advise",
             run_in_background=false,
             prompt="""
-                anchor: {anchor_path}
+                anchor: {anchor_path}{deadline_line}
                 action-history: Agent(
                     subagent_type="ploop:narrator",
                     description="narrate action history",

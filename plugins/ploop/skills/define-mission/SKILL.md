@@ -28,4 +28,5 @@ advisor는 목표가 완전히 달성되면 loop를 종료한다.
 - [IMPORTANT] **Acceptable boundaries**와 **달성 가능한 목표**가 명확히 정의되어야 한다.
 - harness(CLAUDE.md, rules 등)가 제공하는 내용은 중복이니 anchor에 넣지 마라.
 - ROI(분량 대비 정보)가 높은 문서를 작성하라 — 중요한 단어만 남기고, 작성 후 더 irreducible하게 줄일 수 있는지 재검토하라.
+- anchor 최상단 frontmatter의 `deadline: 2026-08-04T22:00+09:00`(ISO 8601, timezone 필수) 선언은 advisor에게 매 round 잔여 시간을 전달한다.
 - 구조는 Background → Mission → Constraint → Reference 순이다. `# Mission`(달성할 목표)과 `# Constraint`(허용 범위)는 필수, `# Background`(목표의 배경)와 `# Reference`(관련 link — URL·파일 경로)는 선택이며, section은 자유롭게 추가할 수 있다.

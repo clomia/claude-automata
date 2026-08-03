@@ -427,6 +427,15 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     조용히 죽으면 pre-heartbeat 현상 유지로 퇴행할 뿐 새 피해는 없고, 하위 harness 우려는 root canon의
     auto-update 전제가 배제한다. advisor는 결코 arm하지 않아 결정 16의 소집 계약은 불변이다 — 유예의 길이
     자체는 결함이 아니며, heartbeat wake가 잦아지는 것이 아니라 잠이 유한해지는 것이다.
+20. **deadline — 시계는 정보, 집행은 advisor.** anchor 최상단 frontmatter `deadline:`(ISO 8601, timezone
+    필수)을 Stop hook이 trigger 조립 시점에 읽어 advisor prompt에 status 한 줄(`deadline: 2h 13m remaining`·
+    `expired 23m ago`·parse 불가 시 unreadable로 원문 표면화 — 조용한 무장 해제는 거짓 안심이다)로 실어준다.
+    미선언 anchor는 비용 0. advisor는 Bash가 없어 시계를 못 읽는 관측 공백을 이 줄이 메우고, 마감 판단 —
+    잔여 내 wrap-up 조율, 경과 시 종료(instruction 판단 절이 명시) — 은 종결 권위의 기존 mandate가 흡수한다.
+    threshold 자동 off는 기각했다: off는 무통보 인간 전용 pause라 마지막 시간(정확히 wrap-up 창)을 절단하고,
+    인간 pause와 기계 만료를 같은 상태로 접어 구별 불능을 만들며, 결정 19가 폐기한 코드 단속을 재도입해
+    종결 권위를 이원화한다. 마감을 넘긴 기절은 heartbeat(결정 19)가 깨워 다음 stop에서 advisor가 경과를
+    본다 — 잠은 heartbeat가, mission은 deadline이 상한하고, 집행은 둘 다 advisor다.
 
 ---
 
