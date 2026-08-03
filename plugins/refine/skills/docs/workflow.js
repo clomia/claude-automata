@@ -27,7 +27,7 @@ function header(agoraName) {
     `principles: ${principlesPath}`,
     conventionPath ? `convention: ${conventionPath}` : null,
     `repomix: ${repomixCmd}`,
-    focusArea ? `집중 분석 영역: ${focusArea}` : null,
+    focusArea ? `집중 분석 영역: ${focusArea} (임무의 전수 범위는 이 영역이다)` : null,
     '',
   ].filter((l) => l !== null).join('\n')
 }
@@ -93,7 +93,7 @@ const REGIONS_SCHEMA = {
 
 const FINDINGS_SCHEMA = {
   type: 'object',
-  required: ['findings'],
+  required: ['findings', 'total'],
   properties: {
     findings: {
       type: 'array',
@@ -109,6 +109,7 @@ const FINDINGS_SCHEMA = {
         },
       },
     },
+    total: { type: 'integer', description: '이 반환 후 네 Agora에 기록된 발견 누계' },
   },
 }
 
@@ -149,8 +150,7 @@ const ORDER_SCHEMA = {
   properties: {
     executionOrder: {
       type: 'array',
-      minItems: 1,
-      description: '분할·병합·폐기를 반영한 최종 계획 전체 — 실행 순서대로',
+      description: '분할·병합·폐기를 반영한 최종 계획 전체 — 실행 순서대로. 전량 폐기면 빈 배열',
       items: {
         type: 'string',
         pattern: '^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*$',
@@ -190,7 +190,7 @@ phase('Census')
 await synod(
   'cartographer',
   `# 임무: 문서 전수조사와 검증 영역 정의
-repository의 문서를 하나도 빠짐없이 목록화하고, 독립적으로 검증 가능한 영역으로 나눠라.
+repository의 문서(코드 주석·docstring 포함)를 하나도 빠짐없이 목록화하고, 독립적으로 검증 가능한 영역으로 나눠라.
 영역은 겹침 없이 나누어 떨어지고, agent 하나가 전수 검증할 수 있는 크기여야 한다.
 영역별 문서 inventory와 착수 context를 네 Agora에 기록하라.`,
   { label: 'census:draft', schema: REGIONS_SCHEMA },
@@ -216,7 +216,8 @@ log(`${regions.length} regions: ${regions.map((r) => r.dir).join(', ')}`)
 phase('Verify')
 const SWEEPS = 4
 async function verifyRegion(r) {
-  let count = 0
+  let fresh = 0
+  let total = 0
   for (let round = 1; round <= SWEEPS; round++) {
     const res = await synod(
       r.dir,
@@ -224,15 +225,17 @@ async function verifyRegion(r) {
 inventory의 모든 문서를 읽고, 문서의 모든 주장을 코드와 대조해 검증하라.
 발견은 다음으로 분류한다: mismatch(코드와 다른 주장) / duplication(같은 정보의 다중 서술 — 다른 영역 문서와의 중복 포함) / dead-doc(대상이 사라진 문서) / restating-comment(코드를 재언하는 주석) / code-defect(문서가 의도를 담고 코드가 결함인 충돌 — 수정 말고 보고) / convention(convention 파일이 정한 규약 위반).
 발견마다 근거(문서 위치·코드 위치)를 함께 기록하라.
-네 Agora에 이미 발견이 기록되어 있다면 그 너머의 새 발견만 기록·반환하라. 새 발견이 없으면 빈 배열을 반환하라.`,
+네 Agora에 이미 발견이 기록되어 있다면 그 너머의 새 발견만 기록·반환하라(없으면 빈 배열). total은 네 Agora의 발견 누계다.`,
       { label: `verify:${r.dir}#${round}`, schema: FINDINGS_SCHEMA },
     )
-    const fresh = res?.findings?.length ?? 0
-    count += fresh
-    if (!fresh) break
+    const found = res?.findings?.length ?? 0
+    fresh += found
+    total = Math.max(total, res?.total ?? 0)
+    if (!found) break
     if (round === SWEEPS) log(`${r.dir}: ${SWEEPS} sweeps spent, still finding — coverage capped`)
   }
-  return count
+  // 반환은 Agora 누계다 — 재개 run의 신규 0은 비어있음이 아니다
+  return Math.max(fresh, total)
 }
 const counts = (await series(regions.map((r) => () => verifyRegion(r)))).filter((n) => n !== null)
 const totalFindings = counts.reduce((a, b) => a + b, 0)
@@ -359,7 +362,9 @@ ${PRINCIPLE}
 )
 // Refine은 계획을 분할·병합·폐기할 수 있다 — executionOrder가 실행 집합의 정본이다.
 const ordered = [...new Set((refined?.executionOrder ?? []).map((n) => String(n).trim()))]
-const order = ordered.length ? ordered : plans.map((p) => p.name)
+if (refined && !ordered.length)
+  return outcome('all-dropped', { findings: consensus.count, plans: plans.length, codeFindings: consensus.codeDefects ?? [] })
+const order = ordered
 const added = order.filter((n) => !plans.some((p) => p.name === n))
 const dropped = plans.map((p) => p.name).filter((n) => !order.includes(n))
 if (added.length) log(`refine added: ${added.join(', ')}`)

@@ -17,7 +17,7 @@ Agora는 산출물의 단일 저장소이자 agent 간 협업 수단이다.
 
 # codebase 탐색: repomix
 
-임무에 제공된 repomix 명령으로 codebase를 탐색하라.  
+임무에 제공된 repomix 명령으로 codebase를 탐색하라. 출력물은 project tree가 아니라 네 Agora에 둔다.  
 착수 전, 임무와 연관된 코드를 하나도 빠짐없이 찾아내라.  
 문서는 outdated일 수 있다. **실제 코드가 ground truth다.**
 
