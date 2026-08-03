@@ -69,9 +69,9 @@ claude plugin update tx@claude-automata
   routes the change: `tx:plan` for anything structural, or skipping OpenSpec
   for trivial or docs-only changes.
 - **`tx:plan`** — records the change as OpenSpec artifacts (proposal, delta
-  specs, design, tasks) until `validate --strict` is green — except the
-  class-wide `no deltas` error on delta-less changes, whose gate is task
-  completion and CI. Unknowns are translated three
+  specs, design, tasks) until `validate --strict` is green; a delta-less
+  change declares `skip_specs` and validates green, gated by task completion
+  and CI instead. Unknowns are translated three
   ways: measure and record / adopt a reversible assumption and note it in
   design / halt the change and record why.
 - **`tx:apply`** — implements task by task; when the change carries spec
