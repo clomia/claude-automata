@@ -38,6 +38,11 @@ loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의
   auto-compaction마다 fire하는 branch-state-warn(SessionStart `compact` matcher)이 유지하고,
   정합의 보증 자체는 close의 강제 fetch·rebase·CI가 소유한다 — loop 중 nudge는 신선도
   최적화이지 무결성 요건이 아니다.
+- **잔여 책임 분할 — ploop은 잠을 상한하고, tx는 닫힘에 청산한다.** 작업이 machine에 남기는
+  흔적의 책임은 겹치지 않는다: ploop heartbeat는 armed loop의 기절을 3h로 상한할 뿐 아무것도
+  치우지 않고, 실행 환경의 무결은 tx close가 gate한다 — transaction이 존재시킨 것은 base에
+  실렸거나 소멸했어야 닫힌다. 잔여의 형태는 어느 쪽도 열거하지 않는다(형태 목록은 harness
+  진화마다 자라는 부채다) — 탐지·처분은 agent 판단이다.
 - **refine × tx — 청소도 gate를 지난다**(MEMORY 불변식 1). 접면은 그 gate 하나다: refine은 tx를
   참조하지 않는다(무종속 계약). refine run의 halt 구간(빈 background 정지)에 tx git-sync nudge가
   닿는 것은 알려진 접촉이고, 그 처방은 plugin 결합이 아니라 tx의 사용자 command
