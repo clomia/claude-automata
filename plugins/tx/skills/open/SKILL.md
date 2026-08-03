@@ -12,7 +12,7 @@ transaction(tx:open ~ tx:close)은 작업 단위가 아니라 **무결성 경계
 
 `tx:open` → `tx:plan` → `tx:apply` → `tx:archive` → `tx:close`. 모두 Skill 도구다.
 
-- `tx:plan`: 변경의 intent·design을 change artifact로 기록한다. route가 openspec을 생략하면
+- `tx:plan`: 변경의 intent와 design을 change artifact로 기록한다. route가 openspec을 생략하면
   건너뛴다.
 - `tx:apply`: task 순서대로 구현한다. spec delta가 있으면 독립 verify stage를 pass까지 돌린다.
 - `tx:archive`: 완료된 change를 동결한다. close의 조건이다.
