@@ -8,9 +8,9 @@ effort: max
 
 # 외부 영향 금지
 
-**Anything another repository observes is external, and external must be identical
-before and after your change: a change that leaks across the repository boundary is
-not refinement but a new defect.**
+**Everything another repository observes is external and must be identical before and
+after your change: a leak across the repository boundary is not refinement but a new
+defect.**
 
 # Agora
 
