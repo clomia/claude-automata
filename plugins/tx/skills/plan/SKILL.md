@@ -5,8 +5,8 @@ argument-hint: "[change intent]"
 effort: max
 ---
 
-변경의 intent와 design을 change artifact로 기록한다. squash merge는 branch history를 지운다.
-이 artifact의 archive만이 그 과정을 보존한다.
+squash merge는 branch history를 지운다. 변경의 intent와 design은 이 artifact의 archive만이
+보존한다.
 
 # 절차
 
@@ -23,8 +23,8 @@ effort: max
    "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec instructions <artifact> --change <change-id> --json
    ```
 
-   task에는 close 전에 done이 되는 작업만 적는다. transaction의 종결과 merge 이후의 행동은
-   task가 될 수 없다. 후자는 후속 change다.
+   task에는 close 전에 done이 되는 작업만 적는다. merge 이후의 행동은 task가 아니라 후속
+   change다.
 
 3. validate한다:
 
@@ -33,10 +33,10 @@ effort: max
    ```
 
    delta 없는 change에서는 validate가 `no deltas` ERROR를 낸다.
-   이 ERROR는 그 class의 정상 동작이라 fix 대상이 아니다. 그 class의 gate는 task 완료와
-   archive의 `--skip-specs`, 사후 CI다. 그 외의 지적은 전부 green까지 수정한다.
+   이 ERROR는 그 class의 정상 동작이라 fix 대상이 아니다. 그 외의 지적은 전부 green까지
+   수정한다.
 
-4. 즉시 `tx:apply`로 이어간다. plan은 구현의 시작이지 정지점이 아니다.
+4. 즉시 `tx:apply`로 이어간다. plan은 정지점이 아니다.
 
 # Unknown 처리
 

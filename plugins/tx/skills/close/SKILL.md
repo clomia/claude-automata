@@ -24,8 +24,7 @@ BASE=$("${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" base)
   Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
   ```
 
-- Every active change is archived through `tx:archive`. Missing or incomplete
-  tasks block the close: fill them with `tx:plan` and `tx:apply`, then close.
+- Every active change is archived through `tx:archive`.
 - The branch is rebased onto the latest `origin/<base>`. A git-sync pause does
   not exempt this.
 - If the diff touches long-term memory (tracked `.md`, `openspec/**`): the
@@ -36,9 +35,8 @@ BASE=$("${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" base)
 - The whole transaction is squash-merged into base through a PR from remote
   branch `<prefix>/<scope>/<slug>`. CI green is the merge condition, and
   absent checks also block (right after PR creation, absence can be
-  scheduling lag). The local branch stays `tx-*` until the merge. The squash
-  message is a conventional commit, `<prefix>(<scope>): <summary>`, describing
-  the whole transaction.
+  scheduling lag). The squash message is a conventional commit,
+  `<prefix>(<scope>): <summary>`, describing the whole transaction.
 - Everything born in this transaction has landed in base or ceased to exist.
   What is not the transaction's, leave untouched. Anything of uncertain
   origin, or holding changes that never landed, is surfaced to the user

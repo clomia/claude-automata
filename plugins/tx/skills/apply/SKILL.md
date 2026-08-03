@@ -31,7 +31,7 @@ effort: max
    Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
    ```
 
-   change-id 외에는 아무것도 전달하지 않는다. verifier는 artifact와 코드를 직접 읽는다.
+   change-id 외에는 아무것도 전달하지 않는다.
    결함이 보고되면 구현 context가 살아있는 지금 이 자리에서 고치고, pass까지 재spawn한다.
 
 # Unknown 처리
