@@ -5,8 +5,8 @@ argument-hint: "[change description]"
 effort: high
 ---
 
-transaction은 작업 단위가 아니라 **무결성 경계**다.
-**`/tx:open`은 "지금부터 전체 상태를 무결하지 않게 만들겠다"는 선언이다.**
+transaction(tx:open ~ tx:close)은 작업 단위가 아니라 **무결성 경계**다.
+**`tx:open`은 "지금부터 전체 상태를 무결하지 않게 만들겠다"는 선언이다.**
 
 # 열린 상태: 아래가 전부 참이면 transaction은 열린 것이다
 
