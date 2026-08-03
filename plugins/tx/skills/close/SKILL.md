@@ -54,8 +54,8 @@ close는 idempotent다: 다시 실행하면 아직 참이 아닌 조건만 채�
 | ---------- | -------------------------------------------------- |
 | `feat`     | 관찰 가능한 behavior가 늘어남                      |
 | `fix`      | 기존 behavior의 결함 수정                          |
-| `refactor` | behavior 불변, 구조·이름·내부 구현만 변경          |
-| `chore`    | build·CI·dependency·config·hook·tooling 등 repo-wide infra |
+| `refactor` | behavior 불변, 내부만 변경                         |
+| `chore`    | repo-wide infra                                    |
 | `docs`     | 문서만 변경                                        |
 
-`scope`는 변경이 속한 domain·module이다. `chore`·`docs`는 scope를 생략한다.
+`scope`는 변경이 속한 domain 또는 module이다. `chore`와 `docs`는 scope를 생략한다.
