@@ -26,7 +26,7 @@ function header(agoraName) {
     `Project Dir: ${projectDir}`,
     `principles: ${principlesPath}`,
     `repomix: ${repomixCmd}`,
-    focusArea ? `집중 분석 영역: ${focusArea}` : null,
+    focusArea ? `집중 분석 영역: ${focusArea} (임무의 전수 범위는 이 영역이다)` : null,
     '',
   ].filter((l) => l !== null).join('\n')
 }
@@ -94,7 +94,7 @@ const REGIONS_SCHEMA = {
 
 const ANTIPATTERNS_SCHEMA = {
   type: 'object',
-  required: ['antipatterns'],
+  required: ['antipatterns', 'total'],
   properties: {
     antipatterns: {
       type: 'array',
@@ -107,6 +107,7 @@ const ANTIPATTERNS_SCHEMA = {
         },
       },
     },
+    total: { type: 'integer', description: '이 반환 후 네 Agora에 기록된 antipattern 누계' },
   },
 }
 
@@ -146,8 +147,7 @@ const ORDER_SCHEMA = {
   properties: {
     executionOrder: {
       type: 'array',
-      minItems: 1,
-      description: '분할·병합·폐기를 반영한 최종 계획 전체 — 실행 순서대로',
+      description: '분할·병합·폐기를 반영한 최종 계획 전체 — 실행 순서대로. 전량 폐기면 빈 배열',
       items: {
         type: 'string',
         pattern: '^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*$',
@@ -208,22 +208,25 @@ log(`${regions.length} regions: ${regions.map((r) => r.dir).join(', ')}`)
 phase('Identify')
 const SWEEPS = 4
 async function identifyRegion(r) {
-  let count = 0
+  let fresh = 0
+  let total = 0
   for (let round = 1; round <= SWEEPS; round++) {
     const res = await synod(
       r.dir,
       `# 임무: antipattern 식별 — 영역 '${r.dir}' (${r.scope})
 이 영역의 antipattern을 식별하고 네 Agora에 기록하라.
 각 antipattern의 존재 이유를 코드 주변 환경과 history(.claude/·문서·설정·git 등)에서 추론해 함께 기록하라.
-네 Agora에 이미 antipattern이 기록되어 있다면 그 너머의 새 antipattern만 기록·반환하라. 새 antipattern이 없으면 빈 배열을 반환하라.`,
+네 Agora에 이미 antipattern이 기록되어 있다면 그 너머의 새 antipattern만 기록·반환하라(없으면 빈 배열). total은 네 Agora의 antipattern 누계다.`,
       { label: `identify:${r.dir}#${round}`, schema: ANTIPATTERNS_SCHEMA },
     )
-    const fresh = res?.antipatterns?.length ?? 0
-    count += fresh
-    if (!fresh) break
+    const found = res?.antipatterns?.length ?? 0
+    fresh += found
+    total = Math.max(total, res?.total ?? 0)
+    if (!found) break
     if (round === SWEEPS) log(`${r.dir}: ${SWEEPS} sweeps spent, still finding — coverage capped`)
   }
-  return count
+  // 반환은 Agora 누계다 — 재개 run의 신규 0은 비어있음이 아니다
+  return Math.max(fresh, total)
 }
 const counts = (await series(regions.map((r) => () => identifyRegion(r)))).filter((n) => n !== null)
 const totalAntipatterns = counts.reduce((a, b) => a + b, 0)
@@ -346,7 +349,9 @@ ${PRINCIPLE}
 )
 // Refine은 계획을 분할·병합·폐기할 수 있다 — executionOrder가 실행 집합의 정본이다.
 const ordered = [...new Set((refined?.executionOrder ?? []).map((n) => String(n).trim()))]
-const order = ordered.length ? ordered : plans.map((p) => p.name)
+if (refined && !ordered.length)
+  return outcome('all-dropped', { antipatterns: consensus.count, plans: plans.length })
+const order = ordered
 const added = order.filter((n) => !plans.some((p) => p.name === n))
 const dropped = plans.map((p) => p.name).filter((n) => !order.includes(n))
 if (added.length) log(`refine added: ${added.join(', ')}`)

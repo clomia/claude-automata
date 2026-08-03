@@ -27,7 +27,7 @@ function header(agoraName) {
     `Project Dir: ${projectDir}`,
     `principles: ${principlesPath}`,
     `repomix: ${repomixCmd}`,
-    focusArea ? `집중 분석 영역: ${focusArea}` : null,
+    focusArea ? `집중 분석 영역: ${focusArea} (임무의 전수 범위는 이 영역이다)` : null,
     '',
   ].filter((l) => l !== null).join('\n')
 }
@@ -94,7 +94,7 @@ const REGIONS_SCHEMA = {
 
 const HAZARDS_SCHEMA = {
   type: 'object',
-  required: ['hazards'],
+  required: ['hazards', 'total'],
   properties: {
     hazards: {
       type: 'array',
@@ -111,6 +111,7 @@ const HAZARDS_SCHEMA = {
         },
       },
     },
+    total: { type: 'integer', description: '이 반환 후 네 Agora에 기록된 hazard 누계' },
   },
 }
 
@@ -150,8 +151,7 @@ const ORDER_SCHEMA = {
   properties: {
     executionOrder: {
       type: 'array',
-      minItems: 1,
-      description: '분할·병합·폐기를 반영한 최종 계획 전체 — 실행 순서대로',
+      description: '분할·병합·폐기를 반영한 최종 계획 전체 — 실행 순서대로. 전량 폐기면 빈 배열',
       items: {
         type: 'string',
         pattern: '^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*$',
@@ -214,22 +214,25 @@ log(`${regions.length} regions: ${regions.map((r) => r.dir).join(', ')}`)
 phase('Hunt')
 const SWEEPS = 4
 async function huntRegion(r) {
-  let count = 0
+  let fresh = 0
+  let total = 0
   for (let round = 1; round <= SWEEPS; round++) {
     const res = await synod(
       r.dir,
       `# 임무: hazard 수집 — 영역 '${r.dir}' (${r.scope})
 principles를 기준으로, 이 영역에서 무결성 경계가 포함하지 못하는 도달 가능한 상태를 모두 찾아라 — 검증 없는 경계 입력과 경합까지.
 각 hazard의 도달 경로(입력·상태)와 현재 동작을 추적하고, 첫 질문의 답을 verdict로 제안하고 근거를 기록하라.
-네 Agora에 이미 hazard가 기록되어 있다면 그 너머의 새 hazard만 기록·반환하라. 새 hazard가 없으면 빈 배열을 반환하라.`,
+네 Agora에 이미 hazard가 기록되어 있다면 그 너머의 새 hazard만 기록·반환하라(없으면 빈 배열). total은 네 Agora의 hazard 누계다.`,
       { label: `hunt:${r.dir}#${round}`, schema: HAZARDS_SCHEMA },
     )
-    const fresh = res?.hazards?.length ?? 0
-    count += fresh
-    if (!fresh) break
+    const found = res?.hazards?.length ?? 0
+    fresh += found
+    total = Math.max(total, res?.total ?? 0)
+    if (!found) break
     if (round === SWEEPS) log(`${r.dir}: ${SWEEPS} sweeps spent, still finding — coverage capped`)
   }
-  return count
+  // 반환은 Agora 누계다 — 재개 run의 신규 0은 비어있음이 아니다
+  return Math.max(fresh, total)
 }
 const counts = (await series(regions.map((r) => () => huntRegion(r)))).filter((n) => n !== null)
 const totalHazards = counts.reduce((a, b) => a + b, 0)
@@ -358,7 +361,9 @@ ${PRINCIPLE}
 )
 // Refine은 계획을 분할·병합·폐기할 수 있다 — executionOrder가 실행 집합의 정본이다.
 const ordered = [...new Set((refined?.executionOrder ?? []).map((n) => String(n).trim()))]
-const order = ordered.length ? ordered : plans.map((p) => p.name)
+if (refined && !ordered.length)
+  return outcome('all-dropped', { hazards: consensus.count, plans: plans.length, unabsorbed: consensus.titles ?? [] })
+const order = ordered
 const added = order.filter((n) => !plans.some((p) => p.name === n))
 const dropped = plans.map((p) => p.name).filter((n) => !order.includes(n))
 if (added.length) log(`refine added: ${added.join(', ')}`)
