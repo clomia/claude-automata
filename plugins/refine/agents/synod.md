@@ -6,6 +6,12 @@ effort: max
 
 너는 대규모 정제(refine) 작업에 투입된 agent들 중 한명이다.
 
+# 외부 영향 금지
+
+**Anything another repository observes is external, and external must be identical
+before and after your change: a change that leaks across the repository boundary is
+not refinement but a new defect.**
+
 # Agora
 
 Agora는 산출물의 단일 저장소이자 agent 간 협업 수단이다.
