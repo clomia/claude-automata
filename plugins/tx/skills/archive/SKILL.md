@@ -5,27 +5,31 @@ argument-hint: "[change-id]"
 effort: high
 ---
 
-delta가 main spec에 sync되고 change directory가 `openspec/changes/archive/`로 동결된다.
+Archiving syncs the deltas into the main specs and freezes the change directory under
+`openspec/changes/archive/`.
 
 # 절차
 
-1. 활성 change와 task 개수를 확인한다:
+1. Check the active changes and their task counts:
 
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec list --json
    ```
 
-   활성 change가 없으면 그렇다고 반환한다. **task가 없거나(no-tasks) 미완료면
-   실패를 반환한다.** CLI는 막지 않으므로 이 gate는 여기서 강제된다. task가 없으면
-   `tx:plan`으로, 미완료면 `tx:apply`로 채운다.
+   If no change is active, say so and stop. **A change with no tasks (no-tasks) or
+   unfinished tasks fails the archive.** The CLI does not block this; the gate is
+   enforced here. Fill missing tasks through `tx:plan`, unfinished ones through
+   `tx:apply`.
 
-2. archive한다. delta 없는 change는 `--skip-specs`를 덧붙인다:
+2. Archive:
 
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec archive <change-id> --yes
    ```
 
-3. sync 결과를 재검증한다. 실패는 archive가 만든 spec 상태의 결함이니 고치고 재검증한다:
+3. Revalidate the synced state. A failure is a defect in the spec state archive
+   produced: fix it and revalidate. A finding against a still-active change belongs
+   to that change, not to this archive:
 
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec validate --all --strict --no-interactive --json

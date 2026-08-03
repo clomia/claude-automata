@@ -27,6 +27,12 @@ passes — scratch repositories are working memory; the invariant governs only
 this repository.  A session outside a repository, or an unresolvable base
 (no origin/HEAD mirror), disables the guard entirely — the shared degrade
 contract.
+
+Arrival depends on the hooks.json `if: "Bash(git *)"` filter passing compound
+commands.  Measured live 2026-08: `cd x && git commit` arrived here and was
+denied, so the segmentation above is load-bearing.  If that filter ever
+tightens to prefix-only matching, compound spellings stop arriving and the
+server-side ruleset is the remaining backstop.
 """
 
 import json

@@ -7,37 +7,40 @@ effort: max
 
 # 절차
 
-1. gate를 판정한다: `applyRequires`에 열거된 artifact가 전부 `done`이어야 한다.
-   (`isComplete`는 gate가 아니다. design은 포함 조건에 해당할 때만 존재한다.)
-   아니면 부족한 것은 구현이 아니라 계획이다: `tx:plan`으로 돌아간다.
+1. Judge the gate: every artifact listed in `applyRequires` must be `done`.
+   (`isComplete` is not the gate; design exists only when its inclusion criteria apply.)
+   Otherwise what is missing is planning, not implementation: return to `tx:plan`.
 
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec status --change <change-id> --json
    ```
 
-2. context 파일 경로와 task checklist를 받는다:
+2. Take the context file paths and the task checklist:
 
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec instructions apply --change <change-id> --json
    ```
 
-3. task를 dependency 순서대로 구현한다.
-   spec wording이 구현을 구속한다. 구현 중 spec이 틀렸음이 드러나면 `tx:plan`으로 delta를
-   고친 뒤 계속한다.
+3. Implement the tasks in dependency order.
+   The spec wording binds the implementation. If implementation reveals the spec is
+   wrong, fix the delta through `tx:plan`, then continue.
 
-4. 모든 task가 완료되고 change에 spec delta가 있으면 **verify stage를 spawn한다** (필수):
+4. When every task is done and the change carries a spec delta, **spawn the verify
+   stage** (mandatory):
 
    ```
    Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
    ```
 
-   change-id 외에는 아무것도 전달하지 않는다.
-   결함이 보고되면 구현 context가 살아있는 지금 이 자리에서 고치고, pass까지 재spawn한다.
+   Pass nothing but the change-id.
+   Fix reported defects here, while the implementation context is live, and respawn
+   until pass. A defect that does not reproduce is a defect in the spec wording: fix
+   it through `tx:plan`.
 
 # Unknown 처리
 
-구현 중 만나는 모든 unknown은 셋 중 하나로 처리한다:
+Every unknown met while implementing resolves one of three ways:
 
-- **measurable하면**: 측정하고 결과를 기록한다.
-- **reversible하면**: assumption을 채택하고 design에 명시한다.
-- **둘 다 아니면**: 해당 task를 중단하고 사유를 tasks.md에 기록한다.
+- **measurable**: measure it and record the result.
+- **reversible**: adopt an assumption and state it in design.
+- **neither**: halt the task and record why in tasks.md.

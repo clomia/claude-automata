@@ -5,43 +5,42 @@ argument-hint: "[change intent]"
 effort: max
 ---
 
-squash merge는 branch history를 지운다. 변경의 intent와 design은 이 artifact의 archive만이
-보존한다.
+squash merge erases branch history. Only the archive of these artifacts preserves the
+change's intent and design.
 
 # 절차
 
-1. change-id를 정한다. 보통 tx branch의 slug와 같다.
+1. Pick a change-id. Usually the tx branch's slug:
 
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec new change <change-id>
    ```
 
-2. artifact를 dependency 순서로 작성한다. artifact마다
-   instructions를 engine에서 받는다. format의 정본은 engine이다:
+2. Write the artifacts in dependency order. Each artifact's instructions come from the
+   engine; the engine owns the format:
 
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec instructions <artifact> --change <change-id> --json
    ```
 
-   task에는 close 전에 done이 되는 작업만 적는다. merge 이후의 행동은 task가 아니라 후속
-   change다.
+   Tasks hold only work that is done before close. Post-merge actions are follow-up
+   changes, not tasks.
 
-3. validate한다:
+3. Validate:
 
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec validate <change-id> --strict --no-interactive --json
    ```
 
-   delta 없는 change에서는 validate가 `no deltas` ERROR를 낸다.
-   이 ERROR는 그 class의 정상 동작이라 fix 대상이 아니다. 그 외의 지적은 전부 green까지
-   수정한다.
+   On a delta-less change, validate raises the `no deltas` ERROR: normal for the class,
+   not a defect to fix. Fix everything else until green.
 
-4. 즉시 `tx:apply`로 이어간다. plan은 정지점이 아니다.
+4. Continue straight into `tx:apply`. plan is not a stopping point.
 
 # Unknown 처리
 
-계획 중 만나는 모든 unknown은 셋 중 하나로 처리한다:
+Every unknown met while planning resolves one of three ways:
 
-- **measurable하면**: 측정하고 결과를 기록한다.
-- **reversible하면**: assumption을 채택하고 design에 명시한다.
-- **둘 다 아니면**: 변경을 중단하고 사유를 proposal에 기록한다.
+- **measurable**: measure it and record the result.
+- **reversible**: adopt an assumption and state it in design.
+- **neither**: halt the change and record why in the proposal.

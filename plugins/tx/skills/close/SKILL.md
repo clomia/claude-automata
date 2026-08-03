@@ -25,8 +25,7 @@ BASE=$("${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" base)
   ```
 
 - Every active change is archived through `tx:archive`.
-- The branch is rebased onto the latest `origin/<base>`. A git-sync pause does
-  not exempt this.
+- The branch is rebased onto the latest `origin/<base>`.
 - If the diff touches long-term memory (tracked `.md`, `openspec/**`): the
   final tree passes the `${CLAUDE_PLUGIN_ROOT}/references/docs-surface.md`
   rules, and the diff's old and new vocabulary is scanned for conflicts
