@@ -19,7 +19,7 @@ delta가 main spec에 sync되고 change directory가 `openspec/changes/archive/`
    실패를 반환한다.** CLI는 막지 않으므로 이 gate는 여기서 강제된다. task가 없으면
    `tx:plan`으로, 미완료면 `tx:apply`로 채운다.
 
-2. archive한다. delta spec이 없는 change(tooling·infra·docs 변경)는 `--skip-specs`를 덧붙인다:
+2. archive한다. delta 없는 change(tooling·infra·docs 변경)는 `--skip-specs`를 덧붙인다:
 
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec archive <change-id> --yes
