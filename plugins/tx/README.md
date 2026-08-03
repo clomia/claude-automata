@@ -11,15 +11,13 @@ slipping through.
 
 **A transaction is the process of turning the prior state into an integral one.**
 
-Whether the prior state was integral or not, by `/tx:close` the implementation,
-its documented intent, and the environment the work ran in must all be
-integral. Between `/tx:open` and `/tx:close`, they are allowed to be
-non-integral.
+Whether the prior state was integral or not, by `/tx:close` the state must be
+integral. Between `/tx:open` and `/tx:close`, it is allowed to be non-integral.
 
 Two declarations bound it:
 
-- **`/tx:open`** declares: "I will make the implementation, its intent, or the environment non-integral."
-- **`/tx:close`** declares: "The implementation, its intent, and the environment are now all integral."
+- **`/tx:open`** declares: "I will make the state non-integral."
+- **`/tx:close`** declares: "The state is now integral."
 
 A transaction is **not a unit of work — it is an integrity boundary.** It does
 not depend on a Claude Code session or the nature of the task; it depends only on
@@ -61,7 +59,7 @@ claude plugin update tx@claude-automata
 ```
 /tx:open  [change description]   # cut a tx-* branch off base, seed, route the change
 ...plan & implement...           # tx:plan → tx:apply → verify stage (all tx-owned)
-/tx:close                        # verify, archive, docs gate, squash-merge, settle the environment
+/tx:close                        # verify, archive, docs gate, squash-merge, settle every trace
 ```
 
 - **`/tx:open`** — from the base branch with a clean tree, cuts `tx-<slug>` off
@@ -88,11 +86,10 @@ claude plugin update tx@claude-automata
   `tx:archive` (incomplete tasks block the close), rebases onto the latest
   `origin/<base>`, runs the docs-surface
   gate with a post-rebase conflict scan, opens the PR, waits for CI,
-  squash-merges, and settles the environment: everything the transaction
-  brought into existence has landed in base or ceased to exist. What forms a
-  trace can take is deliberately not enumerated — detection and disposal are
-  the agent's judgment; anything of uncertain origin or holding unmerged
-  changes is surfaced to the user, never deleted. Idempotent throughout.
+  squash-merges, and settles every trace: what the transaction brought into
+  existence has landed in base or ceased to exist — anything of uncertain
+  origin or holding unmerged changes is surfaced, never deleted. Idempotent
+  throughout.
 
 ## The seed
 
