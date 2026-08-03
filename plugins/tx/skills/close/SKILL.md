@@ -4,7 +4,7 @@ description: "Close the transaction: verify, archive, docs gate, then squash mer
 effort: max
 ---
 
-**tx close는 "전체 상태가 무결하다"는 선언이다.** 무결하지 않으면 닫지 마라.
+**`tx:close`는 "전체 상태가 무결하다"는 선언이다.** 무결하지 않으면 닫지 마라.
 필요한 수정을 transaction 안에서 마친 뒤 닫는다.
 
 base는 repository의 GitHub default branch다. 해석이 실패하면 stderr의 지시를 전하고 거부한다:
