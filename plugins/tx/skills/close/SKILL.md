@@ -4,7 +4,7 @@ description: Close the transaction — verify, archive, docs gate, then squash m
 effort: max
 ---
 
-**tx close는 "구현·내용·환경이 모두 무결하다"는 선언이다.** 무결하지 않으면 닫지 마라 —
+**tx close는 "상태가 모두 무결하다"는 선언이다.** 무결하지 않으면 닫지 마라 —
 필요한 수정을 transaction 안에서 마친 뒤 닫는다.
 
 base는 repository의 GitHub default branch다. 해석이 실패하면 stderr의 지시를 전하고 거부한다:
@@ -33,12 +33,9 @@ BASE=$("${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" base)
   있다 — CI green이 merge 조건이고 check 부재도 차단이다(PR 직후의 부재는 scheduling 지연일 수
   있다). local branch는 merge까지 tx-*로 남는다. squash message는
   conventional-commit(`<prefix>(<scope>): <요약>`)으로 transaction 전체를 요약한다.
-- 환경이 무결하다: transaction의 실행이 machine에 남긴 것은 merge가 전부다 — transaction이
-  존재시킨 것은 base에 실렸거나 소멸했다. 실행 중이든 대기 중이든 disk 점유든 이 transaction이
-  존재 이유인 것이 남아 있으면 잔여다. 잔여의 형태는 열거하지 않는다 — 무엇을 존재시켰는지는
-  네가 알고, 환경을 심문할 수단도 너에게 있다. 존재 이유가 transaction 밖에 있는 것은 흔적이
-  아니니 건드리지 마라. 이 transaction의 것인지 불확실하거나 merge에 실리지 않은 변경을 품은
-  것은 지우는 것도 무결성 위반이다 — 사용자에게 표면화하고, 해소 전에는 닫지 마라.
+- transaction이 존재시킨 것은 base에 실렸거나 소멸했다 — 남아 있으면 잔여다. transaction
+  밖의 것은 건드리지 마라. 출처가 불확실하거나 merge에 실리지 않은 변경을 품었으면 삭제도
+  무결성 위반이다 — 사용자에게 표면화하고, 해소 전에는 닫지 마라.
 - local은 merge된 base에 동기화되어 있고, transaction branch가 남아 있지 않다.
 
 이미 닫힌 transaction의 close는 부족한 상태만 채운다 (idempotent).
