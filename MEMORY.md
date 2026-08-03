@@ -140,7 +140,7 @@ tx의 OpenSpec 의존은 다음이 전부다:
   tx release와 함께 version된다(global 설치·repo별 package.json 없음). 업그레이드는 release note 검토 +
   skill 표면 재감사를 거친 의도적 tx release다(audit-harness-deps pattern).
 - **scaffold는 `openspec init --tools none`이다** — 산출물은 `specs/`·`changes/archive/`·
-  `config.yaml`뿐이다(1.6.0 실측, 비대화식). upstream prompt는 어떤 repo에도 배포되지 않는다.
+  `config.yaml`뿐이다(1.7.0 실측, 비대화식). upstream prompt는 어떤 repo에도 배포되지 않는다.
 - **fork하지 않는다** — fork는 validate 유지보수를 떠안아 채택의 이유를 소멸시키고, 기억 문법을
   agent의 수정 권한 안으로 들여 외부 고정점을 파괴한다. npm version 불변성으로 pin이 동결을 이미
   보장한다.

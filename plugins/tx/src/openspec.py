@@ -20,7 +20,7 @@ from typing import NoReturn
 
 from src.repo import git
 
-PIN = "1.6.0"
+PIN = "1.7.0"
 NPX_MISSING = "npx not found — openspec requires Node.js >= 22."
 
 

@@ -32,8 +32,8 @@ change's intent and design.
    "${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" openspec validate <change-id> --strict --no-interactive --json
    ```
 
-   On a delta-less change, validate raises the `no deltas` ERROR: normal for the class,
-   not a defect to fix. Fix everything else until green.
+   A delta-less change declares `skip_specs: true` in its `.openspec.yaml`; validate
+   then accepts zero deltas. Fix everything until green.
 
 4. Continue straight into `tx:apply`. plan is not a stopping point.
 

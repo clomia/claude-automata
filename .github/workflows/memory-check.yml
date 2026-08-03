@@ -15,7 +15,7 @@ jobs:
           package-manager-cache: false
       - name: openspec validate
         if: hashFiles('openspec/config.yaml') != ''
-        run: npx --yes @fission-ai/openspec@1.6.0 validate --all --strict --no-interactive
+        run: npx --yes @fission-ai/openspec@1.7.0 validate --all --strict --no-interactive
 
   docs-form-check:
     runs-on: ubuntu-latest
