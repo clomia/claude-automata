@@ -11,13 +11,14 @@ slipping through.
 
 **A transaction is the process of turning the prior state into an integral one.**
 
-Whether the prior state was integral or not, by `/tx:close` the state must be
-integral. Between `/tx:open` and `/tx:close`, it is allowed to be non-integral.
+Whether the prior state was integral or not, by `/tx:close` the whole state
+must be integral. Between `/tx:open` and `/tx:close`, it is allowed to be
+non-integral.
 
 Two declarations bound it:
 
-- **`/tx:open`** declares: "I will make the state non-integral."
-- **`/tx:close`** declares: "The state is now integral."
+- **`/tx:open`** declares: "I will make the whole state non-integral."
+- **`/tx:close`** declares: "The whole state is now integral."
 
 A transaction is **not a unit of work — it is an integrity boundary.** It does
 not depend on a Claude Code session or the nature of the task; it depends only on
