@@ -40,7 +40,7 @@ def main() -> None:
     )
     if status.returncode != 0 or status.stdout.strip():
         print(
-            "Working tree is not clean — commit, stash, or drop the changes first.",
+            "Working tree is not clean: stash or drop the changes first.",
             file=sys.stderr,
         )
         raise SystemExit(1)
