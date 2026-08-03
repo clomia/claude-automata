@@ -31,9 +31,11 @@ close의 닫힌 상태 gate는 close 시점이 아니라 작업 내내의 규율
   ```
 
 - The change is routed. `tx:plan` takes anything that touches structure or
-  worldview; a behavior-preserving refactor that touches structure is still
-  `tx:plan`'s. Only two kinds of change skip openspec: one confined to the
-  docs surface, and one trivial enough to touch neither.
+  worldview (the repo's design canon); a behavior-preserving refactor that
+  touches structure is still `tx:plan`'s. Only two kinds of change skip
+  openspec: one confined to the docs surface
+  (`${CLAUDE_PLUGIN_ROOT}/references/docs-surface.md` defines it), and one
+  trivial enough to touch neither.
 
 A failed command's stderr carries the fix; only a failed seed proceeds anyway,
 on the openspec-skip route.

@@ -71,13 +71,13 @@ def build_messages(branch: str, base: str, paused: bool) -> list[str]:
                 hours = int(age.total_seconds() // 3600)
                 messages.append(
                     f"[branch-state-warn] This transaction has been open for {hours}h. "
-                    "Reach an integral point and consider splitting it."
+                    "Reach an integral point and close it; reopen for the rest."
                 )
 
     if paused:
         messages.append(
             "[branch-state-warn] tx git-sync is off (protecting long-running "
-            "analysis). If that work is done, turn it back on: /tx:git-sync-on"
+            "analysis). If that work is done, ask the user to run /tx:git-sync-on."
         )
         return messages
 

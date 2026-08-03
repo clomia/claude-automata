@@ -71,13 +71,13 @@ claude plugin update tx@claude-automata
 - **`tx:plan`** — records the change as OpenSpec artifacts (proposal, delta
   specs, design, tasks) until `validate --strict` is green — except the
   class-wide `no deltas` error on delta-less changes, whose gate is task
-  completion, `--skip-specs` archive, and CI. Unknowns are translated three
+  completion and CI. Unknowns are translated three
   ways: measure and record / adopt a reversible assumption and note it in
   design / halt the change and record why.
 - **`tx:apply`** — implements task by task; when the change carries spec
   deltas it must then spawn **`tx:verify`** — an independent agent with a clean
   context that receives only the change-id and checks the implementation
-  against the artifacts (completeness, accuracy, coherence). Delta-less
+  against the artifacts (completeness, correctness, consistency). Delta-less
   changes are gated by task completion and CI instead. The verdict gates every next step, and the repair happens while
   the implementation context is still live.
   Defects are repaired on the spot and verify is re-spawned until it passes;
