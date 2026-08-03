@@ -7,7 +7,8 @@ effort: max
 **`tx:close`는 "전체 상태가 무결하다"는 선언이다.** 무결하지 않으면 닫지 마라.
 필요한 수정을 transaction 안에서 마친 뒤 닫는다.
 
-base는 repository의 GitHub default branch다. 해석이 실패하면 stderr의 지시를 전하고 거부한다:
+base is the repository's GitHub default branch. If it cannot be resolved,
+relay the stderr instruction and refuse to close:
 
 ```bash
 BASE=$("${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" base)
@@ -15,28 +16,34 @@ BASE=$("${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" base)
 
 # 닫힌 상태: 아래가 전부 참이면 transaction은 닫힌 것이다
 
-- transaction의 change 중 spec delta를 가진 것마다 verify stage의 pass가 있고, 그 pass는
-  마지막 코드 변경 이후의 것이다. delta 없는 change의 gate는 task 완료와 CI다. verifier에게는
-  change-id 외에 아무것도 전달하지 않는다:
+- Every change carrying a spec delta has a verify pass newer than the last
+  code change. Delta-less changes are gated by task completion and CI instead.
+  The verifier receives the change-id and nothing else:
 
   ```
   Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
   ```
 
-- 활성 change는 `tx:archive`(Skill 도구)로 archive되어 있다. task가 없거나 미완료면 닫을 수
-  없다: `tx:plan`·`tx:apply`로 채운 뒤 닫는다.
-- branch는 최신 `origin/<base>` 위에 rebase되어 있다. git-sync pause는 이를 면제하지 않는다.
-- diff에 장기기억 표면(추적 `.md`·`openspec/**`)이 있으면, 최종 tree에 대해
-  `${CLAUDE_PLUGIN_ROOT}/references/docs-surface.md` 규약 판정이, diff의 신·구 어휘에 대해
-  추적 text 전체와의 상충 scan이 수행되었고, 발견은 이 transaction에서 해소되어 있다.
-- transaction 전체가 remote branch `<prefix>/<scope>/<slug>`의 PR로 base에 squash merge되어
-  있다. merge 조건은 CI green이며, check 부재도 차단이다(PR 직후의 부재는 scheduling 지연일
-  수 있다). local branch는 merge까지 tx-*로 남는다. squash message는
-  conventional-commit(`<prefix>(<scope>): <요약>`)으로 transaction 전체를 요약한다.
-- transaction에서 생겨난 모든 것은 base에 실렸거나 소멸했다. transaction 밖의 것은 건드리지
-  마라. 출처가 불확실한 것과 merge에 실리지 않은 변경을 품은 것은 지워도 무결성 위반이다:
-  사용자에게 표면화하고, 해소 전에는 닫지 마라.
-- local은 merge된 base에 동기화되어 있고, transaction branch가 남아 있지 않다.
+- Every active change is archived through `tx:archive`. Missing or incomplete
+  tasks block the close: fill them with `tx:plan` and `tx:apply`, then close.
+- The branch is rebased onto the latest `origin/<base>`. A git-sync pause does
+  not exempt this.
+- If the diff touches long-term memory (tracked `.md`, `openspec/**`): the
+  final tree passes the `${CLAUDE_PLUGIN_ROOT}/references/docs-surface.md`
+  rules, and the diff's old and new vocabulary is scanned for conflicts
+  across every tracked text. The scan postdates the final rebase (rerun it if
+  the rebase recurs), and every finding is resolved inside this transaction.
+- The whole transaction is squash-merged into base through a PR from remote
+  branch `<prefix>/<scope>/<slug>`. CI green is the merge condition, and
+  absent checks also block (right after PR creation, absence can be
+  scheduling lag). The local branch stays `tx-*` until the merge. The squash
+  message is a conventional commit, `<prefix>(<scope>): <summary>`, describing
+  the whole transaction.
+- Everything born in this transaction has landed in base or ceased to exist.
+  What is not the transaction's, leave untouched. Anything of uncertain
+  origin, or holding changes that never landed, is surfaced to the user
+  instead of deleted; it blocks the close until resolved.
+- Local is synced onto the merged base, and no transaction branch remains.
 
 close는 idempotent다: 다시 실행하면 아직 참이 아닌 조건만 채우고, 전부 참이면 아무것도 하지
 않는다.
