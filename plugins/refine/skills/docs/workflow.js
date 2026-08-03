@@ -147,7 +147,16 @@ const ORDER_SCHEMA = {
   type: 'object',
   required: ['executionOrder'],
   properties: {
-    executionOrder: { type: 'array', items: { type: 'string' } },
+    executionOrder: {
+      type: 'array',
+      minItems: 1,
+      description: '분할·병합·폐기를 반영한 최종 계획 전체 — 실행 순서대로',
+      items: {
+        type: 'string',
+        pattern: '^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*$',
+        description: "English kebab-case '{index}-{name}', exactly matching the plan directory you wrote",
+      },
+    },
   },
 }
 
@@ -342,30 +351,33 @@ const refined = await synod(
   'doc-manager',
   `# 임무: 정합 계획 개선 + 실행 순서 확정
 ${agoraPath}/ 전체(계획들과 review-* 검수 기록)를 읽어 context를 복원하라.
-검수 내용을 기반으로 각 계획을 개선하라.
+검수 내용을 기반으로 각 계획의 proposal.md를 제자리에서 개선하라.
+계획의 분할·병합·폐기는 ${plansDir}/ 에 같은 형식으로 반영하라.
 ${PRINCIPLE}
-개선이 끝나면 계획들의 실행 순서를 ${agoraPath}/doc-manager/execution-order.md 에 기록하고, 그 순서를 계획 name 배열로 반환하라.`,
+개선이 끝나면 최종 계획들의 실행 순서를 ${agoraPath}/doc-manager/execution-order.md 에 기록하고, 그 순서를 계획 name 배열로 반환하라 — 이 배열에 있는 계획만 실행된다.`,
   { label: 'refine', schema: ORDER_SCHEMA },
 )
-const ordered = (refined?.executionOrder ?? [])
-  .map((n) => String(n).trim())
-  .filter((n) => plans.some((p) => p.name === n))
-const order = [...new Set(ordered.length ? ordered : plans.map((p) => p.name))]
+// Refine은 계획을 분할·병합·폐기할 수 있다 — executionOrder가 실행 집합의 정본이다.
+const ordered = [...new Set((refined?.executionOrder ?? []).map((n) => String(n).trim()))]
+const order = ordered.length ? ordered : plans.map((p) => p.name)
+const added = order.filter((n) => !plans.some((p) => p.name === n))
+const dropped = plans.map((p) => p.name).filter((n) => !order.includes(n))
+if (added.length) log(`refine added: ${added.join(', ')}`)
+if (dropped.length) log(`refine dropped: ${dropped.join(', ')}`)
 log(`execution order: ${order.join(' -> ')}`)
 
 // 7. Apply — 순차 실행 후 최종 검수
 phase('Apply')
 const applied = []
 for (const name of order) {
-  const p = plans.find((x) => x.name === name)
   const res = await synod(
     `apply-${name}`,
     `# 임무: 정합 수행 — '${name}'
-계획(${p.proposal})을 읽고 그대로 구현하라. **실행되지 않는 text만 수정한다.**
+계획(${plansDir}/${name}/proposal.md)을 읽고 그대로 구현하라. **실행되지 않는 text만 수정한다.**
 선행 적용 기록(${agoraPath}/apply-*)이 있으면 현재 상태 파악에 참고하라.
 주석·docstring 수정으로 코드 파일을 건드렸다면 test suite로 behavior 불변을 확인하라.
 변경 요약과 확인 결과를 네 Agora에 기록하고 반환하라.`,
-    { label: `apply:${p.label}`, schema: APPLY_SCHEMA },
+    { label: `apply:${name}`, schema: APPLY_SCHEMA },
   )
   if (halted) break
   applied.push({ name, status: res?.status ?? 'unknown', testsPassed: res?.testsPassed ?? null })
