@@ -97,9 +97,10 @@ HEARTBEAT_SECONDS = 10800
 
 HEARTBEAT_NOTICE = (
     "Heartbeat: 3 hours without a stop — this session has likely been asleep. "
-    "Audit every live background task: kill what can never finish (a wait on "
-    "a dead producer, an orphaned process); relaunch bounded (`timeout N`) if "
-    "still needed. Then continue the anchor, or stop again to keep waiting.\n"
+    "Audit everything alive in the background: kill what can never finish (a "
+    "wait on a dead producer, an orphaned process); relaunch bounded (`timeout "
+    "N`) if still needed. Then continue the anchor, or stop again to keep "
+    "waiting.\n"
 )
 
 

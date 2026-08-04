@@ -415,7 +415,8 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     python으로 exec하지 않고 ~26MB로 상주하므로(실측 2026-07) python은 arm(nonce 기록·handoff 출력)과 fire 두
     순간만 돌며, fire의 exit code·stderr는 wrapper의 것으로 전파돼 harness가 관측한다), fire 시점에
     nonce가 여전히 최신이고 loop가 armed면 — 즉 **3h 동안 stop이 없었으면** — exit 2로 잠든 session을 깨워
-    background task audit을 지시한다(HEARTBEAT_NOTICE). 나중 stop이 있었거나 loop가 끝났으면 조용히 자멸한다:
+    background audit을 지시한다(HEARTBEAT_NOTICE는 범주어를 쓰지 않는다 — `task`는 잔여 monitor·shell을
+    audit 밖으로 밀어냈다(관측 2026-08)). 나중 stop이 있었거나 loop가 끝났으면 조용히 자멸한다:
     활발히 round를 도는 loop는 heartbeat를 듣지 않고, `/ploop:off`·수렴은 즉시 전 timer를 무장 해제한다.
     **왜 이 형태인가**: 잠드는 *이유*를 몰라도 된다 — 파일 대기·불투명 script·멈춘 subagent를 균일하게 3h로
     상한한다(0.50의 문자열 classifier는 결정 불가 판정·allowlist 쳇바퀴·양 소비처 공유 맹점으로 철회 —
