@@ -15,6 +15,7 @@ import json
 import pytest
 
 from src.main import (
+    HEARTBEAT_NOTICE,
     HEARTBEAT_SECONDS,
     TERMINATION_TOKEN,
     heartbeat_arm,
@@ -810,8 +811,7 @@ class TestHeartbeatFire:
         (tmp_path / "s1_active").touch()
         (tmp_path / "s1_heartbeat_nonce").write_text("n1")
         assert self.fire(tmp_path, monkeypatch, ["s1", "n1"]) == 2
-        err = capsys.readouterr().err
-        assert "Heartbeat" in err and "background task" in err
+        assert capsys.readouterr().err == HEARTBEAT_NOTICE
 
     @pytest.mark.parametrize(
         "arrange_case, argv",

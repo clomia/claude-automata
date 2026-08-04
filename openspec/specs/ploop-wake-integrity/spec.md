@@ -27,8 +27,9 @@ Every stop of an armed loop SHALL arm a heartbeat: record a fresh nonce and cont
 a detached 3-hour timer (an `asyncRewake` Stop hook process, alive across context
 compaction). At fire time the timer SHALL exit silently when the loop is no longer
 armed or a later stop has superseded its nonce, and SHALL otherwise end with exit 2 —
-waking the idle session with a notice that directs an audit of live background tasks
-(kill what can never finish, relaunch bounded if needed, then continue or stop). Stops
+waking the idle session with a notice that directs an audit of everything alive in the
+background (kill what can never finish, relaunch bounded if needed, then continue or
+stop). Stops
 outside an armed loop SHALL arm nothing.
 
 #### Scenario: An armed stop arms the timer
