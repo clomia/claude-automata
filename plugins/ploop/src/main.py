@@ -40,6 +40,7 @@ from src.prompt import (
     deadline_status,
     format_advice_history,
     format_advisor_trigger,
+    format_candidates_notice,
     format_end_notice,
 )
 from src.state import (
@@ -140,6 +141,26 @@ def project_dir(event: dict) -> str:
         if isinstance(value, str) and value.strip():
             return value.strip().rstrip("/") or "/"
     return str(Path.cwd())
+
+
+def deliver_expansion_context(text: str) -> None:
+    """Ride the expanded skill body with additionalContext (UserPromptExpansion).
+
+    The hook's only channel into the launch turn itself: the text lands alongside
+    the submitted prompt, so a reference the skill body makes resolves in the same
+    turn instead of waiting for the first stop.  Mutually exclusive with
+    block_expansion — a blocked turn is erased and carries only its reason.
+    """
+    sys.stdout.write(
+        json.dumps(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptExpansion",
+                    "additionalContext": text,
+                }
+            }
+        )
+    )
 
 
 def block_expansion(reason: str) -> None:
@@ -604,7 +625,13 @@ def launch() -> None:
     with the anchor text (an anchor owns one log, and its final summary reads
     the anchor first; the finished log survives ordinary turns), writes the
     anchor, records the launch directory (the provenance docent scopes its
-    listing by), and arms the loop.
+    listing by), arms the loop, and delivers the candidates queue address into
+    the launch turn.  The skill body directs candidates at that queue, so the
+    address ships with the directive: an address that arrived only at the first
+    stop would leave the opening round to invent its own, and every mechanism
+    keyed to the real queue (the advisor's conditional line, the drain
+    directive, the next launch's reset) would then be reading an empty file
+    while the queue filled elsewhere — a divergence with no signal (decision 21).
     """
     event = read_event()
     if event.get("command_name", "") != "ploop:launch":
@@ -627,6 +654,7 @@ def launch() -> None:
     ws.anchor_path.write_text(anchor)
     ws.project_path.write_text(project_dir(event))
     ws.active_path.touch()
+    deliver_expansion_context(format_candidates_notice(ws.candidates_path))
 
 
 def off_command() -> None:

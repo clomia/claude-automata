@@ -30,7 +30,15 @@ from src.main import (
     write_log,
     write_round_slice,
 )
-from src.state import ADVISING, CONVERGED, FRESH, load_ledger, save_ledger
+from src.prompt import format_candidates_notice
+from src.state import (
+    ADVISING,
+    CONVERGED,
+    FRESH,
+    Workspace,
+    load_ledger,
+    save_ledger,
+)
 
 # A minimal round transcript: a trigger boundary + the main agent's own work.
 # The advice comes from advice.md (the sole channel); this transcript only sets
@@ -955,6 +963,27 @@ class TestLaunch:
         assert saved in log
         assert "prior anchor log" not in log
 
+    def test_arming_launch_delivers_the_candidates_address(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """The skill body directs candidates at the queue, so the address ships in
+        the same turn — and it is the very line every trigger re-delivers, so the
+        main agent is never left reconciling two addresses."""
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        self.prereqs(tmp_path, monkeypatch)
+        monkeypatch.setattr(
+            "sys.stdin",
+            self.make_stdin(
+                command_name="ploop:launch", command_args="do it", session_id="s1"
+            ),
+        )
+        launch()
+        delivered = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+        assert delivered["hookEventName"] == "UserPromptExpansion"
+        assert delivered["additionalContext"] == format_candidates_notice(
+            Workspace.from_env("s1").candidates_path
+        )
+
     def test_array_command_args_join_verbatim(self, tmp_path, monkeypatch):
         """The reference schema types command_args as an array while observed
         events carry a string — both shapes must yield the anchor verbatim,
@@ -991,7 +1020,9 @@ class TestLaunch:
 
     def test_blank_anchor_blocks_expansion(self, tmp_path, monkeypatch, capsys):
         """A blank anchor is blocked at expansion — otherwise the skill body
-        would announce an activation the hook never armed (a ghost loop)."""
+        would announce an activation the hook never armed (a ghost loop).  A
+        blocked turn is erased, so it carries the reason and nothing else: the
+        queue address rides only a launch that armed."""
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         monkeypatch.setattr(
             "sys.stdin",
@@ -1002,7 +1033,9 @@ class TestLaunch:
         with pytest.raises(SystemExit) as exc:
             launch()
         assert exc.value.code == 0
-        assert json.loads(capsys.readouterr().out)["decision"] == "block"
+        out = capsys.readouterr().out
+        assert json.loads(out)["decision"] == "block"
+        assert "candidates" not in out
         assert not (tmp_path / "s1_active").exists()
 
     def test_armed_loop_blocks_relaunch_untouched(self, tmp_path, monkeypatch, capsys):

@@ -186,7 +186,7 @@ system temp(위 근거). 한 session에 하나의 anchor를 가정해 `session_i
 | `{session}_advice_history.md` | hook | advisor 입력의 advice-history (XML) |
 | `advice.md` (temp) | advisor (`Write`) | advice 또는 종료 token (유일 channel) — 비보호 temp라 auto mode Write 승인 · main·hook이 읽음 · prose 격리 |
 | `narration.md` (temp) | narrator (`Write`) | action-history 서사 (advice와 동일 channel) — advisor가 분석 입력으로 · hook이 round log로 읽음 |
-| `candidates.md` (temp) | main | 승격 대기열 (자유 형식) — trigger가 경로를 상시 안내 · 비어있지 않으면 advisor 입력에 조건부 1행 · launch만 지움(off·on·종료는 보존) · 종료 notice가 잔량 drain을 지시 |
+| `candidates.md` (temp) | main | 승격 대기열 (자유 형식) — launch가 경로를 최초 배달·trigger가 매 round 재안내 · 비어있지 않으면 advisor 입력에 조건부 1행 · launch만 지움(off·on·종료는 보존) · 종료 notice가 잔량 drain을 지시 |
 | `{session}_loop.log` | hook | 완결 round log (서사 + 그 round의 advice) · launch가 `[[ ANCHOR ]]` 원문으로 새로 시작 · 종료 요약의 소스 |
 | `{session}_advisor_token` | hook | advisor 1회 호출 인가 token (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight marker (PreToolUse set · SubagentStop clear) |
@@ -241,7 +241,7 @@ pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal 
 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
-| **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 — `active` 존재·빈 `anchor`·prerequisite(nested cap `<5`·`autoCompactEnabled`·`alwaysThinkingEnabled`) 미충족이면 차단 · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`면 차단 |
+| **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 + candidates 경로를 `additionalContext`로 배달(결정 21) — `active` 존재·빈 `anchor`·prerequisite(nested cap `<5`·`autoCompactEnabled`·`alwaysThinkingEnabled`) 미충족이면 차단(배달 없음) · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`면 차단 |
 | **PostCompact** | (전체) | compaction 후 | `compacted` marker touch (Stop이 mechanism 2로 anchor text 재주입) |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 token 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(자발 호출 차단) |
 | **Stop** | (전체) | main이 종료 시도 | active gate → **background gate**(`background_tasks`: subagent·workflow·running shell 조용히 대기, monitor·비running·그 외 통과) → **in-flight guard** → 종료 판정 → `exit 2`+stderr(advisor 호출 지시, 종료 시엔 종료 notice+log recap) 또는 `exit 0`(허용) |
@@ -437,6 +437,16 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     인간 pause와 기계 만료를 같은 상태로 접어 구별 불능을 만들며, 결정 19가 폐기한 코드 단속을 재도입해
     종결 권위를 이원화한다. 마감을 넘긴 기절은 heartbeat(결정 19)가 깨워 다음 stop에서 advisor가 경과를
     본다 — 잠은 heartbeat가, mission은 deadline이 상한하고, 집행은 둘 다 advisor다.
+21. **queue 주소는 기계가 배달한다 — 지시와 같은 turn에.** launch skill 본문은 candidates 축적을
+    지시하므로, launch hook이 arm 성공 경로에서 `UserPromptExpansion`의 `additionalContext`(공식
+    hook 계약 — 확장된 prompt와 나란히 실린다)로 경로를 함께 배달한다. 차단 3종과는 배타다. 주소가
+    첫 Stop에야 도착하면 round 0의 지시는 지시대상 없는 dangling reference가 되고, main은 그것을
+    자기 경로로 해소한다 — 그러면 경로를 소유한 기계 전부(advisor 입력의 조건부 라인, 종료 notice의
+    drain, 다음 launch의 reset)가 빈 파일을 읽는 채로 정상처럼 보인다. 관측 신호가 없는 divergence라
+    "첫 trigger에서의 self-healing"(main의 자발적 이주에 의존)으로는 bound되지 않는다. trigger의 상시
+    라인은 유지 — launch는 최초 공급, trigger는 compaction 이후의 재공급으로 역할이 갈린다.
+    `/ploop:on`·`/ploop:off`는 배제한다: 두 skill 본문은 candidates를 지시하지 않아 해소할 참조가
+    없고, 배달 없는 배달은 text의 단조 증가다.
 
 ---
 
@@ -477,8 +487,6 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
   compaction 후 정체성 표류는 관측 항목이다.
 - **background가 상시 점유되면 advisor가 소집되지 않는다**(결정 16의 뒷면) — 위임 파도가 영원히
   비지 않는 운용에는 기계 보장이 없다. rules의 파도-정지 rhythm이 자연 유도하는 것으로 수용한다.
-- **round 0에는 candidates 경로가 전달되지 않는다** — 경로의 유일 결정론 channel이 Stop trigger라 첫
-  정지 전의 후보는 context에만 존재한다. 첫 trigger에서 파일로 이동하는 self-healing으로 수용한다.
 - **candidates label의 stale/growing 판정은 round 단면 snapshot이다** — advisor는 queue의 추이를 갖지
   않는다. 표면화의 근거는 "쌓여 있고 처리되지 않았다"뿐이고 그 이상의 판단은 main 몫이다.
 - **worker 내부 행위는 advisor에 비가시다** — narrator는 main transcript(지휘·주장)만 서술한다.

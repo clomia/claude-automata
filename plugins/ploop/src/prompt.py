@@ -67,6 +67,16 @@ def deadline_status(anchor: str, now: datetime) -> str:
     return f"{span} remaining" if seconds >= 0 else f"expired {span} ago"
 
 
+def format_candidates_notice(candidates_path: Path) -> str:
+    """The queue's address, worded once.
+
+    Both deliveries share this line: launch hands it over in the turn that arms the
+    loop, every trigger re-delivers it afterwards.  One wording, so the main agent
+    never has two addresses to reconcile.
+    """
+    return f"Your candidates queue: {candidates_path}"
+
+
 def format_advice_history(advice_history: list[str]) -> str:
     """Format prior advices as <advice-N> blocks (advice-history).
 
@@ -120,12 +130,12 @@ def format_advisor_trigger(
     anchor text itself into context.
 
     The candidates queue rides the trigger in both directions: a standing line
-    after the advice-read direction hands the per-session path to the main agent
-    (the trigger is the loop's one deterministic per-round channel — the static
-    launch skill cannot know the session), and the advisor block names the queue
-    only when candidates_pending — the hook decides emptiness in code, so a loop
-    that never queues candidates keeps its advisor prompt free of the promotion
-    domain.
+    after the advice-read direction re-delivers the per-session path to the main
+    agent (launch delivered it first, in the turn it armed the loop; the trigger is
+    what survives a compaction that erased that turn), and the advisor block names
+    the queue only when candidates_pending — the hook decides emptiness in code, so
+    a loop that never queues candidates keeps its advisor prompt free of the
+    promotion domain.
     """
     prefix = ""
     if anchor_text:
@@ -167,7 +177,7 @@ def format_advisor_trigger(
         ```
 
         When the advisor returns, read its advice at {advice_path}.
-        Your candidates queue: {candidates_path}
+        {format_candidates_notice(candidates_path)}
     ''')
     return prefix + body
 
