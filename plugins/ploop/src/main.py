@@ -119,8 +119,9 @@ HEARTBEAT_NOTICE = (
     "Heartbeat: 3 hours without a stop — this session has likely been asleep. "
     "Audit everything alive in the background: kill what can never finish (a "
     "wait on a dead producer, an orphaned process); relaunch bounded (`timeout "
-    "N`) if still needed. Then continue the anchor, or stop again to keep "
-    "waiting.\n"
+    "N`) if still needed. Then continue the anchor — and keep any further "
+    "waiting in a background shell (a bounded `until` loop), so the loop "
+    "sleeps on the gate instead of stopping empty-handed.\n"
 )
 
 
@@ -235,8 +236,12 @@ def unmet_prerequisites(event: dict) -> list[str]:
     ]
 
 
-def timestamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+def append_log_entry(log_path: Path, header: str, body: str) -> None:
+    """The loop log's one entry shape — both entry kinds render through it, so
+    Round and Audit entries can never drift apart."""
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with open(log_path, "a") as f:
+        f.write(f"[[ {header} - {timestamp} ]]\n\n{body}\n\n")
 
 
 def write_round_entry(log_path: Path, round_number: int, narration: str) -> None:
@@ -248,21 +253,39 @@ def write_round_entry(log_path: Path, round_number: int, narration: str) -> None
     the anchor text; the finished log outlives the anchor so the whole turn
     stays reconstructable after any compaction.
     """
-    with open(log_path, "a") as f:
-        f.write(f"[[ Round {round_number} - {timestamp()} ]]\n\n{narration}\n\n")
+    append_log_entry(log_path, f"Round {round_number}", narration)
 
 
 def write_audit_entry(log_path: Path, audit_number: int, report: str) -> None:
-    """Append one audit report to the loop log, verbatim.
+    """Append one audit report to the loop log.
 
     Appended at the stop that reads it, one position ahead of the narration of
     the round that convened it — the report opens with its own findings and the
     following round's narration describes the response, so the skew reads
-    cleanly without buffering.  The completion token is machinery and never
-    enters the log.
+    cleanly without buffering.  Ending tokens are machinery and never enter the
+    log — an ending report is logged with its token lines stripped.
     """
-    with open(log_path, "a") as f:
-        f.write(f"[[ Audit {audit_number} - {timestamp()} ]]\n\n{report}\n\n")
+    append_log_entry(log_path, f"Audit {audit_number}", report)
+
+
+def token_line(advice: str, token: str) -> bool:
+    """True iff a line of the report is exactly the token.
+
+    Machinery must be deliberate: a report may legitimately discuss the token
+    strings (the instruction teaches them), so prose that merely mentions one
+    is not a verdict — only a line the advisor wrote alone is.
+    """
+    return any(line.strip() == token for line in advice.splitlines())
+
+
+def strip_token_lines(advice: str) -> str:
+    """The report without its token lines — what an ending report leaves in the log."""
+    kept = [
+        line
+        for line in advice.splitlines()
+        if line.strip() not in (COMPLETION_TOKEN, EXPIRY_TOKEN)
+    ]
+    return "\n".join(kept).strip()
 
 
 def candidates_pending(ws: Workspace) -> bool:
@@ -374,6 +397,7 @@ def arm_round(
     )
     ws.advice_path.unlink(missing_ok=True)
     ws.narration_path.unlink(missing_ok=True)
+    ws.advisor_stopped_path.unlink(missing_ok=True)
     ws.advisor_token_path.write_text("")
     sys.stderr.write(notice + directive)
     sys.exit(2)
@@ -457,38 +481,41 @@ def stop() -> None:
             ws.narration_path.read_text().strip() if ws.narration_path.exists() else ""
         )
         if narration:
-            write_round_entry(ws.log_path, round_number - 1, narration)
+            write_round_entry(ws.log_path, max(round_number - 1, 0), narration)
 
-        # The advisor ran this round iff PreToolUse consumed the token this
-        # stop's predecessor wrote — and ONLY a run the gate admitted can render
-        # a verdict: the directive exposes the report path, so a report sitting
-        # there with the token unconsumed was not written by the advisor (the
-        # main agent, or a worker, wrote it) and self-certification must not
-        # pass the gate.  Such a file is ignored and cleared at the arm.  Past
-        # the in-flight guard the advisor has finished, so token-consumed with
-        # an absent report means it wrote nothing — a malfunction, not a
-        # verdict.
+        # Only a run the gate admitted can render a verdict: the directive
+        # exposes the report path, so a report sitting there without provenance
+        # was not written by the advisor (the main agent, or a worker, wrote it)
+        # and self-certification must not pass the gate — such a file is ignored
+        # and cleared at the arm.  Provenance has two independent sources, so
+        # one drifting hook cannot strand the loop unclosable: PreToolUse
+        # consumed the audit token, or SubagentStop observed an advisor finish
+        # this round.  Past the in-flight guard the advisor has finished, so
+        # provenance with an absent report means it wrote nothing — a
+        # malfunction, not a verdict.  An ending token counts only as a line
+        # written alone (prose may mention the strings); expiry is checked
+        # first so an ambiguous double-token report is never dressed as
+        # certified completion, and the ending report's prose — its rationale,
+        # the expiry's unmet summary — is logged (token lines stripped) before
+        # the loop ends, or the closure's reasons would survive nowhere.
         advisor_invoked = not ws.advisor_token_path.exists()
+        advisor_ran = advisor_invoked or ws.advisor_stopped_path.exists()
         advice = ws.advice_path.read_text().strip() if ws.advice_path.exists() else ""
-        if advisor_invoked and advice:
-            if COMPLETION_TOKEN in advice:
-                end_loop(
-                    ws,
-                    ledger,
-                    "the advisor confirmed the mission complete",
-                    converged=True,
-                )
-            if EXPIRY_TOKEN in advice:
-                end_loop(
-                    ws,
-                    ledger,
-                    "the deadline expired — the advisor closed the mission",
-                    converged=True,
-                )
+        if advisor_ran and advice:
+            ending = None
+            if token_line(advice, EXPIRY_TOKEN):
+                ending = "the deadline expired — the advisor closed the mission"
+            elif token_line(advice, COMPLETION_TOKEN):
+                ending = "the advisor confirmed the mission complete"
+            if ending:
+                report = strip_token_lines(advice)
+                if report:
+                    write_audit_entry(ws.log_path, len(advice_history) + 1, report)
+                end_loop(ws, ledger, ending, converged=True)
             advice_history = [*advice_history, advice]
             write_audit_entry(ws.log_path, len(advice_history), advice)
             anomalies = 0
-        elif advisor_invoked:  # a malfunction: ran, wrote nothing
+        elif advisor_ran:  # a malfunction: ran, wrote nothing
             anomalies += 1
             if anomalies >= MAX_ANOMALIES:
                 end_loop(
@@ -511,8 +538,9 @@ def stop() -> None:
                     end_loop(
                         ws,
                         ledger,
-                        "two unanswered audit directives — no completion"
-                        " verdict was issued",
+                        "two consecutive anomalous rounds (in this one the"
+                        " directive went unanswered) — no completion verdict"
+                        " was issued",
                         converged=False,
                     )
                 notice = DECLINE_NOTICE
@@ -629,23 +657,25 @@ def mark_compaction() -> None:
 
 
 def subagent_stop() -> None:
-    """SubagentStop hook: the sole clearer of the advisor-running marker.
+    """SubagentStop hook: clears the in-flight marker, records the run.
 
-    Paired with PreToolUse setting it, the marker tells stop() an advisor is
-    still in flight; narrator and other subagent stops are ignored.  The stop
-    payload has been observed carrying the bare agent name as well as the
-    scoped one, so both forms clear the marker — a missed clear would strand
-    the in-flight marker and stall the loop; a merely-containing name (a
-    delegated worker) must not clear it, or the next stop re-arms a second
-    advisor.
+    Paired with PreToolUse setting it, the running marker tells stop() an
+    advisor is still in flight; narrator and other subagent stops are ignored.
+    The stop payload has been observed carrying the bare agent name as well as
+    the scoped one, so both forms match — a missed clear would strand the
+    in-flight marker and stall the loop; a merely-containing name (a delegated
+    worker) must not match, or the next stop re-arms a second advisor.  The
+    stopped marker is verdict provenance's second, independent source (the
+    first is PreToolUse's token consumption): with it, one drifting hook cannot
+    make every legitimate verdict read as forged.
     """
     event = read_event()
     agent_type = str(event.get("agent_type") or event.get("subagent_type") or "")
     if agent_type not in ("advisor", "ploop:advisor"):
         sys.exit(0)
-    Workspace.from_env(event.get("session_id", "")).advisor_running_path.unlink(
-        missing_ok=True
-    )
+    ws = Workspace.from_env(event.get("session_id", ""))
+    ws.advisor_running_path.unlink(missing_ok=True)
+    ws.advisor_stopped_path.touch()
 
 
 def launch() -> None:
@@ -774,6 +804,7 @@ def on_command() -> None:
         )
     ws.advisor_token_path.unlink(missing_ok=True)
     ws.advisor_running_path.unlink(missing_ok=True)
+    ws.advisor_stopped_path.unlink(missing_ok=True)
     ws.advice_path.unlink(missing_ok=True)
     ws.narration_path.unlink(missing_ok=True)
     save_ledger(ws.ledger_path, {**ledger, "phase": FRESH, "anomalies": 0})

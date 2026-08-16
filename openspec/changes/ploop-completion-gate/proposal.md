@@ -75,6 +75,9 @@ and the official-docs audit that grounded the mechanics.
   behavior is unchanged).
 - `ploop-docent`: the resolver reports the round ordinal from the ledger's `round`
   field and the audit count separately.
+- `init-cli`: the settings-prerequisites rationale for the spawn-depth env is
+  re-grounded (environment pin against the drifted default, not an advisor-path
+  repair) — the provisioned value and behavior are unchanged.
 
 ## Impact
 

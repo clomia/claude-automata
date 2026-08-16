@@ -31,32 +31,50 @@ disclose the silent-exit failsafe.
 The advisor SHALL write its verdict to the report file: a findings report, each
 finding citing an anchor coordinate, or an ending token — the completion token,
 or the deadline-closure token for an expired-deadline wrap-up, so the end cause
-is never disguised. The hook SHALL honor the report file as a verdict only when
-the audit token was consumed this round — a report present with the token
-unconsumed was not written by the gated advisor and SHALL be ignored (and
-cleared at the arm). On an ending token the loop converges (phase converged,
-gate dropped, recap notice carrying that token's honest cause); a findings
-report SHALL be appended to the audit history and the loop log, and the loop
-continues.
+is never disguised. The hook SHALL honor the report file as a verdict only with
+provenance from this round — the audit token consumed, or an advisor stop
+observed (two independent sources, so one drifting hook cannot strand the loop
+unclosable) — and a report without provenance was not written by the gated
+advisor and SHALL be ignored (and cleared at the arm). An ending token counts
+only when written alone on its own line — prose that merely mentions a token
+string is not machinery — and when both tokens appear, the deadline closure
+SHALL win, so ambiguity never certifies completion. On an ending token the
+report's prose SHALL be appended to the loop log (token lines stripped) before
+the loop converges (phase converged, gate dropped, recap notice carrying that
+token's honest cause); a findings report SHALL be appended to the audit history
+and the loop log, and the loop continues.
 
 #### Scenario: Completion token converges
 
-- **WHEN** the stop reads a report file containing the completion token with the
-  audit token consumed
+- **WHEN** the stop reads a report whose own line is the completion token, with
+  provenance present
 - **THEN** the phase moves to converged, the active gate drops, and the end notice
   reports the advisor's certification with a loop-log recap
 
 #### Scenario: Deadline closure is not dressed as completion
 
-- **WHEN** the stop reads a report file containing the deadline-closure token
-- **THEN** the loop converges and the end notice names the expired deadline as the
-  cause, not mission completion
+- **WHEN** the stop reads a report whose own line is the deadline-closure token
+- **THEN** the loop converges, the end notice names the expired deadline as the
+  cause, and the report's unmet summary survives in the loop log without the token
+
+#### Scenario: A prose mention of a token is not a verdict
+
+- **WHEN** a findings report mentions a token string inside a sentence
+- **THEN** the loop does not converge — the report joins the audit history as an
+  ordinary finding set
 
 #### Scenario: A report the advisor did not write is no verdict
 
-- **WHEN** a report file exists at a stop whose audit token was never consumed
+- **WHEN** a report file exists at a stop with no provenance (token unconsumed,
+  no advisor stop observed)
 - **THEN** no verdict is recorded — the stop is judged working or bare on its
   transcript growth and the file is cleared as the next round arms
+
+#### Scenario: Provenance survives PreToolUse drift
+
+- **WHEN** the audit token was never consumed but an advisor stop was observed
+  this round
+- **THEN** the report is honored as a verdict
 
 #### Scenario: Findings report continues the loop
 

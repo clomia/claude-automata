@@ -33,7 +33,7 @@ loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의
   않으므로, ploop이 정지를 막아 이어가는 round 체인의 **내부 정지**에는 rebase nudge가
   끼어들지 않는다 — round 중의 rebase는 진행 중 분석을 무효화하기 때문이며, **이것은 우연이
   아니라 계약이다**(이 절이 그 계약의 기록이다). 체인 **진입 정지**(launch 후 첫
-  정지·background 대기 후 재개 정지)에서는 두 hook이 함께 fire해 advisor trigger와 rebase nudge가
+  정지·background 대기 후 재개 정지)에서는 두 hook이 함께 fire해 round directive와 rebase nudge가
   같이 주입되고 수행 순서는 main이 정한다. 장기 loop의 remote 정합 인지는 이 진입 정지들과
   auto-compaction마다 fire하는 branch-state-warn(SessionStart `compact` matcher)이 유지하고,
   정합의 보증 자체는 close의 강제 fetch·rebase·CI가 소유한다 — loop 중 nudge는 신선도

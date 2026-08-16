@@ -95,3 +95,41 @@ two defects, both fixed:
    the loop with the expired-deadline cause. Both tokens converge (a stale
    deadline should be edited before any continuation, so relaunch is the correct
    resume path).
+
+## Meta-review round (independent verify + /code-review) — fixed before close
+
+The tx-model verify agent and an independent code review over the branch diff
+surfaced a second round, all applied:
+
+- **Version-pair lockstep** (verify defect): the plugin-level pyproject.toml (and
+  uv.lock) of all three changed plugins had not moved with plugin.json.
+- **Provenance made dual-source**: with the token as the only provenance, PreToolUse
+  drift would discard every legitimate verdict as forged, strand the loop
+  unclosable, and stale-ify risk 4's promised graceful close. SubagentStop now
+  records `advisor_stopped` as the second, independent source; both drifting at
+  once is the accepted residual (documented in risk 4).
+- **Tokens anchored to their own line, expiry checked first**: a prose mention of a
+  token string no longer converges the loop into the unrecoverable phase, and an
+  ambiguous double-token report can never be dressed as certified completion.
+- **The ending report is persisted**: its prose (the expiry's unmet summary
+  included) lands as a final Audit entry — token lines stripped — before end_loop,
+  so the closure's rationale survives in the flight record.
+- **Vacuous purpose-completion guard**: the instruction scopes ending tokens to
+  anchors that define completion; a requirement-less purpose anchor cannot be
+  vacuously certified, matching define-purpose's stated contract.
+- **Honest mixed-streak cause**: the bare-lane cap cause returns to the hedged
+  "(in this one …)" pattern so a malfunction-then-bare streak is not reported as
+  two unanswered directives.
+- **Heartbeat notice re-lanes waiting**: "stop again to keep waiting" sanctioned
+  exactly the text-only stop the bare judge penalizes; the notice now steers
+  waits into a gated background shell.
+- Cosmetics with teeth: negative Round entry clamped (pre-`round`-field ledgers),
+  the deadline "expired" prefix became a shared producer/consumer constant, the
+  two log-entry writers share one shape, close's verify bullet carries the same
+  rebuttal valve as apply, the site's visible exchange text matches its
+  aria-labels, and MEMORY invariant 5 dropped the retired per-round-surfacing
+  vocabulary.
+- Accepted (documented, not fixed): the certifying audit's narrative inputs end
+  one round behind (state measurement is the primary evidence; failure direction
+  is an extra round), and a narrator-relay-only stall reads as working (bounded
+  by deadline and /ploop:off).

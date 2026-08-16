@@ -97,7 +97,7 @@ main      depth 0  session     full tools    loop main: runs the anchor
 | **advisor** | 전체 − `Bash·Edit·NotebookEdit·Artifact·Agent` (`Write`는 보고 출력용) | `opus[1m]` | max |
 | **narrator** | `Read` · `Write` (narration 출력용) | `sonnet[1m]` | medium |
 
-- **advisor는 `Write`로 감사 보고(또는 완수 token)만 쓰고 나머지 부작용 도구는 막혀 있다
+- **advisor는 `Write`로 감사 보고(또는 종결 token)만 쓰고 나머지 부작용 도구는 막혀 있다
   (`disallowedTools: Bash, Edit, NotebookEdit, Artifact, Agent`).** subagent의 최종 message는
   customizing 불가라 추론 prose가 섞이므로(harness 한계), 보고를 `advice.md`(비보호 system temp —
   보호된 `~/.claude` 하위인 `CLAUDE_PLUGIN_DATA`는 auto mode Write가 classifier에 막힌다)에 Write해
@@ -120,11 +120,13 @@ main round N work ── stops
    |
    |  <-- Stop hook (active gate, background empty, not in-flight)
    |        read narration.md (round N-1)  -> append [[ Round N-1 ]] to loop.log
-   |        read advice.md (a verdict only if the audit token was consumed):
+   |        read advice.md (a verdict only with provenance:
+   |                        token consumed OR advisor stop observed):
    |          report                    -> append [[ Audit K ]], history += report
-   |          completion/deadline token -> END converged (its honest cause)
-   |          token consumed, no report -> MALFUNCTION: anomalies++, RETRY notice
-   |          token left (any file here is not the advisor's -> ignored):
+   |          completion/deadline token -> log report minus token lines,
+   |                                       END converged (its honest cause)
+   |          provenance, no report     -> MALFUNCTION: anomalies++, RETRY notice
+   |          no provenance (any file here is not the advisor's -> ignored):
    |            line delta >  T -> WORKING stop: anomalies = 0 (normal)
    |            line delta <= T -> BARE stop: anomalies++, DECLINE notice
    |        anomalies >= 2 -> END with honest cause (resumable via /ploop:on)
@@ -137,7 +139,7 @@ main round N+1:
    3. mission complete, or audit wanted -> Agent(advisor)
         advisor reads: anchor + loop.log + narration.md
                        + audit-history + instructions -> measures the state
-        -> Write to advice.md: findings report | completion token
+        -> Write to advice.md: findings report | ending token
    4. read advice.md: observations, not orders
       -> judge each against the anchor; act or rebut
    ── stops (loop)
@@ -157,7 +159,7 @@ directive가 다시 설 뿐이다. 오작동·bare 모두 **연속 2회**면 정
 파일이라 context를 차지하지 않고 advisor는 매 소집 stateless하게 reset되므로, 수렴은 "모든
 요구사항이 충족됐는가"라는 anchor 좌표 판정에 맡긴다.
 
-**모든 자동 종료 경로(advisor 완수 token + malfunction·bare failsafe)는 main에게 정직한 사유와 함께
+**모든 자동 종료 경로(advisor 종결 token + malfunction·bare failsafe)는 main에게 정직한 사유와 함께
 종료 notice를 보낸다**(`format_end_notice`) — loop.log가 존재하면(launch부터 존재한다) recap 지시를
 덧붙인다. 자연 종료는 종료 정지를 한 번 더 막아(exit 2) notice를 주입하고, 그 다음 정지는 `active`가
 없어 통과한다. **이 자동 종료 동작은 노출 계약이라 불변이다.** 끝내기와 별개로 사용자는 `/ploop:off`로
@@ -193,22 +195,29 @@ system temp(위 근거). 한 session에 하나의 anchor를 가정해 `session_i
 | `{session}_loop.json` | hook | 5field — `advice_history`(감사 기록, 길이=audit ordinal) · `round_start_line`(slice cut offset) · `anomalies`(연속 이상 counter — audit·working 정지에 0 reset) · `phase`(`fresh` 갓 launch/resume·판정 스킵 → `advising` round 진행 → `converged` 완수 인증·`/ploop:on` 거부) · `round`(진행 중 round ordinal — 매 arm 전진). `{**ledger, ...}` 병합이라 미언급 field 보존(preserve-by-default) |
 | `{session}_round.jsonl` | hook | 이번 round transcript slice `[round_start..end]` (narrator가 통째로 분석) — line cut이라 message parsing 없음 |
 | `{session}_advice_history.md` | hook | advisor 입력의 audit-history (XML `<audit-N>`) |
-| `advice.md` (temp) | advisor (`Write`) | 감사 보고 또는 완수 token (유일 channel) — 비보호 temp라 auto mode Write 승인 · main·hook이 읽음 · prose 격리 |
+| `advice.md` (temp) | advisor (`Write`) | 감사 보고 또는 종결 token (유일 channel) — 비보호 temp라 auto mode Write 승인 · main·hook이 읽음 · prose 격리 |
 | `narration.md` (temp) | narrator (`Write`) | round 서사 (advice와 동일 channel) — main이 매 round 직접 생산 지시 · hook이 loop.log로 append · advisor가 최신분을 분석 입력으로 읽음 |
 | `candidates.md` (temp) | main | 승격 대기열 (자유 형식) — launch가 경로를 최초 배달·directive가 매 round 재안내 · 비어있지 않으면 advisor 입력에 조건부 1행 · launch만 지움(off·on·종료는 보존) · 종료 notice가 잔량 drain을 지시 |
 | `{session}_loop.log` | hook | flight recorder — `[[ Round N ]]` 서사(한 정지 지연)와 `[[ Audit K ]]` 보고 전문의 시간순 append · launch가 `[[ ANCHOR ]]` 원문으로 새로 시작 · advisor의 action-history 입력이자 종료 요약·docent의 소스 |
 | `{session}_advisor_token` | hook | round당 audit 1회 인가 token (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight marker (PreToolUse set · SubagentStop clear) |
+| `{session}_advisor_stopped` | hook | verdict provenance 제2 소스 — advisor 종료 관측 (SubagentStop touch · arm/`/ploop:on` clear) |
 | `{session}_compacted` | hook (PostCompact) | compaction 발생 marker (Stop이 mechanism 2로 소비) |
 | `{session}_heartbeat_nonce` | hook (heartbeat) | 마지막 armed stop의 heartbeat nonce — fire 시점에 이 값과 다르면 timer가 자멸(더 새 stop이 감시를 소유), 같으면 3h 침묵이므로 wake (launch가 지움) |
 
 **loop 상태(advice_history·phase·anomalies·round_start_line·round)는 hook이 단독 소유한다.** advisor는
-보고(또는 완수 token)를 `advice.md`에 Write만 하고, hook이 다음 정지에 그 파일을 읽어
-`advice_history`에 append하거나 완수 token이면 `phase`를 `converged`로 옮긴다. in-flight guard를 통과한
-시점이라 advisor는 이미 종료했으므로 **token 소비 + `advice.md` 부재 = 오작동**이다(종결도 token
-Write를 요구). **verdict는 audit token 소비를 전제한다** — directive가 report 경로를 노출하므로
-미소비 round의 `advice.md`는 advisor의 것이 아니고(자기인증·위조 차단) 무시된 채 다음 arm이
-지운다. token 미소비의 부재는 소집이 없던 정상 round다(working/bare 판정은 핵심 loop 절).
+보고(또는 종결 token)를 `advice.md`에 Write만 하고, hook이 다음 정지에 그 파일을 읽어
+`advice_history`에 append하거나 종결 token이면 `phase`를 `converged`로 옮긴다. in-flight guard를 통과한
+시점이라 advisor는 이미 종료했으므로 **provenance + `advice.md` 부재 = 오작동**이다(종결도 token
+Write를 요구). **verdict는 provenance를 전제한다** — directive가 report 경로를 노출하므로
+provenance 없는 round의 `advice.md`는 advisor의 것이 아니고(자기인증·위조 차단) 무시된 채 다음
+arm이 지운다. provenance의 소스는 독립 2원이다: PreToolUse의 token 소비, 또는 SubagentStop의
+advisor 종료 관측(`advisor_stopped`) — 한 hook의 표류가 정당한 verdict 전부를 위조로 오판해
+loop를 닫을 수 없게 만드는 일이 없다. 둘 다 없는 부재는 소집이 없던 정상 round다(working/bare
+판정은 핵심 loop 절). 종결 token은 **단독 줄로만** 기계 신호다 — 산문 속 언급은 verdict가 아니고
+(instruction이 두 문자열을 가르치므로 보고가 정당하게 인용할 수 있다), expiry를 먼저 검사해 이중
+token의 모호가 완수 인증으로 격상되지 않으며, 종결 보고의 산문(기한 종결의 미달 요약 포함)은
+token 줄을 제거한 최종 Audit entry로 log에 영속된 뒤에 loop가 닫힌다.
 main도 같은 `advice.md`를 읽어 그 보고를 판단하므로 이 파일이 보고/완수의 유일 channel이자 main·hook
 공통 소스다 — 단일 작성자(hook)가 ledger를 소유해 race가 없다.
 
@@ -284,7 +293,7 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
    advisor 호출(main의 판단) — 를 주입하고 main(LLM)이 Agent tool로 실행한다. 이 간접 한 단계가 ploop
    hook 설계의 본질이다. 호출 구문은 hook이 verbatim으로 조립하고, advisor 호출의 남용은 PreToolUse
    token gating(결정 9)이 round당 1회로 제한한다.
-3. **loop 상태는 hook 단독 소유.** advisor는 보고(또는 완수 token)를 `advice.md`에 Write만 하고 hook이 그
+3. **loop 상태는 hook 단독 소유.** advisor는 보고(또는 종결 token)를 `advice.md`에 Write만 하고 hook이 그
    파일을 읽어 5field ledger를 기록한다(`{**ledger, ...}` 병합, 미언급 field 보존). `advice.md`가 유일 channel이라
    transcript를 scrape하지 않는다 — 단일 작성자라 동시성 문제가 없고 Agent tool_result 형식(메타
    envelope·prose) 의존이 통째로 사라진다.
@@ -302,7 +311,7 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
    그대로 서술해 advisor에 전달하며, steering은 round를 reset하지 않는다. narrator relay 누락은
    anomaly가 아니라 degrade다("무서사 round" — 수용한 한계).
 5. **활성화 gate + 의미론적 수렴(숫자 상한 없음) + 수동 pause/resume.** `/ploop:launch`가 `active`를 써야
-   Stop이 loop를 돌고, 종료는 round 상한 없이 advisor 완수 token·anomaly failsafe로만 일어난다(audit-history가
+   Stop이 loop를 돌고, 종료는 round 상한 없이 advisor 종결 token·anomaly failsafe로만 일어난다(audit-history가
    파일이라 context를 안 차지 — anchor도 동일). 이 자동 종료와 별개로 사용자는 `/ploop:off`로
    일시정지·`/ploop:on`으로 재개한다(위 활성화 lifecycle).
 6. **anchor 정박 — mechanism 1 + 2.** 외부 보존(`anchor.md`)으로 원문이 디스크에 영속하고, `PostCompact`
@@ -330,9 +339,10 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
    `Agent`)가 token이 있을 때만 통과시킨다(narrator는 read-only leaf라 gating 안 한다) — 소비 후 재호출은
    다음 정지가 재인가할 때까지 거부되므로, 보고에 대한 반응이 서사화된 뒤에야 재감사되는 순서가
    부수적으로 강제된다. stale token은 launch reset·`/ploop:on` 정규화가 지운다. **verdict의
-   provenance도 이 token이 보증한다**: 미소비 round의 report 파일은 gate를 지난 advisor의 것이
-   아니므로 판정에서 제외된다 — main이 token 문자열을 알아내 자기인증하는 우회로가 구조적으로
-   닫힌다. token 미소비 정지의 판정(working/bare)은 결정 14·24가 소유한다.
+   provenance도 이 token이 보증한다**(SubagentStop 관측이 제2 소스 — 상태 소유 절): provenance
+   없는 round의 report 파일은 gate를 지난 advisor의 것이 아니므로 판정에서 제외된다 — main이
+   token 문자열을 알아내 자기인증하는 우회로가 구조적으로 닫힌다. provenance 없는 정지의
+   판정(working/bare)은 결정 14·24가 소유한다.
 10. **advisor·narrator 호출은 동기(`run_in_background=false`).** Agent tool은 background가 기본이라
     (2.1.233 실측: param 존속, "Agents run in the background by default … pass false only when your
     very next action depends on the result" — 정확히 이 두 호출의 경우다) background 호출은 산출 없이
@@ -344,7 +354,9 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     출력·background 전환은 결정 14·13이 처리한다.
 11. **logging: entry 2형 — `[[ Round N ]]` 서사와 `[[ Audit K ]]` 보고.** round 서사는 그 round를
     narrator가 서술한 다음 정지에 append되고(한 정지 지연 — narration은 다음 round 초입에 생산된다),
-    감사 보고는 읽힌 정지에 전문 그대로 append된다(완수 token 같은 기계 신호는 log에 안 남는다).
+    감사 보고는 읽힌 정지에 전문 그대로 append된다 — 종결 보고도 남는다: token 줄만 제거된 최종
+    Audit entry가 종료 직전 기록되어 종결 사유(기한 종결의 미달 요약 포함)가 영속한다(기계 신호
+    자체는 log에 안 남는다).
     보고가 소집 round의 서사보다 한 위치 앞서는 시간 skew는 buffering 없이 수용한다 — 보고는 자기
     내용으로 열리고 다음 서사가 반응을 설명하므로 독해가 무결하다. 번호는 각각 ledger의 `round`
     counter와 `advice_history` 길이다. advisor도 같은 log를 입력으로 받아 자기 직전 보고에 대한 main의
@@ -537,9 +549,11 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
 3. **main의 지시 순응도 — risk로 취급.** main이 directive의 narrator relay를 빼먹거나(무서사 round로
    degrade) 완수 없이 소집을 영영 미룰 수 있다(생산적 무한 loop — risk 1과 동일 상한: deadline·off).
    bare 무응답 1회는 권한 고지 + 비상구 공개로 재유도되고 2연속이면 failsafe가 무결하게 닫는다(결정 14).
-4. **PreToolUse 발동·session 일치** — 자발 호출 gating은 PreToolUse가 main의 Agent 호출에 발동하고
-   session_id가 Stop과 같아야 성립한다. 미발동이면 token이 소비되지 않아 매 정지가 decline으로
-   오판되고 2round failsafe로 닫힌다 — session은 무손상, `/ploop:on`으로 재개 가능(graceful).
+4. **PreToolUse 발동·session 일치** — rate limit과 provenance 제1 소스는 PreToolUse가 main의 Agent
+   호출에 발동하고 session_id가 Stop과 같아야 성립한다. 미발동이면 rate limit은 사라지지만 verdict는
+   제2 소스(SubagentStop 관측)로 살아남아 loop가 정상 종결 가능하다 — 두 소스가 모두 표류하면
+   advisor 산출이 전부 무provenance로 기각되어 loop는 deadline·`/ploop:off`까지 달린다(수동 재개
+   무손상). 독립 hook 2개의 동시 표류만이 이 경로라 수용한다.
 5. **SubagentStop `agent_type`은 공식 문서상 plugin agent에 scoped(`ploop:advisor`)다** —
    이 repo의 실측은 bare(`advisor`)도 기록한 바 있어 2형 matching으로 관용한다(PreToolUse의
    `subagent_type`은 scoped 정확 일치). 표류하면 in-flight marker가 leak해 stuck-active가 되고
@@ -558,6 +572,9 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
   수용했고, 완화는 자발 중간 감사와 deadline이다.
 - **flight recorder의 완전성은 main의 narrator 순응에 의존한다** — relay 누락 round는 무서사로
   남는다(log에 구멍, anomaly 아님).
+- **소집 round 자신의 서사는 그 감사의 입력에 없다** — narration은 직전 round까지다(1-stop 지연,
+  결정 4). transcript에만 있는 증거(같은 round의 반박·채팅 납품)는 다음 감사에야 닿는다 — 상태
+  실측이 1차 증거라 수용하며, 실패 방향은 재지적으로 인한 여분 round다.
 - **session hard-death에는 drain notice가 닿지 않는다** — candidates의 종료 protocol 운반체는 종료
   notice뿐이라, process 사망 시 잔량은 유실된다. "수시로 비워라"(launch rules)가 손실 창을
   bound한다 — 작업기억은 lossy가 정의다.
@@ -596,7 +613,7 @@ ploop/
 ├── agents/                           # loop tier(advisor·narrator — 둘 다 main이 depth 1로 직접 호출)
 │   ├── advisor.md                    # 완수 auditor 역할 + 5-section 읽기 순서 (Write: 보고→advice.md)
 │   └── narrator.md                   # round slice 파일 → round 서사 (Read: round.jsonl · Write: narration→narration.md)
-├── prompts/instruction.md            # advisor 완수 판정·보고 지침 (anchor 좌표 의무·완수 token)
+├── prompts/instruction.md            # advisor 완수 판정·보고 지침 (anchor 좌표 의무·종결 token 2종)
 ├── skills/define-mission/SKILL.md    # /ploop:define-mission — 목표(goal) anchor 작성 (loop와 비연결, 수동 handoff)
 ├── skills/define-purpose/SKILL.md    # /ploop:define-purpose — 목적(purpose) anchor 작성 (loop와 비연결, 수동 handoff)
 ├── skills/docent/SKILL.md            # /ploop:docent — 기록 해설 교리 (read-only 질의 표면, 별도 session)

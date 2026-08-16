@@ -46,6 +46,11 @@
       verdict (guard restored; forged self-certification blocked)
 - [x] 5.2 Honest expiry closure: `DEADLINE_EXPIRED_ENDING_THE_TURN` token, its
       end cause, instruction 기한 종결 section, canon and spec-delta alignment
+- [x] 5.3 Meta-review round: dual-source provenance (`advisor_stopped`),
+      own-line token matching (expiry first), ending report persisted to the
+      log, vacuous purpose-completion guard, honest mixed-streak cause,
+      heartbeat waiting re-laned, version-pair lockstep, exposure/canon
+      alignments (see design.md)
 
 ## 6. Tests
 

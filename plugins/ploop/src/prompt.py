@@ -30,6 +30,12 @@ from pathlib import Path
 
 INSTRUCTION_PATH = Path(__file__).resolve().parent.parent / "prompts" / "instruction.md"
 
+# The one string that ties deadline_status (producer) to format_directive
+# (consumer): an expired status opens with this prefix, and the directive's
+# mandatory-audit branch keys on it.  A reworded status that forgot the
+# consumer would silently reopen the keep-working branch past the deadline.
+DEADLINE_EXPIRED_PREFIX = "expired"
+
 
 def deadline_status(anchor: str, now: datetime) -> str:
     """anchor frontmatter의 deadline을 now 기준 status로 렌더링 — 미선언이면 "".
@@ -65,7 +71,9 @@ def deadline_status(anchor: str, now: datetime) -> str:
     seconds = (deadline - now).total_seconds()
     hours, minutes = divmod(int(abs(seconds) // 60), 60)
     span = f"{hours}h {minutes}m" if hours else f"{minutes}m"
-    return f"{span} remaining" if seconds >= 0 else f"expired {span} ago"
+    if seconds >= 0:
+        return f"{span} remaining"
+    return f"{DEADLINE_EXPIRED_PREFIX} {span} ago"
 
 
 def format_candidates_notice(candidates_path: Path) -> str:
@@ -178,7 +186,7 @@ def format_directive(
         )
         ```
     ''')
-    if deadline.startswith("expired"):
+    if deadline.startswith(DEADLINE_EXPIRED_PREFIX):
         judge = (
             "2. The deadline has expired. Run the advisor call below NOW,"
             " EXACTLY as written — it judges the wrap-up:\n\n"

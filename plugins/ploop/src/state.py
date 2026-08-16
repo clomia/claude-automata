@@ -103,6 +103,13 @@ class Workspace:
         return self.path("advisor_running")
 
     @property
+    def advisor_stopped_path(self) -> Path:
+        """Second verdict-provenance source: SubagentStop touches it when an
+        advisor finishes, so a verdict survives PreToolUse drift (the token
+        being the first source); cleared at every arm."""
+        return self.path("advisor_stopped")
+
+    @property
     def compacted_path(self) -> Path:
         return self.path("compacted")
 
@@ -135,6 +142,7 @@ class Workspace:
             self.advice_history_path,
             self.advisor_token_path,
             self.advisor_running_path,
+            self.advisor_stopped_path,
             self.compacted_path,
             self.heartbeat_nonce_path,
             self.advice_path,

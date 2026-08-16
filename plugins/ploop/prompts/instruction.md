@@ -21,6 +21,8 @@ candidates가 제공되었고 잔량이 있으면 미승격 잔량도 미완이�
 # 보고
 
 `report-path`에 `Write`하라. 작성된 파일이 main agent에게 전달된다. main agent를 지칭할 때는 '너'라고 하라.
+종결 token은 **자기 줄에 단독으로** 써라 — 산문 속 언급은 기계 신호가 아니다.
+anchor가 완료 조건을 정의하지 않으면(purpose) 종결 token은 대상이 아니다 — 그 loop는 `/ploop:off`로만 끝난다.
 
 ## 미완
 

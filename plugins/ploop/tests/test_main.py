@@ -426,7 +426,7 @@ class TestStop:
             monkeypatch,
             WORK,
             ledger={"phase": ADVISING, "advice_history": ["r"], "round": 4},
-            advice=f"All requirements verified. {COMPLETION_TOKEN}",
+            advice=f"All requirements verified.\n\n{COMPLETION_TOKEN}",
             narration="final round work",
         )
         with pytest.raises(SystemExit) as exc:
@@ -455,7 +455,7 @@ class TestStop:
             monkeypatch,
             WORK,
             ledger={"phase": ADVISING, "advice_history": ["r"], "round": 4},
-            advice=f"Unmet: X, Y. Wrapping up. {EXPIRY_TOKEN}",
+            advice=f"Unmet: X, Y. Wrapping up.\n\n{EXPIRY_TOKEN}",
             narration="wrap-up work",
         )
         with pytest.raises(SystemExit) as exc:
@@ -468,6 +468,11 @@ class TestStop:
         err = capsys.readouterr().err
         assert "deadline expired" in err
         assert "mission complete" not in err
+        # the closure's rationale survives in the log, without the token
+        log = (tmp_path / "s1_loop.log").read_text()
+        assert "Unmet: X, Y. Wrapping up." in log
+        assert "[[ Audit" in log
+        assert EXPIRY_TOKEN not in log
 
     def test_unconsumed_token_report_is_no_verdict(self, tmp_path, monkeypatch, capsys):
         """The directive exposes the report path, so a report sitting there with
@@ -479,7 +484,7 @@ class TestStop:
             monkeypatch,
             WORK,
             ledger={"phase": ADVISING, "advice_history": ["r"]},
-            advice=f"I judge my own mission complete. {COMPLETION_TOKEN}",
+            advice=f"I judge my own mission complete.\n{COMPLETION_TOKEN}",
         )
         (tmp_path / "s1_advisor_token").write_text("")  # never consumed
         with pytest.raises(SystemExit) as exc:
@@ -492,6 +497,44 @@ class TestStop:
         assert (tmp_path / "s1_active").exists()
         assert not (tmp_path / "ploop_s1_advice.md").exists()  # cleared at arm
         assert "[[ Audit" not in (tmp_path / "s1_loop.log").read_text()
+
+    def test_prose_mention_of_a_token_is_not_a_verdict(self, tmp_path, monkeypatch):
+        """Machinery must be deliberate: the instruction teaches the token
+        strings, so a findings report may legitimately mention one in prose —
+        only a line written alone converges the loop."""
+        arrange_anchor(
+            tmp_path,
+            monkeypatch,
+            WORK,
+            ledger={"phase": ADVISING, "advice_history": []},
+            advice=f"- Mission: {COMPLETION_TOKEN}은 아직 쓸 수 없다 — 요구사항 3 미달",
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2  # loop continues
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["phase"] == ADVISING
+        assert len(ledger["advice_history"]) == 1  # an ordinary finding set
+        assert (tmp_path / "s1_active").exists()
+
+    def test_advisor_stop_observation_is_second_provenance(self, tmp_path, monkeypatch):
+        """PreToolUse drift must not strand the loop unclosable: with the token
+        unconsumed but an advisor stop observed this round, the report is
+        honored as a verdict."""
+        arrange_anchor(
+            tmp_path,
+            monkeypatch,
+            WORK,
+            ledger={"phase": ADVISING, "advice_history": []},
+            advice=f"All requirements verified.\n\n{COMPLETION_TOKEN}",
+        )
+        (tmp_path / "s1_advisor_token").write_text("")  # PreToolUse never fired
+        (tmp_path / "s1_advisor_stopped").touch()  # but SubagentStop observed it
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        assert load_ledger(tmp_path / "s1_loop.json")["phase"] == CONVERGED
+        assert not (tmp_path / "s1_active").exists()
 
     def test_no_round_cap_arms_indefinitely(self, tmp_path, monkeypatch):
         """There is no round limit: a long audit history still arms the next
@@ -775,7 +818,7 @@ class TestStop:
             monkeypatch,
             WORK,
             ledger={"phase": ADVISING, "advice_history": ["r"]},
-            advice=f"All covered. {COMPLETION_TOKEN}",
+            advice=f"All covered.\n\n{COMPLETION_TOKEN}",
             narration="final",
         )
         (tmp_path / "ploop_s1_candidates.md").write_text("term: foo")
@@ -925,7 +968,9 @@ class TestHeartbeatFire:
 
 
 class TestSubagentStop:
-    def test_advisor_stop_clears_running_marker(self, tmp_path, monkeypatch):
+    def test_advisor_stop_clears_running_and_records_provenance(
+        self, tmp_path, monkeypatch
+    ):
         (tmp_path / "s1_advisor_running").touch()
         arrange(
             tmp_path,
@@ -934,6 +979,7 @@ class TestSubagentStop:
         )
         subagent_stop()
         assert not (tmp_path / "s1_advisor_running").exists()
+        assert (tmp_path / "s1_advisor_stopped").exists()  # 2nd verdict provenance
 
     def test_scoped_advisor_stop_clears_running_marker(self, tmp_path, monkeypatch):
         """The stop payload has carried the bare name as well as the scoped
@@ -1316,6 +1362,7 @@ class TestOnCommand:
         for name in (
             "s1_advisor_token",
             "s1_advisor_running",
+            "s1_advisor_stopped",
             "ploop_s1_advice.md",
             "ploop_s1_narration.md",
         ):
@@ -1332,6 +1379,7 @@ class TestOnCommand:
         # stale transients cleared so the first resumed stop arms cleanly
         assert not (tmp_path / "s1_advisor_token").exists()
         assert not (tmp_path / "s1_advisor_running").exists()
+        assert not (tmp_path / "s1_advisor_stopped").exists()
         assert not (tmp_path / "ploop_s1_advice.md").exists()
         assert not (tmp_path / "ploop_s1_narration.md").exists()
 
