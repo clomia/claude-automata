@@ -11,16 +11,16 @@ project directory에서 launch된 것으로 판정된 session(Project scope 판�
 NOT), 숨긴 개수를 내용 없는 1행으로 고지해야 한다(SHALL — 무언의 절삭 금지).
 `--exclude-converged` flag가 주어지면 phase가 converged인 session을 추가로 제외하고 제외
 개수를 1행 고지해야 한다(SHALL). session마다 active 여부(`{session}_active` marker),
-ledger의 phase·round ordinal(advice_history 길이)·round_start_line, 최근 활동 시각(기록과
-transcript 통산 최신 mtime — loop 상태 파일은 정지에만 움직이므로 transcript가 생존
-신호다), anchor 첫 줄, 기록 파일 경로(anchor·loop.log·advice history·round slice·ledger·
-candidates)를 출력해야 한다(SHALL). 정렬은 active 우선, 그 안에서 최근 활동 순이어야
-하며(MUST), 출력은 English여야 한다(MUST).
+ledger의 phase·round ordinal(`round` field)·감사 수(advice_history 길이)·round_start_line,
+최근 활동 시각(기록과 transcript 통산 최신 mtime — loop 상태 파일은 정지에만 움직이므로
+transcript가 생존 신호다), anchor 첫 줄, 기록 파일 경로(anchor·loop.log·audit history·round
+slice·ledger·candidates)를 출력해야 한다(SHALL). 정렬은 active 우선, 그 안에서 최근 활동
+순이어야 하며(MUST), 출력은 English여야 한다(MUST).
 
 #### Scenario: active와 converged loop 병렬 열거
 
 - **WHEN** 이 directory에서 launch된 active loop 하나와 converged loop 하나가 data dir에 있을 때 resolver를 실행하면
-- **THEN** 두 session이 모두 출력되고 active가 먼저 오며, 각각 phase와 round ordinal이 표기된다
+- **THEN** 두 session이 모두 출력되고 active가 먼저 오며, 각각 phase·round ordinal·감사 수가 표기된다
 
 #### Scenario: loop 없음
 

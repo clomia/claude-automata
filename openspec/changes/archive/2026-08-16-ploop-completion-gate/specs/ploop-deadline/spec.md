@@ -17,13 +17,13 @@ directive SHALL close the keep-working branch and direct the advisor call itself
 Judgment stays with the advisor — the loop machinery SHALL NOT pause, stop, or gate
 the loop on the deadline.
 
-#### Scenario: Deadline ahead reaches both participants
+#### Scenario: Deadline ahead
 
 - **WHEN** the directive is assembled 2 hours 13 minutes before the deadline
 - **THEN** `deadline: 2h 13m remaining` appears as a directive header line and
   inside the advisor prompt
 
-#### Scenario: Deadline passed mandates the audit
+#### Scenario: Deadline passed
 
 - **WHEN** the directive is assembled after the deadline
 - **THEN** the keep-working branch is absent and the directive orders the advisor

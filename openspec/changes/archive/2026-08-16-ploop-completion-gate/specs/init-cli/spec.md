@@ -19,3 +19,11 @@ an advisor-path repair.
 #### Scenario: 기존 settings 보존
 - **WHEN** 무관한 key(`statusLine` 등)·`permissions.allow`·기존 `env` 항목을 가진 settings가 이미 있으면
 - **THEN** 무관한 key·`permissions.allow`·기존 `env` 항목은 그대로 남고 전제조건 key(신규 `env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` 포함)만 설정된다
+
+#### Scenario: nested-subagent depth 확보
+- **WHEN** init이 완료되면
+- **THEN** settings의 `env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`가 `"5"`로 설정되어 mission worker들의 위임 tree 깊이가 harness default 표류와 무관하게 고정된다
+
+#### Scenario: 재실행 수렴
+- **WHEN** init을 두 번 실행하면
+- **THEN** 두 번째 실행 후 파일 내용이 첫 실행 결과와 동일하다

@@ -19,7 +19,8 @@ repo root는 Python package `claude-automata`여야 하며, `claude-automata` �
 - **THEN** package가 격리 환경에 resolve되고 `init` command가 실행된다
 
 ### Requirement: Settings prerequisites
-`init`은 target repo의 `.claude/settings.json`에 다음 전제조건을 merge-write해야 한다(SHALL): `alwaysThinkingEnabled=true`, `autoMemoryEnabled=false`, `autoCompactEnabled=true`, `model="opus[1m]"`, `permissions.defaultMode="bypassPermissions"`, `env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH="5"`. `env` 전제조건은 Claude Code 2.1.217이 nested subagent를 기본 차단한 것을 되돌려 ploop advisor loop(advisor→narrator)의 nesting을 복원하며, 값 `5`는 nesting 도입 시(2.1.172) 공식 cap이다. 기존 파일의 다른 key와 `permissions`·`env`의 다른 하위 key는 보존해야 한다(MUST). 재실행은 idempotent해야 한다(MUST).
+
+`init`은 target repo의 `.claude/settings.json`에 다음 전제조건을 merge-write해야 한다(SHALL): `alwaysThinkingEnabled=true`, `autoMemoryEnabled=false`, `autoCompactEnabled=true`, `model="opus[1m]"`, `permissions.defaultMode="bypassPermissions"`, `env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH="5"`. `env` 전제조건은 mission worker들의 위임 tree 깊이를 harness default 표류(5→1→3, release마다 변동)로부터 pin하는 orchestration 환경 계약이다 — ploop loop 기계 자체는 depth 1에서 닫히며, 값 `5`는 nesting 도입 시(2.1.172) 공식 cap이다. 기존 파일의 다른 key와 `permissions`·`env`의 다른 하위 key는 보존해야 한다(MUST). 재실행은 idempotent해야 한다(MUST).
 
 #### Scenario: settings 파일 부재
 - **WHEN** `.claude/settings.json`이 없는 repo에서 init을 실행하면
@@ -31,7 +32,7 @@ repo root는 Python package `claude-automata`여야 하며, `claude-automata` �
 
 #### Scenario: nested-subagent depth 확보
 - **WHEN** init이 완료되면
-- **THEN** settings의 `env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`가 `"5"`로 설정되어 ploop의 nested subagent(advisor가 narrator를 spawn) 경로가 동작 가능해진다
+- **THEN** settings의 `env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`가 `"5"`로 설정되어 mission worker들의 위임 tree 깊이가 harness default 표류와 무관하게 고정된다
 
 #### Scenario: 재실행 수렴
 - **WHEN** init을 두 번 실행하면

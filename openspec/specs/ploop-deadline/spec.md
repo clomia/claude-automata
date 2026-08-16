@@ -32,31 +32,36 @@ anchor without frontmatter or without the key declares no deadline.
 
 ### Requirement: Every advisor round carries the deadline status
 
-When a deadline is declared, the advisor-summoning trigger SHALL include one status
-line inside the advisor's prompt, rendered at trigger-assembly time: remaining time
-before the deadline, elapsed time past it, or the unreadable raw value. Judgment
-stays with the advisor — the loop machinery SHALL NOT pause, stop, or gate the loop
-on the deadline.
+When a deadline is declared, the round directive SHALL carry one status line —
+remaining time, elapsed time past expiry, or the unreadable raw value — rendered at
+directive-assembly time in two positions: a header line for the main agent and the
+same line inside the advisor call's prompt. When the status is expired, the
+directive SHALL close the keep-working branch and direct the advisor call itself.
+Judgment stays with the advisor — the loop machinery SHALL NOT pause, stop, or gate
+the loop on the deadline.
 
 #### Scenario: Deadline ahead
 
-- WHEN the trigger is assembled 2 hours 13 minutes before the deadline
-- THEN the advisor prompt contains `deadline: 2h 13m remaining`
+- **WHEN** the directive is assembled 2 hours 13 minutes before the deadline
+- **THEN** `deadline: 2h 13m remaining` appears as a directive header line and
+  inside the advisor prompt
 
 #### Scenario: Deadline passed
 
-- WHEN the trigger is assembled 23 minutes after the deadline
-- THEN the advisor prompt contains `deadline: expired 23m ago`
+- **WHEN** the directive is assembled after the deadline
+- **THEN** the keep-working branch is absent and the directive orders the advisor
+  call now
 
 #### Scenario: Unreadable declaration
 
-- WHEN the frontmatter's `deadline:` value cannot be parsed as an aware datetime
-- THEN the advisor prompt surfaces `deadline: unreadable:` with the raw value
+- **WHEN** the frontmatter's `deadline:` value cannot be parsed as an aware datetime
+- **THEN** the directive surfaces `deadline: unreadable:` with the raw value and
+  keeps the normal branches
 
 #### Scenario: No deadline declared
 
-- WHEN the anchor declares no deadline
-- THEN the trigger carries no deadline line and loop behavior is unchanged
+- **WHEN** the anchor declares no deadline
+- **THEN** the directive carries no deadline line and loop behavior is unchanged
 
 ### Requirement: Deadline semantics live in the advisor instruction
 
