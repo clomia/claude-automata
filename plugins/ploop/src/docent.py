@@ -150,13 +150,14 @@ def render_session(ws: Workspace) -> str:
     active = ws.active_path.exists()
     lines = [
         f"session {ws.session_id}  [{'ACTIVE' if active else 'inactive'}]"
-        f"  phase={ledger['phase']}  round={len(ledger['advice_history'])}"
+        f"  phase={ledger['phase']}  round={ledger['round']}"
+        f"  audits={len(ledger['advice_history'])}"
         f"  round_start_line={ledger['round_start_line']}"
         f"  last_activity={iso(last_activity(ws))}",
         f"  anchor head:     {first_line(ws.anchor_path)}",
         f"  anchor:          {describe(ws.anchor_path)}",
         f"  loop log:        {describe(ws.log_path)}",
-        f"  advice history:  {describe(ws.advice_history_path)}",
+        f"  audit history:   {describe(ws.advice_history_path)}",
         f"  round slice:     {describe(ws.round_path)}",
         f"  ledger:          {describe(ws.ledger_path)}",
         f"  candidates:      {describe(ws.candidates_path)}",

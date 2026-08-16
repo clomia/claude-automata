@@ -84,7 +84,7 @@ hook 주입 message 조립).
 
 - **upstream OpenSpec prompt 미설치** — engine·format만 채택하고 정책은 전량 자작한다. 근거와
   seam은 MEMORY의 OpenSpec 채택 경계.
-- **별도 session 자동화(claude -p) 기각** — 정식 nested subagent 경로만 사용한다(구독 안전).
+- **별도 session 자동화(claude -p) 기각** — 정식 subagent 경로만 사용한다(구독 안전).
   근거는 ploop 정본.
 - **ADR·사실 DB·문서 index 기각** — 결정 기록은 각 정본의 배제·결정 section, 측정은 조사 기록,
   회상은 grep. 근거는 MEMORY의 docs 표면 규약.

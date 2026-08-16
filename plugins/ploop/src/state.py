@@ -8,22 +8,26 @@ into the protected ~/.claude routes to the auto-permission-mode classifier and
 can be silently blocked, so their writers use unprotected temp, where it is
 auto-approved.
 
-The ledger ({advice_history, round_start_line, anomalies, phase}) is the loop's
-persisted state; the hook owns it as single writer — advisor and narrator only
-hand off text files.  Four fields, each one fact:
+The ledger ({advice_history, round_start_line, anomalies, phase, round}) is the
+loop's persisted state; the hook owns it as single writer — advisor and narrator
+only hand off text files.  Five fields, each one fact:
 
-- advice_history: the round record; its length is the round ordinal (the log
-  numbers by it).
+- advice_history: the audit record — one entry per advisor report (the log's
+  Audit entries number by its length).
 - round_start_line: the transcript line where the current round's work begins —
   a file offset, not a message-format field — so the narrator reads that round's
   slice directly instead of the hook reconstructing it.
 - anomalies: consecutive anomaly count (an advisor run that wrote nothing, or a
-  stop that ignored the trigger), reset to 0 on any clean round; the cap ends the
-  loop before it can stalemate.
-- phase: the round-cycle position — "fresh" (just launched/resumed, no verdict to
-  record yet), "advising" (rounds running), "converged" (the advisor deliberately
-  finished the anchor).  It subsumes the old skip-gate and the finished flag:
-  record iff phase == "advising"; /ploop:on resumes any phase except "converged".
+  bare stop that left the directive unanswered), reset to 0 by an audit or a
+  working stop; the cap ends the loop before it can stalemate.
+- phase: the round-cycle position — "fresh" (just launched/resumed: no token was
+  armed yet, so an absent token must not read as consumed), "advising" (rounds
+  running), "converged" (the advisor certified the mission complete).
+  Read/judge iff phase == "advising"; /ploop:on resumes any phase except
+  "converged".
+- round: the ordinal of the round in progress — rounds are the stop-to-stop time
+  slices of the transcript, advanced at every arm (the log's Round entries
+  number by it, one behind: a round's narration lands at the next stop).
 
 load_ledger always returns every key, so callers index directly and update by
 merge ({**ledger, "phase": ...}): an omitted key is preserved, never
@@ -41,9 +45,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # The round-cycle position (ledger `phase`).
-FRESH = "fresh"  # just launched/resumed — the next stop arms without recording
-ADVISING = "advising"  # rounds running — the next stop records then arms
-CONVERGED = "converged"  # the advisor finished the anchor — /ploop:on refuses
+FRESH = "fresh"  # just launched/resumed — the next stop arms without judging
+ADVISING = "advising"  # rounds running — the next stop reads, judges, then arms
+CONVERGED = "converged"  # the advisor certified completion — /ploop:on refuses
 
 
 @dataclass(frozen=True)
@@ -151,6 +155,7 @@ def load_ledger(ledger_file: Path) -> dict:
         "round_start_line": 1,
         "anomalies": 0,
         "phase": FRESH,
+        "round": 0,
     }
     if not ledger_file.exists():
         return defaults

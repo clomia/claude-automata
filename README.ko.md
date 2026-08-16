@@ -26,7 +26,7 @@ Claude Code는 끝났다고 믿는 순간 turn을 끝내고, 다음 compaction�
 
 | Plugin | 기억 역할 |
 |---|---|
-| **ploop** | 작업기억: 단일 세션이 며칠에 걸쳐 자율 항해합니다. 독립 advisor가 모든 정지를 감사합니다 |
+| **ploop** | 작업기억: 단일 세션이 며칠에 걸쳐 자율 항해합니다. 완수 선언은 독립 advisor가 심사합니다 |
 | **tx** | consolidation: 장기기억으로 가는 심사 관문(독립 verify, CI, squash merge) |
 | **refine** | 재접지: 기술 부채를 제거하는 대규모 워크플로우 |
 
@@ -49,7 +49,7 @@ agent가 [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTAL
 /ploop:launch [anchor 내용]    # 새 session에서 loop에 전달
 ```
 
-agent가 끝났다고 선언하는 순간 hook이 정지를 막고 advisor를 소집합니다. advisor는 전체 스토리에 접근할 수 있는 독립 메타인지이고, loop는 advisor가 더 말할 것이 없을 때 끝납니다.
+agent가 끝났다고 선언하는 순간 hook이 정지를 막고 advisor 심사를 요구합니다. advisor는 전체 스토리에 접근할 수 있는 독립 메타인지이고, loop는 advisor가 완수를 인증할 때만 끝납니다.
 
 ```
 agent   › Mission accomplished. Stopping.

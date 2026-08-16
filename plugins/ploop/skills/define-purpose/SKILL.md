@@ -12,7 +12,7 @@ anchor는 그 loop를 붙들어 매는 기준 파일로, context가 유실되어
 
 **Purpose는 완료 조건 없이 방향만 가진다.** 
 agent는 Purpose로부터 **스스로 요구사항을 만들며 나아가야 한다.**
-advisor는 agent가 생각하지 못한 요구사항을 찾아준다.
+advisor를 소집하면 방향·Constraint 대비 상태를 감사받는다. purpose loop는 스스로 멈추지 않는다 — `/ploop:off`가 끝이다.
 
 # Instructions
 

@@ -28,7 +28,7 @@ def seed_session(
     ws.log_path.write_text(f"[[ ANCHOR ]]\n\n# Mission of {session}\n")
     save_ledger(
         ws.ledger_path,
-        {"advice_history": ["advice"] * rounds, "phase": phase},
+        {"advice_history": ["advice"] * rounds, "phase": phase, "round": rounds},
     )
     if active:
         ws.active_path.touch()
@@ -68,8 +68,8 @@ class TestRender:
         )
         out = render(tmp_path, "/w/repo")
         assert out.index("session live") < out.index("session old-conv")
-        assert "[ACTIVE]  phase=advising  round=2  round_start_line=1" in out
-        assert "[inactive]  phase=converged  round=5" in out
+        assert "[ACTIVE]  phase=advising  round=2  audits=2  round_start_line=1" in out
+        assert "[inactive]  phase=converged  round=5  audits=5" in out
         assert "# Mission of live" in out
         assert f"{Workspace(tmp_path, 'live').log_path} (" in out
 

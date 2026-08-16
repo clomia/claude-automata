@@ -26,7 +26,7 @@ Claude Code ends its turn the moment it believes it's finished, and loses the de
 
 | Plugin | Memory role |
 |---|---|
-| **ploop** | working memory: a single session sails autonomously for days; an independent advisor audits every stop |
+| **ploop** | working memory: a single session sails autonomously for days; an independent advisor judges every completion claim |
 | **tx** | consolidation: the screening gate into long-term memory (independent verify, CI, squash merge) |
 | **refine** | re-grounding: large-scale workflows that eliminate technical debt |
 
@@ -49,7 +49,7 @@ Your agent reads [INSTALL.md](https://github.com/clomia/claude-automata/blob/mai
 /ploop:launch [anchor text]    # hand it to the loop in a fresh session
 ```
 
-Declare the mission done and a hook blocks the stop, summoning an independent advisor with access to the whole story; the loop ends only when the advisor has nothing left to say.
+Declare the mission done and a hook blocks the stop, demanding an audit by an independent advisor with access to the whole story; the loop ends only when the advisor certifies completion.
 
 ```
 agent   › Mission accomplished. Stopping.

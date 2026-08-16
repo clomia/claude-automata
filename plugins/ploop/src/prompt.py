@@ -1,27 +1,27 @@
-"""Prompt — assemble the advisor's input artifacts and the trigger.
+"""Prompt — assemble the standing round directive and the loop notices.
 
-The advisor loop feeds the advisor five sections in a canonical order.  ploop
-can't run the advisor from the hook, so it writes the deterministic section
-(advice-history) to a file and emits a trigger that points the advisor at the
-five sections in that order:
+Every stop of an armed loop injects one standing directive: narrate the finished
+round (the narrator call, run by the main agent at depth 1), then judge the state
+against the anchor — keep working, or convene the advisor when the mission reads
+complete or an independent audit is wanted.  The advisor is the completion gate:
+only its verdict certifies completion, and the directive spells both Agent calls
+out verbatim so nothing is left for the LLM to construct.
+
+The advisor reads five sections in canonical order:
 
     role (advisor system prompt)
     -> anchor           (anchor file)
-    -> action-history   (narrator call, run by the advisor)
-    -> advice-history   (advice-history file)
+    -> action-history   (loop log, then the freshest narration)
+    -> audit-history    (advice-history file — prior audit reports)
     -> instructions     (static prompt file)
 
-The advisor reads/runs them top-to-bottom, building the ordered context.
-A sixth, conditional section — the main agent's candidates queue — rides
-between advice-history and instructions only when the queue is non-empty.
-
-action-history is the one runtime-collected section: the hook slices the round's
-own lines out of the main transcript into a small file (round_path), and the
-narrator analyzes that whole file — no offsets, no boundary-finding.  The slice
-is a pure line range [round_start .. end-of-transcript-at-this-stop], which is
-exactly the round (the next handoff has not been appended yet), so the hook does
-no message-format parsing and the loop carries no dependency on the transcript's
-internal message shapes.
+action-history is the flight recorder: the hook slices each round's own lines out
+of the main transcript into a small file (round_path) and the narrator — invoked
+by the main agent every round, not by the advisor — renders it into the loop log.
+The slice is a pure line range [round_start .. end-of-transcript-at-this-stop],
+so the hook does no message-format parsing and the loop carries no dependency on
+the transcript's internal message shapes.  Accumulated narrations keep the audit
+input bounded no matter how long the mission runs.
 """
 
 import textwrap
@@ -38,7 +38,8 @@ def deadline_status(anchor: str, now: datetime) -> str:
     안의 `deadline:` 값은 timezone 있는 ISO 8601이어야 읽힌다 — parse 불가나
     timezone 부재는 원문을 unreadable로 표면화한다(조용한 무장 해제는 거짓 안심이다).
     본문의 `deadline:`은 산문이다.  여기서는 시각 사실만 만든다 — 판단은 advisor
-    몫이다(결정 20).
+    몫이고, expired가 directive의 소집 의무화로 이어지는 것도 그 판단의 배달일 뿐이다
+    (결정 20).
     """
     lines = anchor.splitlines()
     if not lines or lines[0].strip() != "---":
@@ -71,31 +72,31 @@ def format_candidates_notice(candidates_path: Path) -> str:
     """The queue's address, worded once.
 
     Both deliveries share this line: launch hands it over in the turn that arms the
-    loop, every trigger re-delivers it afterwards.  One wording, so the main agent
+    loop, every directive re-delivers it afterwards.  One wording, so the main agent
     never has two addresses to reconcile.
     """
     return f"Your candidates queue: {candidates_path}"
 
 
 def format_advice_history(advice_history: list[str]) -> str:
-    """Format prior advices as <advice-N> blocks (advice-history).
+    """Format prior audit reports as <audit-N> blocks (audit-history).
 
-    Each block is one round's advice verbatim — its action-history recap plus
-    the uncovered regions it lists — so the history also carries regions the
-    main agent reached on its own, and covered ground is never re-surfaced.
+    Each block is one audit verbatim, so the advisor sees its own prior findings
+    and never re-flags an item the main agent already answered or rebutted.
     """
     if not advice_history:
-        return "No prior advice."
+        return "No prior audits."
     return "\n\n".join(
-        f"<advice-{i + 1}>\n\n{advice}\n\n</advice-{i + 1}>"
+        f"<audit-{i + 1}>\n\n{advice}\n\n</audit-{i + 1}>"
         for i, advice in enumerate(advice_history)
     )
 
 
-def format_advisor_trigger(
+def format_directive(
     *,
     anchor_path: Path,
     round_path: Path,
+    log_path: Path,
     advice_history_path: Path,
     advice_path: Path,
     narration_path: Path,
@@ -105,41 +106,39 @@ def format_advisor_trigger(
     anchor_text: str | None = None,
     deadline: str = "",
 ) -> str:
-    """Build the stderr feedback that drives the main agent to invoke the advisor.
+    """Build the standing directive every armed stop injects.
 
-    The trigger spells out the advisor's Agent-tool call verbatim, with the
-    narrator's Agent-tool call inlined inside it — the hook authors the exact
-    invocations, and the main agent and advisor relay them as written.  Handing over the literal call is the
-    simplest, most deterministic path: nothing is left for the LLM to construct.
-    The five sections appear in the loop's canonical order; the advisor
-    reads/runs them top-to-bottom (advisor.md).
+    The directive spells both Agent calls out verbatim — the hook authors the
+    exact invocations and the main agent relays them as written, the simplest and
+    most deterministic path.  The narrator call is unconditional (the flight
+    recorder), the advisor call is the main agent's judgment: convene it on a
+    completion claim or whenever an independent audit is wanted.  Only the
+    advisor certifies completion — the silent-exit failsafe is disclosed only
+    after a first unanswered directive (the decline notice), never here.
 
-    The call is synchronous (run_in_background=false): the advisor Writes its
-    advice to advice_path — a clean file channel, since its chat message may carry
-    reasoning prose neither the main agent nor the hook should read.  Both the
-    advice and the termination token go to advice_path (the sole channel); the trigger
-    directs the main agent to read that file, and the hook reads it too for the
-    ledger.  The narrator analyzes round_path — the round's own transcript slice the
-    hook cut (a contiguous line range ending before the next handoff, so no
-    interjection can truncate it) — and hands off through the same kind of channel:
-    it Writes the narrative to narration_path, which the advisor reads as analysis
-    input after the inlined call blocks — and the hook reads into the round log.
+    Both calls are synchronous (run_in_background=false: the next action depends
+    on each result).  The advisor Writes its report to advice_path — a clean file
+    channel, since its chat message may carry reasoning prose — and reads the
+    loop log plus the freshest narration as action-history, its own prior reports
+    as audit-history.  A deadline surfaces to both participants from one status
+    string: a header line for the main agent (convening is its decision, so the
+    clock is its input too) and the same line inside the advisor prompt; an
+    expired deadline closes the keep-working branch and makes convening the
+    directive itself — judgment stays with the advisor.
 
     On a compacted round, anchor_text is the anchor's full text, re-injected at
-    this recency position (mechanism 2) — the discrete compaction event puts the
-    anchor text itself into context.
-
-    The candidates queue rides the trigger in both directions: a standing line
-    after the advice-read direction re-delivers the per-session path to the main
-    agent (launch delivered it first, in the turn it armed the loop; the trigger is
-    what survives a compaction that erased that turn), and the advisor block names
-    the queue only when candidates_pending — the hook decides emptiness in code, so
-    a loop that never queues candidates keeps its advisor prompt free of the
-    promotion domain.
+    this recency position (mechanism 2).  The candidates queue rides both
+    directions: a standing line re-delivers the address to the main agent (launch
+    delivered it first; the directive is what survives a compaction), and the
+    advisor block names the queue only when candidates_pending — emptiness is
+    decided here in code, so a loop that never queues candidates keeps its
+    advisor prompt free of the promotion domain.
     """
     prefix = ""
     if anchor_text:
         prefix = f"Your anchor — stay anchored to it:\n\n{anchor_text}\n\n---\n\n"
+    if deadline:
+        prefix += f"deadline: {deadline}\n\n"
     deadline_line = ""
     if deadline:
         deadline_line = f"\n                deadline: {deadline}"
@@ -147,38 +146,63 @@ def format_advisor_trigger(
     if candidates_pending:
         candidates_line = (
             f"\n                candidates: {candidates_path} — facts and terms"
-            " the main agent queued for promotion; a stale or growing queue is"
-            " an uncovered region"
+            " the main agent queued for promotion; an un-promoted remainder is"
+            " unfinished work"
         )
-    body = textwrap.dedent(f'''\
-        Run the call below EXACTLY as written:
-
+    narrator_call = textwrap.dedent(f"""\
+        ```
+        Agent(
+            subagent_type="ploop:narrator",
+            description="narrate action history",
+            run_in_background=false,
+            prompt='
+                round: {round_path}
+                narration-path: {narration_path}
+            '
+        )
+        ```
+    """)
+    advisor_call = textwrap.dedent(f'''\
         ```
         Agent(
             subagent_type="ploop:advisor",
-            description="review and advise",
+            description="audit the mission",
             run_in_background=false,
             prompt="""
                 anchor: {anchor_path}{deadline_line}
-                action-history: Agent(
-                    subagent_type="ploop:narrator",
-                    description="narrate action history",
-                    run_in_background=false,
-                    prompt='
-                        round: {round_path}
-                        narration-path: {narration_path}
-                    '
-                )
-                advice-history: {advice_history_path}{candidates_line}
+                action-history: {log_path} then {narration_path}
+                audit-history: {advice_history_path}{candidates_line}
                 instructions: {instruction_path}
-                advice-path: {advice_path}
+                report-path: {advice_path}
             """
         )
         ```
-
-        When the advisor returns, read its advice at {advice_path}.
-        {format_candidates_notice(candidates_path)}
     ''')
+    if deadline.startswith("expired"):
+        judge = (
+            "2. The deadline has expired. Run the advisor call below NOW,"
+            " EXACTLY as written — it judges the wrap-up:\n\n"
+        )
+    else:
+        judge = (
+            "2. Re-read your anchor and hold your state against it.\n"
+            "   Work remains -> keep working now.\n\n"
+            "3. ONLY when you judge the mission complete — or when you want an\n"
+            "   independent audit — run the call below EXACTLY as written:\n\n"
+        )
+    body = (
+        "1. Narrate the finished round — run the call below EXACTLY as written:\n\n"
+        + narrator_call
+        + "\n"
+        + judge
+        + advisor_call
+        + "\n"
+        + f"When the advisor returns, read its report at {advice_path}.\n"
+        "Findings are observations, not orders: judge each against the anchor —\n"
+        "act on what holds, rebut what does not (your rebuttal reaches the next\n"
+        "audit). Only the advisor can certify completion.\n"
+        f"{format_candidates_notice(candidates_path)}\n"
+    )
     return prefix + body
 
 
@@ -190,12 +214,12 @@ def format_end_notice(
     """Build the notice every termination path sends to the main agent.
 
     The main agent must clearly report the end and its cause to the user —
-    whatever ended the loop.  When the turn surfaced any advice the notice
-    also has it recap the round log: over a long run the main agent's
-    context may have auto-compacted early rounds away, so the log on disk is
-    the one complete record.  A candidates_path (passed when the queue still
-    holds entries) appends the drain directive — promote or discard — so an
-    automatic end never strands the queue.
+    whatever ended the loop.  The loop log is the one complete record (round
+    narrations plus every audit), so the notice has the main agent recap it: over
+    a long run the main agent's context may have auto-compacted early rounds
+    away.  A candidates_path (passed when the queue still holds entries) appends
+    the drain directive — promote or discard — so an automatic end never strands
+    the queue.
     """
     notice = (
         f"The advisor loop has ended — {cause}. "
