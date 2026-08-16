@@ -26,7 +26,7 @@ Claude Code ends its turn the moment it believes it's finished, and loses the de
 
 | Plugin | Memory role |
 |---|---|
-| **ploop** | working memory: a single session sails autonomously for days; an independent advisor audits every stop |
+| **ploop** | working memory: a single session sails autonomously for days; an independent advisor judges every completion claim |
 | **tx** | consolidation: the screening gate into long-term memory (independent verify, CI, squash merge) |
 | **refine** | re-grounding: large-scale workflows that eliminate technical debt |
 
@@ -49,7 +49,7 @@ Your agent reads [INSTALL.md](https://github.com/clomia/claude-automata/blob/mai
 /ploop:launch [anchor text]    # hand it to the loop in a fresh session
 ```
 
-Declare the mission done and a hook blocks the stop, summoning an independent advisor with access to the whole story; the loop ends only when the advisor has nothing left to say.
+Declare the mission done and a hook blocks the stop, demanding an audit by an independent advisor with access to the whole story; the loop ends only when the advisor certifies completion.
 
 ```
 agent   › Mission accomplished. Stopping.
@@ -76,10 +76,10 @@ Agents drive tx on their own. Every change lands as one verified, CI-green squas
 ## Keep the repository lean
 
 ```
-/refine:code [focus] · /refine:docs [focus] · /refine:integrity [focus]
+/refine:code [focus] · /refine:docs [focus]
 ```
 
-Repository-wide workflows that clear technical debt: code architecture, doc-to-code alignment, and logical integrity. A run can sweep the whole codebase and take ten hours or more; watch it with `/workflows`.
+Repository-wide workflows that clear technical debt: code architecture and doc-to-code alignment. They touch only the representation layer and never change behavior. A run can sweep the whole codebase and take ten hours or more; watch it with `/workflows`.
 
 ---
 

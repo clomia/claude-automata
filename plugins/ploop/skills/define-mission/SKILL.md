@@ -18,9 +18,10 @@ advisor는 목표가 완전히 달성되면 loop를 종료한다.
 
 1. 사용자를 추궁해 생각과 의도를 최대한 수집하라 — 열린 질문으로 시작해 여러 번의 질의응답을 거쳐라.
    - [CRITICAL] 사용자의 주장을 사실로 수용하지 마라. **False assumption이 가장 위험하다.** 사용자의 말은 생각이나 의도로 해석하라.
-2. 수집한 정보를 판단 기준으로 쓸 수 있는 축으로 종합하고, Anchor file save path에 markdown 형식으로 mission을 작성하라.
-3. 사용자가 anchor를 최종 검수하게 하라 — 내용을 모두 출력하지 말고 파일 확인을 요청하라.
-4. 완료 후 anchor text를 복사해 별도 session에 `/ploop:launch [anchor text]` 하라고 안내하라.
+2. 무인 운행 여부를 확인하라. 무인이면 사용자 없이 결정해서는 안 되는 것을 추궁해 Constraint에 담고, 무인 선언 한 줄을 Constraint에 넣어라 — 사용자 부재·결정 소유·대기 금지. 예: `무인 운행: 사용자는 부재한다. 선택은 스스로 최적해로 결정해 전진하고, 확인 대기로 멈추지 마라.`
+3. 수집한 정보를 판단 기준으로 쓸 수 있는 축으로 종합하고, Anchor file save path에 markdown 형식으로 mission을 작성하라.
+4. 사용자가 anchor를 최종 검수하게 하라 — 내용을 모두 출력하지 말고 파일 확인을 요청하라.
+5. 완료 후 anchor text를 복사해 별도 session에 `/ploop:launch [anchor text]` 하라고 안내하라.
    - `/ploop:launch`는 파일 경로가 아닌 내용을 copy & paste해야 한다.
 
 # Mission 규칙
@@ -28,5 +29,5 @@ advisor는 목표가 완전히 달성되면 loop를 종료한다.
 - [IMPORTANT] **Acceptable boundaries**와 **달성 가능한 목표**가 명확히 정의되어야 한다.
 - harness(CLAUDE.md, rules 등)가 제공하는 내용은 중복이니 anchor에 넣지 마라.
 - ROI(분량 대비 정보)가 높은 문서를 작성하라 — 중요한 단어만 남기고, 작성 후 더 irreducible하게 줄일 수 있는지 재검토하라.
-- anchor 최상단 frontmatter의 `deadline: 2026-08-04T22:00+09:00`(ISO 8601, timezone 필수) 선언은 advisor에게 매 round 잔여 시간을 전달한다.
+- (선택) 마감이 실재하는 mission에만 anchor 최상단 frontmatter로 선언한다: `deadline: 2026-08-04T22:00+09:00`(ISO 8601, timezone 필수). 선언하면 loop가 잔여 시간을 추적해 판정에 반영한다. 미선언이 기본이다 — 마감 없는 mission에 만들어 붙이지 마라.
 - 구조는 Background → Mission → Constraint → Reference 순이다. `# Mission`(달성할 목표)과 `# Constraint`(허용 범위)는 필수, `# Background`(목표의 배경)와 `# Reference`(관련 link — URL·파일 경로)는 선택이며, section은 자유롭게 추가할 수 있다.

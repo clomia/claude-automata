@@ -168,17 +168,17 @@
   <h2><a class="sec-link" href="#advisor"><span class="sec-no">01</span>"DONE" GETS AUDITED</a></h2>
   <p class="sec-lede">
     The moment the agent declares itself done, a hook blocks the stop and
-    summons the advisor: an independent metacognition with access to the
-    whole story.
+    demands the audit — by the advisor, an independent metacognition with
+    access to the whole story.
   </p>
   <div class="exchange" role="img"
-       aria-label="An illustrative exchange: the agent declares the mission accomplished and tries to stop; the hook blocks the stop and summons the advisor; the advisor lists overlooked regions (unmeasured layouts, uncited claims, facts still awaiting promotion); the agent resumes. Six rounds later the advisor writes: I have no further advice, ending the turn. Only then does the loop end.">
+       aria-label="An illustrative exchange: the agent declares the mission accomplished and tries to stop; the hook blocks the stop and demands the audit; the advisor lists unmet requirements (unmeasured layouts, uncited claims, facts still awaiting promotion); the agent resumes. Six rounds later the advisor writes: mission complete, ending the turn. Only then does the loop end.">
     <div class="xc-line"><span class="xc-who xc-agent">agent</span><span class="xc-text">Mission accomplished. Stopping.</span></div>
-    <div class="xc-line"><span class="xc-who xc-hook">hook</span><span class="xc-text">Stop blocked. Summoning the advisor.</span></div>
+    <div class="xc-line"><span class="xc-who xc-hook">hook</span><span class="xc-text">Stop blocked. The completion audit is due.</span></div>
     <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text">Not yet. The mobile layout was never measured. Two claims cite no source. The promotion queue still holds facts.</span></div>
     <div class="xc-line"><span class="xc-who xc-agent">agent</span><span class="xc-text">…resuming.</span></div>
     <div class="xc-gap">⟲ six rounds later</div>
-    <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text xc-end">I have no further advice. Ending the turn.</span></div>
+    <div class="xc-line"><span class="xc-who xc-advisor">advisor</span><span class="xc-text xc-end">Mission complete. Ending the turn.</span></div>
   </div>
   <p class="xc-note">
     This is what ploop provides. The authority to end the loop rests with
@@ -195,7 +195,7 @@
       <h3>The loop never wanders</h3>
       <p>
         ploop defines the intent you hand it as the anchor, plants it outside
-        the transcript, and the advisor consults it constantly. Injected into
+        the transcript, and the advisor judges against it. Injected into
         context right after each auto‑compaction, the anchor remains the
         single source of truth.
       </p>
@@ -305,10 +305,10 @@
       </div>
       <p>
         Large‑scale workflows that eliminate technical debt:
-        <code>/refine:code</code> optimizes the code architecture,
-        <code>/refine:docs</code> aligns documentation with the code, and
-        <code>/refine:integrity</code> audits integrity. They sweep the whole
-        repository, so a run can take ten hours or more.
+        <code>/refine:code</code> optimizes the code architecture, and
+        <code>/refine:docs</code> aligns documentation with the code. They
+        touch only the representation layer — never behavior — and sweep the
+        whole repository, so a run can take ten hours or more.
       </p>
     </article>
 
@@ -364,8 +364,7 @@
     <p class="step-caption">4 · KEEP THE REPOSITORY LEAN</p>
     <pre class="code-block"><code><span class="c-muted"># between missions: hours-long maintenance passes</span>
 /refine:code       <span class="c-muted"># optimizes the code architecture</span>
-/refine:docs       <span class="c-muted"># aligns documentation with the code</span>
-/refine:integrity  <span class="c-muted"># verifies logical integrity</span></code></pre>
+/refine:docs       <span class="c-muted"># aligns documentation with the code</span></code></pre>
 
     <p class="step-caption">APPENDIX · WHY AGENTS BRANCH</p>
     <p class="loop-note">

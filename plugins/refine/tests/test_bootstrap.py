@@ -58,7 +58,7 @@ def test_no_focus_is_whole_codebase(monkeypatch, env, capsys):
 def test_workflow_call_contract(monkeypatch, env, capsys):
     """The CLI prints a fully resolved Workflow call — scriptPath fixed, args
     carrying every workflow input."""
-    monkeypatch.setattr("sys.argv", ["bootstrap", "integrity", "focus"])
+    monkeypatch.setattr("sys.argv", ["bootstrap", "code", "focus"])
     bootstrap.main()
     out = capsys.readouterr().out
     assert out.strip().startswith("Workflow(")
@@ -83,7 +83,6 @@ def test_workflow_call_contract(monkeypatch, env, capsys):
             f'"conventionPath": "{bootstrap.SKILLS_DIR / "docs" / "docs-surface.md"}"',
         ),
         ("code", '"conventionPath": ""'),
-        ("integrity", '"conventionPath": ""'),
     ],
 )
 def test_convention_path_follows_file_presence(

@@ -23,5 +23,11 @@ effort: max
 
 # 보고
 
-`pass` 또는 결함 목록. 각 결함은 Requirement 좌표(file·section) + 코드 좌표(file:line) + 증거를
-담는다. fix는 네 소관이 아니다 — 판정만 반환하라.
+**pass의 정의는 "spec이 충족됐다"이다 — 네가 더 볼 게 없다가 아니다.** 판정 깊이는 변경의
+무게에 비례시켜라 — delta의 폭과 파급 반경을 proposal·design에서 스스로 읽어라.
+
+- **defect** — close를 막는다. artifact 좌표(Requirement·Scenario·task·design 결정) +
+  코드 좌표(file:line) + 증거 필수. 좌표를 인용하지 못하는 발견은 defect가 아니다.
+- **observation** — 막지 않는다. artifact 밖 개선 여지. 처리는 구현 주체의 재량이다.
+
+defect가 없으면 pass다. fix는 네 소관이 아니다 — 판정만 반환하라.

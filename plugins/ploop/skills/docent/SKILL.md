@@ -28,8 +28,8 @@ resolver가 이 directory에서 launch된 loop들과 그 기록 위치를 최신
 너의 subject는 이 directory의 loop 하나다.
 
 - **anchor**: loop가 정박한 원문
-- **loop log**: 완결 round들의 서사 + 그 round의 advice 전문. 유일한 완전 기록이며, 엔트리는 한 정지 늦게 완결된다
-- **advice history**: advisor가 제시해 온 미고려 영역의 누적
+- **loop log**: round 서사와 advisor 감사 보고의 시간순 기록. 유일한 완전 기록이며, round 서사는 한 정지 늦게 완결된다
+- **audit history**: advisor의 완수 감사 보고 누적
 - **round slice**: 마지막 정지에 잘린 round transcript 원본. 실황은 main transcript tail이 더 최신이다
 - **candidates**: repo 승격 대기열
 - **transcript / worker records**: main의 원본 기록과, 위임된 worker들의 내부 기록

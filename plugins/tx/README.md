@@ -82,7 +82,9 @@ claude plugin update tx@claude-automata
   the implementation context is still live.
   Defects are repaired on the spot and verify is re-spawned until it passes;
   there is no retry cap — a transaction simply cannot close before it is
-  integral.
+  integral. Pass means the spec is satisfied: only findings that cite an
+  artifact coordinate gate the close, and findings beyond the artifacts are
+  advisory observations.
 - **`/tx:close`** — re-verifies when needed, archives the change through
   `tx:archive` (incomplete tasks block the close), rebases onto the latest
   `origin/<base>`, runs the docs-surface

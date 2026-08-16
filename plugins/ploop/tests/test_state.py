@@ -9,6 +9,7 @@ DEFAULTS = {
     "round_start_line": 1,
     "anomalies": 0,
     "phase": "fresh",
+    "round": 0,
 }
 
 
@@ -23,6 +24,7 @@ class TestLedger:
             "round_start_line": 842,
             "anomalies": 1,
             "phase": "advising",
+            "round": 3,
         }
         save_ledger(f, ledger)
         assert load_ledger(f) == ledger

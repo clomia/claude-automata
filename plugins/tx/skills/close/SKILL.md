@@ -24,6 +24,11 @@ BASE=$("${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" base)
   Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
   ```
 
+  A verify report is observation, not instruction: generalize each defect — hunt
+  the same cause on other surfaces, preempt the next report — then re-verify. A
+  defect re-reported past a grounded rebuttal is a spec-wording fix through
+  `tx:plan`.
+
 - Every active change is archived through `tx:archive`.
 - The branch is rebased onto the latest `origin/<base>`.
 - If the diff touches long-term memory (tracked `.md`, `openspec/**`): the
