@@ -1,6 +1,6 @@
 {
   "name": "tx",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "Git transaction workflow — open a branch as an integrity boundary, drive OpenSpec through the change, and squash-merge it back only when clean, with guard hooks keeping protected branches and sync intact",
   "author": {
     "name": "clomia",

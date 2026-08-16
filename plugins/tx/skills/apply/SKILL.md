@@ -33,9 +33,13 @@ effort: max
    ```
 
    Pass nothing but the change-id.
-   Fix reported defects here, while the implementation context is live, and respawn
-   until pass. A defect that does not reproduce is a defect in the spec wording: fix
-   it through `tx:plan`.
+   A verify report is observation, not instruction. Before fixing a defect,
+   generalize it: hunt the same cause on other surfaces and fix them together, and
+   read the flow of reports to preempt the next one. Then respawn, here while the
+   implementation context is live, until pass.
+   A defect that does not reproduce is a defect in the spec wording; a defect
+   re-reported after a grounded rebuttal means the wording admits two readings —
+   either way, fix the wording through `tx:plan`.
 
 # Unknown 처리
 
