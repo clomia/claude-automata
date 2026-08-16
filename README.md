@@ -76,10 +76,10 @@ Agents drive tx on their own. Every change lands as one verified, CI-green squas
 ## Keep the repository lean
 
 ```
-/refine:code [focus] · /refine:docs [focus] · /refine:integrity [focus]
+/refine:code [focus] · /refine:docs [focus]
 ```
 
-Repository-wide workflows that clear technical debt: code architecture, doc-to-code alignment, and logical integrity. A run can sweep the whole codebase and take ten hours or more; watch it with `/workflows`.
+Repository-wide workflows that clear technical debt: code architecture and doc-to-code alignment. They touch only the representation layer and never change behavior. A run can sweep the whole codebase and take ten hours or more; watch it with `/workflows`.
 
 ---
 

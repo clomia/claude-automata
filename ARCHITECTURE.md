@@ -63,6 +63,11 @@ loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의
   plugin `bin/`은 Bash PATH에 주입되므로 bare 이름은 namespace 오염이다. 강제는
   `tests/test_plugin_runtime.py`. 의존성이 생기는 미래 plugin은 cache가 아니라
   CLAUDE_PLUGIN_DATA에 manifest-diff 패턴으로 환경을 둔다.
+- **검증자 계약 (횡단)** — 검증 agent의 차단력은 고정 좌표(ploop advisor=anchor, tx
+  verify=change artifact)를 인용한 판정에만 있다. 좌표 없는 발견은 관찰이며, 관찰의 채택은
+  실행 주체의 판단이다. 좌표 체계 없는 탐색에는 쓰기 권한도 차단 권한도 결합하지 않는다 —
+  refine workflow는 표현 계층(정보 효율)만 만지고 behavior 변경은 소관 밖이다(그 home은
+  mission+tx). 각 plugin의 prompt는 이 계약을 재서술 없이 시행만 한다.
 - **규약 운반** — docs 표면 규약의 층별 배치와 fork 경계는 MEMORY.md 운반 절이 소유한다.
 
 ## 언어·prompt 정책 (repo 전역)
@@ -94,6 +99,13 @@ hook 주입 message 조립).
   대상으로 하고, 사용자의 Claude Code는 auto-update된다고 전제한다. plugin은 harness 버전을
   탐지·분기하지 않는다 — 버전 guard는 존재하지 않는 사용자를 위한 복잡도다. (settings/env
   상태의 assertion — ploop 결정 18 — 은 버전이 아니라 구성의 문제라 이 배제 밖이다.)
+- **refine:integrity 삭제 (2026-08 실측)** — hazard 탐색-흡수 workflow는 표현이 아니라
+  behavior를 변경하며 발산한다: 발견-극대화 구조(loop-until-dry sweep · critic의 hazard
+  보완 · 수정마다 코드+test 순증)가 run 단위로도 재귀하고, undefined behavior의 상당수는
+  사실상 하중을 받는 de-facto 계약이라(production repo에서 통합 test 40% 파손) 도달가능성
+  분석만으로는 결함과 구분할 수 없다. guardrail로 살릴 수 없다 — "behavior 보존" 제약은
+  verdict 전부를 금지해 workflow의 목적 자체를 소멸시킨다. 경계 강화의 home은 mission+tx다.
+  refine workflow의 입장 시험은 검증자 계약(접면 계약 절)이 소유한다.
 - **소급 capability spec 전사 기각** — 기존 plugin behavior를 코드에서 spec으로 옮겨 적는
   것은 불변식 3이 막는 changelog 퇴화이자 결정 시점 provenance의 조작이다(verify는 change의
   delta를 읽지 main spec을 읽지 않는다). `openspec/specs/`는 첫 진짜 behavior delta의

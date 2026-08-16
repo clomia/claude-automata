@@ -76,10 +76,10 @@ tx는 에이전트가 알아서 사용합니다. 모든 변경은 무결성 경�
 ## Repository 정비
 
 ```
-/refine:code [영역] · /refine:docs [영역] · /refine:integrity [영역]
+/refine:code [영역] · /refine:docs [영역]
 ```
 
-기술 부채를 제거하는 레포지토리 전역 워크플로우입니다: 코드 architecture, 문서-코드 정합, 논리적 무결성. codebase 전체를 훑느라 한 번에 10시간 이상 걸릴 수 있고, 진행은 `/workflows`에서 봅니다.
+기술 부채를 제거하는 레포지토리 전역 워크플로우입니다: 코드 architecture, 문서-코드 정합. 표현 계층만 만지며 behavior는 바꾸지 않습니다. codebase 전체를 훑느라 한 번에 10시간 이상 걸릴 수 있고, 진행은 `/workflows`에서 봅니다.
 
 ---
 

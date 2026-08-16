@@ -305,10 +305,10 @@
       </div>
       <p>
         Large‑scale workflows that eliminate technical debt:
-        <code>/refine:code</code> optimizes the code architecture,
-        <code>/refine:docs</code> aligns documentation with the code, and
-        <code>/refine:integrity</code> audits integrity. They sweep the whole
-        repository, so a run can take ten hours or more.
+        <code>/refine:code</code> optimizes the code architecture, and
+        <code>/refine:docs</code> aligns documentation with the code. They
+        touch only the representation layer — never behavior — and sweep the
+        whole repository, so a run can take ten hours or more.
       </p>
     </article>
 
@@ -364,8 +364,7 @@
     <p class="step-caption">4 · KEEP THE REPOSITORY LEAN</p>
     <pre class="code-block"><code><span class="c-muted"># between missions: hours-long maintenance passes</span>
 /refine:code       <span class="c-muted"># optimizes the code architecture</span>
-/refine:docs       <span class="c-muted"># aligns documentation with the code</span>
-/refine:integrity  <span class="c-muted"># verifies logical integrity</span></code></pre>
+/refine:docs       <span class="c-muted"># aligns documentation with the code</span></code></pre>
 
     <p class="step-caption">APPENDIX · WHY AGENTS BRANCH</p>
     <p class="loop-note">
