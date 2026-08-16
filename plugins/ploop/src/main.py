@@ -7,9 +7,9 @@ is the completion gate: only its verdict certifies completion.  The active
 marker written at /ploop:launch gates everything.
 
 The loop ENDS through auto-termination — the advisor writes the completion
-token (phase -> converged), or two consecutive anomalies trip the cap (a bare
-stop that left the directive unanswered, or an advisor run that wrote no
-report) — and every such end has the main agent recap the loop log
+token or the deadline-closure token (phase -> converged), or two consecutive
+anomalies trip the cap (a bare stop that left the directive unanswered, or an
+advisor run that wrote no report) — and every such end has the main agent recap the loop log
 (format_end_notice); that exposed end behavior is left untouched.  A working
 stop is never an anomaly: the directive stands, the round advances, and the
 main agent convenes the advisor on its own judgment.
@@ -55,9 +55,12 @@ from src.state import (
     save_ledger,
 )
 
-# Sentinel the advisor writes to certify the mission complete.  Checked with
-# `in` so the signal survives any surrounding prose the model emits alongside it.
-TERMINATION_TOKEN = "MISSION_COMPLETE_ENDING_THE_TURN"
+# Sentinels the advisor writes to end the loop, each carrying its honest cause:
+# certified completion, or a deadline-expiry closure (which must never be dressed
+# as completion — decision 20).  Checked with `in` so the signal survives any
+# surrounding prose the model emits alongside it.
+COMPLETION_TOKEN = "MISSION_COMPLETE_ENDING_THE_TURN"
+EXPIRY_TOKEN = "DEADLINE_EXPIRED_ENDING_THE_TURN"
 
 # Anomaly cap: the first anomaly gets one corrective repeat (an empty advisor run
 # is retried, a bare stop is redirected to the advisor's authority); a second
@@ -386,9 +389,11 @@ def stop() -> None:
     not read as consumed.  Per advising stop, in order: the narration the main
     agent produced for the previous round is appended to the loop log (the
     flight recorder); then advice.md — the advisor's sole output channel — is
-    read: a report becomes an audit-history entry and a log entry, and only the
-    explicit completion token ends the loop (phase -> converged).  An absent
-    report splits three ways on the audit token: consumed with no report is a
+    read, and honored only when the audit token was consumed (an unwritten-by-
+    the-advisor report is no verdict): a report becomes an audit-history entry
+    and a log entry, and only an explicit token — completion, or deadline
+    closure — ends the loop (phase -> converged).  The token state splits the
+    rest three ways: consumed with no report is a
     malfunctioned advisor run (the protocol demands a Write even to certify),
     retried behind the retry notice; unconsumed with real transcript growth is a
     WORKING stop — the normal case, no anomaly, the directive simply stands
@@ -455,17 +460,29 @@ def stop() -> None:
             write_round_entry(ws.log_path, round_number - 1, narration)
 
         # The advisor ran this round iff PreToolUse consumed the token this
-        # stop's predecessor wrote.  Past the in-flight guard the advisor has
-        # finished, so token-consumed with an absent report means it wrote
-        # nothing — a malfunction, not a verdict.
+        # stop's predecessor wrote — and ONLY a run the gate admitted can render
+        # a verdict: the directive exposes the report path, so a report sitting
+        # there with the token unconsumed was not written by the advisor (the
+        # main agent, or a worker, wrote it) and self-certification must not
+        # pass the gate.  Such a file is ignored and cleared at the arm.  Past
+        # the in-flight guard the advisor has finished, so token-consumed with
+        # an absent report means it wrote nothing — a malfunction, not a
+        # verdict.
         advisor_invoked = not ws.advisor_token_path.exists()
         advice = ws.advice_path.read_text().strip() if ws.advice_path.exists() else ""
-        if advice:
-            if TERMINATION_TOKEN in advice:
+        if advisor_invoked and advice:
+            if COMPLETION_TOKEN in advice:
                 end_loop(
                     ws,
                     ledger,
                     "the advisor confirmed the mission complete",
+                    converged=True,
+                )
+            if EXPIRY_TOKEN in advice:
+                end_loop(
+                    ws,
+                    ledger,
+                    "the deadline expired — the advisor closed the mission",
                     converged=True,
                 )
             advice_history = [*advice_history, advice]

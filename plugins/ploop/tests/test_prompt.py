@@ -265,11 +265,13 @@ class TestFormatEndNotice:
         assert "promote or discard each one" in out
 
 
-def test_instruction_file_carries_termination_token():
+def test_instruction_file_carries_both_ending_tokens():
     """instruction.md의 토큰 wording과 main.py 상수는 같은 계약의 양면 — 표류는 침묵 고장이 된다."""
-    from src.main import TERMINATION_TOKEN
+    from src.main import COMPLETION_TOKEN, EXPIRY_TOKEN
 
-    assert TERMINATION_TOKEN in INSTRUCTION_PATH.read_text()
+    text = INSTRUCTION_PATH.read_text()
+    assert COMPLETION_TOKEN in text
+    assert EXPIRY_TOKEN in text
 
 
 def test_decline_notice_discloses_the_silent_exit():

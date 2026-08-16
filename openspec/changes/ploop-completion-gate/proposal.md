@@ -32,8 +32,11 @@ and the official-docs audit that grounded the mechanics.
   region-derivation to verdict: every finding must cite an anchor coordinate
   (requirement/Constraint); state beats narrative (measure directly); evidence that
   passed an independent gate outranks re-measurement; rebutted items are not
-  re-flagged; completion is certified with `MISSION_COMPLETE_ENDING_THE_TURN` (token
-  renamed — the old "no further advice" wording is false under the new semantics).
+  re-flagged; the loop is ended with `MISSION_COMPLETE_ENDING_THE_TURN` (certified
+  completion) or `DEADLINE_EXPIRED_ENDING_THE_TURN` (expiry closure — never dressed
+  as completion; the old "no further advice" wording is false under the new
+  semantics). A report is honored as a verdict only when the audit token was
+  consumed this round — a file the gated advisor did not write cannot certify.
   The main agent consumes reports as observations, not orders.
 - **Rounds become stop-to-stop time slices.** The ledger gains a `round` counter;
   the narrator runs every round at depth 1, invoked by the main agent directly (the

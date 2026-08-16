@@ -29,16 +29,34 @@ disclose the silent-exit failsafe.
 ### Requirement: Only the advisor's verdict certifies completion
 
 The advisor SHALL write its verdict to the report file: a findings report, each
-finding citing an anchor coordinate, or the completion token. The hook SHALL
-converge the loop (phase converged, gate dropped, recap notice) only on the token;
-a report SHALL be appended to the audit history and the loop log, and the loop
+finding citing an anchor coordinate, or an ending token — the completion token,
+or the deadline-closure token for an expired-deadline wrap-up, so the end cause
+is never disguised. The hook SHALL honor the report file as a verdict only when
+the audit token was consumed this round — a report present with the token
+unconsumed was not written by the gated advisor and SHALL be ignored (and
+cleared at the arm). On an ending token the loop converges (phase converged,
+gate dropped, recap notice carrying that token's honest cause); a findings
+report SHALL be appended to the audit history and the loop log, and the loop
 continues.
 
 #### Scenario: Completion token converges
 
-- **WHEN** the stop reads a report file containing the completion token
+- **WHEN** the stop reads a report file containing the completion token with the
+  audit token consumed
 - **THEN** the phase moves to converged, the active gate drops, and the end notice
   reports the advisor's certification with a loop-log recap
+
+#### Scenario: Deadline closure is not dressed as completion
+
+- **WHEN** the stop reads a report file containing the deadline-closure token
+- **THEN** the loop converges and the end notice names the expired deadline as the
+  cause, not mission completion
+
+#### Scenario: A report the advisor did not write is no verdict
+
+- **WHEN** a report file exists at a stop whose audit token was never consumed
+- **THEN** no verdict is recorded — the stop is judged working or bare on its
+  transcript growth and the file is cleared as the next round arms
 
 #### Scenario: Findings report continues the loop
 

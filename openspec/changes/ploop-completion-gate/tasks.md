@@ -40,7 +40,14 @@
 - [x] 4.3 README ko/en, site en/ko: completion-claim audit wording, token line
 - [x] 4.4 Version 0.54.0 → 0.55.0; pyproject 0.3.1 → 0.3.2
 
-## 5. Tests
+## 5. Final-inspection fixes
+
+- [x] 5.1 Verdict provenance: a report with the audit token unconsumed is no
+      verdict (guard restored; forged self-certification blocked)
+- [x] 5.2 Honest expiry closure: `DEADLINE_EXPIRED_ENDING_THE_TURN` token, its
+      end cause, instruction 기한 종결 section, canon and spec-delta alignment
+
+## 6. Tests
 
 - [x] 5.1 `test_prompt.py`: directive shape, dual deadline, expired variant,
       disclosure absence, candidates lanes, decline-notice disclosure

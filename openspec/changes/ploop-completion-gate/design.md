@@ -74,3 +74,24 @@ the hook's contract.
 - `opus[1m]` agent-frontmatter alias and `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` are
   absent from docs but alive in the bundle — observed dependencies for
   audit-harness-deps.
+
+## Final-inspection simulation findings (fixed before close)
+
+A full main-agent walkthrough (multi-day mission, tx interplay, background waves,
+compaction, ESC/heartbeat, deadline, candidates drain, forged channels) surfaced
+two defects, both fixed:
+
+1. **Verdict provenance regression.** The rewritten stop() honored advice.md
+   regardless of the audit token, while the directive exposes the report path and
+   the instruction path — a main agent could learn the token string and
+   self-certify. The old design's guard (unconsumed token → the file is not the
+   advisor's) is restored: a verdict requires the token consumed; anything else in
+   the channel is ignored and cleared at the arm.
+2. **Expiry closure dressed as completion.** The instruction names deadline expiry
+   as an ending cause, but a single MISSION_COMPLETE token forced the hook to
+   report every advisor ending as certified completion — violating the honest-cause
+   invariant (decision 14). A single token cannot carry two causes, so wording
+   alone cannot fix it: a dedicated `DEADLINE_EXPIRED_ENDING_THE_TURN` token closes
+   the loop with the expired-deadline cause. Both tokens converge (a stale
+   deadline should be edited before any continuation, so relaunch is the correct
+   resume path).

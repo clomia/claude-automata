@@ -19,9 +19,10 @@ import pytest
 
 from src.main import (
     BARE_STOP_LINE_THRESHOLD,
+    COMPLETION_TOKEN,
+    EXPIRY_TOKEN,
     HEARTBEAT_NOTICE,
     HEARTBEAT_SECONDS,
-    TERMINATION_TOKEN,
     heartbeat_arm,
     heartbeat_fire,
     launch,
@@ -425,7 +426,7 @@ class TestStop:
             monkeypatch,
             WORK,
             ledger={"phase": ADVISING, "advice_history": ["r"], "round": 4},
-            advice=f"All requirements verified. {TERMINATION_TOKEN}",
+            advice=f"All requirements verified. {COMPLETION_TOKEN}",
             narration="final round work",
         )
         with pytest.raises(SystemExit) as exc:
@@ -438,13 +439,59 @@ class TestStop:
         log = (tmp_path / "s1_loop.log").read_text()
         assert "[[ Round 3 - " in log
         assert "final round work" in log
-        assert TERMINATION_TOKEN not in log
+        assert COMPLETION_TOKEN not in log
         err = capsys.readouterr().err
         assert "has ended" in err
         assert "confirmed the mission complete" in err
         assert str(tmp_path / "s1_loop.log") in err
         assert "recap" in err
         assert "candidates" not in err  # empty queue: no drain directive
+
+    def test_expiry_token_closes_with_honest_cause(self, tmp_path, monkeypatch, capsys):
+        """A deadline-expiry closure is never dressed as completion: the
+        dedicated token converges the loop with the expired-deadline cause."""
+        arrange_anchor(
+            tmp_path,
+            monkeypatch,
+            WORK,
+            ledger={"phase": ADVISING, "advice_history": ["r"], "round": 4},
+            advice=f"Unmet: X, Y. Wrapping up. {EXPIRY_TOKEN}",
+            narration="wrap-up work",
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["phase"] == CONVERGED
+        assert ledger["advice_history"] == ["r"]  # the token is never recorded
+        assert not (tmp_path / "s1_active").exists()
+        err = capsys.readouterr().err
+        assert "deadline expired" in err
+        assert "mission complete" not in err
+
+    def test_unconsumed_token_report_is_no_verdict(self, tmp_path, monkeypatch, capsys):
+        """The directive exposes the report path, so a report sitting there with
+        the audit token unconsumed was not written by the gated advisor — a
+        self-certification attempt must not pass the gate: no convergence, no
+        history entry, the file cleared at the arm."""
+        arrange_anchor(
+            tmp_path,
+            monkeypatch,
+            WORK,
+            ledger={"phase": ADVISING, "advice_history": ["r"]},
+            advice=f"I judge my own mission complete. {COMPLETION_TOKEN}",
+        )
+        (tmp_path / "s1_advisor_token").write_text("")  # never consumed
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2  # loop continues — no convergence
+        ledger = load_ledger(tmp_path / "s1_loop.json")
+        assert ledger["phase"] == ADVISING
+        assert ledger["advice_history"] == ["r"]  # forged report not recorded
+        assert ledger["anomalies"] == 0  # WORK transcript: a working stop
+        assert (tmp_path / "s1_active").exists()
+        assert not (tmp_path / "ploop_s1_advice.md").exists()  # cleared at arm
+        assert "[[ Audit" not in (tmp_path / "s1_loop.log").read_text()
 
     def test_no_round_cap_arms_indefinitely(self, tmp_path, monkeypatch):
         """There is no round limit: a long audit history still arms the next
@@ -728,7 +775,7 @@ class TestStop:
             monkeypatch,
             WORK,
             ledger={"phase": ADVISING, "advice_history": ["r"]},
-            advice=f"All covered. {TERMINATION_TOKEN}",
+            advice=f"All covered. {COMPLETION_TOKEN}",
             narration="final",
         )
         (tmp_path / "ploop_s1_candidates.md").write_text("term: foo")

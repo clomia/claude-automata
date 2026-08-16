@@ -25,8 +25,8 @@ recorder·heartbeat·background gate)는 상시 무료로 돌고 advisor는 소�
 - **anchor** — main을 anchor에 붙들어 매는 SSoT. transcript 바깥 외부 파일(`{session}_anchor.md`)에
   보존된다.
 - **advice** — advisor의 **완수 감사 보고**: anchor 좌표를 인용한 미달·누락·미검증의 list,
-  또는 완수 인증 token. audit-history(advice_history)에 누적되어 반박된 항목이 재지적되지
-  않는다.
+  또는 종결 token(완수 인증·기한 종결 — 각자의 정직한 사유를 나른다). audit-history
+  (advice_history)에 누적되어 반박된 항목이 재지적되지 않는다.
 - **docent** — loop 기록을 소유자에게 해설하는 read-only 질의 표면. loop와 별도 session에서 돌며
   loop 기계와 접점이 없다(세 표면 절).
 
@@ -120,11 +120,11 @@ main round N work ── stops
    |
    |  <-- Stop hook (active gate, background empty, not in-flight)
    |        read narration.md (round N-1)  -> append [[ Round N-1 ]] to loop.log
-   |        read advice.md:
-   |          report            -> append [[ Audit K ]], advice_history += report
-   |          completion token  -> END converged (recap + drain notice)
-   |          absent, token consumed -> MALFUNCTION: anomalies++, RETRY notice
-   |          absent, token left:
+   |        read advice.md (a verdict only if the audit token was consumed):
+   |          report                    -> append [[ Audit K ]], history += report
+   |          completion/deadline token -> END converged (its honest cause)
+   |          token consumed, no report -> MALFUNCTION: anomalies++, RETRY notice
+   |          token left (any file here is not the advisor's -> ignored):
    |            line delta >  T -> WORKING stop: anomalies = 0 (normal)
    |            line delta <= T -> BARE stop: anomalies++, DECLINE notice
    |        anomalies >= 2 -> END with honest cause (resumable via /ploop:on)
@@ -143,8 +143,9 @@ main round N+1:
    ── stops (loop)
 ```
 
-수렴 종료는 의미론적 판단만 인정한다: advisor가 `advice.md`에 **완수 token을 Write할 때만** 수렴
-종료다(`phase`→`converged` + `active` 정리). advisor가 돌고도 파일이 없으면 **오작동**이다 — 정상
+수렴 종료는 의미론적 판단만 인정한다: advisor가 `advice.md`에 **종결 token을 Write할 때만** 수렴
+종료다(`phase`→`converged` + `active` 정리) — 완수 인증과 deadline 경과의 기한 종결은 별도
+token이라 종료 사유가 위장되지 않는다(결정 20). advisor가 돌고도 파일이 없으면 **오작동**이다 — 정상
 advisor는 완수조차 token Write로 표현하므로 안 쓴 것은 판정이 아니다(RETRY notice로 재소집).
 directive가 응답되지 않은 **bare 정지**(token 잔존 + tool 활동 없는 transcript — main의 침묵 또는
 사용자가 끊은 turn)는 **권한 분할**을 고지하며 재주입한다: 완수 인증권은 advisor에게 있고, **이
@@ -204,8 +205,10 @@ system temp(위 근거). 한 session에 하나의 anchor를 가정해 `session_i
 **loop 상태(advice_history·phase·anomalies·round_start_line·round)는 hook이 단독 소유한다.** advisor는
 보고(또는 완수 token)를 `advice.md`에 Write만 하고, hook이 다음 정지에 그 파일을 읽어
 `advice_history`에 append하거나 완수 token이면 `phase`를 `converged`로 옮긴다. in-flight guard를 통과한
-시점이라 advisor는 이미 종료했으므로 **token 소비 + `advice.md` 부재 = 오작동**이다(완수도 token
-Write를 요구). token 미소비의 부재는 소집이 없던 정상 round다(working/bare 판정은 핵심 loop 절).
+시점이라 advisor는 이미 종료했으므로 **token 소비 + `advice.md` 부재 = 오작동**이다(종결도 token
+Write를 요구). **verdict는 audit token 소비를 전제한다** — directive가 report 경로를 노출하므로
+미소비 round의 `advice.md`는 advisor의 것이 아니고(자기인증·위조 차단) 무시된 채 다음 arm이
+지운다. token 미소비의 부재는 소집이 없던 정상 round다(working/bare 판정은 핵심 loop 절).
 main도 같은 `advice.md`를 읽어 그 보고를 판단하므로 이 파일이 보고/완수의 유일 channel이자 main·hook
 공통 소스다 — 단일 작성자(hook)가 ledger를 소유해 race가 없다.
 
@@ -326,8 +329,10 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
    것 — 은 `advice.md` channel을 오염시킨다. 매 armed 정지가 1회용 token을 세우고 PreToolUse(matcher
    `Agent`)가 token이 있을 때만 통과시킨다(narrator는 read-only leaf라 gating 안 한다) — 소비 후 재호출은
    다음 정지가 재인가할 때까지 거부되므로, 보고에 대한 반응이 서사화된 뒤에야 재감사되는 순서가
-   부수적으로 강제된다. stale token은 launch reset·`/ploop:on` 정규화가 지운다. token 미소비 정지의
-   판정(working/bare)은 결정 14·24가 소유한다.
+   부수적으로 강제된다. stale token은 launch reset·`/ploop:on` 정규화가 지운다. **verdict의
+   provenance도 이 token이 보증한다**: 미소비 round의 report 파일은 gate를 지난 advisor의 것이
+   아니므로 판정에서 제외된다 — main이 token 문자열을 알아내 자기인증하는 우회로가 구조적으로
+   닫힌다. token 미소비 정지의 판정(working/bare)은 결정 14·24가 소유한다.
 10. **advisor·narrator 호출은 동기(`run_in_background=false`).** Agent tool은 background가 기본이라
     (2.1.233 실측: param 존속, "Agents run in the background by default … pass false only when your
     very next action depends on the result" — 정확히 이 두 호출의 경우다) background 호출은 산출 없이
@@ -467,6 +472,8 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     변수)와 advisor prompt(관측 공백 보전 — advisor는 Bash가 없어 시계를 못 읽는다). 미선언 anchor는
     비용 0. **expired는 directive의 "계속 작업" 분기를 닫고 소집 자체를 지시로 만든다** — 마감 판단
     (잔여 내 wrap-up 조율, 경과 시 종료 — instruction 판단 절이 명시)은 여전히 advisor의 mandate다.
+    기한 종결은 전용 token(`DEADLINE_EXPIRED_…`)으로 닫혀 완수 인증과 사유가 분리된다 — 종료를
+    위장하지 않는다는 결정 14의 원칙이 hook의 cause 문자열까지 관통한다.
     threshold 자동 off는 기각했다: off는 무통보 인간 전용 pause라 마지막 시간(정확히 wrap-up 창)을 절단하고,
     인간 pause와 기계 만료를 같은 상태로 접어 구별 불능을 만들며, 결정 19가 폐기한 코드 단속을 재도입해
     종결 권위를 이원화한다. 마감을 넘긴 기절은 heartbeat(결정 19)가 깨워 다음 stop에서 advisor가 경과를

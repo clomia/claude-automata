@@ -39,3 +39,8 @@ Findings:
 ## 완수
 
 모든 요구사항의 충족이 확인되면 `MISSION_COMPLETE_ENDING_THE_TURN`을 `Write`하라.
+
+## 기한 종결
+
+deadline이 expired고 mission을 종결하기로 판정하면, 미달 요약과 함께
+`DEADLINE_EXPIRED_ENDING_THE_TURN`을 `Write`하라 — 기한 종결을 완수로 위장하지 마라.
