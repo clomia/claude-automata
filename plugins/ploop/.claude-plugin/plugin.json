@@ -1,6 +1,6 @@
 {
   "name": "ploop",
-  "version": "0.55.0",
+  "version": "0.55.1",
   "description": "Advisor Loop — an autonomous loop for long, multi-day work: an independent advisor certifies mission completion and the anchor survives every compaction, on subscription-safe agents",
   "author": {
     "name": "clomia",
