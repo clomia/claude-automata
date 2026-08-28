@@ -16,9 +16,9 @@ BASE=$("${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" base)
 
 # 닫힌 상태: 아래가 전부 참이면 transaction은 닫힌 것이다
 
-- Every change carrying a spec delta has a verify pass newer than the last
-  code change. Delta-less changes are gated by task completion and CI instead.
-  The verifier receives the change-id and nothing else:
+- Every change whose delta moved observable behavior has a verify pass newer
+  than its last behavior change. The verifier receives the change-id and
+  nothing else:
 
   ```
   Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
