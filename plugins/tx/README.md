@@ -74,17 +74,17 @@ claude plugin update tx@claude-automata
   and CI instead. Unknowns are translated three
   ways: measure and record / adopt a reversible assumption and note it in
   design / halt the change and record why.
-- **`tx:apply`** — implements task by task; when the change carries spec
-  deltas it must then spawn **`tx:verify`** — an independent agent with a clean
-  context that receives only the change-id and checks the implementation
-  against the artifacts (completeness, correctness, consistency). Delta-less
-  changes are gated by task completion and CI instead. The verdict gates every next step, and the repair happens while
-  the implementation context is still live.
-  Defects are repaired on the spot and verify is re-spawned until it passes;
-  there is no retry cap — a transaction simply cannot close before it is
-  integral. Pass means the spec is satisfied: only findings that cite an
-  artifact coordinate gate the close, and findings beyond the artifacts are
-  advisory observations.
+- **`tx:apply`** — implements task by task, then judges the implementation
+  against the artifacts (completeness, correctness, consistency). A delta that
+  moved observable behavior makes **`tx:verify`** mandatory — an independent
+  agent with a clean context, receiving only the change-id; everything else is
+  judged in place, gated by task completion and CI. The verdict gates every next
+  step, and the repair happens while the implementation context is still live.
+  Defects are repaired on the spot and verify is re-spawned whenever a repair
+  moved behavior; there is no retry cap — a transaction simply cannot close
+  before it is integral. Pass means the spec is satisfied: only findings that
+  cite an artifact coordinate gate the close, and findings beyond the
+  artifacts are advisory observations.
 - **`/tx:close`** — re-verifies when needed, archives the change through
   `tx:archive` (incomplete tasks block the close), rebases onto the latest
   `origin/<base>`, runs the docs-surface

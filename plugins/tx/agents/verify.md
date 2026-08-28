@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Independent verifier — checks an OpenSpec change against its implementation with a clean context
+description: Independent verifier — checks an OpenSpec change against its implementation with a clean context; summoned only when a spec delta moved observable behavior
 disallowedTools: Edit, Write, NotebookEdit
 effort: max
 ---
@@ -22,8 +22,6 @@ effort: max
 - **consistency** — 구현이 design의 결정과 모순되지 않는가.
 
 # 보고
-
-defect가 없고 구현과 spec이 정합되면 PASS로 판정해라.
 
 요구사항을 최소한의 복잡도로 구현하는 것을 **최적 복잡도**라고 한다.  
 의도를 파악하고 그것을 표현한 spec과 코드가 최적 복잡도에 있는지 고찰해라.  
