@@ -1,4 +1,4 @@
-"""Tests for the main module — Stop, PreToolUse, SubagentStop, PostCompact entry points.
+"""Tests for the main module — Stop, PreToolUse, SubagentStop, SessionStart entry points.
 
 The hook owns the whole ledger.  Per advising stop it appends the previous
 round's narration to the loop log (the flight recorder), reads advice.md — the
@@ -26,10 +26,10 @@ from src.main import (
     heartbeat_arm,
     heartbeat_fire,
     launch,
-    mark_compaction,
     off_command,
     on_command,
     pre_tool_use,
+    reanchor,
     stop,
     subagent_stop,
     write_audit_entry,
@@ -643,23 +643,6 @@ class TestStop:
         assert "NOW" in err
         assert "keep working" not in err
 
-    def test_compacted_round_inlines_anchor_text(self, tmp_path, monkeypatch, capsys):
-        """Mechanism 2: a compacted round re-injects the anchor text into
-        the directive and consumes the marker."""
-        arrange_anchor(
-            tmp_path,
-            monkeypatch,
-            WORK,
-            ledger={"phase": ADVISING, "advice_history": []},
-            advice="- finding",
-        )
-        (tmp_path / "s1_compacted").touch()
-        with pytest.raises(SystemExit):
-            stop()
-        err = capsys.readouterr().err
-        assert "build the thing" in err  # anchor text inlined
-        assert not (tmp_path / "s1_compacted").exists()  # consumed
-
     def test_running_marker_pauses_without_rearm(self, tmp_path, monkeypatch):
         """Running marker present (advisor in flight — e.g. pushed to the
         background): allow the stop, don't re-arm — no cascade.  SubagentStop is
@@ -1020,14 +1003,31 @@ class TestSubagentStop:
         assert (tmp_path / "s1_advisor_running").exists()
 
 
-# ── mark_compaction ──
+# ── SessionStart compact: re-anchoring (mechanism 2) ──
 
 
-class TestMarkCompaction:
-    def test_touches_compacted_marker(self, tmp_path, monkeypatch):
-        arrange(tmp_path, monkeypatch, json.dumps({"session_id": "s1"}))
-        mark_compaction()
-        assert (tmp_path / "s1_compacted").exists()
+class TestReanchor:
+    def test_armed_loop_reenters_anchor_and_queue_address(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Right after a compaction the anchor's full text and the candidates
+        address ride additionalContext into the rebuilt context — no round has
+        to arm first, so a loop asleep on the background gate is re-anchored too."""
+        arrange_anchor(tmp_path, monkeypatch, [])
+        reanchor()
+        delivered = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+        assert delivered["hookEventName"] == "SessionStart"
+        context = delivered["additionalContext"]
+        queue_line = format_candidates_notice(Workspace.from_env("s1").candidates_path)
+        assert "build the thing" in context
+        assert context.index("build the thing") < context.index(queue_line)
+
+    def test_unarmed_session_is_silent(self, tmp_path, monkeypatch, capsys):
+        arrange(tmp_path, monkeypatch, make_stdin())
+        with pytest.raises(SystemExit) as exc:
+            reanchor()
+        assert exc.value.code == 0
+        assert capsys.readouterr().out == ""
 
 
 # ── /ploop:launch UserPromptExpansion hook ──

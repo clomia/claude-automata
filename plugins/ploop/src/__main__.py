@@ -11,7 +11,7 @@ ENTRIES = {
     "heartbeat-arm": main.heartbeat_arm,
     "heartbeat-fire": main.heartbeat_fire,
     "subagent-stop": main.subagent_stop,
-    "mark-compaction": main.mark_compaction,
+    "reanchor": main.reanchor,
     "launch": main.launch,
     "off-command": main.off_command,
     "on-command": main.on_command,

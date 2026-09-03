@@ -110,10 +110,6 @@ class Workspace:
         return self.path("advisor_stopped")
 
     @property
-    def compacted_path(self) -> Path:
-        return self.path("compacted")
-
-    @property
     def heartbeat_nonce_path(self) -> Path:
         return self.path("heartbeat_nonce")
 
@@ -143,7 +139,6 @@ class Workspace:
             self.advisor_token_path,
             self.advisor_running_path,
             self.advisor_stopped_path,
-            self.compacted_path,
             self.heartbeat_nonce_path,
             self.advice_path,
             self.narration_path,
