@@ -197,12 +197,11 @@ system temp(위 근거). 한 session에 하나의 anchor를 가정해 `session_i
 | `{session}_advice_history.md` | hook | advisor 입력의 audit-history (XML `<audit-N>`) |
 | `advice.md` (temp) | advisor (`Write`) | 감사 보고 또는 종결 token (유일 channel) — 비보호 temp라 auto mode Write 승인 · main·hook이 읽음 · prose 격리 |
 | `narration.md` (temp) | narrator (`Write`) | round 서사 (advice와 동일 channel) — main이 매 round 직접 생산 지시 · hook이 loop.log로 append · advisor가 최신분을 분석 입력으로 읽음 |
-| `candidates.md` (temp) | main | 승격 대기열 (자유 형식) — launch가 경로를 최초 배달·directive가 매 round 재안내 · 비어있지 않으면 advisor 입력에 조건부 1행 · launch만 지움(off·on·종료는 보존) · 종료 notice가 잔량 drain을 지시 |
+| `candidates.md` (temp) | main | 승격 대기열 (자유 형식) — launch가 경로를 최초 배달·compaction 재정박이 재공급·directive가 매 round 재안내 · 비어있지 않으면 advisor 입력에 조건부 1행 · launch만 지움(off·on·종료는 보존) · 종료 notice가 잔량 drain을 지시 |
 | `{session}_loop.log` | hook | flight recorder — `[[ Round N ]]` 서사(한 정지 지연)와 `[[ Audit K ]]` 보고 전문의 시간순 append · launch가 `[[ ANCHOR ]]` 원문으로 새로 시작 · advisor의 action-history 입력이자 종료 요약·docent의 소스 |
 | `{session}_advisor_token` | hook | round당 audit 1회 인가 token (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight marker (PreToolUse set · SubagentStop clear) |
 | `{session}_advisor_stopped` | hook | verdict provenance 제2 소스 — advisor 종료 관측 (SubagentStop touch · arm/`/ploop:on` clear) |
-| `{session}_compacted` | hook (PostCompact) | compaction 발생 marker (Stop이 mechanism 2로 소비) |
 | `{session}_heartbeat_nonce` | hook (heartbeat) | 마지막 armed stop의 heartbeat nonce — fire 시점에 이 값과 다르면 timer가 자멸(더 새 stop이 감시를 소유), 같으면 3h 침묵이므로 wake (launch가 지움) |
 
 **loop 상태(advice_history·phase·anomalies·round_start_line·round)는 hook이 단독 소유한다.** advisor는
@@ -251,10 +250,14 @@ pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal 
    본문은 auto-compact 후에도 re-inject되므로(skill당 앞 5,000token·합산 25,000token 예산) anchor handoff
    text가 main context에 남는다(main session은 custom system prompt를 못 받지만 skill re-inject가 그
    자리를 메운다).
-3. **mechanism 2(PostCompact + anchor text inline)** — `PostCompact`가 `_compacted`를 touch하면 다음
-   Stop이 그 round directive에 **anchor 원문을 recency 위치에 inline**한다(`format_directive`의
-   `anchor_text`). re-inject(2)는 5,000token cap에 잘리고 원래 깊이에 남는 반면, 이것은 discrete한
-   compaction event마다 anchor 전문을 무조건 recency에 박는다. main session `PostCompact`는 확실히 fire한다.
+3. **mechanism 2(SessionStart `compact` + additionalContext)** — compaction이 올리는 `SessionStart`를
+   hook이 받아, armed loop면 **anchor 원문을 additionalContext로 요약 바로 뒤(recency)에 놓는다**
+   (candidates 주소 동승 — 결정 21). re-inject(2)는 5,000token cap에 잘리고 원래 깊이에 남는 반면,
+   이것은 compaction event마다 anchor 전문을 무조건 recency에 박는다 — 실측(2026-09) `compact_boundary`
+   → 요약 → `SessionStart:compact` → `hook_additional_context`, 다음 turn 전이다. **round에 묶지
+   않는다**: 종전 형태(`PostCompact` marker를 다음 armed Stop의 directive가 소비)는 background gate에
+   잠든 loop에서 그 Stop이 무기한 오지 않아 재주입도 무기한 미뤄졌다(11h·42 stop에 background가 빈
+   정지 0회 — 2026-09 loop session 실측).
 
 ---
 
@@ -263,7 +266,7 @@ pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
 | **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 + candidates 경로를 `additionalContext`로 배달(결정 21) — `active` 존재·빈 `anchor`·prerequisite(nested cap `<5`·`autoCompactEnabled`·`alwaysThinkingEnabled`) 미충족이면 차단(배달 없음) · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`면 차단 |
-| **PostCompact** | (전체) | compaction 후 | `compacted` marker touch (Stop이 mechanism 2로 anchor text 재주입) |
+| **SessionStart** | `compact` | compaction 직후 | armed loop면 anchor 원문 + candidates 주소를 `additionalContext`로 재주입(mechanism 2) — 비활성 session은 즉시 exit 0 |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 token 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(round당 audit 1회 rate limit) |
 | **Stop** | (전체) | main이 종료 시도 | active gate → **background gate**(`background_tasks`: subagent·workflow·running shell 조용히 대기, monitor·비running·그 외 통과) → **in-flight guard** → narration append → 판정(보고/token/오작동/working/bare) → `exit 2`+stderr(standing directive, 종료 시엔 종료 notice+log recap) 또는 `exit 0`(허용) |
 | **Stop** | (전체, `asyncRewake`) | main이 종료 시도 | **heartbeat**(결정 19): armed loop면 arm이 nonce를 기록·handoff하고 wrapper sh 자신이 3h를 잔다 — fire 시 nonce 최신·armed면 `exit 2`로 잠든 session을 깨워 background audit 지시, 아니면 무음 자멸. 비활성 session은 즉시 exit 0 |
@@ -286,7 +289,7 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
    trigger는 Stop hook이다. advisor·narrator만 subagent로 격리해 구독 안전성을 얻는다 — anchor의
    지휘(orchestration)는 원래 main context에서 일어나므로 별도 operator subagent는 격리 이점 없이
    부채만 남겨 제거했다. main은 orchestrator다(launch rules가 세운다): 작업은 위임한 agent에서
-   소비되고 main context에는 지휘만 남는다 — depth 0의 보장(PostCompact 확실 fire·동기
+   소비되고 main context에는 지휘만 남는다 — depth 0의 보장(SessionStart `compact` 확실 fire·동기
    Agent 호출·전체 hook 수명주기)이 작업이 아니라 지휘에 필요한 전부라 배치가 정확히 맞는다.
 2. **hook은 directive, 실행은 Agent tool.** Claude Code hook은 stdout/stderr/exit code로만 통신해 tool call을
    fire하지 못하므로, Stop이 `exit 2`+stderr로 main에게 standing directive — narrator 호출(무조건)과
@@ -314,9 +317,9 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
    Stop이 loop를 돌고, 종료는 round 상한 없이 advisor 종결 token·anomaly failsafe로만 일어난다(audit-history가
    파일이라 context를 안 차지 — anchor도 동일). 이 자동 종료와 별개로 사용자는 `/ploop:off`로
    일시정지·`/ploop:on`으로 재개한다(위 활성화 lifecycle).
-6. **anchor 정박 — mechanism 1 + 2.** 외부 보존(`anchor.md`)으로 원문이 디스크에 영속하고, `PostCompact`
-   marker를 소비한 Stop이 compacted round의 directive에 anchor 원문을 inline한다(mechanism 2 — discrete
-   compaction event에 무조건 text 주입). advisor도 감사마다 anchor를 읽어 anchor 좌표 판정을 내리므로
+6. **anchor 정박 — mechanism 1 + 2.** 외부 보존(`anchor.md`)으로 원문이 디스크에 영속하고, compaction
+   직후의 `SessionStart` hook이 anchor 원문을 additionalContext로 재주입한다(mechanism 2 — compaction
+   event마다 무조건, round와 무관하게 text 주입). advisor도 감사마다 anchor를 읽어 anchor 좌표 판정을 내리므로
    main은 간접 정박되고, launch skill re-inject가 handoff text를 보존한다. "매 round
    pointer"는 이들과 중복이라 두지 않는다(irreducible).
 7. **advisor 분석 입력은 5-section 순서.** advisor는 role·anchor·action-history·audit-history·instructions
@@ -497,7 +500,8 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     자기 경로로 해소한다 — 그러면 경로를 소유한 기계 전부(advisor 입력의 조건부 라인, 종료 notice의
     drain, 다음 launch의 reset)가 빈 파일을 읽는 채로 정상처럼 보인다. 관측 신호가 없는 divergence라
     "첫 directive에서의 self-healing"(main의 자발적 이주에 의존)으로는 bound되지 않는다. directive의 상시
-    라인은 유지 — launch는 최초 공급, directive는 compaction 이후의 재공급으로 역할이 갈린다.
+    라인은 유지 — launch는 최초 공급, compaction 재정박(mechanism 2)이 재공급, directive는 매 round의
+    재안내로 역할이 갈린다.
     `/ploop:on`·`/ploop:off`는 배제한다: 두 skill 본문은 candidates를 지시하지 않아 해소할 참조가
     없고, 배달 없는 배달은 text의 단조 증가다.
 22. **advisor는 완수 gate다 — per-round 소집 폐지 (2026-08 재설계).** 종전 advisor는 매 round "미고려
@@ -620,10 +624,10 @@ ploop/
 ├── skills/launch/SKILL.md            # /ploop:launch — 완수 gate notice + orchestrator rules + 응고 계약 + anchor handoff (anchor 저장·활성화는 launch hook)
 ├── skills/off/SKILL.md               # /ploop:off — 일시정지 조용한 고지 (일시정지는 off_command hook)
 ├── skills/on/SKILL.md                # /ploop:on — 재개 확인 고지 (재개·정규화는 on_command hook)
-├── hooks/hooks.json                  # UserPromptExpansion(launch·off·on) + PostCompact + PreToolUse(Agent) + Stop(gate + asyncRewake heartbeat) + SubagentStop
+├── hooks/hooks.json                  # UserPromptExpansion(launch·off·on) + SessionStart(compact) + PreToolUse(Agent) + Stop(gate + asyncRewake heartbeat) + SubagentStop
 ├── bin/ploop-hook                    # uv 가용성 check wrapper + heartbeat의 3h 상주(sh가 잔다 — uv는 exec돼도 상주)
 ├── src/                              # hook 구현 (runtime 의존성 없음)
-│   ├── main.py                       # hook entrypoint(stop·pre_tool_use·heartbeat_arm·heartbeat_fire·subagent_stop·mark_compaction·launch·off_command·on_command)
+│   ├── main.py                       # hook entrypoint(stop·pre_tool_use·heartbeat_arm·heartbeat_fire·subagent_stop·reanchor·launch·off_command·on_command)
 │   ├── docent.py                     # docent resolver — session 열거·기록 경로 해석 (read-only, `docent` console script)
 │   ├── state.py                      # Workspace(session 파일 경로의 단일 창구) + 5field ledger(advice_history·round_start_line·anomalies·phase·round) + phase 상수 · preserve-by-default load/저장
 │   └── prompt.py                     # audit-history format + standing directive 조립(narrator·advisor verbatim 호출·deadline 양방 배달)

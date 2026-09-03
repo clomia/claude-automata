@@ -79,7 +79,6 @@ class TestWorkspace:
         assert ws.log_path == tmp_path / "s1_loop.log"
         assert ws.advisor_token_path == tmp_path / "s1_advisor_token"
         assert ws.advisor_running_path == tmp_path / "s1_advisor_running"
-        assert ws.compacted_path == tmp_path / "s1_compacted"
         assert ws.advice_path == tmp_path / "ploop_s1_advice.md"
         assert ws.narration_path == tmp_path / "ploop_s1_narration.md"
         assert ws.candidates_path == tmp_path / "ploop_s1_candidates.md"
@@ -110,7 +109,6 @@ class TestWorkspace:
             ws.advice_history_path,
             ws.advisor_token_path,
             ws.advisor_running_path,
-            ws.compacted_path,
             ws.advice_path,
             ws.narration_path,
             ws.candidates_path,

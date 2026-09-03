@@ -35,14 +35,15 @@
         ]
       }
     ],
-    "PostCompact": [
+    "SessionStart": [
       {
+        "matcher": "compact",
         "hooks": [
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/ploop-hook",
-            "args": ["mark-compaction"],
-            "statusMessage": "ploop: marking compaction"
+            "args": ["reanchor"],
+            "statusMessage": "ploop: re-anchoring"
           }
         ]
       }

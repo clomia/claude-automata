@@ -86,6 +86,16 @@ def format_candidates_notice(candidates_path: Path) -> str:
     return f"Your candidates queue: {candidates_path}"
 
 
+def format_anchor_notice(anchor: str, candidates_path: Path) -> str:
+    """What re-enters the main context right after a compaction (mechanism 2):
+    the anchor's full text and the queue address — the two launch deliveries a
+    compaction can drop."""
+    return (
+        f"Your anchor — stay anchored to it:\n\n{anchor}\n\n"
+        f"{format_candidates_notice(candidates_path)}"
+    )
+
+
 def format_advice_history(advice_history: list[str]) -> str:
     """Format prior audit reports as <audit-N> blocks (audit-history).
 
@@ -111,7 +121,6 @@ def format_directive(
     candidates_path: Path,
     candidates_pending: bool,
     instruction_path: Path = INSTRUCTION_PATH,
-    anchor_text: str | None = None,
     deadline: str = "",
 ) -> str:
     """Build the standing directive every armed stop injects.
@@ -134,19 +143,15 @@ def format_directive(
     expired deadline closes the keep-working branch and makes convening the
     directive itself — judgment stays with the advisor.
 
-    On a compacted round, anchor_text is the anchor's full text, re-injected at
-    this recency position (mechanism 2).  The candidates queue rides both
-    directions: a standing line re-delivers the address to the main agent (launch
-    delivered it first; the directive is what survives a compaction), and the
-    advisor block names the queue only when candidates_pending — emptiness is
-    decided here in code, so a loop that never queues candidates keeps its
-    advisor prompt free of the promotion domain.
+    The candidates queue rides both directions: a standing line re-delivers the
+    address to the main agent (launch delivers it first, the compaction
+    re-anchoring restores it), and the advisor block names the queue only when
+    candidates_pending — emptiness is decided here in code, so a loop that never
+    queues candidates keeps its advisor prompt free of the promotion domain.
     """
     prefix = ""
-    if anchor_text:
-        prefix = f"Your anchor — stay anchored to it:\n\n{anchor_text}\n\n---\n\n"
     if deadline:
-        prefix += f"deadline: {deadline}\n\n"
+        prefix = f"deadline: {deadline}\n\n"
     deadline_line = ""
     if deadline:
         deadline_line = f"\n                deadline: {deadline}"

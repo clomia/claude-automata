@@ -42,6 +42,7 @@ from pathlib import Path
 from src.prompt import (
     deadline_status,
     format_advice_history,
+    format_anchor_notice,
     format_candidates_notice,
     format_directive,
     format_end_notice,
@@ -165,19 +166,20 @@ def project_dir(event: dict) -> str:
     return str(Path.cwd())
 
 
-def deliver_expansion_context(text: str) -> None:
-    """Ride the expanded skill body with additionalContext (UserPromptExpansion).
+def deliver_context(hook_event: str, text: str) -> None:
+    """Ride `text` into the current turn as additionalContext (hookSpecificOutput).
 
-    The hook's only channel into the launch turn itself: the text lands alongside
-    the submitted prompt, so a reference the skill body makes resolves in the same
-    turn instead of waiting for the first stop.  Mutually exclusive with
+    The hook's only channel into a turn it does not block: the text lands
+    alongside the turn's own content — the expanded skill body at launch, the
+    compaction summary at re-anchoring — so it is in context before the model's
+    next action instead of waiting for a stop.  Mutually exclusive with
     block_expansion — a blocked turn is erased and carries only its reason.
     """
     sys.stdout.write(
         json.dumps(
             {
                 "hookSpecificOutput": {
-                    "hookEventName": "UserPromptExpansion",
+                    "hookEventName": hook_event,
                     "additionalContext": text,
                 }
             }
@@ -367,20 +369,15 @@ def arm_round(
 ) -> None:
     """Arm the next round and end the hook (exit 2).
 
-    Consumes any compaction marker (mechanism 2: the directive inlines the anchor
-    text), cuts this round's transcript slice into round_path for the narrator,
-    clears both handoff channels so an absent file at the next stop unambiguously
-    means its agent wrote nothing, sets the single-use audit token, and injects
-    the standing directive — prefixed by `notice` on an anomalous re-arm.
+    Cuts this round's transcript slice into round_path for the narrator, clears
+    both handoff channels so an absent file at the next stop unambiguously means
+    its agent wrote nothing, sets the single-use audit token, and injects the
+    standing directive — prefixed by `notice` on an anomalous re-arm.
     """
     try:
-        full_anchor = ws.anchor_path.read_text()
+        anchor = ws.anchor_path.read_text()
     except OSError:
-        full_anchor = ""
-    anchor_text = None
-    if ws.compacted_path.exists():
-        anchor_text = full_anchor or None
-        ws.compacted_path.unlink(missing_ok=True)
+        anchor = ""
 
     write_round_slice(lines, round_start, ws.round_path)
     directive = format_directive(
@@ -392,8 +389,7 @@ def arm_round(
         narration_path=ws.narration_path,
         candidates_path=ws.candidates_path,
         candidates_pending=candidates_pending(ws),
-        anchor_text=anchor_text,
-        deadline=deadline_status(full_anchor, datetime.now().astimezone()),
+        deadline=deadline_status(anchor, datetime.now().astimezone()),
     )
     ws.advice_path.unlink(missing_ok=True)
     ws.narration_path.unlink(missing_ok=True)
@@ -645,15 +641,27 @@ def heartbeat_fire() -> None:
     sys.exit(2)
 
 
-def mark_compaction() -> None:
-    """PostCompact hook: mark the compaction.
+def reanchor() -> None:
+    """SessionStart hook (matcher: compact): re-anchor the main agent after compaction.
 
-    The next stop() re-injects the anchor text into its directive (mechanism 2)
-    and consumes the marker; a marker left by a non-anchor compaction is cleared
-    when the next anchor launches.
+    Compaction is the one event that can push the anchor out of the main
+    agent's context, and the SessionStart it raises is the hook's channel back
+    in: for an armed loop the anchor's full text — with the candidates queue
+    address, the other launch delivery — rides additionalContext straight into
+    the rebuilt context, right behind the compaction summary (mechanism 2).  No
+    round has to arm first, so a loop sleeping on the background gate is
+    re-anchored the moment its context is rebuilt.  Outside an armed loop the
+    hook is silent.
     """
     event = read_event()
-    Workspace.from_env(event.get("session_id", "")).compacted_path.touch()
+    ws = Workspace.from_env(event.get("session_id", ""))
+    if not ws.active_path.exists():
+        sys.exit(0)
+    try:
+        anchor = ws.anchor_path.read_text()
+    except OSError:
+        sys.exit(0)
+    deliver_context("SessionStart", format_anchor_notice(anchor, ws.candidates_path))
 
 
 def subagent_stop() -> None:
@@ -729,7 +737,7 @@ def launch() -> None:
     ws.anchor_path.write_text(anchor)
     ws.project_path.write_text(project_dir(event))
     ws.active_path.touch()
-    deliver_expansion_context(format_candidates_notice(ws.candidates_path))
+    deliver_context("UserPromptExpansion", format_candidates_notice(ws.candidates_path))
 
 
 def off_command() -> None:

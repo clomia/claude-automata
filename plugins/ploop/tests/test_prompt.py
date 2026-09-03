@@ -81,7 +81,7 @@ class TestFormatAdviceHistory:
 
 
 class TestFormatDirective:
-    def directive(self, anchor_text=None, candidates_pending=False, deadline=""):
+    def directive(self, candidates_pending=False, deadline=""):
         return format_directive(
             anchor_path=Path("/d/s1_anchor.md"),
             round_path=Path("/d/s1_round.jsonl"),
@@ -92,7 +92,6 @@ class TestFormatDirective:
             candidates_path=Path("/t/s1_candidates.md"),
             candidates_pending=candidates_pending,
             instruction_path=Path("/p/prompts/instruction.md"),
-            anchor_text=anchor_text,
             deadline=deadline,
         )
 
@@ -199,16 +198,6 @@ class TestFormatDirective:
         out = self.directive(deadline="unreadable: tomorrow-ish")
         assert "keep working now" in out
         assert "unreadable: tomorrow-ish" in out
-
-    def test_anchor_text_inlined_when_compacted(self):
-        """Mechanism 2: the anchor text is inlined ahead of the directive on a
-        compacted round (recency position)."""
-        out = self.directive(anchor_text="THE ANCHOR BODY")
-        assert "THE ANCHOR BODY" in out
-        assert out.index("THE ANCHOR BODY") < out.index("Narrate the finished round")
-
-    def test_no_anchor_text_by_default(self):
-        assert "THE ANCHOR BODY" not in self.directive()
 
     def test_no_leftover_placeholders(self):
         out = self.directive()
