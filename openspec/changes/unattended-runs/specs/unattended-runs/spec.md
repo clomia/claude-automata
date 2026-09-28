@@ -56,7 +56,7 @@ session의 것이다(SHALL).
 
 ### Requirement: Dialog answers
 
-무인 session에서 사람을 기다리는 dialog는 뜨지 않아야 한다(SHALL). plugin은 다음처럼 답해야 한다:
+무인 session에서 plugin은 hook이 받는 dialog에 다음처럼 답해야 한다(SHALL) — 사람을 기다리지 않도록:
 
 - permission 요청(critical-path 삭제·ask rule·`AskUserQuestion`·plan 승인 등 hook이 받는 전부)은
   **deny**하되(MUST), 사유는 에이전트가 행동을 바꿀 수 있어야 한다 — 질문이면 스스로 결정하고
