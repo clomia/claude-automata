@@ -2,7 +2,7 @@
 
 ## Purpose
 claude-automata의 자율 run(ploop loop·refine workflow)이 사람 없이 끝까지 도는 계약 — 시작 조건,
-무인 session의 범위, 사람을 기다릴 뻔한 모든 dialog에 plugin이 스스로 답하는 방식.
+무인 session의 범위, hook이 받는 dialog에 plugin이 스스로 답하고 답하지 못한 대기는 기록하는 방식.
 ## Requirements
 ### Requirement: Bypass-only start
 
