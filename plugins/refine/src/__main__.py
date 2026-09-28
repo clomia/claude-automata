@@ -3,10 +3,12 @@ virtualenv is ever written into the ephemeral plugin cache."""
 
 import sys
 
-from . import bootstrap
+from . import bootstrap, guard
 
 ENTRIES = {
     "bootstrap": bootstrap.main,
+    "arm": guard.arm,
+    "guard": guard.guard,
 }
 
 sys.argv = sys.argv[1:]

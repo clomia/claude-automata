@@ -18,10 +18,9 @@ advisor는 목표가 완전히 달성되면 loop를 종료한다.
 
 1. 사용자를 추궁해 생각과 의도를 최대한 수집하라 — 열린 질문으로 시작해 여러 번의 질의응답을 거쳐라.
    - [CRITICAL] 사용자의 주장을 사실로 수용하지 마라. **False assumption이 가장 위험하다.** 사용자의 말은 생각이나 의도로 해석하라.
-2. 무인 운행 여부를 확인하라. 무인이면 사용자 없이 결정해서는 안 되는 것을 추궁해 Constraint에 담고, 무인 선언 한 줄을 Constraint에 넣어라 — 사용자 부재·결정 소유·대기 금지. 예: `무인 운행: 사용자는 부재한다. 선택은 스스로 최적해로 결정해 전진하고, 확인 대기로 멈추지 마라.`
-3. 수집한 정보를 판단 기준으로 쓸 수 있는 축으로 종합하고, Anchor file save path에 markdown 형식으로 mission을 작성하라.
-4. 사용자가 anchor를 최종 검수하게 하라 — 내용을 모두 출력하지 말고 파일 확인을 요청하라.
-5. 완료 후 anchor text를 복사해 별도 session에 `/ploop:launch [anchor text]` 하라고 안내하라.
+2. 수집한 정보를 판단 기준으로 쓸 수 있는 축으로 종합하고, Anchor file save path에 markdown 형식으로 mission을 작성하라.
+3. 사용자가 anchor를 최종 검수하게 하라 — 내용을 모두 출력하지 말고 파일 확인을 요청하라.
+4. 완료 후 `claude --permission-mode bypassPermissions`로 연 별도 session에 anchor text를 `/ploop:launch [anchor text]`로 넘기라고 안내하라.
    - `/ploop:launch`는 파일 경로가 아닌 내용을 copy & paste해야 한다.
 
 # Mission 규칙

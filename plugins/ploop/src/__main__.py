@@ -12,6 +12,7 @@ ENTRIES = {
     "heartbeat-fire": main.heartbeat_fire,
     "subagent-stop": main.subagent_stop,
     "reanchor": main.reanchor,
+    "guard": main.guard,
     "launch": main.launch,
     "off-command": main.off_command,
     "on-command": main.on_command,

@@ -15,6 +15,12 @@ PREREQUISITES = {
     "model": "opus[1m]",
 }
 
+# Claude Code grants these modes only from user, managed, or command-line
+# settings; from a repository's settings they are ignored and shadow the
+# user's own mode — bypassPermissions drops the session to Manual, auto to the
+# built-in default.  Autonomous runs check the mode themselves when they start.
+IGNORED_MODES = ("bypassPermissions", "auto")
+
 
 def manifest() -> dict:
     # The wheel carries the manifest via force-include; a source-tree run reads the repo copy.
@@ -30,10 +36,18 @@ def plugin_names() -> list[str]:
 
 
 def merged(current: dict) -> dict:
-    """Return `current` with every prerequisite applied; unrelated keys survive."""
+    """Return `current` with every prerequisite applied and an ignored permission
+    mode removed; unrelated keys survive."""
     out = copy.deepcopy(current)
     out.update(PREREQUISITES)
-    out.setdefault("permissions", {})["defaultMode"] = "bypassPermissions"
+    permissions = out.get("permissions")
+    if (
+        isinstance(permissions, dict)
+        and permissions.get("defaultMode") in IGNORED_MODES
+    ):
+        del permissions["defaultMode"]
+        if not permissions:
+            del out["permissions"]
     out.setdefault("env", {})["CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"] = "5"
     out.setdefault("extraKnownMarketplaces", {})[MARKETPLACE] = {
         "source": {"source": "github", "repo": MARKETPLACE_REPO}
@@ -46,12 +60,8 @@ def merged(current: dict) -> dict:
 
 def overridden(local: dict) -> list[str]:
     """Prerequisite keys a higher-precedence settings.local.json forces away from init's values."""
-    conflicts = [
+    return [
         key
         for key, value in PREREQUISITES.items()
         if key in local and local[key] != value
     ]
-    mode = local.get("permissions", {}).get("defaultMode")
-    if mode is not None and mode != "bypassPermissions":
-        conflicts.append("permissions.defaultMode")
-    return conflicts

@@ -25,17 +25,20 @@ When every line below holds, claude-automata is installed.
   settings declaration, and the cache converges once you put claude on PATH
   and re-run init.
 - The repository's `.claude/settings.json` carries the environment this
-  autonomy needs: `permissions.defaultMode` is `"bypassPermissions"` (the
-  agent stops asking before it acts), `model` is `"opus[1m]"`,
-  `alwaysThinkingEnabled` `true`, `autoCompactEnabled` `true`,
-  `autoMemoryEnabled` `false`, and the `clomia/claude-automata` marketplace
-  is registered with its plugins enabled. That is what adopting this
-  environment means. Init writes these values, and a cautious human reads
-  them here before delegating the install.
+  autonomy needs: `model` is `"opus[1m]"`, `alwaysThinkingEnabled` `true`,
+  `autoCompactEnabled` `true`, `autoMemoryEnabled` `false`, and the
+  `clomia/claude-automata` marketplace is registered with its plugins
+  enabled. It sets no permission mode: Claude Code takes `bypassPermissions`
+  only from the command line or user settings, never from a repository's.
+  The autonomous runs (ploop loops, refine workflows) are unattended — they
+  start only in a session the operator opened in that mode
+  (`claude --permission-mode bypassPermissions`), and from then on deny by
+  themselves every approval a human would otherwise be asked for. That is
+  what adopting this environment means. Init writes these values, and a
+  cautious human reads them here before delegating the install.
 - The session has restarted since init ran. Claude Code loads the installed
-  plugins and the new `model`/`bypassPermissions` only at startup, so in the
-  session that ran init the tx skills (`/tx:open` and the rest) do not exist
-  yet. You can neither restart yourself nor carry this context across the
+  plugins and the new `model` only at startup, so in the session that ran
+  init the tx skills (`/tx:open` and the rest) do not exist yet. You can neither restart yourself nor carry this context across the
   restart, so tell the user to restart Claude Code and then re-send the same
   install request. The returning session re-reads this document, finds init
   already converged, and runs the transaction below. If the tx skills are

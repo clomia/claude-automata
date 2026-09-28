@@ -4,7 +4,8 @@ A hook is code and cannot call tools, so the loop is driven by feedback: stop()
 blocks the main agent's stop (exit 2) and injects the standing round directive —
 narrate the finished round, keep working, or convene the advisor.  The advisor
 is the completion gate: only its verdict certifies completion.  The active
-marker written at /ploop:launch gates everything.
+marker written at /ploop:launch gates the loop; the unattended guard is gated
+by the session having launched at all (guard).
 
 The loop ENDS through auto-termination — the advisor writes the completion
 token or the deadline-closure token (phase -> converged), or two consecutive
@@ -140,12 +141,40 @@ HEARTBEAT_NOTICE = (
 SPAWN_DEPTH_ENV = "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"
 SPAWN_DEPTH_MIN = 5
 PREREQUISITE_HEADER = (
-    "ploop requires these .claude/settings.json settings — set them, then "
-    "restart Claude Code:"
+    "ploop cannot arm until each of these holds — a settings change takes a "
+    "Claude Code restart:"
 )
-NESTED_FIX = '"env": {"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "5"}'
-COMPACT_FIX = '"autoCompactEnabled": true'
-THINKING_FIX = '"alwaysThinkingEnabled": true'
+NESTED_FIX = (
+    '.claude/settings.json: "env": {"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "5"}'
+)
+COMPACT_FIX = '.claude/settings.json: "autoCompactEnabled": true'
+THINKING_FIX = '.claude/settings.json: "alwaysThinkingEnabled": true'
+MODE_FIX = (
+    "bypassPermissions mode: the loop runs unattended — start Claude Code with "
+    "`claude --permission-mode bypassPermissions`, or Shift+Tab back to it if "
+    "this session offers it (a repository's settings cannot grant this mode)"
+)
+
+# The unattended guard's answers — refine's guard gives the same, word for word
+# (tests/test_unattended_contract.py).
+QUESTION_DENIAL = (
+    "Unattended run: nobody is here to answer. Decide yourself, state the "
+    "assumption you made, and continue."
+)
+PLAN_MODE_DENIAL = (
+    "Unattended run: leaving plan mode needs a human's approval, which never "
+    "comes. Plan in your own reasoning and act."
+)
+
+
+def permission_denial(tool: str) -> str:
+    return (
+        f"Unattended run: no human can approve this {tool} call, so it is "
+        "denied. Do not retry it as written — rework the step so it needs no "
+        "approval, or leave it undone, record why, and continue. A removal names "
+        "its exact absolute path: never /, a top-level directory, ~, the working "
+        "directory or its parents, or a variable followed by / or /*."
+    )
 
 
 def read_event() -> dict:
@@ -166,8 +195,16 @@ def project_dir(event: dict) -> str:
     return str(Path.cwd())
 
 
+def answer(hook_event: str, **fields: object) -> None:
+    """Emit the event-specific decision (hookSpecificOutput) — the one JSON shape
+    every hook here answers in."""
+    sys.stdout.write(
+        json.dumps({"hookSpecificOutput": {"hookEventName": hook_event, **fields}})
+    )
+
+
 def deliver_context(hook_event: str, text: str) -> None:
-    """Ride `text` into the current turn as additionalContext (hookSpecificOutput).
+    """Ride `text` into the current turn as additionalContext.
 
     The hook's only channel into a turn it does not block: the text lands
     alongside the turn's own content — the expanded skill body at launch, the
@@ -175,16 +212,7 @@ def deliver_context(hook_event: str, text: str) -> None:
     next action instead of waiting for a stop.  Mutually exclusive with
     block_expansion — a blocked turn is erased and carries only its reason.
     """
-    sys.stdout.write(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "additionalContext": text,
-                }
-            }
-        )
-    )
+    answer(hook_event, additionalContext=text)
 
 
 def block_expansion(reason: str) -> None:
@@ -215,12 +243,13 @@ def project_settings(event: dict) -> dict:
 def unmet_prerequisites(event: dict) -> list[str]:
     """ploop's Claude Code prerequisites the environment fails to satisfy.
 
-    Each entry is a settings.json fix line; empty means all are met.  Nested-
-    subagent depth is read from os.environ — the effective value, so a settings.json
-    edit not yet applied by a restart still reads as unmet (the restart is what makes
-    the env var take hold, which a declared settings.json read would miss).  The
-    compaction and thinking toggles have no such runtime signal, so they are read
-    from the project settings.json.  Extend the tuple to assert a new setting.
+    Each entry is a fix line; empty means all are met.  Nested-subagent depth is
+    read from os.environ and the permission mode from the event — both effective
+    values, so a settings.json edit not yet applied by a restart still reads as
+    unmet, and a mode a repository's settings merely declare (which the harness
+    ignores there) never passes.  The compaction and thinking toggles have no
+    runtime signal, so they are read from the project settings.json.  Extend the
+    tuple to assert a new requirement.
     """
     settings = project_settings(event)
     try:
@@ -233,14 +262,15 @@ def unmet_prerequisites(event: dict) -> list[str]:
             (depth >= SPAWN_DEPTH_MIN, NESTED_FIX),
             (settings.get("autoCompactEnabled") is True, COMPACT_FIX),
             (settings.get("alwaysThinkingEnabled") is True, THINKING_FIX),
+            (event.get("permission_mode") == "bypassPermissions", MODE_FIX),
         )
         if not ok
     ]
 
 
 def append_log_entry(log_path: Path, header: str, body: str) -> None:
-    """The loop log's one entry shape — both entry kinds render through it, so
-    Round and Audit entries can never drift apart."""
+    """The loop log's one entry shape — every entry kind (Round, Audit, Stall)
+    renders through it, so they can never drift apart."""
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     with open(log_path, "a") as f:
         f.write(f"[[ {header} - {timestamp} ]]\n\n{body}\n\n")
@@ -686,6 +716,51 @@ def subagent_stop() -> None:
     ws.advisor_stopped_path.touch()
 
 
+def guard() -> None:
+    """The unattended guard: PreToolUse (EnterPlanMode), PermissionRequest,
+    Elicitation, and the stall Notifications — one gate, four answers.
+
+    Outside a session that launched a loop it stays silent, so a human session
+    sees every dialog as usual.  Inside one — subagents and workflow agents too,
+    whose events carry the session's id — no dialog is left to a human: plan
+    mode is refused before entry, a permission request is denied with a reason
+    fitted to the tool, an elicitation is declined, and a wait the guard could
+    not answer (the harness raised it outside these events) becomes a Stall
+    entry in the loop log for docent and the advisor to read.
+    """
+    event = read_event()
+    ws = Workspace.from_env(event.get("session_id", ""))
+    if not ws.unattended:
+        sys.exit(0)
+    tool = str(event.get("tool_name") or "tool")
+    match event.get("hook_event_name"):
+        case "PreToolUse" if tool == "EnterPlanMode":
+            answer(
+                "PreToolUse",
+                permissionDecision="deny",
+                permissionDecisionReason=PLAN_MODE_DENIAL,
+            )
+        case "PermissionRequest":
+            message = (
+                QUESTION_DENIAL
+                if tool == "AskUserQuestion"
+                else permission_denial(tool)
+            )
+            answer(
+                "PermissionRequest", decision={"behavior": "deny", "message": message}
+            )
+        case "Elicitation":
+            answer("Elicitation", action="decline")
+        case "Notification":
+            kind = event.get("notification_type", "")
+            try:
+                append_log_entry(
+                    ws.log_path, "Stall", f"{kind}: {event.get('message', '')}"
+                )
+            except OSError:
+                pass
+
+
 def launch() -> None:
     """UserPromptExpansion hook (matcher: ploop:launch): the whole launch prep.
 
@@ -701,8 +776,8 @@ def launch() -> None:
     pauses it first; a blank anchor, because the skill body would otherwise
     announce an activation this hook never armed (a ghost loop); and any unmet
     Claude Code prerequisite (unmet_prerequisites — nested subagents, auto
-    compaction, thinking), since a loop launched without them silently degrades —
-    the notice lists each settings.json fix and calls for a restart.
+    compaction, thinking, bypassPermissions mode), since a loop launched without
+    them silently degrades or stalls — the notice lists each fix.
 
     A real launch clears the prior anchor's round state, starts the round log
     with the anchor text (an anchor owns one log, and its final summary reads
@@ -783,8 +858,9 @@ def on_command() -> None:
     refuses it and the user launches a fresh anchor.
 
     A resume requires the on-disk anchor and log (else there is no loop to
-    resume) and refuses a converged anchor (phase == converged); either failure
-    blocks the expansion (block_expansion — pure, turn erased) so the
+    resume), refuses a converged anchor (phase == converged), and re-checks
+    launch's prerequisites — the permission mode can change mid-session; any
+    failure blocks the expansion (block_expansion — pure, turn erased) so the
     skill body never announces a resume that didn't happen, and the user gets a
     clear reason.
 
@@ -810,6 +886,8 @@ def on_command() -> None:
         block_expansion(
             "The advisor concluded this anchor. Launch a new one with /ploop:launch <anchor>."
         )
+    if unmet := unmet_prerequisites(event):
+        block_expansion(PREREQUISITE_HEADER + "\n\n" + "\n".join(unmet))
     ws.advisor_token_path.unlink(missing_ok=True)
     ws.advisor_running_path.unlink(missing_ok=True)
     ws.advisor_stopped_path.unlink(missing_ok=True)

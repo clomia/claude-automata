@@ -46,7 +46,7 @@ Your agent reads [INSTALL.md](https://github.com/clomia/claude-automata/blob/mai
 
 ```
 /ploop:define-mission          # an agent interviews you, interprets your intent, and writes the anchor
-/ploop:launch [anchor text]    # hand it to the loop in a fresh session
+/ploop:launch [anchor text]    # hand it to the loop in a fresh bypassPermissions session
 ```
 
 Declare the mission done and a hook blocks the stop, demanding an audit by an independent advisor with access to the whole story; the loop ends only when the advisor certifies completion.
@@ -63,9 +63,9 @@ Six rounds later the advisor ends the turn. [Watch a full round on the site.](ht
 
 <br>
 
-- init sets Auto-Compact; keep it on. For unattended runs, set `askUserQuestionTimeout` so an unanswered question can't park the loop.
+- init sets Auto-Compact; keep it on. The loop runs unattended: open its session with `claude --permission-mode bypassPermissions` (it refuses to launch otherwise), and nothing in it waits for a human — every approval it would ask for is declined and the loop moves on.
 - `/ploop:off` pauses the loop. `/ploop:on` resumes or restores it, even after an accidental ESC, an API error, or a session limit (interrupt with ESC first if a turn is running). Nothing else stops the loop.
-- `/ploop:docent` reports the loop's progress. Run it in a **separate session, same directory**: questions go to the docent, interventions go straight to the loop session.
+- `/ploop:docent` reports the loop's progress. Run it in a **separate session, same directory**: questions go to the docent, and the loop session stays untouched.
 
 </details>
 
@@ -79,7 +79,7 @@ Agents drive tx on their own. Every change lands as one verified, CI-green squas
 /refine:code [focus] · /refine:docs [focus]
 ```
 
-Repository-wide workflows that clear technical debt: code architecture and doc-to-code alignment. They touch only the representation layer and never change behavior. A run can sweep the whole codebase and take ten hours or more; watch it with `/workflows`.
+Repository-wide workflows that clear technical debt: code architecture and doc-to-code alignment. They touch only the representation layer and never change behavior. A run can sweep the whole codebase and take ten hours or more; watch it with `/workflows`. Like the loop, it runs unattended and starts only in a bypassPermissions session.
 
 ---
 

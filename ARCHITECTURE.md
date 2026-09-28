@@ -63,6 +63,15 @@ loop·main·anchor·advice)는 ploop 정본이 소유한다 — 여기 재정의
   plugin `bin/`은 Bash PATH에 주입되므로 bare 이름은 namespace 오염이다. 강제는
   `tests/test_plugin_runtime.py`. 의존성이 생기는 미래 plugin은 cache가 아니라
   CLAUDE_PLUGIN_DATA에 manifest-diff 패턴으로 환경을 둔다.
+- **무인 계약 (ploop·refine) — 자율 run은 사람을 기다리지 않는다.** loop·workflow는 bypassPermissions
+  session에서만 시작하고(시작 시점의 effective mode — hook 입력으로 판정), 시작한 session은 끝까지
+  무인이다: 남은 dialog(권한 요청·질문·plan 승인·MCP elicitation)는 각 plugin의 guard가 deny·decline으로
+  답하며 allow하지 않는다 — 기다림을 없앨 뿐 승인을 대신하지 않는다. 범위 판정은 각 plugin이 소유하고
+  (ploop: loop를 launch한 session — ploop 결정 25, refine: 자기 workflow를 발사한 session), 답은 두 plugin이
+  글자 그대로 같다. 공유 plugin·공유 marker는 두지 않는다 — plugin 상태는 자기 data dir에만 산다
+  (project-unit 격리). 두 사본의 등록 형태와 같은 event에 대한 답은 `tests/test_unattended_contract.py`가
+  결속한다. 실측은
+  `docs/research/unattended-dialogs-2026.md`.
 - **검증자 계약 (횡단)** — 검증 agent의 차단력은 고정 좌표(ploop advisor=anchor, tx
   verify=change artifact)를 인용한 판정에만 있다. 좌표 없는 발견은 관찰이며, 관찰의 채택은
   실행 주체의 판단이다. 좌표 체계 없는 탐색에는 쓰기 권한도 차단 권한도 결합하지 않는다 —
@@ -95,6 +104,12 @@ hook 주입 message 조립).
   swap해 anchor에 정박된 loop의 행동을 운영자 모르게 바꾼다. version-up-alert의 alert-only가
   도구 교체를 인간 몫으로 유지한다. uv 부재 안내도 같은 곳으로 중앙화한다 — wrapper들의 차단
   message는 기능적 사실만 나른다.
+- **init은 permission mode를 쓰지 않는다 (2026-09 실측)** — harness는 project·local settings의
+  `bypassPermissions`·`auto`를 무시하고, 그 무시된 값이 user scope mode를 가린다 — `bypassPermissions`는
+  session을 Manual로, `auto`는 built-in default로 떨어뜨린다(2.1.283 — "only policy/user/flag settings
+  may grant bypass mode"). mode는 운영자가 CLI
+  flag나 user settings로 주고 무인 run이 시작 시점에 검사한다(무인 계약). init은 이전 init이 쓴 무효
+  값을 걷는다.
 - **Claude Code 하위 호환 비목표 (auto-update 전제)** — 배포는 출시 시점의 최신 Claude Code만
   대상으로 하고, 사용자의 Claude Code는 auto-update된다고 전제한다. plugin은 harness 버전을
   탐지·분기하지 않는다 — 버전 guard는 존재하지 않는 사용자를 위한 복잡도다. (settings/env

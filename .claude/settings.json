@@ -23,7 +23,6 @@
 		"pyright-lsp@claude-plugins-official": true
 	},
 	"permissions": {
-		"defaultMode": "bypassPermissions",
 		"deny": [
 			"Read(.private/**)",
 			"Edit(.private/**)"

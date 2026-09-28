@@ -69,6 +69,13 @@ class Workspace:
         return self.path("anchor.md")
 
     @property
+    def unattended(self) -> bool:
+        """A session that ever launched a loop is unattended for the rest of its
+        life — a pause or an end does not bring a human back.  The anchor is the
+        fact: launch writes it and nothing deletes it."""
+        return self.anchor_path.exists()
+
+    @property
     def project_path(self) -> Path:
         """The loop's launch directory — docent lists a loop only where it was
         launched.  Written at launch, backfilled at stop, never round-cleared."""

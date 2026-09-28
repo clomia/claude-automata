@@ -23,6 +23,9 @@ from src.main import (
     EXPIRY_TOKEN,
     HEARTBEAT_NOTICE,
     HEARTBEAT_SECONDS,
+    PLAN_MODE_DENIAL,
+    QUESTION_DENIAL,
+    guard,
     heartbeat_arm,
     heartbeat_fire,
     launch,
@@ -1006,6 +1009,126 @@ class TestSubagentStop:
 # ── SessionStart compact: re-anchoring (mechanism 2) ──
 
 
+class TestGuard:
+    """The unattended guard answers every would-be dialog of a session that
+    launched a loop — paused or ended, subagents included — and stays silent
+    everywhere else."""
+
+    def run(self, tmp_path, monkeypatch, capsys, *, launched=True, **event):
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        if launched:
+            (tmp_path / "s1_anchor.md").write_text("the anchor")
+            (tmp_path / "s1_loop.log").write_text("[[ ANCHOR ]]\n\nthe anchor\n\n")
+        monkeypatch.setattr(
+            "sys.stdin", io.StringIO(json.dumps({"session_id": "s1", **event}))
+        )
+        try:
+            guard()
+        except SystemExit as exc:
+            assert exc.code == 0
+        out = capsys.readouterr().out
+        return json.loads(out)["hookSpecificOutput"] if out else None
+
+    @pytest.mark.parametrize(
+        "event",
+        [
+            {"hook_event_name": "PermissionRequest", "tool_name": "Bash"},
+            {"hook_event_name": "PreToolUse", "tool_name": "EnterPlanMode"},
+            {"hook_event_name": "Elicitation", "mcp_server_name": "m"},
+        ],
+    )
+    def test_silent_in_a_session_that_never_launched(
+        self, tmp_path, monkeypatch, capsys, event
+    ):
+        """No loop was ever launched here, so a human may be at the terminal:
+        every dialog is left to the harness's usual flow."""
+        assert self.run(tmp_path, monkeypatch, capsys, launched=False, **event) is None
+
+    def test_permission_request_is_denied_with_an_actionable_reason(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """The active marker is absent (the loop was paused or ended) and the
+        request comes from a subagent: the session is still unattended.  The
+        denial never allows, and names what to do instead of retrying."""
+        out = self.run(
+            tmp_path,
+            monkeypatch,
+            capsys,
+            hook_event_name="PermissionRequest",
+            tool_name="Bash",
+            agent_id="a1",
+            tool_input={"command": "rmdir /tmp"},
+        )
+        decision = out["decision"]
+        assert decision["behavior"] == "deny"
+        assert "Bash" in decision["message"]
+        assert "exact absolute path" in decision["message"]
+
+    def test_a_question_is_answered_with_self_decision(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        out = self.run(
+            tmp_path,
+            monkeypatch,
+            capsys,
+            hook_event_name="PermissionRequest",
+            tool_name="AskUserQuestion",
+        )
+        assert out["decision"] == {"behavior": "deny", "message": QUESTION_DENIAL}
+
+    def test_plan_mode_is_refused_before_entry(self, tmp_path, monkeypatch, capsys):
+        """Entry passes the harness without a decision while only a human can
+        approve the exit — so the guard refuses entry itself.  Any other tool
+        reaching this entry is left alone."""
+        out = self.run(
+            tmp_path,
+            monkeypatch,
+            capsys,
+            hook_event_name="PreToolUse",
+            tool_name="EnterPlanMode",
+        )
+        assert out["permissionDecision"] == "deny"
+        assert out["permissionDecisionReason"] == PLAN_MODE_DENIAL
+        assert (
+            self.run(
+                tmp_path,
+                monkeypatch,
+                capsys,
+                hook_event_name="PreToolUse",
+                tool_name="Bash",
+            )
+            is None
+        )
+
+    def test_elicitation_is_declined(self, tmp_path, monkeypatch, capsys):
+        out = self.run(
+            tmp_path,
+            monkeypatch,
+            capsys,
+            hook_event_name="Elicitation",
+            mcp_server_name="m",
+        )
+        assert out == {"hookEventName": "Elicitation", "action": "decline"}
+
+    def test_a_wait_it_could_not_answer_becomes_a_stall_entry(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """A dialog the harness held outside the answerable events is recorded
+        in the loop log — the wait itself is not undone."""
+        out = self.run(
+            tmp_path,
+            monkeypatch,
+            capsys,
+            hook_event_name="Notification",
+            notification_type="permission_prompt",
+            message="Claude needs your permission to use network",
+        )
+        assert out is None
+        log = (tmp_path / "s1_loop.log").read_text()
+        assert "[[ Stall - " in log
+        assert "permission_prompt: Claude needs your permission to use network" in log
+
+
 class TestReanchor:
     def test_armed_loop_reenters_anchor_and_queue_address(
         self, tmp_path, monkeypatch, capsys
@@ -1033,31 +1156,40 @@ class TestReanchor:
 # ── /ploop:launch UserPromptExpansion hook ──
 
 
-class TestLaunch:
-    def make_stdin(self, **payload):
-        return io.StringIO(json.dumps(payload))
+def satisfy_prerequisites(
+    tmp_path, monkeypatch, *, depth="5", auto_compact=True, thinking=True
+):
+    """Satisfy the arming prerequisites the environment holds; return the project dir.
 
-    def prereqs(
-        self, tmp_path, monkeypatch, *, depth="5", auto_compact=True, thinking=True
-    ):
-        """Satisfy ploop's launch prerequisites; return the project dir.
-
-        Sets the nested-subagent env cap (depth=None leaves it unset) and writes a
-        project .claude/settings.json with the compaction and thinking toggles.
-        """
-        if depth is None:
-            monkeypatch.delenv("CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH", raising=False)
-        else:
-            monkeypatch.setenv("CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH", depth)
-        proj = tmp_path / "repo"
-        (proj / ".claude").mkdir(parents=True, exist_ok=True)
-        (proj / ".claude" / "settings.json").write_text(
-            json.dumps(
-                {"autoCompactEnabled": auto_compact, "alwaysThinkingEnabled": thinking}
-            )
+    Sets the nested-subagent env cap (depth=None leaves it unset) and writes a
+    project .claude/settings.json with the compaction and thinking toggles.  The
+    permission mode rides the event itself (expansion_stdin).
+    """
+    if depth is None:
+        monkeypatch.delenv("CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH", raising=False)
+    else:
+        monkeypatch.setenv("CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH", depth)
+    proj = tmp_path / "repo"
+    (proj / ".claude").mkdir(parents=True, exist_ok=True)
+    (proj / ".claude" / "settings.json").write_text(
+        json.dumps(
+            {"autoCompactEnabled": auto_compact, "alwaysThinkingEnabled": thinking}
         )
-        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(proj))
-        return proj
+    )
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(proj))
+    return proj
+
+
+def expansion_stdin(**payload):
+    """A slash-command expansion event, in bypassPermissions unless named otherwise."""
+    return io.StringIO(json.dumps({"permission_mode": "bypassPermissions", **payload}))
+
+
+class TestLaunch:
+    make_stdin = staticmethod(expansion_stdin)
+
+    def prereqs(self, tmp_path, monkeypatch, **unmet):
+        return satisfy_prerequisites(tmp_path, monkeypatch, **unmet)
 
     def test_writes_stripped_anchor_and_arms_loop(self, tmp_path, monkeypatch):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
@@ -1202,26 +1334,41 @@ class TestLaunch:
         assert (tmp_path / "s1_anchor.md").read_text() == "do it"
 
     @pytest.mark.parametrize(
-        "unmet, needle",
+        "unmet, mode, needle",
         [
-            ({"depth": None}, "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"),
-            ({"depth": "2"}, "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"),
-            ({"auto_compact": False}, "autoCompactEnabled"),
-            ({"thinking": False}, "alwaysThinkingEnabled"),
+            (
+                {"depth": None},
+                "bypassPermissions",
+                "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH",
+            ),
+            (
+                {"depth": "2"},
+                "bypassPermissions",
+                "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH",
+            ),
+            ({"auto_compact": False}, "bypassPermissions", "autoCompactEnabled"),
+            ({"thinking": False}, "bypassPermissions", "alwaysThinkingEnabled"),
+            ({}, "auto", "claude --permission-mode bypassPermissions"),
+            ({}, None, "claude --permission-mode bypassPermissions"),
         ],
     )
     def test_unmet_prerequisite_blocks(
-        self, tmp_path, monkeypatch, capsys, unmet, needle
+        self, tmp_path, monkeypatch, capsys, unmet, mode, needle
     ):
-        """Each unmet prerequisite blocks the launch and names its settings.json
-        fix — nesting from the env (unset or below 5, the provisioned pin),
-        compaction and thinking from the project settings.json."""
+        """Each unmet prerequisite blocks the launch and names its fix — nesting
+        from the env (unset or below 5, the provisioned pin), compaction and
+        thinking from the project settings.json, and the permission mode from
+        the event: only bypassPermissions arms an unattended loop, and a mode
+        the event does not carry is not one."""
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         self.prereqs(tmp_path, monkeypatch, **unmet)
         monkeypatch.setattr(
             "sys.stdin",
             self.make_stdin(
-                command_name="ploop:launch", command_args="do it", session_id="s1"
+                command_name="ploop:launch",
+                command_args="do it",
+                session_id="s1",
+                permission_mode=mode,
             ),
         )
         with pytest.raises(SystemExit) as exc:
@@ -1245,7 +1392,10 @@ class TestLaunch:
         monkeypatch.setattr(
             "sys.stdin",
             self.make_stdin(
-                command_name="ploop:launch", command_args="do it", session_id="s1"
+                command_name="ploop:launch",
+                command_args="do it",
+                session_id="s1",
+                permission_mode="default",
             ),
         )
         with pytest.raises(SystemExit):
@@ -1254,6 +1404,7 @@ class TestLaunch:
         assert "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH" in reason
         assert "autoCompactEnabled" in reason
         assert "alwaysThinkingEnabled" in reason
+        assert "bypassPermissions" in reason
         assert "restart" in reason.lower()
         assert not (tmp_path / "s1_active").exists()
 
@@ -1327,14 +1478,23 @@ class TestOffCommand:
 
 
 class TestOnCommand:
-    def make_stdin(self, **payload):
-        return io.StringIO(json.dumps(payload))
+    make_stdin = staticmethod(expansion_stdin)
 
-    def arrange(self, tmp_path, monkeypatch, *, command_name="ploop:on"):
+    def arrange(
+        self,
+        tmp_path,
+        monkeypatch,
+        *,
+        command_name="ploop:on",
+        mode="bypassPermissions",
+    ):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        satisfy_prerequisites(tmp_path, monkeypatch)
         monkeypatch.setattr(
             "sys.stdin",
-            self.make_stdin(command_name=command_name, session_id="s1"),
+            self.make_stdin(
+                command_name=command_name, session_id="s1", permission_mode=mode
+            ),
         )
 
     def arrange_paused(self, tmp_path, *, ledger=None):
@@ -1442,6 +1602,23 @@ class TestOnCommand:
             on_command()
         assert json.loads(capsys.readouterr().out)["decision"] == "block"
         assert not (tmp_path / "s1_active").exists()
+
+    def test_non_bypass_mode_blocks_resume_untouched(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """on arms the loop, so it guards the same door as launch: the mode can
+        change mid-session, and resuming an unattended loop outside bypass
+        would hand every action to the guard's denial.  The loop stays paused."""
+        self.arrange_paused(tmp_path, ledger={"phase": ADVISING, "anomalies": 1})
+        self.arrange(tmp_path, monkeypatch, mode="auto")
+        with pytest.raises(SystemExit) as exc:
+            on_command()
+        assert exc.value.code == 0
+        out = json.loads(capsys.readouterr().out)
+        assert out["decision"] == "block"
+        assert "claude --permission-mode bypassPermissions" in out["reason"]
+        assert not (tmp_path / "s1_active").exists()
+        assert load_ledger(tmp_path / "s1_loop.json")["anomalies"] == 1
 
     def test_ignores_other_plugin_on(self, tmp_path, monkeypatch):
         """The guard matches the full scoped name, so another plugin's :on cannot

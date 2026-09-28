@@ -120,10 +120,12 @@ repo root의 `INSTALL.md`는 설치를 수행할 agent 대상의 English 단일�
 를 서술해야 한다(SHALL). 상태 oracle(init 출력·seed 보고·openspec validate·CI)을 지정해야
 하고(MUST), host repository의 기존 harness를 존중하는 경계 — 동결 이력 불가침, 소급 재구성
 금지, repo 소유 결정의 사용자 귀속 — 를 installed state의 술어로 포함해야 한다(MUST).
-init이 기록하는 settings 전제조건(`permissions.defaultMode="bypassPermissions"`·
-`model="opus[1m]"`·flag 3종·marketplace 등록)을 installed state의 일부로 공개해야 하며(SHALL —
-방문자 표면이 아니라 여기가 공개의 home이다), 그 값은 `claude_automata/settings.py`의 실값과
-CI로 결속되어야 한다(MUST). init이 기록하는 settings가 세션 재시작으로만 발효하고 plugin이
+init이 기록하는 settings 전제조건(`model="opus[1m]"`·flag 3종·marketplace 등록)을 installed
+state의 일부로 공개해야 하며(SHALL — 방문자 표면이 아니라 여기가 공개의 home이다), 그 값은
+`claude_automata/settings.py`의 실값과 CI로 결속되어야 한다(MUST). 같은 자리에서 init이 permission
+mode를 쓰지 않는다는 것과, 무인 run(ploop loop·refine workflow)이 운영자가 `bypassPermissions`로
+연 session에서만 시작한다는 것 — repository settings로는 그 mode를 부여할 수 없다 — 을 공개해야
+한다(SHALL). init이 기록하는 settings가 세션 재시작으로만 발효하고 plugin이
 세션 시작 시 로드되므로, installed state는 **init 이후의 세션 재시작을 별도 술어로 요구해야
 하며(SHALL)** — 재시작 전에는 tx skill이 없어 transaction 술어가 성립 불가다 — 설치 agent가
 자기 세션을 재시작하지도 그 context를 재시작 너머로 잇지도 못한다는 사실과, 재시작 및
@@ -143,8 +145,9 @@ CI로 결속되어야 한다(MUST). init이 기록하는 settings가 세션 재�
 
 #### Scenario: settings 공개의 home
 - **WHEN** 신중한 사용자가 위임 prompt를 건네기 전에 INSTALL.md를 읽으면
-- **THEN** init이 기록하는 settings(bypassPermissions·model 고정 포함)가 명시되어 있고,
-  그 값은 settings.py와 CI로 결박되어 표류하지 않는다
+- **THEN** init이 기록하는 settings(model 고정 포함)가 명시되어 있고, 그 값은 settings.py와
+  CI로 결박되어 표류하지 않으며, 무인 run의 bypassPermissions 요건과 그 mode를 운영자가
+  부여한다는 사실이 명시되어 있다
 
 #### Scenario: 재시작 관문
 - **WHEN** 설치 agent가 init을 실행한 세션에서 곧바로 다음 단계로 나아가려 하면

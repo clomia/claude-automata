@@ -46,7 +46,7 @@ agent가 [INSTALL.md](https://github.com/clomia/claude-automata/blob/main/INSTAL
 
 ```
 /ploop:define-mission          # agent가 당신을 interview하여 의도를 해석하고 anchor를 작성합니다
-/ploop:launch [anchor 내용]    # 새 session에서 loop에 전달
+/ploop:launch [anchor 내용]    # bypassPermissions로 연 새 session에서 loop에 전달
 ```
 
 agent가 끝났다고 선언하는 순간 hook이 정지를 막고 advisor 심사를 요구합니다. advisor는 전체 스토리에 접근할 수 있는 독립 메타인지이고, loop는 advisor가 완수를 인증할 때만 끝납니다.
@@ -63,9 +63,9 @@ advisor › Not yet. The mobile layout was never measured. …resuming.
 
 <br>
 
-- init이 Auto-Compact를 켭니다; 그대로 두세요. 무인 운용에는 `askUserQuestionTimeout` 설정을 권장합니다. 그러면 응답 없는 질문에서 loop가 무한정 기다리는 일이 없습니다.
+- init이 Auto-Compact를 켭니다; 그대로 두세요. loop는 무인으로 돕니다: session을 `claude --permission-mode bypassPermissions`로 여세요(그 밖에서는 launch가 거부됩니다). loop 안에서는 사람을 기다리는 일이 없습니다 — 물어볼 승인은 스스로 거절하고 나아갑니다.
 - `/ploop:off`는 루프 일시정지. `/ploop:on`은 루프 재개(복원)로, 실수로 누른 ESC·API error·session limit로 멈춘 loop도 깨웁니다 (turn이 돌고 있으면 ESC로 끊은 뒤). 그 밖의 어떤 것도 loop를 멈추지 않습니다.
-- `/ploop:docent`는 루프의 진행 상황을 보고합니다. **동일한 디렉토리의 별도 session**에서 실행하세요: 질문은 docent에게, 개입은 loop session에 직접.
+- `/ploop:docent`는 루프의 진행 상황을 보고합니다. **동일한 디렉토리의 별도 session**에서 실행하세요: 질문은 docent에게 하고, loop session은 건드리지 않습니다.
 
 </details>
 
@@ -79,7 +79,7 @@ tx는 에이전트가 알아서 사용합니다. 모든 변경은 무결성 경�
 /refine:code [영역] · /refine:docs [영역]
 ```
 
-기술 부채를 제거하는 레포지토리 전역 워크플로우입니다: 코드 architecture, 문서-코드 정합. 표현 계층만 만지며 behavior는 바꾸지 않습니다. codebase 전체를 훑느라 한 번에 10시간 이상 걸릴 수 있고, 진행은 `/workflows`에서 봅니다.
+기술 부채를 제거하는 레포지토리 전역 워크플로우입니다: 코드 architecture, 문서-코드 정합. 표현 계층만 만지며 behavior는 바꾸지 않습니다. codebase 전체를 훑느라 한 번에 10시간 이상 걸릴 수 있고, 진행은 `/workflows`에서 봅니다. loop처럼 무인으로 돌며 bypassPermissions session에서만 시작합니다.
 
 ---
 
