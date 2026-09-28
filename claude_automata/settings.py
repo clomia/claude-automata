@@ -17,8 +17,8 @@ PREREQUISITES = {
 
 # Claude Code grants these modes only from user, managed, or command-line
 # settings; from a repository's settings they are ignored and shadow the
-# user's own mode, dropping the session to Manual.  Autonomous runs check the
-# mode themselves when they start.
+# user's own mode — bypassPermissions drops the session to Manual, auto to the
+# built-in default.  Autonomous runs check the mode themselves when they start.
 IGNORED_MODES = ("bypassPermissions", "auto")
 
 

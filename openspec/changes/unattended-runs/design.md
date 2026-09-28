@@ -47,31 +47,34 @@ heartbeat sleeper 누적 — 별개 결함. dialog 기한·usage-limit 설정의
    `scriptPath`, 또는 args가 싣는 `principlesPath`. live 시험에서 `scriptPath`가 도구 검증에 걸리자
    모델이 같은 run을 inline `script`로 다시 넘기려 했다 — `scriptPath`만 보면 그 run은 무인 표시와 mode
    검사를 건너뛴다. args의 `principlesPath`는 inline 전달·재개(같은 args)에도 남는다.
-5. **plugin마다 자기 guard.** 공유 plugin·공유 marker는 기각: plugin 간 상태 경로는 plugin id(마켓
-   이름 포함)에 묶이고, session scratchpad는 system temp라 며칠짜리 run의 marker를 못 버틴다. 계약
-   문장은 root ARCHITECTURE에 한 번 두고, 각 plugin은 자기 범위 판정과 사유 문구를 소유한다 — 사유는
-   run의 맥락이 다르다(loop main vs Agora worker). 형태 일관은 plugin runner의 선례처럼 repo 수준
-   test가 결속한다.
+5. **plugin마다 자기 guard, 답은 한 문장.** 공유 plugin·공유 marker는 기각: plugin 간 상태 경로는
+   plugin id(마켓 이름 포함)에 묶이고, session scratchpad는 system temp라 며칠짜리 run의 marker를 못
+   버틴다. plugin runtime은 code를 나누지 않으므로(project-unit 격리) 범위 판정은 각 plugin이 갖고, 답은
+   두 사본이 글자 그대로 같다 — 에이전트가 할 일은 run의 종류와 무관하다. 계약 문장은 root
+   ARCHITECTURE에 한 번 두고, repo 수준 test가 등록 형태와 **실제 runner가 같은 event에 내는 답**을 함께
+   결속한다(plugin runner의 선례). 사본이 결속 없이 갈리는 것은 검수가 실제로 잡아냈다.
 6. **멈춤 기록은 ploop만, loop.log에.** Notification `permission_prompt`·`elicitation_dialog`·
    `elicitation_url_dialog`·`quota_auto_resume_stale`·`quota_auto_resume_disabled`만 멈춤이다
    (`idle_prompt`는 정상 idle). loop.log는 advisor·docent가 읽는 유일한 기록이라 `[[ Stall - ts ]]`가
    세 번째 entry 형이 된다 — 새 파일은 읽는 자가 없다. refine은 기록할 자리가 없고(Agora 경로는 hook이
    모른다) workflow 화면이 멈춘 agent를 보인다.
 7. **init은 mode를 쓰지 않고, 무시되는 값을 걷는다.** project scope의 `bypassPermissions`·`auto`는
-   무효이고 user scope mode를 가려 Manual을 만든다(2.1.283 번들: "only policy/user/flag settings may
-   grant bypass mode"). 이전 init이 쓴 값을 제거해 기존 도입처도 수렴한다. 다른 값(`plan` 등)은 사용자
-   선택이라 둔다.
+   무효이고 user scope mode를 가린다 — `bypassPermissions`는 Manual로, `auto`는 built-in default로 떨어진다
+   (2.1.283 번들: "only policy/user/flag settings may grant bypass mode"; permission-modes 문서). 이전
+   init이 쓴 값을 제거해 기존 도입처도 수렴한다. 다른 값(`plan` 등)은 사용자 선택이라 둔다.
 
 ## Risks / Trade-offs
 
-- [run 뒤 같은 session으로 돌아온 사람의 질문·승인 요청도 deny] → 전제대로 수용: 사람 작업은 새
-  session. deny는 안전 방향이다.
+- [run 뒤 같은 session으로 돌아온 사람도 guard를 받는다] → 전제대로 수용: 사람 작업은 새 session.
+  질문·승인 요청이 deny되고, Manual처럼 묻는 mode로 `--resume`하면 모든 권한 요청이 deny돼 session을
+  사실상 쓸 수 없다 — deny는 안전 방향이다.
 - [run 없는 session에서도 permission prompt마다 plugin hook이 uv로 한 번 뜬다] → 첫 판정(marker 부재)에서
   즉시 exit 0. prompt가 드문 bypass·auto에서 무시할 수준.
 - [harness가 새 dialog를 PermissionRequest 밖에 둔다] → Notification 멈춤 기록이 드러내고, 대응은 다음
   change.
-- [hook 실패(uv 부재 등)] → 결정 없음 = 평소 dialog. launch·arm은 uv 없이 거부되므로 무인 run은 시작
-  자체가 안 된다.
+- [hook 실패(uv 부재 등)] → 결정 없음 = 평소 dialog. 무인 run은 시작하지 못한다: ploop은 uv 없이
+  launch·on을 차단하고, refine은 bootstrap이 아무것도 찍지 못해 발사할 Workflow 호출이 없다. 남는 틈은
+  uv 없는 session에서 이전 호출을 재발행하는 경우 하나다.
 
 ## Migration Plan
 

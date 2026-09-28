@@ -620,8 +620,9 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
 - **docent의 해설은 기록 기반 추론이다** — 기록에 없는 "왜"의 재구성은 오귀속할 수 있다. 교리의
   관측/추론 구분·round 인용이 그 경계를 표시하고, compaction 이후에는 main도 그 기억을 갖지 않으므로
   기록이 최선의 증인이라는 전제는 advisor loop와 공유한다.
-- **무인 session으로 돌아온 사람도 guard를 받는다** — 질문·승인 요청이 deny된다(결정 25). 무인 판정은
-  session 단위라 사람의 작업은 새 session으로 한다. deny는 안전 방향이라 해악은 불편에 그친다.
+- **무인 session으로 돌아온 사람도 guard를 받는다** — 질문·승인 요청이 deny되고(결정 25), Manual처럼 묻는
+  mode로 `--resume`하면 모든 권한 요청이 deny돼 session을 사실상 쓸 수 없다. 무인 판정은 session
+  단위라 사람의 작업은 새 session으로 한다. deny는 안전 방향이라 해악은 불편에 그친다.
 - **지난 session 기록은 GC 없이 축적된다** — disk의 기록은 무상한 성장한다. 열거는 launch
   directory 범위로 좁아졌고 완료 anchor는 flag로 제외 가능하지만, 기록 자체의 windowing·정리는
   관측 후 별도 작업으로, loop.log 성장과 같은 계열의 한계다.

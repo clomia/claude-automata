@@ -33,24 +33,26 @@ WORKFLOWS = Path(__file__).resolve().parent.parent / "skills"
 
 MODE_REFUSAL = (
     "refine runs unattended and starts only in bypassPermissions mode: start "
-    "Claude Code with `claude --permission-mode bypassPermissions` (a "
-    "repository's settings cannot grant this mode), then launch the workflow "
-    "again."
+    "Claude Code with `claude --permission-mode bypassPermissions`, or Shift+Tab "
+    "back to it if this session offers it (a repository's settings cannot grant "
+    "this mode), then launch the workflow again."
 )
+# The guard's answers — ploop's guard gives the same, word for word
+# (tests/test_unattended_contract.py).
 QUESTION_DENIAL = (
-    "Unattended refine run: nobody is here to answer. Decide yourself, state "
-    "the assumption you made, and continue."
+    "Unattended run: nobody is here to answer. Decide yourself, state the "
+    "assumption you made, and continue."
 )
 PLAN_MODE_DENIAL = (
-    "Unattended refine run: leaving plan mode needs a human's approval, which "
-    "never comes. Plan in your own reasoning and act."
+    "Unattended run: leaving plan mode needs a human's approval, which never "
+    "comes. Plan in your own reasoning and act."
 )
 
 
 def permission_denial(tool: str) -> str:
     return (
-        f"Unattended refine run: no human can approve this {tool} call, so it "
-        "is denied. Do not retry it as written — rework the step so it needs no "
+        f"Unattended run: no human can approve this {tool} call, so it is "
+        "denied. Do not retry it as written — rework the step so it needs no "
         "approval, or leave it undone, record why, and continue. A removal names "
         "its exact absolute path: never /, a top-level directory, ~, the working "
         "directory or its parents, or a variable followed by / or /*."

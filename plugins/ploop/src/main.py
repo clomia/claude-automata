@@ -151,34 +151,29 @@ COMPACT_FIX = '.claude/settings.json: "autoCompactEnabled": true'
 THINKING_FIX = '.claude/settings.json: "alwaysThinkingEnabled": true'
 MODE_FIX = (
     "bypassPermissions mode: the loop runs unattended — start Claude Code with "
-    "`claude --permission-mode bypassPermissions` (a repository's settings "
-    "cannot grant this mode)"
+    "`claude --permission-mode bypassPermissions`, or Shift+Tab back to it if "
+    "this session offers it (a repository's settings cannot grant this mode)"
 )
 
-# Unattended guard (decision 25).  Nobody is at the terminal of a session that
-# launched a loop, so every dialog the harness would hold for a human is
-# answered here: permission requests — questions and plan approval arrive this
-# way too — are denied with a reason the agent can act on, plan mode is refused
-# before entry (entry passes without a decision, but only a human approves the
-# exit), and MCP elicitations are declined.  Nothing is ever allowed: the guard
-# removes the wait, never the approval.  A wait it could not answer is recorded.
+# The unattended guard's answers — refine's guard gives the same, word for word
+# (tests/test_unattended_contract.py).
 QUESTION_DENIAL = (
-    "Unattended loop: nobody is here to answer. Decide yourself, state the "
+    "Unattended run: nobody is here to answer. Decide yourself, state the "
     "assumption you made, and continue."
 )
 PLAN_MODE_DENIAL = (
-    "Unattended loop: leaving plan mode needs a human's approval, which never "
+    "Unattended run: leaving plan mode needs a human's approval, which never "
     "comes. Plan in your own reasoning and act."
 )
 
 
 def permission_denial(tool: str) -> str:
     return (
-        f"Unattended loop: no human can approve this {tool} call, so it is "
+        f"Unattended run: no human can approve this {tool} call, so it is "
         "denied. Do not retry it as written — rework the step so it needs no "
-        "approval, or leave it undone and continue. A removal names its exact "
-        "absolute path: never /, a top-level directory, ~, the working directory "
-        "or its parents, or a variable followed by / or /*."
+        "approval, or leave it undone, record why, and continue. A removal names "
+        "its exact absolute path: never /, a top-level directory, ~, the working "
+        "directory or its parents, or a variable followed by / or /*."
     )
 
 
@@ -274,8 +269,8 @@ def unmet_prerequisites(event: dict) -> list[str]:
 
 
 def append_log_entry(log_path: Path, header: str, body: str) -> None:
-    """The loop log's one entry shape — both entry kinds render through it, so
-    Round and Audit entries can never drift apart."""
+    """The loop log's one entry shape — every entry kind (Round, Audit, Stall)
+    renders through it, so they can never drift apart."""
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     with open(log_path, "a") as f:
         f.write(f"[[ {header} - {timestamp} ]]\n\n{body}\n\n")

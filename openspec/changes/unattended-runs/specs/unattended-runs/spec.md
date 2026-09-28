@@ -61,7 +61,8 @@ session의 것이다(SHALL).
 - permission 요청(critical-path 삭제·ask rule·`AskUserQuestion`·plan 승인 등 hook이 받는 전부)은
   **deny**하되(MUST), 사유는 에이전트가 행동을 바꿀 수 있어야 한다 — 질문이면 스스로 결정하고
   가정을 밝혀 계속하라, 그 밖이면 같은 형태로 재시도하지 말고 승인이 필요 없게 고치거나 미완으로
-  남기고 계속하라, 삭제라면 정확한 절대 경로를 쓰라.
+  남기되 이유를 기록하고 계속하라, 삭제라면 정확한 절대 경로를 쓰라. 두 plugin은 같은 요청에 같은
+  답을 낸다(SHALL).
 - plan mode 진입은 **진입 전에 deny**해야 한다(MUST) — 진입은 승인 없이 통과하지만 이탈(plan
   승인)은 사람만 풀 수 있어, 진입하면 session이 plan mode에 갇힌다.
 - MCP elicitation은 **decline**해야 한다(MUST).

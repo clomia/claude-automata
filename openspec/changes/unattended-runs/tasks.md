@@ -31,7 +31,7 @@
 - [x] 4.1 root `ARCHITECTURE.md`: 무인 계약(접면 계약), init mode 결정 기록
 - [x] 4.2 README.md·README.ko.md·site(en·ko): bypass launch, askUserQuestionTimeout 안내 제거
 - [x] 4.3 이 repo `.claude/settings.json`의 defaultMode 제거
-- [x] 4.4 repo 수준 test: ploop·refine guard 등록 형태 결속
+- [x] 4.4 repo 수준 test: ploop·refine guard의 등록 형태와, 실제 runner가 같은 event에 내는 답의 동일성 결속
 
 ## 5. Verification
 
