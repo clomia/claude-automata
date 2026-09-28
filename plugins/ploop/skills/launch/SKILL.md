@@ -27,7 +27,7 @@ disable-model-invocation: true
 
 - repo에 남을 가치가 생긴 사실·용어 후보는 제시된 candidates 경로에 측정 방법과 함께 축적하라.
   - candidates는 승격 대기열이다. 수시로 비워라. 승격은 repo로, 나머지는 폐기.
-- 사용자와의 소통 수단은 `AskUserQuestion`뿐이다 — 멈춰서 기다리지 마라. 사용은 anchor의 운영 지침을 따르되, 기본은 스스로 판단이다.
+- 사용자는 부재한다. 결정을 구하지도 기다리지도 말고 스스로 내려 전진하라.
 - 완료를 기다릴 작업은 background(shell·`Agent`·`Workflow`)로 실행하라.
   - background가 빌 때까지 round 지침은 주입되지 않으며, 완료가 session을 깨운다.
   - `Monitor`는 외부 channel·감시 같은 ambient process를 live로 돌리는 데만 사용하고 완료 대기에 쓰지 마라.

@@ -20,7 +20,7 @@ advisor를 소집하면 방향·Constraint 대비 상태를 감사받는다. pur
    - [CRITICAL] 사용자의 주장을 사실로 수용하지 마라. **False assumption이 가장 위험하다.** 사용자의 말은 생각이나 의도로 해석하라.
 2. 수집한 정보를 판단 기준으로 쓸 수 있는 축으로 종합하고, Anchor file save path에 markdown 형식으로 purpose를 작성하라.
 3. 사용자가 anchor를 최종 검수하게 하라 — 내용을 모두 출력하지 말고 파일 확인을 요청하라.
-4. 완료 후 anchor text를 복사해 별도 session에 `/ploop:launch [anchor text]` 하라고 안내하라.
+4. 완료 후 `claude --permission-mode bypassPermissions`로 연 별도 session에 anchor text를 `/ploop:launch [anchor text]`로 넘기라고 안내하라.
    - `/ploop:launch`는 파일 경로가 아닌 내용을 copy & paste해야 한다.
 
 # Purpose 규칙

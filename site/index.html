@@ -343,8 +343,8 @@
 <section class="section" id="operating-the-loop">
   <h2><a class="sec-link" href="#operating-the-loop"><span class="sec-no">06</span>OPERATING THE LOOP</a></h2>
   <p class="sec-lede">
-    This is the whole operating surface. Write an anchor, launch it, and step
-    in only when you want to.
+    This is the whole operating surface. Write an anchor and launch it: the
+    loop runs unattended, and nothing in it waits for you.
   </p>
 
     <p class="step-caption">1 · WRITE THE ANCHOR</p>
@@ -353,8 +353,8 @@
 /ploop:define-purpose   <span class="c-muted"># an open-ended purpose</span></code></pre>
 
     <p class="step-caption">2 · LAUNCH</p>
-    <pre class="code-block"><code><span class="c-muted"># in a fresh session: hand the anchor to the loop</span>
-/ploop:launch [anchor text]</code></pre>
+    <pre class="code-block"><code>claude --permission-mode bypassPermissions   <span class="c-muted"># a fresh session - an unattended loop starts only in this mode</span>
+/ploop:launch [anchor text]                   <span class="c-muted"># hand the anchor to the loop</span></code></pre>
 
     <p class="step-caption">3 · OPERATE</p>
     <pre class="code-block"><code>/ploop:off      <span class="c-muted"># pause the loop</span>
@@ -362,7 +362,7 @@
 /ploop:docent   <span class="c-muted"># reports the loop's progress - run in a separate session, same directory</span></code></pre>
 
     <p class="step-caption">4 · KEEP THE REPOSITORY LEAN</p>
-    <pre class="code-block"><code><span class="c-muted"># between missions: hours-long maintenance passes</span>
+    <pre class="code-block"><code><span class="c-muted"># between missions: hours-long unattended passes, in a bypassPermissions session</span>
 /refine:code       <span class="c-muted"># optimizes the code architecture</span>
 /refine:docs       <span class="c-muted"># aligns documentation with the code</span></code></pre>
 

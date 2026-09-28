@@ -5,6 +5,8 @@ ploop은 **advisor loop** — main이 anchor를 향해 자율 항해하고, 독�
 hook이고, loop의 main 역할은 session agent 자신이다. advisor는 **완수 gate**다: loop는
 advisor의 완수 인증으로만 수렴 종료하며, 매 정지의 안전 기계(directive 주입·flight
 recorder·heartbeat·background gate)는 상시 무료로 돌고 advisor는 소집될 때만 과금된다.
+**ploop은 무인 전용이다** — 사람이 개입할 작업은 바닐라 session의 몫이라, loop를 launch한
+session에는 끝까지 사람이 없다는 전제로 dialog를 스스로 답한다(결정 25).
 
 ---
 
@@ -32,7 +34,7 @@ recorder·heartbeat·background gate)는 상시 무료로 돌고 advisor는 소�
 
 main은 advisor loop와 anchor 재주입으로 anchor에 **정박한다(anchored)** — 자기 확신으로
 표류(drift)하지도, compaction으로 anchor를 잃지도 않는다. 종료 권한은 3분할이다: **완수
-인증은 advisor 독점, 비상 정지는 main의 침묵 2회(인증 없음 — 결정 14), pause는 인간의
+인증은 advisor 독점, 비상 정지는 main의 침묵 2회(인증 없음 — 결정 14), pause는 운영자의
 `/ploop:off`**.
 
 ---
@@ -45,7 +47,7 @@ loop 표면만 소유한다.
 | 표면 | 구성 | loop 상태 |
 |---|---|---|
 | **define** | define-mission·define-purpose — anchor를 정의하는 사용자 대화 | 접점 없음 — 산출물은 repo의 anchor 초안(수동 핸드오프) |
-| **loop** | launch·off·on + hooks + advisor·narrator — 작업 본선 | 단독 소유 (hook이 쓴다) |
+| **loop** | launch·off·on + hooks + advisor·narrator — 작업 본선, 무인 | 단독 소유 (hook이 쓴다) |
 | **docent** | docent skill + resolver — launch 이후 사용자 질의 응답 | read-only (hook 0개·쓰기 0개) |
 
 격리의 근거는 두 갈래로 수렴한다. **context 순수성**: launch 후 사용자 개입의 다수는 질의인데,
@@ -103,7 +105,7 @@ main      depth 0  session     full tools    loop main: runs the anchor
   보호된 `~/.claude` 하위인 `CLAUDE_PLUGIN_DATA`는 auto mode Write가 classifier에 막힌다)에 Write해
   chat channel과 격리한다. `Bash` 차단은 임의 부작용(`rm`·test 실행) 방지고, `Agent` 차단은 그 금지의
   proxy 우회(Bash 가진 worker 위임)를 막는 봉인이다 — **감사는 증거를 요구하지 생산하지 않는다.**
-  `Write`만 좁게 연 것은 보고 channel을 위한 의식적 완화다(전제: auto/bypass 권한 mode). 남은
+  `Write`만 좁게 연 것은 보고 channel을 위한 의식적 완화다(전제: bypass 권한 mode — 결정 18). 남은
   read-only 도구(`Read·Glob·Grep·Web*`)로 상태를 실측한다.
 - **narrator는 `Read`·`Write`만 가진 leaf.** hook이 잘라 준 round slice(`round.jsonl`)를 통째로 읽어
   해석하고(hook 측 parsing 없음), narration을 `narration.md`(advisor와 동일 temp channel)에 쓴다 —
@@ -190,7 +192,7 @@ system temp(위 근거). 한 session에 하나의 anchor를 가정해 `session_i
 
 | 파일 | 작성자 | 내용 |
 |---|---|---|
-| `{session}_anchor.md` | launch hook (UserPromptExpansion) | anchor 정의 (외부 보존 anchor) |
+| `{session}_anchor.md` | launch hook (UserPromptExpansion) | anchor 정의 (외부 보존 anchor) · 존재 = 무인 session(결정 25) — 아무도 지우지 않는다 |
 | `{session}_active` | launch hook 생성 · hook 삭제 | 활성화 marker (Stop gate) |
 | `{session}_loop.json` | hook | 5field — `advice_history`(감사 기록, 길이=audit ordinal) · `round_start_line`(slice cut offset) · `anomalies`(연속 이상 counter — audit·working 정지에 0 reset) · `phase`(`fresh` 갓 launch/resume·판정 스킵 → `advising` round 진행 → `converged` 완수 인증·`/ploop:on` 거부) · `round`(진행 중 round ordinal — 매 arm 전진). `{**ledger, ...}` 병합이라 미언급 field 보존(preserve-by-default) |
 | `{session}_round.jsonl` | hook | 이번 round transcript slice `[round_start..end]` (narrator가 통째로 분석) — line cut이라 message parsing 없음 |
@@ -198,7 +200,7 @@ system temp(위 근거). 한 session에 하나의 anchor를 가정해 `session_i
 | `advice.md` (temp) | advisor (`Write`) | 감사 보고 또는 종결 token (유일 channel) — 비보호 temp라 auto mode Write 승인 · main·hook이 읽음 · prose 격리 |
 | `narration.md` (temp) | narrator (`Write`) | round 서사 (advice와 동일 channel) — main이 매 round 직접 생산 지시 · hook이 loop.log로 append · advisor가 최신분을 분석 입력으로 읽음 |
 | `candidates.md` (temp) | main | 승격 대기열 (자유 형식) — launch가 경로를 최초 배달·compaction 재정박이 재공급·directive가 매 round 재안내 · 비어있지 않으면 advisor 입력에 조건부 1행 · launch만 지움(off·on·종료는 보존) · 종료 notice가 잔량 drain을 지시 |
-| `{session}_loop.log` | hook | flight recorder — `[[ Round N ]]` 서사(한 정지 지연)와 `[[ Audit K ]]` 보고 전문의 시간순 append · launch가 `[[ ANCHOR ]]` 원문으로 새로 시작 · advisor의 action-history 입력이자 종료 요약·docent의 소스 |
+| `{session}_loop.log` | hook | flight recorder — `[[ Round N ]]` 서사(한 정지 지연)·`[[ Audit K ]]` 보고 전문·`[[ Stall ]]` 사람을 기다린 dialog(결정 25)의 시간순 append · launch가 `[[ ANCHOR ]]` 원문으로 새로 시작 · advisor의 action-history 입력이자 종료 요약·docent의 소스 |
 | `{session}_advisor_token` | hook | round당 audit 1회 인가 token (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight marker (PreToolUse set · SubagentStop clear) |
 | `{session}_advisor_stopped` | hook | verdict provenance 제2 소스 — advisor 종료 관측 (SubagentStop touch · arm/`/ploop:on` clear) |
@@ -226,9 +228,8 @@ main도 같은 `advice.md`를 읽어 그 보고를 판단하므로 이 파일이
    쓴다. main이 anchor의 지휘(위임·검증)를 시작한다. `active`가 이미 있거나(중복 launch — 진행 중인 anchor를
    덮어쓰고 in-flight advisor를 고아로 만든다) `anchor`가 비어 있으면(arm되지 않은 유령 loop) 확장을
    **차단**한다(`decision: block`) — 상태를 건드리지 않아 돌던 loop가 무사하다.
-2. **prompt 제출은 event가 아니다** — prompt 경로에 hook이 없다(결정 15). 타이핑된 사용자 turn·AskUserQuestion
-   응답·task-notification·scheduled wakeup·ESC 어느 것도 loop 상태를 건드리지 않고, armed loop는 다음
-   정지에서 재개된다.
+2. **prompt 제출은 event가 아니다** — prompt 경로에 hook이 없다(결정 15). 타이핑된 turn·task-notification·
+   scheduled wakeup·ESC 어느 것도 loop 상태를 건드리지 않고, armed loop는 다음 정지에서 재개된다.
 3. **Stop 자동 종료** — advisor 완수 판정·anomaly failsafe 시 `active`를 지운다(위 핵심 loop).
 4. **`/ploop:off`** (off_command) — loop를 **일시정지**한다: `active`만 지우고 round
    상태(ledger·audit-history·round_start_line)는 보존해 `/ploop:on`이 이어받게 한다. background advisor
@@ -239,7 +240,8 @@ main도 같은 `advice.md`를 읽어 그 보고를 판단하므로 이 파일이
    판정하지 않게)하고 이상 counter를 reset하되 audit-history·round_start_line·round는 병합이 보존한 뒤 `active`를 다시
    쓴다. off·anomaly failsafe·예외(ESC·API error·session limit)로 멈춘 stuck loop까지 무엇이든 깨운다(active여도
    차단하지 않는다). 재개 불가는 딱 둘 — `anchor.md`/`loop.log` 부재(재개할 loop 없음)와 `phase ==
-   converged`(advisor 완수 인증 = 진짜 완료; 새 anchor를 launch) — 이때만 **차단**한다.
+   converged`(advisor 완수 인증 = 진짜 완료; 새 anchor를 launch) — 이때만 **차단**한다. arm하는 문이라
+   launch의 prerequisite도 다시 검사한다(결정 18 — mode는 session 중에 바뀐다).
 
 **anchor 정박은 세 겹이다.** 셋 다 anchor *text*의 보존·주입이다 — "흐려지면 anchor.md를 다시 읽어라"류
 pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal drift는 점진적이라 자가감지되지 않는다).
@@ -265,9 +267,13 @@ pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal 
 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
-| **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 + candidates 경로를 `additionalContext`로 배달(결정 21) — `active` 존재·빈 `anchor`·prerequisite(nested cap `<5`·`autoCompactEnabled`·`alwaysThinkingEnabled`) 미충족이면 차단(배달 없음) · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`면 차단 |
+| **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 + candidates 경로를 `additionalContext`로 배달(결정 21) — `active` 존재·빈 `anchor`·prerequisite(nested cap `<5`·`autoCompactEnabled`·`alwaysThinkingEnabled`·bypass 아닌 mode) 미충족이면 차단(배달 없음) · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`·prerequisite 미충족이면 차단 |
 | **SessionStart** | `compact` | compaction 직후 | armed loop면 anchor 원문 + candidates 주소를 `additionalContext`로 재주입(mechanism 2) — 비활성 session은 즉시 exit 0 |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 token 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(round당 audit 1회 rate limit) |
+| **PreToolUse** | `EnterPlanMode` | plan mode 진입 시도 | **guard**(결정 25): 무인 session이면 진입 전 deny — 비무인 session은 무음 |
+| **PermissionRequest** | (전체) | harness가 사람에게 물으려 할 때 | **guard**: 무인 session이면 tool별 사유로 deny(질문·plan 승인 포함) — 비무인 session은 무음 |
+| **Elicitation** | (전체) | MCP server의 입력 요청 | **guard**: 무인 session이면 decline |
+| **Notification** | 멈춤 5종 | 사람을 기다리는 대기 | **guard**: 무인 session이면 loop.log에 `[[ Stall ]]` 기록 |
 | **Stop** | (전체) | main이 종료 시도 | active gate → **background gate**(`background_tasks`: subagent·workflow·running shell 조용히 대기, monitor·비running·그 외 통과) → **in-flight guard** → narration append → 판정(보고/token/오작동/working/bare) → `exit 2`+stderr(standing directive, 종료 시엔 종료 notice+log recap) 또는 `exit 0`(허용) |
 | **Stop** | (전체, `asyncRewake`) | main이 종료 시도 | **heartbeat**(결정 19): armed loop면 arm이 nonce를 기록·handoff하고 wrapper sh 자신이 3h를 잔다 — fire 시 nonce 최신·armed면 `exit 2`로 잠든 session을 깨워 background audit 지시, 아니면 무음 자멸. 비활성 session은 즉시 exit 0 |
 | **SubagentStop** | (전체) | subagent 종료 | `advisor` 종료면 `advisor_running` clear (in-flight 추적) |
@@ -355,7 +361,7 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     unavailable here") — 그 환경에서 호출이 실패하면 main이 param 없이 재시도해 background로 돌고,
     in-flight guard(결정 13)·background gate(결정 16)·완료 알림이 순서를 흡수한다(graceful). 빈
     출력·background 전환은 결정 14·13이 처리한다.
-11. **logging: entry 2형 — `[[ Round N ]]` 서사와 `[[ Audit K ]]` 보고.** round 서사는 그 round를
+11. **logging: entry 3형 — `[[ Round N ]]` 서사·`[[ Audit K ]]` 보고·`[[ Stall ]]` 멈춤(결정 25).** round 서사는 그 round를
     narrator가 서술한 다음 정지에 append되고(한 정지 지연 — narration은 다음 round 초입에 생산된다),
     감사 보고는 읽힌 정지에 전문 그대로 append된다 — 종결 보고도 남는다: token 줄만 제거된 최종
     Audit entry가 종료 직전 기록되어 종결 사유(기한 종결의 미달 요약 포함)가 영속한다(기계 신호
@@ -395,8 +401,8 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     token과 결정 14 failsafe뿐이고(자동 종료), 사용자는 이와 별개로 `/ploop:off`·`/ploop:on`으로
     pause/resume한다(상태 보존). UserPromptSubmit 경로는 task-notification·scheduled wakeup 같은 system
     prompt(`promptSource: system`)도 타고 launch가 background Agent 전개를 권장하므로, prompt를 개입으로
-    취급하면 loop가 자기가 권장한 pattern에 죽는다 — 타이핑된 사용자 turn도 개입이 아니다(AskUserQuestion 응답·
-    mid-turn 지시는 참여, in-band 종결은 결정 14 합의 경로로 advisor에 닿음). ESC 감지도 두지 않는다: interrupt는
+    취급하면 loop가 자기가 권장한 pattern에 죽는다 — 타이핑된 turn도 개입이 아니다(mid-turn 지시는 참여,
+    in-band 종결은 결정 14 합의 경로로 advisor에 닿음). ESC 감지도 두지 않는다: interrupt는
     hook event가 없어 transcript sentinel 판독이 필요한데 형식 의존을 하나 더 심는다 — ESC는 turn만 끊고
     armed loop는 다음 정지에서 재개되며 공식 일시정지는 ESC 후 `/ploop:off`다. 이 정책으로 UserPromptSubmit
     hook이 통째로 사라졌다.
@@ -444,11 +450,15 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     docent에는 보이되, 산출의 판정은 여전히 gate가 소유한다(신뢰 model 불변).
 18. **launch prerequisite assertion 레이어 — init provision + READ-only 검사.** ploop은 비자명한 Claude
     Code 설정에 mechanism이 걸려 있고 Claude Code 변경이 그 default를 뒤집어 환경을 silent하게 바꿀 수
-    있다(nested subagent default 표류 5→1→3 — §왜 subagent인가). `/ploop:launch`가 세 요구를 검사해 미충족을 모아 block하고 각
-    settings.json fix·재시작·relaunch를 한 알람으로 안내한다: ① nested subagent depth pin
+    있다(nested subagent default 표류 5→1→3 — §왜 subagent인가). arm하는 두 문(`/ploop:launch`·`/ploop:on`)이 네 요구를
+    검사해 미충족을 모아 block하고 각 fix를 한 알람으로 안내한다: ① nested subagent depth pin
     `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH >= 5`(orchestration 환경 계약 — loop 기계는 depth 1로 닫힌다),
-    ② `autoCompactEnabled`, ③ `alwaysThinkingEnabled`
-    (permission mode·autoMemory·model은 강제 안 함 — owner 결정). **provision↔enforcement 분리**: settings
+    ② `autoCompactEnabled`, ③ `alwaysThinkingEnabled`, ④ permission mode `bypassPermissions`(무인 전제 —
+    owner 결정 2026-09-28; 결정 25). bypass만이다 — auto는 classifier 연속 3·누적 20 차단 뒤 prompting으로
+    돌아가 guard가 모든 행동을 deny하는 불능 session이 된다. mode는 hook 입력의 `permission_mode`(effective)로
+    읽는다 — harness는 project·local settings의 `bypassPermissions`를 무시하므로 선언 read는 거짓 통과다.
+    mode의 provision은 init이 아니라 운영자다(`claude --permission-mode bypassPermissions` 또는 user
+    settings). (autoMemory·model은 강제 안 함 — owner 결정.) **provision↔enforcement 분리**: settings
     쓰기는 `claude-automata init`의 본업(PREREQUISITES + env `"5"`)이라 거기서 심어 커밋된
     `.claude/settings.json`으로 기여 machine 전체에 전파하고, ploop은 **읽기만** 한다(결정 12 no-write 보존).
     **소스 = effective 우선**: nesting은 env라 `os.environ`(effective)으로 봐 settings.json만 고치고 재시작
@@ -533,6 +543,23 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     1 round 지연, 판독 불가 transcript는 working으로(인내 방향). **수용**: narrator relay만 하고 멈추는
     정지는 tool turn이라 working으로 읽힌다 — 1-tool 작업 round와 line 수로 구분 불능이며, 건강한
     소규모 round의 오판 종료가 정체 zombie의 지연 검출보다 큰 해악이라 이쪽을 택했다.
+25. **무인 guard — 사람을 기다리는 dialog는 없다.** loop를 launch한 session은 그 뒤 끝까지 무인이다 —
+    `anchor.md` 존재가 그 사실이다(launch만 쓰고 아무도 지우지 않는다; 두 번째 marker는 같은 사실의 중복).
+    armed 구간이 아니라 session인 이유: `/ploop:off` 뒤의 turn도 사람 없이 돈다(운영 도구가 off 뒤 정리
+    turn을 시킨다) — 사람의 작업은 새 session의 몫이다. 무인 session에서 `guard` 하나가 네 event를 답한다:
+    PermissionRequest는 tool별 사유로 deny(질문 → 스스로 결정·가정 명시·계속, 그 밖 → 같은 형태 재시도
+    금지·승인이 필요 없게 고치거나 미완으로 두고 계속, 삭제는 정확한 절대 경로), `EnterPlanMode`는 진입 전
+    deny, Elicitation은 decline, 답하지 못한 대기(Notification 5종 — 권한 prompt·elicitation의 6초 대기,
+    usage-limit 자동 재개의 절전 대기·포기)는 loop.log `[[ Stall ]]`. **allow는 없다** — guard는 기다림을
+    없앨 뿐 승인을 대신하지 않는다. 실측(`docs/research/unattended-dialogs-2026.md`, 2.1.283):
+    critical-path 삭제·`AskUserQuestion`·`ExitPlanMode`가 모두 PermissionRequest로 오고 deny는 dialog 없이
+    즉시 적용되며, subagent·workflow agent의 요청도 main의 `session_id`를 싣는다. plan mode만 사전 deny인
+    이유: 진입은 hook 결정 없이 통과하고 이탈만 승인을 요구해("plan approval never auto-resolves on
+    idle"), 이탈을 deny하면 session이 plan mode에 갇힌다. **기각**: tool별 PreToolUse guard(그물이 이미
+    받는다), harness의 critical-path 판정을 shell로 재구현한 사전 guard(형태 열거는 harness 진화마다 자라는
+    부채 — harness가 판정해 그물로 보낸다), dialog 기한 settings의 provision(user scope라 plugin이 줄 수
+    없고 결정 12 — 기본값 `autoContinueAtUsageLimit` true·`dialogExpiry` 5m이 이미 무인에 맞다). 비무인
+    session에서 guard는 marker 부재로 즉시 무음이라 사람의 dialog는 평소대로다.
 
 ---
 
@@ -593,6 +620,8 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
 - **docent의 해설은 기록 기반 추론이다** — 기록에 없는 "왜"의 재구성은 오귀속할 수 있다. 교리의
   관측/추론 구분·round 인용이 그 경계를 표시하고, compaction 이후에는 main도 그 기억을 갖지 않으므로
   기록이 최선의 증인이라는 전제는 advisor loop와 공유한다.
+- **무인 session으로 돌아온 사람도 guard를 받는다** — 질문·승인 요청이 deny된다(결정 25). 무인 판정은
+  session 단위라 사람의 작업은 새 session으로 한다. deny는 안전 방향이라 해악은 불편에 그친다.
 - **지난 session 기록은 GC 없이 축적된다** — disk의 기록은 무상한 성장한다. 열거는 launch
   directory 범위로 좁아졌고 완료 anchor는 flag로 제외 가능하지만, 기록 자체의 windowing·정리는
   관측 후 별도 작업으로, loop.log 성장과 같은 계열의 한계다.
@@ -624,10 +653,10 @@ ploop/
 ├── skills/launch/SKILL.md            # /ploop:launch — 완수 gate notice + orchestrator rules + 응고 계약 + anchor handoff (anchor 저장·활성화는 launch hook)
 ├── skills/off/SKILL.md               # /ploop:off — 일시정지 조용한 고지 (일시정지는 off_command hook)
 ├── skills/on/SKILL.md                # /ploop:on — 재개 확인 고지 (재개·정규화는 on_command hook)
-├── hooks/hooks.json                  # UserPromptExpansion(launch·off·on) + SessionStart(compact) + PreToolUse(Agent) + Stop(gate + asyncRewake heartbeat) + SubagentStop
+├── hooks/hooks.json                  # UserPromptExpansion(launch·off·on) + SessionStart(compact) + PreToolUse(Agent·EnterPlanMode) + PermissionRequest·Elicitation·Notification(guard) + Stop(gate + asyncRewake heartbeat) + SubagentStop
 ├── bin/ploop-hook                    # uv 가용성 check wrapper + heartbeat의 3h 상주(sh가 잔다 — uv는 exec돼도 상주)
 ├── src/                              # hook 구현 (runtime 의존성 없음)
-│   ├── main.py                       # hook entrypoint(stop·pre_tool_use·heartbeat_arm·heartbeat_fire·subagent_stop·reanchor·launch·off_command·on_command)
+│   ├── main.py                       # hook entrypoint(stop·pre_tool_use·heartbeat_arm·heartbeat_fire·subagent_stop·guard·reanchor·launch·off_command·on_command)
 │   ├── docent.py                     # docent resolver — session 열거·기록 경로 해석 (read-only, `docent` console script)
 │   ├── state.py                      # Workspace(session 파일 경로의 단일 창구) + 5field ledger(advice_history·round_start_line·anomalies·phase·round) + phase 상수 · preserve-by-default load/저장
 │   └── prompt.py                     # audit-history format + standing directive 조립(narrator·advisor verbatim 호출·deadline 양방 배달)

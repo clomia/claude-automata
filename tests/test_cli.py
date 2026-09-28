@@ -29,7 +29,7 @@ def test_init_writes_settings_and_reports(tmp_path, monkeypatch, capsys):
 
     assert cli.init() == 0
     data = json.loads((tmp_path / ".claude" / "settings.json").read_text())
-    assert data["permissions"]["defaultMode"] == "bypassPermissions"
+    assert "permissions" not in data
     assert data["enabledPlugins"]["tx@claude-automata"] is True
     out = capsys.readouterr().out
     assert out.splitlines()[0].startswith("claude-automata ")
@@ -83,7 +83,7 @@ def test_plugin_convergence_runs_after_settings_write(tmp_path, monkeypatch):
     assert cli.init() == 0
     final = json.loads(settings_path.read_text())
     assert final["enabledPlugins"]["extra@claude-automata"] is True
-    assert final["permissions"]["defaultMode"] == "bypassPermissions"
+    assert final["model"] == "opus[1m]"
 
 
 def test_init_succeeds_when_plugins_deferred(tmp_path, monkeypatch, capsys):

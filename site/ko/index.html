@@ -346,8 +346,8 @@
 <section class="section" id="operating-the-loop">
   <h2><a class="sec-link" href="#operating-the-loop"><span class="sec-no">06</span>루프 운용 방법</a></h2>
   <p class="sec-lede">
-    운용 표면은 이것이 전부입니다. anchor를 쓰고, launch하고, 원할 때만
-    개입하세요.
+    운용 표면은 이것이 전부입니다. anchor를 쓰고 launch하세요. loop는
+    무인으로 돌며, 그 안에서 당신을 기다리는 일은 없습니다.
   </p>
 
     <p class="step-caption">1 · ANCHOR 작성</p>
@@ -356,8 +356,8 @@
 /ploop:define-purpose   <span class="c-muted"># 끝이 없는 purpose</span></code></pre>
 
     <p class="step-caption">2 · LAUNCH</p>
-    <pre class="code-block"><code><span class="c-muted"># 새 session에서: anchor를 loop에 전달</span>
-/ploop:launch [anchor text]</code></pre>
+    <pre class="code-block"><code>claude --permission-mode bypassPermissions   <span class="c-muted"># 새 session - 무인 loop는 이 mode에서만 시작합니다</span>
+/ploop:launch [anchor text]                   <span class="c-muted"># anchor를 loop에 전달</span></code></pre>
 
     <p class="step-caption">3 · 조작</p>
     <pre class="code-block"><code>/ploop:off      <span class="c-muted"># 루프 일시정지</span>
@@ -365,7 +365,7 @@
 /ploop:docent   <span class="c-muted"># 루프의 진행 상황 보고 - 동일한 디렉토리의 별도 session에서 실행</span></code></pre>
 
     <p class="step-caption">4 · REPOSITORY 정비</p>
-    <pre class="code-block"><code><span class="c-muted"># mission 사이에: 수 시간 소요되는 유지보수 워크플로우</span>
+    <pre class="code-block"><code><span class="c-muted"># mission 사이에: 수 시간 무인으로 도는 유지보수 워크플로우 (bypassPermissions session)</span>
 /refine:code       <span class="c-muted"># 코드 architecture 최적화</span>
 /refine:docs       <span class="c-muted"># 문서를 코드에 정합</span></code></pre>
 

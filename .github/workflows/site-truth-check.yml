@@ -25,14 +25,12 @@ jobs:
                       prereq = ast.literal_eval(node.value)
                   if isinstance(target, ast.Name) and target.id == "MARKETPLACE_REPO":
                       marketplace_repo = ast.literal_eval(node.value)
-          mode = re.search(r'"defaultMode"\]\s*=\s*"([^"]+)"', src)
-          assert prereq and marketplace_repo and mode, "settings.py shape changed — update this check"
+          assert prereq and marketplace_repo, "settings.py shape changed — update this check"
 
           def rep(value):
               return {True: "true", False: "false"}.get(value, str(value))
 
           pairs = [(key, rep(value)) for key, value in prereq.items()]
-          pairs.append(("permissions.defaultMode", mode.group(1)))
 
           surfaces = ["INSTALL.md"]
           failures = []
