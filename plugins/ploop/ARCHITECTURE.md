@@ -97,7 +97,7 @@ main      depth 0  session     full tools    loop main: runs the anchor
 |---|---|---|---|
 | **main** | 전체 (session) | `opus[1m]` 권장 | inherit |
 | **advisor** | 전체 − `Bash·Edit·NotebookEdit·Artifact·Agent` (`Write`는 보고 출력용) | `opus[1m]` | max |
-| **narrator** | `Read` · `Write` (narration 출력용) | `sonnet[1m]` | medium |
+| **narrator** | `Read` · `Write` (narration 출력용) | `claude-sonnet-5[1m]` | medium |
 
 - **advisor는 `Write`로 감사 보고(또는 종결 token)만 쓰고 나머지 부작용 도구는 막혀 있다
   (`disallowedTools: Bash, Edit, NotebookEdit, Artifact, Agent`).** subagent의 최종 message는
@@ -109,8 +109,7 @@ main      depth 0  session     full tools    loop main: runs the anchor
   read-only 도구(`Read·Glob·Grep·Web*`)로 상태를 실측한다.
 - **narrator는 `Read`·`Write`만 가진 leaf.** hook이 잘라 준 round slice(`round.jsonl`)를 통째로 읽어
   해석하고(hook 측 parsing 없음), narration을 `narration.md`(advisor와 동일 temp channel)에 쓴다 —
-  hook이 loop.log에 append하고, advisor가 최신분을 분석 입력으로 읽는다. 원본 slice를 해석하므로
-  `sonnet[1m]`/`medium`이다.
+  hook이 loop.log에 append하고, advisor가 최신분을 분석 입력으로 읽는다.
 - tree가 depth 1에서 닫히므로 depth pin(§왜 subagent인가)은 전량 mission worker들의 몫이다.
 
 ---
@@ -340,8 +339,11 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
    정박 대상은 session 최초 prompt가 아닌 `/ploop:launch` handoff(`anchor.md`)다 — launch hook이
    인자를 verbatim capture하므로 원문과 정확히 일치한다.
 8. **단일 model `opus[1m]`(main·advisor).** 추론 최대화와 compaction 빈도 감소가 같은 선택으로 수렴한다.
-   narrator는 원본 slice를 해석해 서술하므로 `sonnet[1m]`/`medium`이다(`[1m]`은 대형 round slice
-   수용). main은 session model이라 사용자가 `opus[1m]` 실행을 권장한다.
+   narrator는 원본 slice를 해석해 서술하므로 Sonnet/`medium`이다(`[1m]`은 대형 round slice 수용).
+   `claude-sonnet-5[1m]`로 pin한다 — alias `sonnet`이 resolve되는 Sonnet 5.5는 narrator 호출을 첫
+   요청에서 `reasoning_extraction` safeguard 오탐으로 거부한다(`docs/research/narrator-safeguard-2026.md`).
+   Claude Code 측 해소가 재측정되면 alias로 되돌린다. main은 session model이라 사용자가 `opus[1m]`
+   실행을 권장한다.
 9. **advisor 호출은 round당 1회(PreToolUse token gating).** 소집 시점은 main의 판단이지만, 구문을
    벗어난 호출 — directive의 5-section verbatim 대신 main 자기 말이 가거나 한 round에 감사가 중복되는
    것 — 은 `advice.md` channel을 오염시킨다. 매 armed 정지가 1회용 token을 세우고 PreToolUse(matcher
