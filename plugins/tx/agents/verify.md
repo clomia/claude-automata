@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Independent verifier — checks an OpenSpec change against its implementation with a clean context; summoned only when a spec delta moved observable behavior
+description: Clean-context verifier of an OpenSpec change, on its change-id alone. Costly; warranted only by a complex change or a non-obvious edit to complex structure
 disallowedTools: Edit, Write, NotebookEdit
 effort: max
 ---
