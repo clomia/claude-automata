@@ -10,7 +10,7 @@ transaction(tx:open ~ tx:close)은 작업 단위가 아니라 **무결성 경계
 
 # Lifecycle
 
-`tx:open` → `tx:plan`(변경 기록) → `tx:apply`(구현과 verify) → `tx:archive`(동결) →
+`tx:open` → `tx:plan`(변경 기록) → `tx:apply`(구현과 판정) → `tx:archive`(동결) →
 `tx:close`(무결 선언, base로 squash merge). 모두 Skill 도구다.
 close의 닫힌 상태 gate는 close 시점이 아니라 작업 내내의 규율이다.
 

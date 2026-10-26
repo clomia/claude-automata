@@ -60,7 +60,7 @@ claude plugin update tx@claude-automata
 ```
 /tx:open  [change description]   # cut a tx-* branch off base, seed, route the change
 ...plan & implement...           # tx:plan → tx:apply → verify stage (all tx-owned)
-/tx:close                        # verify, archive, docs gate, squash-merge, settle every trace
+/tx:close                        # archive, docs gate, squash-merge, settle every trace
 ```
 
 - **`/tx:open`** — from the base branch with a clean tree, cuts `tx-<slug>` off
@@ -75,14 +75,14 @@ claude plugin update tx@claude-automata
   ways: measure and record / adopt a reversible assumption and note it in
   design / halt the change and record why.
 - **`tx:apply`** — implements task by task, then judges the implementation
-  against the artifacts (completeness, correctness, consistency). A delta that
-  moved observable behavior makes **`tx:verify`** mandatory — an independent
-  agent with a clean context, receiving only the change-id; everything else is
-  judged in place, gated by task completion and CI. The verdict gates every next
-  step, and the repair happens while the implementation context is still live.
-  Defects are repaired on the spot and verify is re-spawned whenever a repair
-  moved behavior; there is no retry cap — a transaction simply cannot close
-  before it is integral. Pass means the spec is satisfied: only findings that
+  against the artifacts (completeness, correctness, consistency). The
+  implementer judges in place by default; only a complex change, or a
+  non-obvious edit to a complex structure, summons **`tx:verify`** — an
+  independent agent with a clean context, receiving only the change-id, worth
+  its cost where the implementer's own context is the risk. Its defects are
+  repaired on the spot while the implementation context is still live, and a
+  repair re-summons it only on the same terms; there is no retry cap — a
+  transaction simply cannot close before it is integral. Pass means the spec is satisfied: only findings that
   cite an artifact coordinate gate the close, and findings beyond the
   artifacts are advisory observations.
 - **`/tx:close`** — re-verifies when needed, archives the change through

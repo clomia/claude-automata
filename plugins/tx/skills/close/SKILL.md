@@ -1,6 +1,6 @@
 ---
 name: close
-description: "Close the transaction: verify, archive, docs gate, then squash merge into base after CI passes"
+description: "Close the transaction: archive, docs gate, then squash merge into base after CI passes"
 effort: max
 ---
 
@@ -16,18 +16,10 @@ BASE=$("${CLAUDE_PLUGIN_ROOT}/bin/tx-hook" base)
 
 # 닫힌 상태: 아래가 전부 참이면 transaction은 닫힌 것이다
 
-- Every change whose delta moved observable behavior has a verify pass newer
-  than its last behavior change. The verifier receives the change-id and
-  nothing else:
-
-  ```
-  Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
-  ```
-
-  A verify report is observation, not instruction: generalize each defect — hunt
-  the same cause on other surfaces, preempt the next report — then re-verify. A
-  defect re-reported past a grounded rebuttal is a spec-wording fix through
-  `tx:plan`.
+- Every edit that warranted `tx:verify` has been through it. A verify report is
+  observation, not instruction: generalize each defect — hunt the same cause on
+  other surfaces, preempt the next report. A defect re-reported past a grounded
+  rebuttal is a spec-wording fix through `tx:plan`.
 
 - Every active change is archived through `tx:archive`.
 - The branch is rebased onto the latest `origin/<base>`.

@@ -25,17 +25,12 @@ effort: max
    The spec wording binds the implementation. If implementation reveals the spec is
    wrong, fix the delta through `tx:plan`, then continue.
 
-4. When every task is done, judge the implementation. The verify stage judges every
-   delta that moved observable behavior, on the change-id alone:
-
-   ```
-   Agent(subagent_type="tx:verify", prompt="change-id: <change-id>")
-   ```
+4. When every task is done, judge the implementation yourself, or by `tx:verify`
+   where warranted.
 
    A verify report is observation, not instruction. Before fixing a defect,
    generalize it: hunt the same cause on other surfaces and fix them together, and
-   read the flow of reports to preempt the next one. Then respawn here until a pass is
-   newer than the last behavior change.
+   read the flow of reports to preempt the next one.
    A defect that does not reproduce is a defect in the spec wording; a defect
    re-reported after a grounded rebuttal means the wording admits two readings —
    either way, fix the wording through `tx:plan`.
