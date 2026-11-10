@@ -2,7 +2,6 @@
 name: apply
 description: Implement the planned change task by task, then judge it
 argument-hint: "[change-id]"
-effort: max
 ---
 
 # 절차
