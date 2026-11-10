@@ -2,7 +2,6 @@
 name: plan
 description: "Plan the change as OpenSpec artifacts: proposal, delta specs, design, tasks"
 argument-hint: "[change intent]"
-effort: max
 ---
 
 squash merge erases branch history. Only the archive of these artifacts preserves the

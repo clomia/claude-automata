@@ -2,7 +2,6 @@
 name: archive
 description: "Archive the completed change: task gate, delta sync into main specs, revalidate"
 argument-hint: "[change-id]"
-effort: high
 ---
 
 Archiving syncs the deltas into the main specs and freezes the change directory under

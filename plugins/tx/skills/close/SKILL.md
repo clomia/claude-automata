@@ -1,7 +1,6 @@
 ---
 name: close
 description: "Close the transaction: archive, docs gate, then squash merge into base after CI passes"
-effort: max
 ---
 
 **`tx:close`는 "전체 상태가 무결하다"는 선언이다.** 무결하지 않으면 닫지 마라.

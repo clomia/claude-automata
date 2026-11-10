@@ -2,7 +2,6 @@
 name: open
 description: "Open a transaction: cut a tx-* branch off base, seed the repo, and route the change"
 argument-hint: "[change description]"
-effort: high
 ---
 
 transaction(tx:open ~ tx:close)은 작업 단위가 아니라 **무결성 경계**다.
