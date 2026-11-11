@@ -25,8 +25,12 @@ advisor는 목표가 완전히 달성되면 loop를 종료한다.
 
 # Mission 규칙
 
-- [IMPORTANT] **Acceptable boundaries**와 **달성 가능한 목표**가 명확히 정의되어야 한다.
+- [IMPORTANT] **Acceptable boundaries**와 **달성할 최종 상태**를 명확히 서술해야 한다.
+- [IMPORTANT] Anchor는 SoT다. 장기간 loop에서도 변하지 않는 거시적인 관점으로 서술해야 한다.
+  - 변할 수 있는 주장이나 디테일한 정보들은 별도 파일로 분리해 `# Reference`로 link해라.
+  - Anchor는 체크리스트가 아니다. 체크리스트는 agent가 anchor로부터 도출해내는 것이다.
+  - agent가 자신의 역할을 깊이 이해할 수 있도록 배경과 근거를 명확히 서술해라.
 - harness(CLAUDE.md, rules 등)가 제공하는 내용은 중복이니 anchor에 넣지 마라.
 - ROI(분량 대비 정보)가 높은 문서를 작성하라 — 중요한 단어만 남기고, 작성 후 더 irreducible하게 줄일 수 있는지 재검토하라.
 - (선택) 마감이 실재하는 mission에만 anchor 최상단 frontmatter로 선언한다: `deadline: 2026-08-04T22:00+09:00`(ISO 8601, timezone 필수). 선언하면 loop가 잔여 시간을 추적해 판정에 반영한다. 미선언이 기본이다 — 마감 없는 mission에 만들어 붙이지 마라.
-- 구조는 Background → Mission → Constraint → Reference 순이다. `# Mission`(달성할 목표)과 `# Constraint`(허용 범위)는 필수, `# Background`(목표의 배경)와 `# Reference`(관련 link — URL·파일 경로)는 선택이며, section은 자유롭게 추가할 수 있다.
+- 구조는 Background → Mission → Constraint → Reference 순이다. `# Mission`(달성할 최종 상태)과 `# Constraint`(허용 범위)는 필수, `# Background`(목표의 배경)와 `# Reference`(URL·파일 경로)는 선택이며, section은 자유롭게 추가할 수 있다.
