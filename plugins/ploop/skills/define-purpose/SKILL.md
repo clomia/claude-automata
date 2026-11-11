@@ -34,4 +34,4 @@ advisor를 소집하면 방향·Constraint 대비 상태를 감사받는다. pur
   - agent가 자신의 역할을 깊이 이해할 수 있도록 배경과 근거를 명확히 서술해라.
 - harness(CLAUDE.md, rules 등)가 제공하는 내용은 중복이니 anchor에 넣지 마라.
 - ROI(분량 대비 정보)가 높은 문서를 작성하라 — 중요한 단어만 남기고, 작성 후 더 irreducible하게 줄일 수 있는지 재검토하라.
-- 구조는 Background → Purpose → Constraint → Reference 순이다. `# Purpose`(나아갈 방향)와 `# Constraint`(허용 범위)는 필수, `# Background`(방향의 배경)와 `# Reference`(관련 link — URL·파일 경로)는 선택이며, section은 자유롭게 추가할 수 있다.
+- 구조는 Background → Purpose → Constraint → Reference 순이다. `# Purpose`(나아갈 방향)와 `# Constraint`(허용 범위)는 필수, `# Background`(방향의 배경)와 `# Reference`(URL·파일 경로)는 선택이며, section은 자유롭게 추가할 수 있다.
