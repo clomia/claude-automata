@@ -9,7 +9,7 @@ ploop의 멈춤 방지 장치(launch 검사·dialog guard·background gate·hear
 - **끝이 운영 도구의 완료 command인 무인 session** — Lora worker의 run은 `done(run)`으로 끝나고 daemon이
   session을 접는다. anchor가 "아무도 인증하지 않는다"고 말해도 launch notice와 매 directive가 그 반대를
   말한다. 완료 command 앞에서 멈춘 session이 loop를 돌았다(Lora 실측 2026-11, transcript census·청구
-  기록): revision 셋에서 각 $10–18·6–10분, brand의 make 하나에서 narrator 482 요청·37분.
+  기록): 짧은 run 셋에서 각 $10–18·6–10분, 긴 run 하나에서 narrator 482 요청·37분.
 - **purpose anchor** — 완수가 없어 advisor의 completion verdict가 대상이 아니고(advisor instruction),
   결정 22는 purpose의 cadence 설계를 선행 과제로 남겼다. narrator·advisor는 purpose loop에서 멈춤 방지
   역할만 하고 조언가로서의 ROI는 매우 낮다(owner, 2026-11-20).
@@ -49,7 +49,8 @@ anchor가 제 끝을 선언할 기반의 관용구가 없다.
 - `plugins/ploop/src/prompt.py`: frontmatter reader(`deadline_status`에서 분리해 공유), loop 종류 판정,
   종류별 loop notice, hold.
 - `plugins/ploop/src/main.py`: launch(`end:` 검사·종류별 배달), stop(hold 분기), pre_tool_use(거부).
-- `plugins/ploop/skills/launch/SKILL.md`(`<notice>` 삭제), `skills/define-purpose/SKILL.md`.
+- `plugins/ploop/skills/launch/SKILL.md`(`<notice>` 삭제), `skills/define-purpose/SKILL.md`,
+  `skills/docent/SKILL.md`(own-end loop의 행로는 transcript에 있다).
 - `plugins/ploop/ARCHITECTURE.md`(결정 26 신설과 접점), `MEMORY.md` 불변식 5, root `ARCHITECTURE.md`의
   ploop × tx 계약(주입되는 것이 directive만이 아니다), tests.
 - Version 0.57.3 → 0.58.0 (`plugin.json`·`pyproject.toml`·`uv.lock`).

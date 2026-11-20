@@ -60,6 +60,11 @@ hold의 계측(읽을 자가 먼저다). define-mission의 제안.
    읽지 않는다 — 불변식 하나를 위해 on에 분기를 두지 않는다). advisor instruction의 purpose 문장(key 없이 이미
    쓰인 purpose anchor는 오늘의 advisor loop로 돈다).
 
+10. **docent 교리는 own-end loop의 행로가 transcript에 있다고 말한다.** 그 loop의 log에는 anchor와
+    `[[ Stall ]]`만 쌓여 "loop log가 유일한 완전 기록"이 거짓이 된다 — define-purpose가 key를 쓰므로 새
+    purpose loop 전부다. 교리 한 절로 고친다. resolver와 docent spec은 그대로다 — 그 요구는 own-end loop에서도
+    성립한다(resolver는 그 loop를 `phase=fresh round=0 audits=0`으로 그린다).
+
 ## Risks / Trade-offs
 
 - [감사와 그 포착이 사라진다] → 끝이 loop 밖에 있다는 anchor 작성자의 선언이 그 대가를 진다. 감사가 필요한

@@ -600,8 +600,8 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     re-attach였다). **결정 22와의 관계**: 자기인증(B안)의 기각 근거는 main의 확신이 감사 여부를 정하는
     역선택인데, 여기서 정하는 자는 anchor의 작성자이고 launch에 한 번이며 main은 바꿀 수 없다. 이 종류가 아끼는
     것은 advisor 호출 1회가 아니라 loop 전부다 — 완료 command 앞에서 멈춘 운영 도구의 worker session에서 첫
-    directive의 narrator는 launch 이후 전부를 읽어, revision 하나에 $10–18·6–10분, make 하나에 narrator 482
-    요청이 들었다(Lora worker 실측 2026-11). purpose anchor는 이 key로 22가 남긴 cadence 과제를 닫는다 —
+    directive의 narrator는 launch 이후 전부를 읽어, 짧은 run의 loop 하나에 $10–18·6–10분, 긴 run에서 narrator
+    482 요청이 들었다(worker session 실측 2026-11). purpose anchor는 이 key로 22가 남긴 cadence 과제를 닫는다 —
     define-purpose가 key를 쓰고 anchor가 제 끝을 스스로 말하게 한다. define-mission은 쓰지 않는다: mission은
     자신을 인증할 advisor를 지킨다.
 

@@ -8,7 +8,7 @@
 - [x] 1.2 `main.py`: launch (the `end:` check, the delivery by kind), stop (the hold right after the
       background gate), pre_tool_use (both loop agents refused under the key)
 - [x] 1.3 `skills/launch/SKILL.md`: the `<notice>` block out; `skills/define-purpose/SKILL.md`: the key and the
-      anchor's own end
+      anchor's own end; `skills/docent/SKILL.md`: an own-end loop's record is its transcript
 
 ## 2. Tests
 
@@ -32,4 +32,4 @@
       technical risk 1, accepted limits, file map); `MEMORY.md` invariant 5; root `ARCHITECTURE.md`'s
       ploop × tx contract, which named only the round directive
 - [x] 4.2 Version 0.57.3 → 0.58.0 (`plugin.json`, `pyproject.toml`, `uv.lock`)
-- [ ] 4.3 `tx:verify` on the change, its findings judged
+- [x] 4.3 `tx:verify` on the change, its findings judged
