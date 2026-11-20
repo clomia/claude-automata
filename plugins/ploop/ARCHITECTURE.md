@@ -18,7 +18,7 @@ anchor가 제 끝을 선언하면(frontmatter `end: own`) 인증할 것이 없�
 - **main** — advisor loop의 main 역할을 하는 session agent(depth 0). anchor를 소유하는
   orchestrator로서 작업을 agent에 위임·검증하고, 완수 판단 시(또는 독립 감사가 필요할 때)
   advisor를 소집한다.
-- **directive** — 매 armed 정지에 주입되는 상비 지침: 끝난 round의 narrator 호출(무조건) +
+- **directive** — advisor loop의 매 armed 정지에 주입되는 상비 지침: 끝난 round의 narrator 호출(무조건) +
   anchor 대조 자기감사 + advisor 호출 구문(조건부 — 소집은 main의 판단). 호출 구문은 hook이
   verbatim으로 조립한다.
 - **hold** — 제 끝을 선언한 anchor의 loop가 매 armed 정지에 directive 대신 받는 것: directive에서
