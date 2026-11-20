@@ -73,6 +73,34 @@ class TestRender:
         assert "# Mission of live" in out
         assert f"{Workspace(tmp_path, 'live').log_path} (" in out
 
+    def test_anchor_head_skips_a_leading_frontmatter_block(self, tmp_path):
+        """A frontmatter block holds the loop's settings, not what the anchor is
+        about — the head is the first line after it.  An unclosed block is no
+        frontmatter, so its `---` is the head."""
+        for session, text in (
+            (
+                "keyed",
+                "---\nend: own\ndeadline: 2099-01-01T00:00Z\n---\n\n# Purpose\nx",
+            ),
+            ("unclosed", "---\nend: own\n# Purpose\nx"),
+        ):
+            ws = seed_session(
+                tmp_path,
+                session,
+                active=True,
+                phase="fresh",
+                rounds=0,
+                mtime=1000.0,
+                project="/w/repo",
+            )
+            ws.anchor_path.write_text(text)
+        out = render(tmp_path, "/w/repo")
+        heads = [line for line in out.splitlines() if "anchor head:" in line]
+        assert sorted(line.split("anchor head:")[1].strip() for line in heads) == [
+            "# Purpose",
+            "---",
+        ]
+
     def test_no_loops(self, tmp_path):
         assert render(tmp_path, "/w/repo") == f"No loops found in {tmp_path}."
 

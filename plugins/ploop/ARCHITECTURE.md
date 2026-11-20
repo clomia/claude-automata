@@ -261,9 +261,10 @@ pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal 
    자리를 메운다).
 3. **mechanism 2(SessionStart `compact` + additionalContext)** — compaction이 올리는 `SessionStart`를
    hook이 받아, armed loop면 **anchor 원문을 additionalContext로 요약 바로 뒤(recency)에 놓는다**
-   (launch의 배달 — loop 종류의 notice·candidates 주소 — 동승, 결정 21·26). re-inject(2)는 5,000token
-   cap에 잘리고 원래 깊이에 남는 반면,
-   이것은 compaction event마다 anchor 전문을 무조건 recency에 박는다 — 실측(2026-09) `compact_boundary`
+   (launch의 배달 — loop 종류의 notice·candidates 주소 — 가 anchor 앞에 동승, 결정 21·26). re-inject(2)는
+   5,000token cap에 잘리고 원래 깊이에 남는 반면,
+   이것은 compaction event마다 anchor 전문을 recency에 박는다(harness의 hook 출력 cap 안에서 — 수용한
+   한계) — 실측(2026-09) `compact_boundary`
    → 요약 → `SessionStart:compact` → `hook_additional_context`, 다음 turn 전이다. **round에 묶지
    않는다**: 종전 형태(`PostCompact` marker를 다음 armed Stop의 directive가 소비)는 background gate에
    잠든 loop에서 그 Stop이 무기한 오지 않아 재주입도 무기한 미뤄졌다(11h·42 stop에 background가 빈
@@ -276,7 +277,7 @@ pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
 | **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 + loop 종류의 notice·candidates 경로를 `additionalContext`로 배달(결정 21·26) — `active` 존재·빈 `anchor`·`own` 아닌 `end:`·prerequisite(nested cap `<5`·`autoCompactEnabled`·`alwaysThinkingEnabled`·bypass 아닌 mode) 미충족이면 차단(배달 없음) · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`·prerequisite 미충족이면 차단 |
-| **SessionStart** | `compact` | compaction 직후 | armed loop면 anchor 원문 + loop 종류의 notice·candidates 주소를 `additionalContext`로 재주입(mechanism 2) — 비활성 session은 즉시 exit 0 |
+| **SessionStart** | `compact` | compaction 직후 | armed loop면 loop 종류의 notice·candidates 주소 + anchor 원문을 `additionalContext`로 재주입(mechanism 2) — 비활성 session은 즉시 exit 0 |
 | **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 token 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(round당 audit 1회 rate limit) · 제 끝을 선언한 anchor의 armed loop면 advisor·narrator 모두 `exit 2` deny(결정 26) |
 | **PreToolUse** | `EnterPlanMode` | plan mode 진입 시도 | **guard**(결정 25): 무인 session이면 진입 전 deny — 비무인 session은 무음 |
 | **PermissionRequest** | (전체) | harness가 사람에게 물으려 할 때 | **guard**: 무인 session이면 tool별 사유로 deny(질문·plan 승인 포함) — 비무인 session은 무음 |
@@ -524,7 +525,7 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     "첫 directive에서의 self-healing"(main의 자발적 이주에 의존)으로는 bound되지 않는다. directive의 상시
     라인은 유지 — launch는 최초 공급, compaction 재정박(mechanism 2)이 재공급, directive(제 끝을 선언한
     anchor의 loop에선 hold)는 매 정지의 재안내로 역할이 갈린다. loop의 종류도 launch가 같은 turn에 말해야 할
-    기계의 사실이라 같은 배달이 주소 앞에 싣고, 재정박이 anchor 뒤에 되싣는다(결정 26).
+    기계의 사실이라 같은 배달이 주소 앞에 싣고, 재정박이 anchor 앞에 되싣는다(결정 26).
     `/ploop:on`·`/ploop:off`는 배제한다: 두 skill 본문은 candidates를 지시하지 않아 해소할 참조가
     없고, 배달 없는 배달은 text의 단조 증가다.
 22. **advisor는 완수 gate다 — per-round 소집 폐지 (2026-08 재설계).** 종전 advisor는 매 round "미고려
@@ -591,14 +592,16 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     narrator·advisor 호출을 모두 `exit 2`로 거부한다 — agent listing이 모든 session에서 advisor를 종결 권위로
     소개하므로, "loop agent 없음"은 hold의 문구가 아니라 gate의 사실이어야 한다. `end:`의 다른 값은 빈
     anchor처럼 launch를 차단한다 — 읽지 못하는 선언이 다른 종류를 며칠 arm해서는 안 된다. 종류는 쓰일 때마다
-    `anchor.md`에서 읽는다: launch만 쓰고 다시 쓰지 않아 main이 도중에 못 바꾸므로 marker가 필요 없다. 선언이
+    `anchor.md`에서 읽는다: launch만 쓰고 loop의 어떤 것도 다시 쓰지 않으므로 marker가 필요 없다. 선언이
     command가 아니라 key인 이유: key를 모르는 구버전 plugin은 그 anchor로 오늘의 advisor loop를 돌 뿐이지만,
     모르는 command는 launch를 실패시킨다. **loop notice는 skill 본문을 떠났다**: 정적 본문은 anchor에 따라
     갈릴 수 없고 그 첫 문장(loop는 advisor의 판정으로만 끝난다)은 이 종류에서 거짓이며, 조건부 문구는 모든
     mission에게 자기 것이 아닌 출구를 알린다 — 그래서 launch hook이 종류의 notice를 queue 주소 앞에 실어
-    보내고(결정 21) 재정박이 anchor 뒤에 되싣는다(종전에 notice를 compaction 너머로 나르던 것은 skill 본문
-    re-attach였다). **결정 22와의 관계**: 자기인증(B안)의 기각 근거는 main의 확신이 감사 여부를 정하는
-    역선택인데, 여기서 정하는 자는 anchor의 작성자이고 launch에 한 번이며 main은 바꿀 수 없다. 이 종류가 아끼는
+    보내고(결정 21) 재정박이 anchor 앞에 되싣는다 — harness는 10,000자를 넘는 hook context를 첫 2,000자
+    미리보기로 넣으므로(공식 hooks 문서), notice와 주소는 어떤 anchor 길이에서도 그 안에 있어야 한다(종전에
+    notice를 compaction 너머로 나르던 것은 skill 본문 re-attach였다). **결정 22와의 관계**: 자기인증(B안)의
+    기각 근거는 main의 확신이 감사 여부를 정하는 역선택인데, 여기서 정하는 자는 anchor의 작성자이고 launch에
+    한 번이며, loop의 어떤 기계도 그 기록을 다시 쓰지 않는다. 이 종류가 아끼는
     것은 advisor 호출 1회가 아니라 loop 전부다 — 완료 command 앞에서 멈춘 운영 도구의 worker session에서 첫
     directive의 narrator는 launch 이후 전부를 읽어, 짧은 run의 loop 하나에 $10–18·6–10분, 긴 run에서 narrator
     482 요청이 들었다(worker session 실측 2026-11). purpose anchor는 이 key로 22가 남긴 cadence 과제를 닫는다 —
@@ -665,6 +668,10 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
 - **제 끝을 선언한 loop에는 감사도 flight recorder도 없다** — 끝이 loop 밖에 있다는 anchor 작성자의
   선언이 그 대가를 진다(결정 26). 기록은 anchor와 `[[ Stall ]]`뿐이라 docent는 그 loop의 행로를
   transcript로 재구성한다.
+- **재정박이 hook 출력 cap에 닿는 anchor 길이가 loop 종류의 notice만큼 줄었다** — 0.57.3이 통째로 싣던
+  9,576–9,863자 anchor(현 queue 경로 기준)가 이제 첫 2,000자 미리보기로 닿는다; 앞에 실린 notice·주소는 그
+  안에 남고 anchor는 re-attach된 skill 본문이 나르므로, notice를 둘째 `SessionStart(compact)` entry로 떼지
+  않는다(결정 26).
 - **docent의 해설은 기록 기반 추론이다** — 기록에 없는 "왜"의 재구성은 오귀속할 수 있다. 교리의
   관측/추론 구분·round 인용이 그 경계를 표시하고, compaction 이후에는 main도 그 기억을 갖지 않으므로
   기록이 최선의 증인이라는 전제는 advisor loop와 공유한다.

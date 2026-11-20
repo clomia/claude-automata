@@ -8,11 +8,10 @@ keeps every holding device of the advisor loop and runs neither loop agent.
 
 ### Requirement: The anchor's frontmatter declares its own end
 
-The anchor's leading frontmatter block — the block `deadline:` is read from — SHALL accept the key `end:`,
-whose one value is `own`. The kind SHALL be read from the anchor the launch recorded, so it holds for the
-loop's whole life. An anchor without the key SHALL launch the advisor loop, unchanged. Any other value SHALL
-block the launch with a reason that names the fix, and the blocked launch SHALL change no loop state and
-deliver nothing: a declared kind the hook cannot read never arms the other kind.
+The anchor's leading frontmatter block — where `deadline:` is read — SHALL accept the key `end:`, whose one
+value is `own`, read from the anchor the launch recorded. An anchor without the key SHALL launch the advisor
+loop, unchanged. Any other value SHALL block the launch with a reason naming the fix, changing no loop state
+and delivering nothing: a declared kind the hook cannot read never arms the other kind.
 
 #### Scenario: Own end declared
 
@@ -22,8 +21,8 @@ deliver nothing: a declared kind the hook cannot read never arms the other kind.
 #### Scenario: Unreadable end
 
 - **WHEN** the frontmatter holds `end:` with any value other than `own`
-- **THEN** the launch is blocked with a reason naming `own` or the key's absence, and no anchor, log or
-  active marker is written
+- **THEN** the launch is blocked with a reason naming `own` or the key's absence, no anchor, log or active
+  marker is written, and the previous anchor's ledger and queue survive
 
 #### Scenario: Key outside the frontmatter
 
@@ -32,12 +31,11 @@ deliver nothing: a declared kind the hook cannot read never arms the other kind.
 
 ### Requirement: The launch says which loop it armed
 
-A launch that arms the loop SHALL deliver in the same turn, ahead of the candidates queue address, the notice
-of the loop's kind: for an advisor loop, that the advisor judges mission completion and the loop ends only by
-its verdict, and that every stop's directive carries the narrator and advisor calls, convened on the main
-agent's judgment; for an own-end loop, that no stop ends it and the anchor says what does. Every
-re-anchoring after a compaction SHALL carry the same notice and address after the anchor. The launch skill
-body SHALL carry no notice of the loop's kind — static text cannot be true of both.
+A launch that arms the loop SHALL deliver in its turn the kind's notice, then the queue address. An advisor
+loop's notice: the advisor judges completion and only its verdict ends the loop; every stop's directive
+carries the narrator and advisor calls, convened at the main agent's judgment. An own-end loop's: no stop ends
+it; the anchor says what does. Every re-anchoring after a compaction SHALL carry both ahead of the anchor,
+and the launch skill body SHALL carry no notice of the kind.
 
 #### Scenario: Advisor loop launched
 
@@ -53,23 +51,33 @@ body SHALL carry no notice of the loop's kind — static text cannot be true of 
 #### Scenario: Compaction re-anchors the kind
 
 - **WHEN** an armed loop's context is compacted
-- **THEN** the re-anchoring carries the anchor, then the notice of its kind and the queue address
+- **THEN** the re-anchoring carries the notice of its kind and the queue address, then the anchor
+
+#### Scenario: A long anchor keeps the notice in view
+
+- **WHEN** the re-anchoring runs past the harness's 10,000-character cap on a hook's context, which then
+  delivers only its first 2,000 characters as a preview
+- **THEN** the notice and the queue address fall within those 2,000 characters
 
 ### Requirement: An own-end loop holds every stop
 
-Every stop of an armed own-end loop that passes the background gate SHALL be blocked (exit 2) with the hold —
-the standing directive with everything of the narrator and the advisor taken out: re-read the anchor and hold
-the state against it; work remains, keep working now; nothing remains, do what the anchor says comes next;
-the candidates queue address. A declared deadline's status line SHALL open the hold, and nothing SHALL act on
-its expiry. The stop SHALL write no loop state — no round slice, no ledger, no audit token — and no count of
-stops SHALL end the loop: it ends only by `/ploop:off` or the session's end. The background gate, the
-heartbeat and the unattended guard SHALL be those of the advisor loop.
+Past the background gate, an armed own-end loop SHALL block (exit 2) every stop with the hold — the
+directive less its narrator and advisor parts: re-read the anchor, hold the state against it; work remains,
+keep working now; nothing remains, do what the anchor says comes next; the queue address. A deadline's
+status SHALL head it, inert at expiry. Stops SHALL neither write loop state nor end the loop;
+`/ploop:off` or the session's end does. Gate, heartbeat and guard SHALL be the advisor loop's.
 
 #### Scenario: Bare stops are held, never ended
 
 - **WHEN** an armed own-end loop stops again and again with nothing in the background and no tool work
 - **THEN** every stop is answered with the hold, the loop stays armed, and no ledger, round slice or audit
   token exists
+
+#### Scenario: A stray in-flight marker does not silence the hold
+
+- **WHEN** an armed own-end loop stops with an advisor in-flight marker left over (an advisor run before the
+  key was read, a missed SubagentStop)
+- **THEN** the stop is answered with the hold, and the marker is left as it was
 
 #### Scenario: Background work waits
 

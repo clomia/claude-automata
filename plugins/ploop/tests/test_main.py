@@ -826,12 +826,16 @@ class TestStop:
         """The same stops — a wait on a background subagent, then three bare
         stops.  The advisor loop arms, declines, then ends (the control).  An
         own-end loop waits as silently, answers every bare stop with the hold
-        alone, and keeps no loop state — so no stop can end it."""
+        alone — past a stray in-flight marker too (an advisor run before the key
+        was read, a missed SubagentStop) — and keeps no loop state, so no stop
+        can end it."""
 
-        def run_stops(session_id, anchor):
+        def run_stops(session_id, anchor, *seeds):
             arrange_anchor(
                 tmp_path, monkeypatch, BARE_WORK, session_id=session_id, anchor=anchor
             )
+            for seed in seeds:
+                (tmp_path / f"{session_id}_{seed}").touch()
             transcript = str(tmp_path / f"{session_id}.jsonl")
             waiting = [{"id": "t1", "type": "subagent", "status": "running"}]
             outcomes = []
@@ -858,7 +862,7 @@ class TestStop:
         assert "has ended" in advisor[3][1]
         assert not (tmp_path / "s1_active").exists()
 
-        own = run_stops("s2", OWN_END_ANCHOR)
+        own = run_stops("s2", OWN_END_ANCHOR, "advisor_running")
         queue_line = format_candidates_notice(Workspace.from_env("s2").candidates_path)
         assert own[0] == (0, "")
         for code, err in own[1:]:
@@ -868,6 +872,7 @@ class TestStop:
             assert queue_line in err
             assert "Agent(" not in err
         assert (tmp_path / "s2_active").exists()
+        assert (tmp_path / "s2_advisor_running").exists()  # left as it was
         for name in ("loop.json", "round.jsonl", "advisor_token"):
             assert not (tmp_path / f"s2_{name}").exists()
 
@@ -1220,40 +1225,32 @@ class TestGuard:
 
 
 class TestReanchor:
-    def test_armed_loop_reenters_anchor_and_queue_address(
-        self, tmp_path, monkeypatch, capsys
-    ):
-        """Right after a compaction the anchor's full text and the candidates
-        address ride additionalContext into the rebuilt context — no round has
-        to arm first, so a loop asleep on the background gate is re-anchored too."""
-        arrange_anchor(tmp_path, monkeypatch, [])
-        reanchor()
-        delivered = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
-        assert delivered["hookEventName"] == "SessionStart"
-        context = delivered["additionalContext"]
-        queue_line = format_candidates_notice(Workspace.from_env("s1").candidates_path)
-        assert "build the thing" in context
-        assert context.index("build the thing") < context.index(queue_line)
-
     @pytest.mark.parametrize(
         "anchor, kind",
         [
             ("build the thing", "The advisor loop is active."),
             (OWN_END_ANCHOR, "No stop ends it — your anchor says what does."),
+            ("build the thing. " * 600, "The advisor loop is active."),
         ],
+        ids=["advisor-loop", "own-end", "past-the-cap"],
     )
-    def test_reanchoring_restores_the_loop_kind(
+    def test_armed_loop_reenters_kind_and_queue_ahead_of_the_anchor(
         self, tmp_path, monkeypatch, capsys, anchor, kind
     ):
-        """The skill body's re-attach used to carry the kind past a compaction;
-        the kind left the body, so the re-anchoring carries it — after the
-        anchor, before the queue address."""
+        """Right after a compaction the launch's delivery — the loop's kind, then
+        the queue address — and the anchor's full text ride additionalContext
+        into the rebuilt context; no round has to arm first, so a loop asleep on
+        the background gate is re-anchored too.  The delivery leads: the harness
+        turns a context over 10,000 characters into a 2,000-character preview,
+        and the kind no longer rides the skill body's re-attach."""
         arrange_anchor(tmp_path, monkeypatch, [], anchor=anchor)
         reanchor()
         delivered = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+        assert delivered["hookEventName"] == "SessionStart"
         context = delivered["additionalContext"]
         queue_line = format_candidates_notice(Workspace.from_env("s1").candidates_path)
-        assert context.index(anchor) < context.index(kind) < context.index(queue_line)
+        assert context.index(kind) < context.index(queue_line) < context.index(anchor)
+        assert context.index(queue_line) + len(queue_line) <= 2000
 
     def test_unarmed_session_is_silent(self, tmp_path, monkeypatch, capsys):
         arrange(tmp_path, monkeypatch, make_stdin())
@@ -1364,9 +1361,17 @@ class TestLaunch:
 
     def test_unreadable_end_blocks_untouched(self, tmp_path, monkeypatch, capsys):
         """`end:` takes `own` or nothing: a kind the hook cannot read must not arm
-        the other kind for days.  Blocked purely — no state, no delivery."""
+        the other kind for days.  Blocked purely, ahead of any reset — the prior
+        anchor's ledger and queue survive, and nothing is written or delivered."""
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
         self.prereqs(tmp_path, monkeypatch)
+        prior = {
+            "s1_loop.json": '{"phase": "converged"}',
+            "ploop_s1_candidates.md": "q",
+        }
+        for name, text in prior.items():
+            (tmp_path / name).write_text(text)
         monkeypatch.setattr(
             "sys.stdin",
             self.make_stdin(
@@ -1381,7 +1386,7 @@ class TestLaunch:
         out = json.loads(capsys.readouterr().out)
         assert out["decision"] == "block"
         assert "`end:` must be `own`, or absent" in out["reason"]
-        assert not list(tmp_path.glob("s1_*"))
+        assert {p.name: p.read_text() for p in tmp_path.glob("*s1_*")} == prior
 
     def test_array_command_args_join_verbatim(self, tmp_path, monkeypatch):
         """The reference schema types command_args as an array while observed
@@ -1503,9 +1508,11 @@ class TestLaunch:
         from the env (unset or below 5, the provisioned pin), compaction and
         thinking from the project settings.json, and the permission mode from
         the event: only bypassPermissions arms an unattended loop, and a mode
-        the event does not carry is not one."""
+        the event does not carry is not one.  The block precedes any reset: the
+        prior anchor's ledger survives."""
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         self.prereqs(tmp_path, monkeypatch, **unmet)
+        (tmp_path / "s1_loop.json").write_text('{"phase": "converged"}')
         monkeypatch.setattr(
             "sys.stdin",
             self.make_stdin(
@@ -1523,6 +1530,7 @@ class TestLaunch:
         assert needle in out["reason"]
         assert not (tmp_path / "s1_active").exists()
         assert not (tmp_path / "s1_anchor.md").exists()
+        assert (tmp_path / "s1_loop.json").read_text() == '{"phase": "converged"}'
 
     def test_multiple_unmet_all_listed_with_restart(
         self, tmp_path, monkeypatch, capsys

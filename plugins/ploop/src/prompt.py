@@ -49,38 +49,39 @@ SELF_AUDIT = (
 )
 
 
-def frontmatter(anchor: str) -> dict[str, str]:
-    """anchor 최상단 frontmatter의 key → 값.
+def split_frontmatter(anchor: str) -> tuple[dict[str, str], str]:
+    """anchor → (최상단 frontmatter의 key → 값, 그 뒤의 본문).
 
     frontmatter는 anchor 첫 줄의 `---`로 열려 다음 `---` 줄로 닫히는 block이다 —
-    닫히지 않은 block은 frontmatter가 아니고, 본문의 `key:`는 산문이다.  같은 key는
-    첫 값이 이긴다.
+    닫히지 않은 block은 frontmatter가 아니고(전부 본문), 본문의 `key:`는 산문이다.
+    같은 key는 첫 값이 이긴다.
     """
     lines = anchor.splitlines()
     if not lines or lines[0].strip() != "---":
-        return {}
-    body = lines[1:]
-    close = next((i for i, line in enumerate(body) if line.strip() == "---"), None)
+        return {}, anchor
+    close = next(
+        (i for i, line in enumerate(lines[1:], 1) if line.strip() == "---"), None
+    )
     if close is None:
-        return {}
+        return {}, anchor
     keys: dict[str, str] = {}
-    for line in body[:close]:
+    for line in lines[1:close]:
         key, sep, value = line.partition(":")
         if sep:
             keys.setdefault(key.strip(), value.strip())
-    return keys
+    return keys, "\n".join(lines[close + 1 :])
 
 
 def own_end(anchor: str) -> bool:
     """True iff the anchor declares its own end (frontmatter `end: own`): its
     loop holds every stop and runs no loop agent (decision 26)."""
-    return frontmatter(anchor).get("end") == OWN_END
+    return split_frontmatter(anchor)[0].get("end") == OWN_END
 
 
 def end_unreadable(anchor: str) -> bool:
     """True iff the frontmatter declares `end:` with a value other than `own` —
     a kind the hook cannot read, which must never arm the other kind."""
-    return frontmatter(anchor).get("end", OWN_END) != OWN_END
+    return split_frontmatter(anchor)[0].get("end", OWN_END) != OWN_END
 
 
 def deadline_status(anchor: str, now: datetime) -> str:
@@ -91,7 +92,7 @@ def deadline_status(anchor: str, now: datetime) -> str:
     여기서는 시각 사실만 만든다 — 판단은 advisor 몫이고, expired가 directive의 소집
     의무화로 이어지는 것도 그 판단의 배달일 뿐이다(결정 20).
     """
-    value = frontmatter(anchor).get("deadline")
+    value = split_frontmatter(anchor)[0].get("deadline")
     if value is None:
         return ""
     try:
@@ -144,11 +145,13 @@ def format_launch_notice(anchor: str, candidates_path: Path) -> str:
 
 def format_anchor_notice(anchor: str, candidates_path: Path) -> str:
     """What re-enters the main context right after a compaction (mechanism 2):
-    the anchor's full text, then the launch's own delivery — everything of the
-    launch a compaction can drop."""
+    everything of the launch a compaction can drop — its own delivery first, then
+    the anchor's full text.  The harness turns a hook context over 10,000
+    characters into a path and a 2,000-character preview, so what leads must be
+    what has to survive at any anchor length (decision 26)."""
     return (
-        f"Your anchor — stay anchored to it:\n\n{anchor}\n\n"
-        f"{format_launch_notice(anchor, candidates_path)}"
+        f"{format_launch_notice(anchor, candidates_path)}\n\n"
+        f"Your anchor — stay anchored to it:\n\n{anchor}"
     )
 
 

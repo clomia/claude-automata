@@ -718,12 +718,13 @@ def reanchor() -> None:
 
     Compaction is the one event that can push the anchor out of the main
     agent's context, and the SessionStart it raises is the hook's channel back
-    in: for an armed loop the anchor's full text — with the candidates queue
-    address, the other launch delivery — rides additionalContext straight into
-    the rebuilt context, right behind the compaction summary (mechanism 2).  No
-    round has to arm first, so a loop sleeping on the background gate is
-    re-anchored the moment its context is rebuilt.  Outside an armed loop the
-    hook is silent.
+    in: for an armed loop the launch's own delivery (the loop's kind, the
+    candidates queue address) and the anchor's full text ride additionalContext
+    straight into the rebuilt context, right behind the compaction summary
+    (mechanism 2) — the delivery first, so it survives the harness cutting a
+    long context to a preview.  No round has to arm first, so a loop sleeping
+    on the background gate is re-anchored the moment its context is rebuilt.
+    Outside an armed loop the hook is silent.
     """
     event = read_event()
     ws = Workspace.from_env(event.get("session_id", ""))

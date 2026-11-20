@@ -26,7 +26,8 @@ anchor가 제 끝을 선언할 기반의 관용구가 없다.
 - PreToolUse(`Agent`)가 그 loop에서 narrator·advisor 호출을 모두 거부한다.
 - `end:`의 다른 값은 launch를 차단한다.
 - loop notice가 launch skill 본문을 떠나 launch hook의 배달로 간다: loop 종류의 notice, 그다음 candidates
-  주소. compaction 재정박이 anchor 뒤에 같은 것을 싣는다. key 없는 anchor에서 notice의 뜻은 그대로고,
+  주소. compaction 재정박이 같은 것을 anchor 앞에 싣는다 — harness는 10,000자를 넘는 hook 출력을 첫
+  2,000자 미리보기로만 넣는다. key 없는 anchor에서 notice의 뜻은 그대로고,
   channel이 skill 본문에서 hook 배달로 옮기며 hook lane의 언어(영어)를 따른다.
 - define-purpose가 key를 쓰고 anchor가 제 끝을 스스로 말하게 한다. define-mission은 그대로다 — mission은
   자신을 인증할 advisor를 지킨다. 이미 쓰인 anchor는 notice의 channel 말고는 오늘과 같다.
@@ -43,12 +44,15 @@ anchor가 제 끝을 선언할 기반의 관용구가 없다.
   anchor의 loop)의 것으로 한정된다.
 - `ploop-candidates`: 차단된 launch는 차단 사유와 무관하게 주소를 배달하지 않는다(사유가 넷이 된다);
   매 정지의 주소 재배달은 directive와 hold 둘 다의 것이다.
+- `ploop-docent`: resolver의 anchor head가 최상단 frontmatter block을 건너뛴다 — 새 purpose anchor는 모두
+  `---`로 연다.
 
 ## Impact
 
 - `plugins/ploop/src/prompt.py`: frontmatter reader(`deadline_status`에서 분리해 공유), loop 종류 판정,
   종류별 loop notice, hold.
 - `plugins/ploop/src/main.py`: launch(`end:` 검사·종류별 배달), stop(hold 분기), pre_tool_use(거부).
+- `plugins/ploop/src/docent.py`: anchor head가 frontmatter 뒤의 첫 줄.
 - `plugins/ploop/skills/launch/SKILL.md`(`<notice>` 삭제), `skills/define-purpose/SKILL.md`,
   `skills/docent/SKILL.md`(own-end loop의 행로는 transcript에 있다).
 - `plugins/ploop/ARCHITECTURE.md`(결정 26 신설과 접점), `MEMORY.md` 불변식 5, root `ARCHITECTURE.md`의

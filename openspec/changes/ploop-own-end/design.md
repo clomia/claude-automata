@@ -23,8 +23,9 @@ hold의 계측(읽을 자가 먼저다). define-mission의 제안.
    기각: 둘째 command(`/ploop:hold`) — 그것을 모르는 구버전 plugin에서 launch가 실패한다; key는 구버전에서
    오늘의 loop로 퇴행할 뿐이다. 기각: launch 인자 flag — anchor 밖의 사실이라 재정박이 잃는다. 기각: 두 값
    (`own`·`never`) — 셋째 줄 한 줄의 차이를 위해 기계에 분기를 둔다.
-2. **종류는 쓰일 때마다 `anchor.md`에서 읽는다 — 새 파일·marker가 없다.** launch만 그 파일을 쓰고 다시
-   쓰지 않으므로 main이 도중에 종류를 바꿀 수 없다.
+2. **종류는 쓰일 때마다 `anchor.md`에서 읽는다 — 새 파일·marker가 없다.** launch만 그 파일을 쓰고 loop의
+   어떤 것도 다시 쓰지 않으므로 종류는 loop의 수명 동안 그대로다. 막는 기계가 있는 것은 아니다 —
+   bypassPermissions의 main은 `active`를 지울 수 있듯 그 파일도 고쳐 쓸 수 있다.
 3. **hold는 standing directive에서 narrator·advisor에 속한 것을 걷어낸 나머지다** — 새 개념이 없다.
    - 자기감사 두 줄은 directive step 2와 한 상수를 공유해 표류하지 않는다(directive의 byte는 그대로다).
    - 셋째 줄 `Nothing remains -> do what your anchor says comes next.`는 끝을 말하지 않는다: 이 loop에서
@@ -46,9 +47,14 @@ hold의 계측(읽을 자가 먼저다). define-mission의 제안.
    기각: 조건부 문구("anchor가 끝을 선언하지 않으면") — 모든 mission에게 자기 것이 아닌 출구를 알린다.
    기각: skill 본문의 shell 전처리로 종류를 계산 — anchor text가 shell을 거치고, hook과 전처리의 순서라는
    비공식 의존을 심는다. launch가 같은 turn에 말해야 할 사실은 기계가 배달한다(결정 21) — loop의 종류가 그런
-   사실이다. 재정박이 launch의 배달을 되싣으므로 notice도 anchor 뒤에 싣는다: 종전에 notice를 compaction
-   너머로 나르던 것은 skill 본문 re-attach였다. key 없는 anchor의 notice는 종전 본문의 번역이다 — hook이
-   조립하는 발신 message는 영어다(root 언어 정책).
+   사실이다. 재정박은 launch의 배달을 anchor **앞에** 되싣는다: harness는 10,000자를 넘는 hook context를
+   파일 경로와 첫 2,000자 미리보기로 바꾸므로(공식 hooks 문서 — 11.6K자 anchor에서 재현), notice와 주소는
+   anchor 길이와 무관하게 그 안에 있어야 한다. 종전에 notice를 compaction 너머로
+   나르던 것은 skill 본문 re-attach였고, 이 순서는 0.57.x부터 긴 anchor에서 가려지던 주소도 되살린다.
+   기각: notice를 둘째 `SessionStart(compact)` hook entry로 분리 — cap이 entry마다 따로 재지므로 notice
+   길이만큼 생긴 띠(cap에 닿는 anchor 길이가 줄었다)까지 없애지만, notice는 어느 쪽이든 보이고 anchor는
+   re-attach된 skill 본문이 나르므로 재정박 entry 하나가 더 단순하다 — 띠는 수용한 한계다. key 없는
+   anchor의 notice는 종전 본문의 번역이다 — hook이 조립하는 발신 message는 영어다(root 언어 정책).
 7. **`end:`의 다른 값은 launch를 차단한다** — 빈 anchor와 같은 차단. 읽지 못하는 선언이 다른 종류를 며칠
    arm해서는 안 된다.
 8. **define-purpose가 key를 쓴다 — 결정 22의 미결에 대한 답이다.** 22는 purpose anchor를 completion
@@ -60,10 +66,12 @@ hold의 계측(읽을 자가 먼저다). define-mission의 제안.
    읽지 않는다 — 불변식 하나를 위해 on에 분기를 두지 않는다). advisor instruction의 purpose 문장(key 없이 이미
    쓰인 purpose anchor는 오늘의 advisor loop로 돈다).
 
-10. **docent 교리는 own-end loop의 행로가 transcript에 있다고 말한다.** 그 loop의 log에는 anchor와
-    `[[ Stall ]]`만 쌓여 "loop log가 유일한 완전 기록"이 거짓이 된다 — define-purpose가 key를 쓰므로 새
-    purpose loop 전부다. 교리 한 절로 고친다. resolver와 docent spec은 그대로다 — 그 요구는 own-end loop에서도
-    성립한다(resolver는 그 loop를 `phase=fresh round=0 audits=0`으로 그린다).
+10. **docent는 frontmatter로 여는 anchor를 읽는다.** own-end loop의 log에는 anchor와 `[[ Stall ]]`만 쌓여
+    "loop log가 유일한 완전 기록"이 거짓이 되므로, 교리가 그 loop의 행로는 transcript에 있다고 말한다.
+    resolver의 anchor head는 최상단 frontmatter block을 건너뛴다 — 새 purpose anchor와 key를 단 worker
+    anchor는 모두 `---`로 열어, 첫 줄은 무엇에 관한 anchor인지 말하지 않는다. block 판정은 hook의 reader 하나를
+    공유한다. 종류의 출력은 두지 않는다 — anchor 본문이 이미 보인다(resolver는 own-end loop를 `phase=fresh
+    round=0 audits=0`으로 그린다).
 
 ## Risks / Trade-offs
 
@@ -77,6 +85,9 @@ hold의 계측(읽을 자가 먼저다). define-mission의 제안.
   `deadline:`만 제안한다. 차단은 launch 시점에 일어나고 fix를 말한다.
 - [hold 8회 뒤 harness가 정지를 통과시키면 session은 heartbeat까지 잔다] → own-end loop는 스스로 끝나지
   않는다는 뜻 그대로다. 잠은 3h로 상한된다.
+- [재정박이 cap에 닿는 anchor 길이가 notice만큼 줄었다 — 현 경로에서 9,576–9,863자 anchor가 0.57.3에선
+  통째로 닿았고 이제 미리보기로 닿는다] → 앞에 실린 notice·주소는 미리보기 안에 남고, anchor는 re-attach된
+  skill 본문이 나른다.
 
 ## Migration Plan
 

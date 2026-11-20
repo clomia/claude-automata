@@ -40,6 +40,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from src.prompt import split_frontmatter
 from src.state import CONVERGED, Workspace, load_ledger
 
 
@@ -125,9 +126,11 @@ def human_size(n: float) -> str:
     return f"{n:.1f}GB"
 
 
-def first_line(path: Path) -> str:
+def anchor_head(path: Path) -> str:
+    """The anchor's first line of prose — a leading frontmatter block holds the
+    loop's settings (deadline, end), not what the anchor is about."""
     try:
-        for line in path.read_text().splitlines():
+        for line in split_frontmatter(path.read_text())[1].splitlines():
             if line.strip():
                 return line.strip()
     except OSError, UnicodeDecodeError:
@@ -154,7 +157,7 @@ def render_session(ws: Workspace) -> str:
         f"  audits={len(ledger['advice_history'])}"
         f"  round_start_line={ledger['round_start_line']}"
         f"  last_activity={iso(last_activity(ws))}",
-        f"  anchor head:     {first_line(ws.anchor_path)}",
+        f"  anchor head:     {anchor_head(ws.anchor_path)}",
         f"  anchor:          {describe(ws.anchor_path)}",
         f"  loop log:        {describe(ws.log_path)}",
         f"  audit history:   {describe(ws.advice_history_path)}",

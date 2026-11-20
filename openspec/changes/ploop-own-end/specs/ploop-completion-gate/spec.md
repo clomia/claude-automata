@@ -2,8 +2,8 @@
 
 ### Requirement: Every armed stop injects the standing round directive
 
-Every stop of an armed advisor loop — a loop whose anchor does not declare its own end (`ploop-own-end`) —
-that passes the background and in-flight gates SHALL be blocked (exit 2) with the standing directive: a
+Every stop of an armed advisor loop (an anchor without `end: own`) that passes the background and
+in-flight gates SHALL be blocked (exit 2) with the standing directive: a
 verbatim narrator call for the round just sliced, the direction to re-read the anchor and keep working while
 work remains, and a verbatim advisor call to run only on a completion judgment or a wanted audit. The
 directive SHALL state that only the advisor can certify completion and SHALL NOT disclose the silent-exit
