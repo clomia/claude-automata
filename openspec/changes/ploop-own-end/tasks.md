@@ -44,5 +44,5 @@
 - [x] 5.3 docent's anchor head skips a leading frontmatter block, through the hook's reader, with a test
 - [x] 5.4 Canon: decision 26 and 21 (the re-anchor order), the anchoring layer 3 and an accepted limit (the
       cap's band); the kind holds because nothing in the loop rewrites `anchor.md`
-- [ ] 5.5 The suite, ruff and `openspec validate --all --strict`; the byte comparison again, with the new
+- [x] 5.5 The suite, ruff and `openspec validate --all --strict`; the byte comparison again, with the new
       expected re-anchor diff stated; `tx:verify` on the change

@@ -124,8 +124,9 @@ main      depth 0  session     full tools    loop main: runs the anchor
 ```
 main round N work ── stops
    |
-   |  <-- Stop hook (active gate, background empty, not in-flight)
+   |  <-- Stop hook (active gate, background empty)
    |        anchor `end: own` -> exit 2 + stderr: the hold (nothing below runs)
+   |        advisor in flight -> exit 0 (its SubagentStop resumes the loop)
    |        read narration.md (round N-1)  -> append [[ Round N-1 ]] to loop.log
    |        read advice.md (a verdict only with provenance:
    |                        token consumed OR advisor stop observed):
