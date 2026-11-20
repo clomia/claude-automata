@@ -86,8 +86,8 @@ glossary는 장기기억 소속이다. ubiquitous language는 모든 agent와 �
    재접지 대상이 아니고, 검증 대상은 그 형식(header·banner·자기완결)이며 삭제는 전이 2종(§docs
    표면 규약)으로만 일어난다.
 5. **응고는 mission 종료에만 걸지 않는다.** loop는 비정상 종료할 수 있다 — loop는 수시로
-   승격하고, advisor가 감사마다 미승격 잔량을 미완으로 표면화하며, 종료 notice가 잔량
-   drain을 지시한다.
+   승격하고, advisor loop에서는 advisor가 감사마다 미승격 잔량을 미완으로 표면화하며 종료 notice가
+   잔량 drain을 지시한다.
 
 ---
 

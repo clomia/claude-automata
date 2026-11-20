@@ -19,8 +19,7 @@ deliver no path — the blocked turn carries only its reason.
 
 #### Scenario: Launch blocked
 
-- **WHEN** the launch is blocked (a loop is already armed, the anchor is empty, or a
-  prerequisite is unmet)
+- **WHEN** the launch is blocked, whatever blocked it
 - **THEN** no queue path is delivered
 
 #### Scenario: Candidate found before the first stop
@@ -33,17 +32,17 @@ deliver no path — the blocked turn carries only its reason.
 ### Requirement: One address, delivered by the loop machinery alone
 
 The candidates queue address SHALL be authored by the loop machinery and never
-inferred by a loop participant. Every round's directive SHALL re-deliver the address
-to the main agent, so a compaction that erases the launch turn cannot strand the
-queue.
+inferred by a loop participant. Every round's directive, and every hold of an own-end
+loop (`ploop-own-end`), SHALL re-deliver the address to the main agent, so a compaction
+that erases the launch turn cannot strand the queue.
 
 #### Scenario: Address survives compaction
 
 - **WHEN** the launch turn has been compacted away
-- **THEN** the next round directive still carries the queue address
+- **THEN** the next round directive, or the next hold, still carries the queue address
 
 #### Scenario: The address is identical across deliveries
 
-- **WHEN** the launch turn and any round's directive both name the queue
+- **WHEN** the launch turn and any directive or hold both name the queue
 - **THEN** both name the same path
 

@@ -13,8 +13,8 @@ NOT), 숨긴 개수를 내용 없는 1행으로 고지해야 한다(SHALL — �
 개수를 1행 고지해야 한다(SHALL). session마다 active 여부(`{session}_active` marker),
 ledger의 phase·round ordinal(`round` field)·감사 수(advice_history 길이)·round_start_line,
 최근 활동 시각(기록과 transcript 통산 최신 mtime — loop 상태 파일은 정지에만 움직이므로
-transcript가 생존 신호다), anchor 첫 줄, 기록 파일 경로(anchor·loop.log·audit history·round
-slice·ledger·candidates)를 출력해야 한다(SHALL). 정렬은 active 우선, 그 안에서 최근 활동
+transcript가 생존 신호다), anchor의 첫 산문 줄(최상단 frontmatter block은 건너뛴다), 기록 파일
+경로(anchor·loop.log·audit history·round slice·ledger·candidates)를 출력해야 한다(SHALL). 정렬은 active 우선, 그 안에서 최근 활동
 순이어야 하며(MUST), 출력은 English여야 한다(MUST).
 
 #### Scenario: active와 converged loop 병렬 열거
@@ -36,6 +36,11 @@ slice·ledger·candidates)를 출력해야 한다(SHALL). 정렬은 active 우�
 
 - **WHEN** 이 directory의 advising loop과 converged loop이 있는 상태에서 `--exclude-converged`로 실행하면
 - **THEN** converged loop은 출력에서 빠지고 제외 개수가 1행 고지된다
+
+#### Scenario: frontmatter로 여는 anchor
+
+- **WHEN** anchor가 최상단 `---` frontmatter block(`deadline:`·`end:`)으로 열린 session을 열거하면
+- **THEN** anchor head는 `---`가 아니라 그 block 뒤의 첫 줄이다
 
 ### Requirement: Data dir 해석 체인
 

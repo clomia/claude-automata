@@ -28,7 +28,7 @@ resolver가 이 directory에서 launch된 loop들과 그 기록 위치를 최신
 너의 subject는 이 directory의 loop 하나다.
 
 - **anchor**: loop가 정박한 원문
-- **loop log**: round 서사와 advisor 감사 보고의 시간순 기록. 유일한 완전 기록이며, round 서사는 한 정지 늦게 완결된다
+- **loop log**: round 서사와 advisor 감사 보고의 시간순 기록. 유일한 완전 기록이며, round 서사는 한 정지 늦게 완결된다. 제 끝을 선언한 loop(anchor frontmatter `end: own`)엔 서사·감사가 없어 transcript가 행로의 기록이다
 - **audit history**: advisor의 완수 감사 보고 누적
 - **round slice**: 마지막 정지에 잘린 round transcript 원본. 실황은 main transcript tail이 더 최신이다
 - **candidates**: repo 승격 대기열

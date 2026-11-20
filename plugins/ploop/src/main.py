@@ -3,7 +3,9 @@
 A hook is code and cannot call tools, so the loop is driven by feedback: stop()
 blocks the main agent's stop (exit 2) and injects the standing round directive —
 narrate the finished round, keep working, or convene the advisor.  The advisor
-is the completion gate: only its verdict certifies completion.  The active
+is the completion gate: only its verdict certifies completion.  An anchor that
+declares its own end (frontmatter `end: own`) has no gate: its loop holds every
+stop, never ends itself, and runs neither loop agent (decision 26).  The active
 marker written at /ploop:launch gates the loop; the unattended guard is gated
 by the session having launched at all (guard).
 
@@ -42,11 +44,14 @@ from pathlib import Path
 
 from src.prompt import (
     deadline_status,
+    end_unreadable,
     format_advice_history,
     format_anchor_notice,
-    format_candidates_notice,
     format_directive,
     format_end_notice,
+    format_hold,
+    format_launch_notice,
+    own_end,
 )
 from src.state import (
     ADVISING,
@@ -164,6 +169,16 @@ QUESTION_DENIAL = (
 PLAN_MODE_DENIAL = (
     "Unattended run: leaving plan mode needs a human's approval, which never "
     "comes. Plan in your own reasoning and act."
+)
+
+# A fact of the gate, not of the hold's wording: every session's agent listing
+# still introduces the advisor as the loop's terminating authority (decision 26).
+OWN_END_REFUSAL = (
+    "This loop's anchor declares its own end — no narrator or advisor runs in it."
+)
+END_VALUE_FIX = (
+    "The anchor's frontmatter `end:` must be `own`, or absent. Fix the anchor and "
+    "launch again."
 )
 
 
@@ -366,6 +381,16 @@ def end_loop(ws: Workspace, ledger: dict, cause: str, *, converged: bool) -> Non
     sys.exit(2)
 
 
+def read_anchor(ws: Workspace) -> str:
+    """The anchor launch recorded — written once and never again, so its
+    frontmatter holds for the loop's life.  Unreadable reads as empty: no
+    deadline, no own end."""
+    try:
+        return ws.anchor_path.read_text()
+    except OSError:
+        return ""
+
+
 def read_transcript_lines(transcript_path: str) -> list[str]:
     """The transcript's lines (append-only, so line numbers stay valid).
 
@@ -393,6 +418,7 @@ def write_round_slice(lines: list[str], round_start: int, out_path: Path) -> Non
 def arm_round(
     ws: Workspace,
     *,
+    anchor: str,
     lines: list[str],
     round_start: int,
     notice: str = "",
@@ -404,11 +430,6 @@ def arm_round(
     its agent wrote nothing, sets the single-use audit token, and injects the
     standing directive — prefixed by `notice` on an anomalous re-arm.
     """
-    try:
-        anchor = ws.anchor_path.read_text()
-    except OSError:
-        anchor = ""
-
     write_round_slice(lines, round_start, ws.round_path)
     directive = format_directive(
         anchor_path=ws.anchor_path,
@@ -433,8 +454,10 @@ def stop() -> None:
     """Stop hook: record the flight, judge the round, then end the loop or arm the next.
 
     Fires on every main-session stop; the active marker gates it (a converged or
-    paused loop has no active marker, so it just passes).  The phase gates the
-    judging: only an "advising" round has anything to read — the first stop after
+    paused loop has no active marker, so it just passes).  Past the background
+    gate, an anchor that declares its own end gets the hold and nothing else —
+    no judging, no state (decision 26).  Otherwise the phase gates the judging:
+    only an "advising" round has anything to read — the first stop after
     a launch or resume ("fresh") arms without judging, and its absent token must
     not read as consumed.  Per advising stop, in order: the narration the main
     agent produced for the previous round is appended to the loop log (the
@@ -481,6 +504,18 @@ def stop() -> None:
         for t in tasks
     ):
         sys.exit(0)
+
+    # Nothing to certify: no slice, ledger, token or count, so no stop can end
+    # an own-end loop — /ploop:off or the session's end does.
+    anchor = read_anchor(ws)
+    if own_end(anchor):
+        sys.stderr.write(
+            format_hold(
+                candidates_path=ws.candidates_path,
+                deadline=deadline_status(anchor, datetime.now().astimezone()),
+            )
+        )
+        sys.exit(2)
 
     ledger = load_ledger(ws.ledger_path)
     phase = ledger["phase"]
@@ -592,19 +627,21 @@ def stop() -> None:
             "round_start_line": len(lines) + 1 if lines else round_start,
         },
     )
-    arm_round(ws, lines=lines, round_start=round_start, notice=notice)
+    arm_round(ws, anchor=anchor, lines=lines, round_start=round_start, notice=notice)
 
 
 def pre_tool_use() -> None:
-    """PreToolUse hook (matcher: Agent): gate the main agent's advisor invocation.
+    """PreToolUse hook (matcher: Agent): gate the main agent's loop agents.
 
     Allow an Agent(ploop:advisor) call only when the single-use audit token a
     Stop hook armed is present — consuming it and marking the advisor in flight,
     so a stop while it runs (e.g. pushed to the background) won't re-arm.  The
     token authorizes one audit per round; a second call in the same round, or a
     call before the first directive armed, is denied so the channel stays clean.
-    Outside an active loop the gate stays out of the way.  The match is exact —
-    ploop:advisor is the registered scoped name the directive spells out — so a
+    The narrator is a read-only leaf and passes ungated — except in an armed
+    own-end loop, which refuses both loop agents and writes nothing (decision
+    26).  Outside an active loop the gate stays out of the way.  The match is
+    exact — the registered scoped names the directive spells out — so a
     delegated worker whose type merely contains "advisor" is neither denied nor
     allowed to consume the token.
     """
@@ -613,10 +650,15 @@ def pre_tool_use() -> None:
     subagent_type = (
         tool_input.get("subagent_type", "") if isinstance(tool_input, dict) else ""
     )
-    if subagent_type != "ploop:advisor":
+    if subagent_type not in ("ploop:advisor", "ploop:narrator"):
         sys.exit(0)
     ws = Workspace.from_env(event.get("session_id", ""))
     if not ws.active_path.exists():
+        sys.exit(0)
+    if own_end(read_anchor(ws)):
+        sys.stderr.write(OWN_END_REFUSAL)
+        sys.exit(2)
+    if subagent_type == "ploop:narrator":
         sys.exit(0)
     if ws.advisor_token_path.exists():
         ws.advisor_token_path.unlink()
@@ -676,12 +718,13 @@ def reanchor() -> None:
 
     Compaction is the one event that can push the anchor out of the main
     agent's context, and the SessionStart it raises is the hook's channel back
-    in: for an armed loop the anchor's full text — with the candidates queue
-    address, the other launch delivery — rides additionalContext straight into
-    the rebuilt context, right behind the compaction summary (mechanism 2).  No
-    round has to arm first, so a loop sleeping on the background gate is
-    re-anchored the moment its context is rebuilt.  Outside an armed loop the
-    hook is silent.
+    in: for an armed loop the launch's own delivery (the loop's kind, the
+    candidates queue address) and the anchor's full text ride additionalContext
+    straight into the rebuilt context, right behind the compaction summary
+    (mechanism 2) — the delivery first, so it survives the harness cutting a
+    long context to a preview.  No round has to arm first, so a loop sleeping
+    on the background gate is re-anchored the moment its context is rebuilt.
+    Outside an armed loop the hook is silent.
     """
     event = read_event()
     ws = Workspace.from_env(event.get("session_id", ""))
@@ -770,26 +813,30 @@ def launch() -> None:
     an array of arguments — both shapes are accepted so a harness update
     cannot corrupt the anchor.
 
-    Three guards block the expansion (block_expansion — pure, turn erased): an
+    Four guards block the expansion (block_expansion — pure, turn erased): an
     armed loop (active marker), because relaunching over it would overwrite the
     anchor and log mid-flight and orphan an in-flight advisor — /ploop:off
     pauses it first; a blank anchor, because the skill body would otherwise
-    announce an activation this hook never armed (a ghost loop); and any unmet
-    Claude Code prerequisite (unmet_prerequisites — nested subagents, auto
-    compaction, thinking, bypassPermissions mode), since a loop launched without
-    them silently degrades or stalls — the notice lists each fix.
+    announce an activation this hook never armed (a ghost loop); a frontmatter
+    `end:` other than `own`, because a kind the hook cannot read must not arm
+    the other kind for days (decision 26); and any unmet Claude Code
+    prerequisite (unmet_prerequisites — nested subagents, auto compaction,
+    thinking, bypassPermissions mode), since a loop launched without them
+    silently degrades or stalls — the notice lists each fix.
 
     A real launch clears the prior anchor's round state, starts the round log
     with the anchor text (an anchor owns one log, and its final summary reads
     the anchor first; the finished log survives ordinary turns), writes the
     anchor, records the launch directory (the provenance docent scopes its
-    listing by), arms the loop, and delivers the candidates queue address into
-    the launch turn.  The skill body directs candidates at that queue, so the
-    address ships with the directive: an address that arrived only at the first
-    stop would leave the opening round to invent its own, and every mechanism
-    keyed to the real queue (the advisor's conditional line, the drain
-    directive, the next launch's reset) would then be reading an empty file
-    while the queue filled elsewhere — a divergence with no signal (decision 21).
+    listing by), arms the loop, and delivers into the launch turn the loop's
+    kind, then the candidates queue address.  The kind is the anchor's fact,
+    which the static skill body cannot state truly for both kinds (decision
+    26).  The skill body directs candidates at the queue, so the address ships
+    with the directive: an address that arrived only at the first stop would
+    leave the opening round to invent its own, and every mechanism keyed to the
+    real queue (the advisor's conditional line, the drain directive, the next
+    launch's reset) would then be reading an empty file while the queue filled
+    elsewhere — a divergence with no signal (decision 21).
     """
     event = read_event()
     if event.get("command_name", "") != "ploop:launch":
@@ -805,6 +852,8 @@ def launch() -> None:
     anchor = str(args).strip()
     if not anchor:
         block_expansion("The anchor is empty. Run it as /ploop:launch <anchor>.")
+    if end_unreadable(anchor):
+        block_expansion(END_VALUE_FIX)
     if unmet := unmet_prerequisites(event):
         block_expansion(PREREQUISITE_HEADER + "\n\n" + "\n".join(unmet))
     ws.clear_round_state()
@@ -812,7 +861,9 @@ def launch() -> None:
     ws.anchor_path.write_text(anchor)
     ws.project_path.write_text(project_dir(event))
     ws.active_path.touch()
-    deliver_context("UserPromptExpansion", format_candidates_notice(ws.candidates_path))
+    deliver_context(
+        "UserPromptExpansion", format_launch_notice(anchor, ws.candidates_path)
+    )
 
 
 def off_command() -> None:

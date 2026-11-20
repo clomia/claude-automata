@@ -7,12 +7,12 @@ disable-model-invocation: false
 
 Anchor file save path: $ARGUMENTS or ANCHOR.md
 
-ploop(advisor loop)은 agent가 오랜 시간 자율적으로 작업하는 loop다.
+ploop은 agent가 오랜 시간 자율적으로 작업하는 loop다.
 anchor는 그 loop를 붙들어 매는 기준 파일로, context가 유실되어도 항상 원문 그대로 보존된다.
 
 **Purpose는 완료 조건 없이 방향만 가진다.**
 agent는 Purpose로부터 **스스로 요구사항을 만들며 나아가야 한다.**
-advisor를 소집하면 방향·Constraint 대비 상태를 감사받는다. purpose loop는 스스로 멈추지 않는다 — `/ploop:off`가 끝이다.
+완수가 없으니 인증할 advisor도 없다 — purpose loop는 정지를 붙들 뿐 감사하지 않는다.
 
 # Instructions
 
@@ -34,4 +34,5 @@ advisor를 소집하면 방향·Constraint 대비 상태를 감사받는다. pur
   - agent가 자신의 역할을 깊이 이해할 수 있도록 배경과 근거를 명확히 서술해라.
 - harness(CLAUDE.md, rules 등)가 제공하는 내용은 중복이니 anchor에 넣지 마라.
 - ROI(분량 대비 정보)가 높은 문서를 작성하라 — 중요한 단어만 남기고, 작성 후 더 irreducible하게 줄일 수 있는지 재검토하라.
+- anchor 최상단 frontmatter로 `end: own`을 선언하고, anchor가 제 끝을 스스로 말하게 하라 — `/ploop:off` 외에는 끝나지 않으며, 남은 일이 없으면 Purpose에서 다음 요구사항을 도출한다.
 - 구조는 Background → Purpose → Constraint → Reference 순이다. `# Purpose`(나아갈 방향)와 `# Constraint`(허용 범위)는 필수, `# Background`(방향의 배경)와 `# Reference`(URL·파일 경로)는 선택이며, section은 자유롭게 추가할 수 있다.
