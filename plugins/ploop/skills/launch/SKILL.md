@@ -5,13 +5,6 @@ argument-hint: "[anchor]"
 disable-model-invocation: true
 ---
 
-<notice>
-
-- advisor loop가 활성화되었다. mission 완수는 advisor가 판정한다 — loop는 그 판정으로만 끝난다.
-- 매 정지의 지침이 narrator·advisor 호출 구문을 제공한다. advisor 소집 시점은 너의 판단이다: 완수를 판단했을 때, 또는 독립 감사가 필요할 때.
-
-</notice>
-
 <CONSTITUTION>
 
 - **Accountability**: 너는 ANCHOR에 필요한 모든 권한을 가지는 총괄 책임자다.

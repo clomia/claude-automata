@@ -5,7 +5,9 @@ round (the narrator call, run by the main agent at depth 1), then judge the stat
 against the anchor — keep working, or convene the advisor when the mission reads
 complete or an independent audit is wanted.  The advisor is the completion gate:
 only its verdict certifies completion, and the directive spells both Agent calls
-out verbatim so nothing is left for the LLM to construct.
+out verbatim so nothing is left for the LLM to construct.  An anchor that
+declares its own end has no gate: its stops get the hold — the directive with
+everything of the narrator and the advisor taken out (decision 26).
 
 The advisor reads five sections in canonical order:
 
@@ -36,30 +38,60 @@ INSTRUCTION_PATH = Path(__file__).resolve().parent.parent / "prompts" / "instruc
 # consumer would silently reopen the keep-working branch past the deadline.
 DEADLINE_EXPIRED_PREFIX = "expired"
 
+# The one value of the frontmatter `end:` key (decision 26).
+OWN_END = "own"
+
+# The anchor self-audit: the directive's step 2 and the hold's opening — one
+# wording, so the two hand-backs of a stop never drift apart.
+SELF_AUDIT = (
+    "Re-read your anchor and hold your state against it.",
+    "Work remains -> keep working now.",
+)
+
+
+def frontmatter(anchor: str) -> dict[str, str]:
+    """anchor 최상단 frontmatter의 key → 값.
+
+    frontmatter는 anchor 첫 줄의 `---`로 열려 다음 `---` 줄로 닫히는 block이다 —
+    닫히지 않은 block은 frontmatter가 아니고, 본문의 `key:`는 산문이다.  같은 key는
+    첫 값이 이긴다.
+    """
+    lines = anchor.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}
+    body = lines[1:]
+    close = next((i for i, line in enumerate(body) if line.strip() == "---"), None)
+    if close is None:
+        return {}
+    keys: dict[str, str] = {}
+    for line in body[:close]:
+        key, sep, value = line.partition(":")
+        if sep:
+            keys.setdefault(key.strip(), value.strip())
+    return keys
+
+
+def own_end(anchor: str) -> bool:
+    """True iff the anchor declares its own end (frontmatter `end: own`): its
+    loop holds every stop and runs no loop agent (decision 26)."""
+    return frontmatter(anchor).get("end") == OWN_END
+
+
+def end_unreadable(anchor: str) -> bool:
+    """True iff the frontmatter declares `end:` with a value other than `own` —
+    a kind the hook cannot read, which must never arm the other kind."""
+    return frontmatter(anchor).get("end", OWN_END) != OWN_END
+
 
 def deadline_status(anchor: str, now: datetime) -> str:
     """anchor frontmatter의 deadline을 now 기준 status로 렌더링 — 미선언이면 "".
 
-    frontmatter는 anchor 첫 줄의 `---`로 열려 다음 `---` 줄로 닫히는 block이고, 그
-    안의 `deadline:` 값은 timezone 있는 ISO 8601이어야 읽힌다 — parse 불가나
-    timezone 부재는 원문을 unreadable로 표면화한다(조용한 무장 해제는 거짓 안심이다).
-    본문의 `deadline:`은 산문이다.  여기서는 시각 사실만 만든다 — 판단은 advisor
-    몫이고, expired가 directive의 소집 의무화로 이어지는 것도 그 판단의 배달일 뿐이다
-    (결정 20).
+    `deadline:` 값은 timezone 있는 ISO 8601이어야 읽힌다 — parse 불가나 timezone
+    부재는 원문을 unreadable로 표면화한다(조용한 무장 해제는 거짓 안심이다).
+    여기서는 시각 사실만 만든다 — 판단은 advisor 몫이고, expired가 directive의 소집
+    의무화로 이어지는 것도 그 판단의 배달일 뿐이다(결정 20).
     """
-    lines = anchor.splitlines()
-    if not lines or lines[0].strip() != "---":
-        return ""
-    body = lines[1:]
-    closes = [i for i, line in enumerate(body) if line.strip() == "---"]
-    if not closes:
-        return ""  # 닫히지 않은 block은 frontmatter가 아니다
-    value = None
-    for line in body[: closes[0]]:
-        key, sep, rest = line.partition(":")
-        if sep and key.strip() == "deadline":
-            value = rest.strip()
-            break
+    value = frontmatter(anchor).get("deadline")
     if value is None:
         return ""
     try:
@@ -76,24 +108,62 @@ def deadline_status(anchor: str, now: datetime) -> str:
     return f"{DEADLINE_EXPIRED_PREFIX} {span} ago"
 
 
+def deadline_header(deadline: str) -> str:
+    """The status line that opens a stop's hand-back — directive or hold — when
+    the anchor declares a deadline."""
+    return f"deadline: {deadline}\n\n" if deadline else ""
+
+
 def format_candidates_notice(candidates_path: Path) -> str:
     """The queue's address, worded once.
 
-    Both deliveries share this line: launch hands it over in the turn that arms the
-    loop, every directive re-delivers it afterwards.  One wording, so the main agent
-    never has two addresses to reconcile.
+    Every delivery shares this line: launch hands it over in the turn that arms the
+    loop, the re-anchoring restores it after a compaction, and every directive or
+    hold re-delivers it at a stop.  One wording, so the main agent never has two
+    addresses to reconcile.
     """
     return f"Your candidates queue: {candidates_path}"
 
 
+def format_launch_notice(anchor: str, candidates_path: Path) -> str:
+    """What the launch delivers in the turn that arms the loop: the loop's kind,
+    then the queue address (decisions 21, 26).  The kind is the anchor's fact, so
+    no static skill body could state it truly for both kinds."""
+    if own_end(anchor):
+        kind = "The loop is active. No stop ends it — your anchor says what does."
+    else:
+        kind = (
+            "The advisor loop is active. The advisor judges mission completion —"
+            " the loop ends only by its verdict.\n"
+            "Every stop's directive carries the narrator and advisor calls. When to"
+            " convene the advisor is your judgment: when you judge the mission"
+            " complete, or when you want an independent audit."
+        )
+    return f"{kind}\n{format_candidates_notice(candidates_path)}"
+
+
 def format_anchor_notice(anchor: str, candidates_path: Path) -> str:
     """What re-enters the main context right after a compaction (mechanism 2):
-    the anchor's full text and the queue address — the two launch deliveries a
-    compaction can drop."""
+    the anchor's full text, then the launch's own delivery — everything of the
+    launch a compaction can drop."""
     return (
         f"Your anchor — stay anchored to it:\n\n{anchor}\n\n"
-        f"{format_candidates_notice(candidates_path)}"
+        f"{format_launch_notice(anchor, candidates_path)}"
     )
+
+
+def format_hold(*, candidates_path: Path, deadline: str = "") -> str:
+    """An own-end loop's hand-back of a stop: the standing directive with
+    everything of the narrator and the advisor taken out (decision 26).  It names
+    no end — no stop ends this loop, so the anchor says what comes next: a run's
+    last act, a purpose's next requirement.  A declared deadline opens it as
+    information; with no advisor to enforce it, no branch closes on an expiry."""
+    lines = (
+        *SELF_AUDIT,
+        "Nothing remains -> do what your anchor says comes next.",
+        format_candidates_notice(candidates_path),
+    )
+    return deadline_header(deadline) + "\n".join(lines) + "\n"
 
 
 def format_advice_history(advice_history: list[str]) -> str:
@@ -149,9 +219,7 @@ def format_directive(
     candidates_pending — emptiness is decided here in code, so a loop that never
     queues candidates keeps its advisor prompt free of the promotion domain.
     """
-    prefix = ""
-    if deadline:
-        prefix = f"deadline: {deadline}\n\n"
+    prefix = deadline_header(deadline)
     deadline_line = ""
     if deadline:
         deadline_line = f"\n                deadline: {deadline}"
@@ -198,8 +266,7 @@ def format_directive(
         )
     else:
         judge = (
-            "2. Re-read your anchor and hold your state against it.\n"
-            "   Work remains -> keep working now.\n\n"
+            "2. " + "\n   ".join(SELF_AUDIT) + "\n\n"
             "3. ONLY when you judge the mission complete — or when you want an\n"
             "   independent audit — run the call below EXACTLY as written:\n\n"
         )

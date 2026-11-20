@@ -14,6 +14,7 @@ narration.md, the two file channels.
 
 import io
 import json
+from pathlib import Path
 
 import pytest
 
@@ -63,6 +64,9 @@ WORK = [{"role": "user", "content": "round directive"}] + [
     for i in range(BARE_STOP_LINE_THRESHOLD + 5)
 ]
 
+# An anchor that declares its own end — "build the thing" under the key alone.
+OWN_END_ANCHOR = "---\nend: own\n---\n\nbuild the thing"
+
 
 def make_stdin(*, session_id="s1", transcript_path="/t.jsonl", background_tasks=None):
     event = {"session_id": session_id, "transcript_path": transcript_path}
@@ -96,6 +100,7 @@ def arrange_anchor(
     main_messages,
     *,
     session_id="s1",
+    anchor="build the thing",
     ledger=None,
     advice=None,
     narration=None,
@@ -111,10 +116,8 @@ def arrange_anchor(
     """
     monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
     (tmp_path / f"{session_id}_active").touch()
-    (tmp_path / f"{session_id}_anchor.md").write_text("build the thing")
-    (tmp_path / f"{session_id}_loop.log").write_text(
-        "[[ ANCHOR ]]\n\nbuild the thing\n\n"
-    )
+    (tmp_path / f"{session_id}_anchor.md").write_text(anchor)
+    (tmp_path / f"{session_id}_loop.log").write_text(f"[[ ANCHOR ]]\n\n{anchor}\n\n")
     if ledger:
         save_ledger(tmp_path / f"{session_id}_loop.json", ledger)
     if advice is not None:
@@ -817,6 +820,77 @@ class TestStop:
         assert str(tmp_path / "ploop_s1_candidates.md") in err
         assert (tmp_path / "ploop_s1_candidates.md").exists()
 
+    def test_own_end_holds_every_stop_where_the_advisor_loop_ends(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """The same stops — a wait on a background subagent, then three bare
+        stops.  The advisor loop arms, declines, then ends (the control).  An
+        own-end loop waits as silently, answers every bare stop with the hold
+        alone, and keeps no loop state — so no stop can end it."""
+
+        def run_stops(session_id, anchor):
+            arrange_anchor(
+                tmp_path, monkeypatch, BARE_WORK, session_id=session_id, anchor=anchor
+            )
+            transcript = str(tmp_path / f"{session_id}.jsonl")
+            waiting = [{"id": "t1", "type": "subagent", "status": "running"}]
+            outcomes = []
+            for background in (waiting, None, None, None):
+                arrange(
+                    tmp_path,
+                    monkeypatch,
+                    make_stdin(
+                        session_id=session_id,
+                        transcript_path=transcript,
+                        background_tasks=background,
+                    ),
+                )
+                with pytest.raises(SystemExit) as exc:
+                    stop()
+                outcomes.append((exc.value.code, capsys.readouterr().err))
+            return outcomes
+
+        advisor = run_stops("s1", "build the thing")
+        assert [code for code, _ in advisor] == [0, 2, 2, 2]
+        assert advisor[0][1] == ""
+        assert "ploop:narrator" in advisor[1][1]
+        assert "certify completion belongs" in advisor[2][1]
+        assert "has ended" in advisor[3][1]
+        assert not (tmp_path / "s1_active").exists()
+
+        own = run_stops("s2", OWN_END_ANCHOR)
+        queue_line = format_candidates_notice(Workspace.from_env("s2").candidates_path)
+        assert own[0] == (0, "")
+        for code, err in own[1:]:
+            assert code == 2
+            assert err.startswith("Re-read your anchor and hold your state against it.")
+            assert "Nothing remains -> do what your anchor says comes next." in err
+            assert queue_line in err
+            assert "Agent(" not in err
+        assert (tmp_path / "s2_active").exists()
+        for name in ("loop.json", "round.jsonl", "advisor_token"):
+            assert not (tmp_path / f"s2_{name}").exists()
+
+    def test_a_deadline_heads_the_hold_as_information(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """An own-end anchor's deadline opens the hold as it opens the directive,
+        and nothing acts on its expiry: no advisor exists to enforce it, so the
+        keep-working branch stays open."""
+        arrange_anchor(
+            tmp_path,
+            monkeypatch,
+            BARE_WORK,
+            anchor="---\nend: own\ndeadline: 2020-01-01T00:00+00:00\n---\n\nbuild",
+        )
+        with pytest.raises(SystemExit) as exc:
+            stop()
+        assert exc.value.code == 2
+        err = capsys.readouterr().err
+        assert err.startswith("deadline: expired")
+        assert "Work remains -> keep working now." in err
+        assert "Agent(" not in err
+
 
 # ── pre_tool_use gating ──
 
@@ -875,6 +949,22 @@ class TestPreToolUse:
             assert exc.value.code == 0
             assert (tmp_path / "s1_advisor_token").exists()  # not consumed
             assert not (tmp_path / "s1_advisor_running").exists()
+
+    def test_own_end_loop_refuses_both_loop_agents(self, tmp_path, monkeypatch, capsys):
+        """No loop agent runs in an own-end loop — a fact of the gate, since every
+        session's agent listing still names the advisor.  The refusal consumes
+        and marks nothing, even past a stray token."""
+        (tmp_path / "s1_active").touch()
+        (tmp_path / "s1_anchor.md").write_text(OWN_END_ANCHOR)
+        (tmp_path / "s1_advisor_token").write_text("")
+        for agent in ("ploop:narrator", "ploop:advisor"):
+            arrange(tmp_path, monkeypatch, make_pretooluse_stdin(subagent_type=agent))
+            with pytest.raises(SystemExit) as exc:
+                pre_tool_use()
+            assert exc.value.code == 2
+            assert "declares its own end" in capsys.readouterr().err
+        assert (tmp_path / "s1_advisor_token").exists()
+        assert not (tmp_path / "s1_advisor_running").exists()
 
 
 # ── heartbeat: the silence timer and its fire phase ──
@@ -1145,6 +1235,26 @@ class TestReanchor:
         assert "build the thing" in context
         assert context.index("build the thing") < context.index(queue_line)
 
+    @pytest.mark.parametrize(
+        "anchor, kind",
+        [
+            ("build the thing", "The advisor loop is active."),
+            (OWN_END_ANCHOR, "No stop ends it — your anchor says what does."),
+        ],
+    )
+    def test_reanchoring_restores_the_loop_kind(
+        self, tmp_path, monkeypatch, capsys, anchor, kind
+    ):
+        """The skill body's re-attach used to carry the kind past a compaction;
+        the kind left the body, so the re-anchoring carries it — after the
+        anchor, before the queue address."""
+        arrange_anchor(tmp_path, monkeypatch, [], anchor=anchor)
+        reanchor()
+        delivered = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+        context = delivered["additionalContext"]
+        queue_line = format_candidates_notice(Workspace.from_env("s1").candidates_path)
+        assert context.index(anchor) < context.index(kind) < context.index(queue_line)
+
     def test_unarmed_session_is_silent(self, tmp_path, monkeypatch, capsys):
         arrange(tmp_path, monkeypatch, make_stdin())
         with pytest.raises(SystemExit) as exc:
@@ -1218,26 +1328,60 @@ class TestLaunch:
         assert saved in log
         assert "prior anchor log" not in log
 
-    def test_arming_launch_delivers_the_candidates_address(
+    def test_arming_launch_delivers_the_loop_kind_then_the_queue_address(
         self, tmp_path, monkeypatch, capsys
     ):
-        """The skill body directs candidates at the queue, so the address ships in
-        the same turn — and it is the very line every directive re-delivers, so the
-        main agent is never left reconciling two addresses."""
+        """The kind is the anchor's fact, so the hook says it — the static skill
+        body cannot be true of both kinds and carries none.  The skill body
+        directs candidates at the queue, so the address follows in the same turn,
+        the very line every directive re-delivers.  `end: own` in the body is
+        prose: an advisor loop."""
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
+        self.prereqs(tmp_path, monkeypatch)
+        queue_line = format_candidates_notice(Workspace.from_env("s1").candidates_path)
+        delivered = {}
+        for anchor in ("do it", OWN_END_ANCHOR, "do it\nend: own"):
+            (tmp_path / "s1_active").unlink(missing_ok=True)
+            monkeypatch.setattr(
+                "sys.stdin",
+                self.make_stdin(
+                    command_name="ploop:launch", command_args=anchor, session_id="s1"
+                ),
+            )
+            launch()
+            out = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+            assert out["hookEventName"] == "UserPromptExpansion"
+            assert out["additionalContext"].endswith(queue_line)
+            delivered[anchor] = out["additionalContext"]
+        assert delivered["do it"].startswith("The advisor loop is active.")
+        assert delivered["do it\nend: own"] == delivered["do it"]
+        own = delivered[OWN_END_ANCHOR]
+        assert "No stop ends it — your anchor says what does." in own
+        assert "advisor" not in own and "narrator" not in own
+        skill = Path(__file__).resolve().parent.parent / "skills/launch/SKILL.md"
+        body = skill.read_text().split("---", 2)[2]
+        assert "advisor" not in body and "narrator" not in body
+
+    def test_unreadable_end_blocks_untouched(self, tmp_path, monkeypatch, capsys):
+        """`end:` takes `own` or nothing: a kind the hook cannot read must not arm
+        the other kind for days.  Blocked purely — no state, no delivery."""
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         self.prereqs(tmp_path, monkeypatch)
         monkeypatch.setattr(
             "sys.stdin",
             self.make_stdin(
-                command_name="ploop:launch", command_args="do it", session_id="s1"
+                command_name="ploop:launch",
+                command_args="---\nend: never\n---\n\ndo it",
+                session_id="s1",
             ),
         )
-        launch()
-        delivered = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
-        assert delivered["hookEventName"] == "UserPromptExpansion"
-        assert delivered["additionalContext"] == format_candidates_notice(
-            Workspace.from_env("s1").candidates_path
-        )
+        with pytest.raises(SystemExit) as exc:
+            launch()
+        assert exc.value.code == 0
+        out = json.loads(capsys.readouterr().out)
+        assert out["decision"] == "block"
+        assert "`end:` must be `own`, or absent" in out["reason"]
+        assert not list(tmp_path.glob("s1_*"))
 
     def test_array_command_args_join_verbatim(self, tmp_path, monkeypatch):
         """The reference schema types command_args as an array while observed

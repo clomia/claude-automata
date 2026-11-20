@@ -5,8 +5,9 @@ ploop은 **advisor loop** — main이 anchor를 향해 자율 항해하고, 독�
 hook이고, loop의 main 역할은 session agent 자신이다. advisor는 **완수 gate**다: loop는
 advisor의 완수 인증으로만 수렴 종료하며, 매 정지의 안전 기계(directive 주입·flight
 recorder·heartbeat·background gate)는 상시 무료로 돌고 advisor는 소집될 때만 과금된다.
-**ploop은 무인 전용이다** — 사람이 개입할 작업은 바닐라 session의 몫이라, loop를 launch한
-session에는 끝까지 사람이 없다는 전제로 dialog를 스스로 답한다(결정 25).
+anchor가 제 끝을 선언하면(frontmatter `end: own`) 인증할 것이 없어, loop는 정지를 붙들기만 하고
+감사하지 않는다(결정 26). **ploop은 무인 전용이다** — 사람이 개입할 작업은 바닐라 session의
+몫이라, loop를 launch한 session에는 끝까지 사람이 없다는 전제로 dialog를 스스로 답한다(결정 25).
 
 ---
 
@@ -20,6 +21,9 @@ session에는 끝까지 사람이 없다는 전제로 dialog를 스스로 답한
 - **directive** — 매 armed 정지에 주입되는 상비 지침: 끝난 round의 narrator 호출(무조건) +
   anchor 대조 자기감사 + advisor 호출 구문(조건부 — 소집은 main의 판단). 호출 구문은 hook이
   verbatim으로 조립한다.
+- **hold** — 제 끝을 선언한 anchor의 loop가 매 armed 정지에 directive 대신 받는 것: directive에서
+  narrator·advisor에 속한 것을 걷어낸 나머지 — anchor 대조 자기감사, 남은 일이 없으면 anchor가 말하는
+  다음, candidates 주소(결정 26).
 - **round** — 정지와 정지 사이의 시간 구간. advisor 호출과 무관하게 매 정지 전진하며,
   narrator가 각 round의 slice를 서사화해 loop.log(flight recorder)에 쌓는다.
 - **candidates** — main이 승격 대기 사실·용어 후보를 측정 방법과 함께 축적하는 작업기억
@@ -35,7 +39,8 @@ session에는 끝까지 사람이 없다는 전제로 dialog를 스스로 답한
 main은 advisor loop와 anchor 재주입으로 anchor에 **정박한다(anchored)** — 자기 확신으로
 표류(drift)하지도, compaction으로 anchor를 잃지도 않는다. 종료 권한은 3분할이다: **완수
 인증은 advisor 독점, 비상 정지는 main의 침묵 2회(인증 없음 — 결정 14), pause는 운영자의
-`/ploop:off`**.
+`/ploop:off`**. 제 끝을 선언한 anchor의 loop에는 앞의 둘이 없다 — 끝은 anchor 자신의 것이고 pause만
+운영자의 것이다(결정 26).
 
 ---
 
@@ -120,6 +125,7 @@ main      depth 0  session     full tools    loop main: runs the anchor
 main round N work ── stops
    |
    |  <-- Stop hook (active gate, background empty, not in-flight)
+   |        anchor `end: own` -> exit 2 + stderr: the hold (nothing below runs)
    |        read narration.md (round N-1)  -> append [[ Round N-1 ]] to loop.log
    |        read advice.md (a verdict only with provenance:
    |                        token consumed OR advisor stop observed):
@@ -191,14 +197,14 @@ system temp(위 근거). 한 session에 하나의 anchor를 가정해 `session_i
 
 | 파일 | 작성자 | 내용 |
 |---|---|---|
-| `{session}_anchor.md` | launch hook (UserPromptExpansion) | anchor 정의 (외부 보존 anchor) · 존재 = 무인 session(결정 25) — 아무도 지우지 않는다 |
+| `{session}_anchor.md` | launch hook (UserPromptExpansion) | anchor 정의 (외부 보존 anchor) · frontmatter가 deadline(결정 20)과 loop의 종류(`end: own` — 결정 26)를 싣는다 · 존재 = 무인 session(결정 25) — 아무도 지우지 않는다 |
 | `{session}_active` | launch hook 생성 · hook 삭제 | 활성화 marker (Stop gate) |
 | `{session}_loop.json` | hook | 5field — `advice_history`(감사 기록, 길이=audit ordinal) · `round_start_line`(slice cut offset) · `anomalies`(연속 이상 counter — audit·working 정지에 0 reset) · `phase`(`fresh` 갓 launch/resume·판정 스킵 → `advising` round 진행 → `converged` 완수 인증·`/ploop:on` 거부) · `round`(진행 중 round ordinal — 매 arm 전진). `{**ledger, ...}` 병합이라 미언급 field 보존(preserve-by-default) |
 | `{session}_round.jsonl` | hook | 이번 round transcript slice `[round_start..end]` (narrator가 통째로 분석) — line cut이라 message parsing 없음 |
 | `{session}_advice_history.md` | hook | advisor 입력의 audit-history (XML `<audit-N>`) |
 | `advice.md` (temp) | advisor (`Write`) | 감사 보고 또는 종결 token (유일 channel) — 비보호 temp라 auto mode Write 승인 · main·hook이 읽음 · prose 격리 |
 | `narration.md` (temp) | narrator (`Write`) | round 서사 (advice와 동일 channel) — main이 매 round 직접 생산 지시 · hook이 loop.log로 append · advisor가 최신분을 분석 입력으로 읽음 |
-| `candidates.md` (temp) | main | 승격 대기열 (자유 형식) — launch가 경로를 최초 배달·compaction 재정박이 재공급·directive가 매 round 재안내 · 비어있지 않으면 advisor 입력에 조건부 1행 · launch만 지움(off·on·종료는 보존) · 종료 notice가 잔량 drain을 지시 |
+| `candidates.md` (temp) | main | 승격 대기열 (자유 형식) — launch가 경로를 최초 배달·compaction 재정박이 재공급·directive(제 끝을 선언한 anchor의 loop에선 hold)가 매 정지 재안내 · 비어있지 않으면 advisor 입력에 조건부 1행 · launch만 지움(off·on·종료는 보존) · 종료 notice가 잔량 drain을 지시 |
 | `{session}_loop.log` | hook | flight recorder — `[[ Round N ]]` 서사(한 정지 지연)·`[[ Audit K ]]` 보고 전문·`[[ Stall ]]` 사람을 기다린 dialog(결정 25)의 시간순 append · launch가 `[[ ANCHOR ]]` 원문으로 새로 시작 · advisor의 action-history 입력이자 종료 요약·docent의 소스 |
 | `{session}_advisor_token` | hook | round당 audit 1회 인가 token (Stop set · PreToolUse 소비) |
 | `{session}_advisor_running` | hook | advisor in-flight marker (PreToolUse set · SubagentStop clear) |
@@ -225,11 +231,13 @@ main도 같은 `advice.md`를 읽어 그 보고를 판단하므로 이 파일이
 
 1. **`/ploop:launch`** (UserPromptExpansion) — 직전 anchor의 round 상태를 reset하고 `anchor.md`·`active`를
    쓴다. main이 anchor의 지휘(위임·검증)를 시작한다. `active`가 이미 있거나(중복 launch — 진행 중인 anchor를
-   덮어쓰고 in-flight advisor를 고아로 만든다) `anchor`가 비어 있으면(arm되지 않은 유령 loop) 확장을
-   **차단**한다(`decision: block`) — 상태를 건드리지 않아 돌던 loop가 무사하다.
+   덮어쓰고 in-flight advisor를 고아로 만든다) `anchor`가 비어 있거나(arm되지 않은 유령 loop) frontmatter
+   `end:`가 `own`이 아니면(읽지 못하는 종류 — 결정 26) 확장을 **차단**한다(`decision: block`) — 상태를
+   건드리지 않아 돌던 loop가 무사하다.
 2. **prompt 제출은 event가 아니다** — prompt 경로에 hook이 없다(결정 15). 타이핑된 turn·task-notification·
    scheduled wakeup·ESC 어느 것도 loop 상태를 건드리지 않고, armed loop는 다음 정지에서 재개된다.
-3. **Stop 자동 종료** — advisor 완수 판정·anomaly failsafe 시 `active`를 지운다(위 핵심 loop).
+3. **Stop 자동 종료** — advisor 완수 판정·anomaly failsafe 시 `active`를 지운다(위 핵심 loop). 제 끝을
+   선언한 anchor의 loop에는 없다(결정 26).
 4. **`/ploop:off`** (off_command) — loop를 **일시정지**한다: `active`만 지우고 round
    상태(ledger·audit-history·round_start_line)는 보존해 `/ploop:on`이 이어받게 한다. background advisor
    in-flight 중에도 무조건 멈추도록 `advisor_running`도 지운다. 종료가 아니라 종료 notice는 없다. `active`가
@@ -247,13 +255,14 @@ pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal 
 
 1. **외부 보존(mechanism 1)** — launch hook이 anchor를 `anchor.md`에 기록한다. transcript와 독립이라 main이
    어떻게 compaction되든 원본이 보존된다. advisor가 감사마다 읽고, mechanism 2가 재주입 소스로 쓴다.
-2. **launch skill 본문 re-inject** — `/ploop:launch` skill 본문은 loop notice와 `<ANCHOR>` 원문을 담고, skill
+2. **launch skill 본문 re-inject** — `/ploop:launch` skill 본문은 `<ANCHOR>` 원문을 담고, skill
    본문은 auto-compact 후에도 re-inject되므로(skill당 앞 5,000token·합산 25,000token 예산) anchor handoff
    text가 main context에 남는다(main session은 custom system prompt를 못 받지만 skill re-inject가 그
    자리를 메운다).
 3. **mechanism 2(SessionStart `compact` + additionalContext)** — compaction이 올리는 `SessionStart`를
    hook이 받아, armed loop면 **anchor 원문을 additionalContext로 요약 바로 뒤(recency)에 놓는다**
-   (candidates 주소 동승 — 결정 21). re-inject(2)는 5,000token cap에 잘리고 원래 깊이에 남는 반면,
+   (launch의 배달 — loop 종류의 notice·candidates 주소 — 동승, 결정 21·26). re-inject(2)는 5,000token
+   cap에 잘리고 원래 깊이에 남는 반면,
    이것은 compaction event마다 anchor 전문을 무조건 recency에 박는다 — 실측(2026-09) `compact_boundary`
    → 요약 → `SessionStart:compact` → `hook_additional_context`, 다음 turn 전이다. **round에 묶지
    않는다**: 종전 형태(`PostCompact` marker를 다음 armed Stop의 directive가 소비)는 background gate에
@@ -266,14 +275,14 @@ pointer는 두지 않는다(agent가 drift를 자각해야 작동하는데 goal 
 
 | Hook | Matcher | 시점 | 동작 |
 |---|---|---|---|
-| **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 + candidates 경로를 `additionalContext`로 배달(결정 21) — `active` 존재·빈 `anchor`·prerequisite(nested cap `<5`·`autoCompactEnabled`·`alwaysThinkingEnabled`·bypass 아닌 mode) 미충족이면 차단(배달 없음) · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`·prerequisite 미충족이면 차단 |
-| **SessionStart** | `compact` | compaction 직후 | armed loop면 anchor 원문 + candidates 주소를 `additionalContext`로 재주입(mechanism 2) — 비활성 session은 즉시 exit 0 |
-| **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 token 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(round당 audit 1회 rate limit) |
+| **UserPromptExpansion** | `ploop:launch` · `ploop:off` · `ploop:on` | slash command 확장(제출 전) | launch: round reset + `anchor`·`active` 기록 + loop 종류의 notice·candidates 경로를 `additionalContext`로 배달(결정 21·26) — `active` 존재·빈 `anchor`·`own` 아닌 `end:`·prerequisite(nested cap `<5`·`autoCompactEnabled`·`alwaysThinkingEnabled`·bypass 아닌 mode) 미충족이면 차단(배달 없음) · off: `active` 삭제(round 상태 보존, in-flight 무관) — 비활성이면 차단 · on: `phase`→`fresh` 정규화·counter reset(history 보존) + `active` 기록(stuck·active도 wake) — `anchor`/`loop.log` 부재·`converged`·prerequisite 미충족이면 차단 |
+| **SessionStart** | `compact` | compaction 직후 | armed loop면 anchor 원문 + loop 종류의 notice·candidates 주소를 `additionalContext`로 재주입(mechanism 2) — 비활성 session은 즉시 exit 0 |
+| **PreToolUse** | `Agent` | main이 Agent 호출 | `advisor` 호출이면 1회용 token 검사 → 허용(소비 + `advisor_running` set) 또는 `exit 2` deny(round당 audit 1회 rate limit) · 제 끝을 선언한 anchor의 armed loop면 advisor·narrator 모두 `exit 2` deny(결정 26) |
 | **PreToolUse** | `EnterPlanMode` | plan mode 진입 시도 | **guard**(결정 25): 무인 session이면 진입 전 deny — 비무인 session은 무음 |
 | **PermissionRequest** | (전체) | harness가 사람에게 물으려 할 때 | **guard**: 무인 session이면 tool별 사유로 deny(질문·plan 승인 포함) — 비무인 session은 무음 |
 | **Elicitation** | (전체) | MCP server의 입력 요청 | **guard**: 무인 session이면 decline |
 | **Notification** | 멈춤 5종 | 사람을 기다리는 대기 | **guard**: 무인 session이면 loop.log에 `[[ Stall ]]` 기록 |
-| **Stop** | (전체) | main이 종료 시도 | active gate → **background gate**(`background_tasks`: subagent·workflow·running shell 조용히 대기, monitor·비running·그 외 통과) → **in-flight guard** → narration append → 판정(보고/token/오작동/working/bare) → `exit 2`+stderr(standing directive, 종료 시엔 종료 notice+log recap) 또는 `exit 0`(허용) |
+| **Stop** | (전체) | main이 종료 시도 | active gate → **background gate**(`background_tasks`: subagent·workflow·running shell 조용히 대기, monitor·비running·그 외 통과) → `end: own`이면 hold로 `exit 2`(결정 26) → **in-flight guard** → narration append → 판정(보고/token/오작동/working/bare) → `exit 2`+stderr(standing directive, 종료 시엔 종료 notice+log recap) 또는 `exit 0`(허용) |
 | **Stop** | (전체, `asyncRewake`) | main이 종료 시도 | **heartbeat**(결정 19): armed loop면 arm이 nonce를 기록·handoff하고 wrapper sh 자신이 3h를 잔다 — fire 시 nonce 최신·armed면 `exit 2`로 잠든 session을 깨워 background audit 지시, 아니면 무음 자멸. 비활성 session은 즉시 exit 0 |
 | **SubagentStop** | (전체) | subagent 종료 | `advisor` 종료면 `advisor_running` clear (in-flight 추적) |
 
@@ -497,7 +506,8 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     (`deadline: 2h 13m remaining`·`expired 23m ago`·parse 불가 시 unreadable로 원문 표면화 — 조용한
     무장 해제는 거짓 안심이다)을 **두 위치에** 싣는다: directive header(소집 시점을 정하는 main의 결정
     변수)와 advisor prompt(관측 공백 보전 — advisor는 Bash가 없어 시계를 못 읽는다). 미선언 anchor는
-    비용 0. **expired는 directive의 "계속 작업" 분기를 닫고 소집 자체를 지시로 만든다** — 마감 판단
+    비용 0. 제 끝을 선언한 anchor(결정 26)에서는 hold의 header 한 줄이 전부다 — 집행할 advisor가 없어
+    만료에 닫히는 분기도 없다. **expired는 directive의 "계속 작업" 분기를 닫고 소집 자체를 지시로 만든다** — 마감 판단
     (잔여 내 wrap-up 조율, 경과 시 종료 — instruction 판단 절이 명시)은 여전히 advisor의 mandate다.
     기한 종결은 전용 token(`DEADLINE_EXPIRED_…`)으로 닫혀 완수 인증과 사유가 분리된다 — 종료를
     위장하지 않는다는 결정 14의 원칙이 hook의 cause 문자열까지 관통한다.
@@ -512,8 +522,9 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     자기 경로로 해소한다 — 그러면 경로를 소유한 기계 전부(advisor 입력의 조건부 라인, 종료 notice의
     drain, 다음 launch의 reset)가 빈 파일을 읽는 채로 정상처럼 보인다. 관측 신호가 없는 divergence라
     "첫 directive에서의 self-healing"(main의 자발적 이주에 의존)으로는 bound되지 않는다. directive의 상시
-    라인은 유지 — launch는 최초 공급, compaction 재정박(mechanism 2)이 재공급, directive는 매 round의
-    재안내로 역할이 갈린다.
+    라인은 유지 — launch는 최초 공급, compaction 재정박(mechanism 2)이 재공급, directive(제 끝을 선언한
+    anchor의 loop에선 hold)는 매 정지의 재안내로 역할이 갈린다. loop의 종류도 launch가 같은 turn에 말해야 할
+    기계의 사실이라 같은 배달이 주소 앞에 싣고, 재정박이 anchor 뒤에 되싣는다(결정 26).
     `/ploop:on`·`/ploop:off`는 배제한다: 두 skill 본문은 candidates를 지시하지 않아 해소할 참조가
     없고, 배달 없는 배달은 text의 단조 증가다.
 22. **advisor는 완수 gate다 — per-round 소집 폐지 (2026-08 재설계).** 종전 advisor는 매 round "미고려
@@ -526,8 +537,9 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     관찰로 소비한다(채택·반박은 main의 판단, 반박은 narration을 타고 다음 감사에 닿는다). **침묵 종료
     (B안 — main 자기인증)는 기각했다**: 감사 여부를 main의 확신이 정하면 과신 표본일수록 gate를
     우회하는 역선택이고, C(advisor 서명)와의 비용 차이는 mission당 호출 1회다. 침묵 2회는 비상
-    종료권으로 보존된다(결정 14). purpose anchor는 이 instruction 밖이다 — 부활 시 자기 cadence
-    설계가 선행 과제다(define-purpose는 인간 종결 반영구 loop로 동작).
+    종료권으로 보존된다(결정 14). purpose anchor는 이 instruction 밖이다 — 그 cadence는 결정 26이다
+    (define-purpose가 `end: own`을 쓴다; key 없이 쓰인 purpose anchor는 advisor loop로 돌고 instruction이
+    종결 token을 막는다).
 23. **narration은 per-stop, narrator는 main이 직접 호출한다.** 감사가 드물어지면 "마지막 감사 이후
     전체"가 한 slice가 되어 narrator context를 넘을 수 있다 — per-stop cadence는 slice를 구조적으로
     한 round로 bound하고, loop.log를 실시간 flight recorder로 유지하며(docent·recap·감사 입력의 단일
@@ -562,6 +574,36 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
     부채 — harness가 판정해 그물로 보낸다), dialog 기한 settings의 provision(user scope라 plugin이 줄 수
     없고 결정 12 — 기본값 `autoContinueAtUsageLimit` true·`dialogExpiry` 5m이 이미 무인에 맞다). 비무인
     session에서 guard는 marker 부재로 즉시 무음이라 사람의 dialog는 평소대로다.
+26. **anchor가 제 끝을 선언한다 — `end: own`의 loop는 붙들되 감사하지 않는다.** frontmatter `end: own`은
+    `deadline:`처럼 anchor의 사실이다: 끝은 anchor 자신의 것이고(run의 끝은 운영 도구의 완료 command, purpose의
+    끝은 `/ploop:off`뿐) 어떤 loop agent도 인증하지 않는다 — 인증할 것이 없으니 advisor가 없고, advisor가 없으니
+    그 독자를 위한 narrator도 없다. 정지는 background gate(결정 16)까지 advisor loop와 같고, 그 뒤 **hold**로
+    `exit 2`한다: directive에서 narrator·advisor에 속한 것을 걷어낸 나머지 — 자기감사 두 줄(directive step 2와
+    한 상수), `Nothing remains -> do what your anchor says comes next.`, candidates 주소(결정 21의 매 정지
+    재안내), deadline이 있으면 그 status header(정보일 뿐 — 결정 20). 셋째 줄이 끝을 말하지 않는 이유: 이
+    loop에서 어떤 정지도 끝이 아니므로, "end"라는 낱말은 hold의 교착을 부르고 purpose의 agent를 멈춤으로
+    민다. hold 밖의 것은 없다 — slice·ledger·token·삭제가 없어 정지는 armed marker·`background_tasks`·anchor
+    frontmatter의 순수 함수이고, `loop.json`·`round.jsonl`·`advisor_token`이 정지로 생기지 않는다(`/ploop:on`의
+    정규화는 ledger를 쓰지만 정지가 읽지 않는다). bare 정지 규칙(결정 14·24)도 없다: 그 규칙은 main이 부르지
+    않을 권위로 교착을 끝내는데 여기엔 그 권위가 없고, 그 종료는 session이 막힌 바로 그때 heartbeat를 무장
+    해제한다 — 침묵하는 main의 상한은 harness의 연속 continuation cap이고(기술 risk 1), 그 뒤의 잠은 heartbeat가
+    깨운다(결정 19). loop는 `/ploop:off`나 session의 끝으로만 끝난다. PreToolUse(`Agent`)는 이 loop에서
+    narrator·advisor 호출을 모두 `exit 2`로 거부한다 — agent listing이 모든 session에서 advisor를 종결 권위로
+    소개하므로, "loop agent 없음"은 hold의 문구가 아니라 gate의 사실이어야 한다. `end:`의 다른 값은 빈
+    anchor처럼 launch를 차단한다 — 읽지 못하는 선언이 다른 종류를 며칠 arm해서는 안 된다. 종류는 쓰일 때마다
+    `anchor.md`에서 읽는다: launch만 쓰고 다시 쓰지 않아 main이 도중에 못 바꾸므로 marker가 필요 없다. 선언이
+    command가 아니라 key인 이유: key를 모르는 구버전 plugin은 그 anchor로 오늘의 advisor loop를 돌 뿐이지만,
+    모르는 command는 launch를 실패시킨다. **loop notice는 skill 본문을 떠났다**: 정적 본문은 anchor에 따라
+    갈릴 수 없고 그 첫 문장(loop는 advisor의 판정으로만 끝난다)은 이 종류에서 거짓이며, 조건부 문구는 모든
+    mission에게 자기 것이 아닌 출구를 알린다 — 그래서 launch hook이 종류의 notice를 queue 주소 앞에 실어
+    보내고(결정 21) 재정박이 anchor 뒤에 되싣는다(종전에 notice를 compaction 너머로 나르던 것은 skill 본문
+    re-attach였다). **결정 22와의 관계**: 자기인증(B안)의 기각 근거는 main의 확신이 감사 여부를 정하는
+    역선택인데, 여기서 정하는 자는 anchor의 작성자이고 launch에 한 번이며 main은 바꿀 수 없다. 이 종류가 아끼는
+    것은 advisor 호출 1회가 아니라 loop 전부다 — 완료 command 앞에서 멈춘 운영 도구의 worker session에서 첫
+    directive의 narrator는 launch 이후 전부를 읽어, revision 하나에 $10–18·6–10분, make 하나에 narrator 482
+    요청이 들었다(Lora worker 실측 2026-11). purpose anchor는 이 key로 22가 남긴 cadence 과제를 닫는다 —
+    define-purpose가 key를 쓰고 anchor가 제 끝을 스스로 말하게 한다. define-mission은 쓰지 않는다: mission은
+    자신을 인증할 advisor를 지킨다.
 
 ---
 
@@ -570,10 +612,11 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
 설계는 성립하나 live tree 없이 unit test할 수 없던 항목들이다. 모두 **graceful degrade**한다.
 
 1. **Stop block cap.** Claude Code는 Stop hook이 **연속** N회 종료를 막으면 강제 종료하나
-   (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, 기본 8 — docs 미기재, 2.1.233 번들 생존 실측 2026-08), 이
-   counter는 생산적 작업(tool-use) turn마다 0으로 reset된다.
+   (기본 8 — 공식 hooks 문서의 8-consecutive-continuation cap, `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`로 조정 ·
+   2.1.233 번들 실측 2026-08), 이 counter는 생산적 작업(tool-use) turn마다 0으로 reset된다.
    ploop은 매 round narrator relay·작업을 하므로 걸리지 않고, 무진전 bare 정지는
-   failsafe(결정 14)가 cap보다 먼저(2회) 끝낸다 — cap은 backstop으로만 남는다. advisor가 완수를 안 내고 main이
+   failsafe(결정 14)가 cap보다 먼저(2회) 끝낸다 — cap은 backstop으로만 남는다. 제 끝을 선언한 anchor의
+   loop(결정 26)에서는 cap이 침묵의 상한 그 자체다. advisor가 완수를 안 내고 main이
    무한히 **일하는** 생산적 무한 loop만 이 cap도 못 막으므로(작업이 reset) 그땐 deadline과 `/ploop:off`가 수단이다.
 2. **transcript 형식 가정.** hook은 transcript를 parsing하지 않는다(결정 4). 유일한 의존은
    **transcript가 line 단위 append-only라 line 번호가 안정적**이라는 것 하나다(compaction도 append) —
@@ -619,6 +662,9 @@ wrapper를 호출한다 — 경로 placeholder가 shell tokenization을 거치�
   않는다. 표면화의 근거는 "쌓여 있고 처리되지 않았다"뿐이고 그 이상의 판단은 main 몫이다.
 - **worker 내부 행위는 advisor에 비가시다** — narrator는 main transcript(지휘·주장)만 서술한다.
   결함이 아니라 신뢰 model의 이동이다: 산출의 판정은 관측이 아니라 gate(독립 검증·CI)가 소유한다.
+- **제 끝을 선언한 loop에는 감사도 flight recorder도 없다** — 끝이 loop 밖에 있다는 anchor 작성자의
+  선언이 그 대가를 진다(결정 26). 기록은 anchor와 `[[ Stall ]]`뿐이라 docent는 그 loop의 행로를
+  transcript로 재구성한다.
 - **docent의 해설은 기록 기반 추론이다** — 기록에 없는 "왜"의 재구성은 오귀속할 수 있다. 교리의
   관측/추론 구분·round 인용이 그 경계를 표시하고, compaction 이후에는 main도 그 기억을 갖지 않으므로
   기록이 최선의 증인이라는 전제는 advisor loop와 공유한다.
@@ -653,7 +699,7 @@ ploop/
 ├── skills/define-mission/SKILL.md    # /ploop:define-mission — 목표(goal) anchor 작성 (loop와 비연결, 수동 handoff)
 ├── skills/define-purpose/SKILL.md    # /ploop:define-purpose — 목적(purpose) anchor 작성 (loop와 비연결, 수동 handoff)
 ├── skills/docent/SKILL.md            # /ploop:docent — 기록 해설 교리 (read-only 질의 표면, 별도 session)
-├── skills/launch/SKILL.md            # /ploop:launch — 완수 gate notice + orchestrator rules + 응고 계약 + anchor handoff (anchor 저장·활성화는 launch hook)
+├── skills/launch/SKILL.md            # /ploop:launch — orchestrator rules + 응고 계약 + anchor handoff (anchor 저장·활성화·loop 종류의 notice는 launch hook)
 ├── skills/off/SKILL.md               # /ploop:off — 일시정지 조용한 고지 (일시정지는 off_command hook)
 ├── skills/on/SKILL.md                # /ploop:on — 재개 확인 고지 (재개·정규화는 on_command hook)
 ├── hooks/hooks.json                  # UserPromptExpansion(launch·off·on) + SessionStart(compact) + PreToolUse(Agent·EnterPlanMode) + PermissionRequest·Elicitation·Notification(guard) + Stop(gate + asyncRewake heartbeat) + SubagentStop
@@ -662,6 +708,6 @@ ploop/
 │   ├── main.py                       # hook entrypoint(stop·pre_tool_use·heartbeat_arm·heartbeat_fire·subagent_stop·guard·reanchor·launch·off_command·on_command)
 │   ├── docent.py                     # docent resolver — session 열거·기록 경로 해석 (read-only, `docent` console script)
 │   ├── state.py                      # Workspace(session 파일 경로의 단일 창구) + 5field ledger(advice_history·round_start_line·anomalies·phase·round) + phase 상수 · preserve-by-default load/저장
-│   └── prompt.py                     # audit-history format + standing directive 조립(narrator·advisor verbatim 호출·deadline 양방 배달)
+│   └── prompt.py                     # anchor frontmatter(deadline·end) + audit-history format + standing directive 조립(narrator·advisor verbatim 호출·deadline 양방 배달) + loop 종류의 notice·hold
 └── tests/                            # 구현 독립 (stdin/stdout/disk 구동)
 ```
